@@ -16,7 +16,15 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use crate::models::{responses, Calendar, Stop};
+use crate::models::{
+    // This whole ordeal instead of just writing `responses::` because of uitopa
+    // The macros do not support module paths
+    responses::{
+        DateDeparture, Departure, Parish, Route, Subroute, SubrouteStops,
+    },
+    Calendar,
+    Stop,
+};
 use crate::{Error, State};
 
 use std::sync::Arc;
@@ -27,12 +35,23 @@ use axum::response::IntoResponse;
 use axum::{Extension, Json};
 use chrono::NaiveDate;
 use itertools::Itertools;
+use utoipa_swagger_ui::Config;
 
+#[utoipa::path(
+    get,
+    path = "/api/parishes",
+    responses(
+        (
+            status = 200,
+            description = "List of parishes",
+            body = [Parish])
+    )
+)]
 pub(crate) async fn get_parishes(
     Extension(state): Extension<Arc<State>>,
 ) -> Result<impl IntoResponse, Error> {
     let res = sqlx::query_as!(
-        responses::Parish,
+        Parish,
         r#"
 SELECT Parishes.id, Parishes.name, Municipalities.name as municipality, Municipalities.zone, Parishes.polygon
 FROM Parishes
@@ -46,7 +65,16 @@ JOIN Municipalities where Parishes.municipality = Municipalities.id
     Ok((StatusCode::OK, Json(res)).into_response())
 }
 
-#[utoipa::path(get, path = "/stops/")]
+#[utoipa::path(
+    get,
+    path = "/api/stops",
+    responses(
+        (
+            status = 200,
+            description = "List of stops",
+            body = [Stop])
+    )
+)]
 pub(crate) async fn get_stops(
     Extension(state): Extension<Arc<State>>,
 ) -> Result<impl IntoResponse, Error> {
@@ -66,11 +94,16 @@ WHERE source = 'cmet'
     Ok((StatusCode::OK, Json(res)).into_response())
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/routes",
+    responses(
+        (status = 200, description = "List of routes", body = [Route]),
+    )
+)]
 pub(crate) async fn get_routes(
     Extension(state): Extension<Arc<State>>,
 ) -> Result<impl IntoResponse, Error> {
-    // let mut conn = state.pool.acquire().await?;
-
     let res = sqlx::query!(
         r#"
 SELECT Routes.id as route, Routes.flag as flag, Routes.circular as circular,
@@ -91,12 +124,12 @@ ORDER BY Routes.id asc
     let mut routes = vec![];
 
     if let Some(row) = row_iter.next() {
-        let mut curr_route = responses::Route {
+        let mut curr_route = Route {
             id: row.route,
             flag: row.flag,
             circular: row.circular != 0,
             main_subroute: row.main_subroute,
-            subroutes: vec![responses::Subroute {
+            subroutes: vec![Subroute {
                 id: row.subroute,
                 verbose_flag: row.subroute_flag,
                 cached_from: row.from_stop,
@@ -106,7 +139,7 @@ ORDER BY Routes.id asc
 
         for row in row_iter {
             if row.route == curr_route.id {
-                curr_route.subroutes.push(responses::Subroute {
+                curr_route.subroutes.push(Subroute {
                     id: row.subroute,
                     verbose_flag: row.subroute_flag,
                     cached_from: row.from_stop,
@@ -114,12 +147,12 @@ ORDER BY Routes.id asc
                 });
             } else {
                 routes.push(curr_route);
-                curr_route = responses::Route {
+                curr_route = Route {
                     id: row.route,
                     flag: row.flag,
                     circular: row.circular != 0,
                     main_subroute: row.main_subroute,
-                    subroutes: vec![responses::Subroute {
+                    subroutes: vec![Subroute {
                         id: row.subroute,
                         verbose_flag: row.subroute_flag,
                         cached_from: row.from_stop,
@@ -134,6 +167,28 @@ ORDER BY Routes.id asc
     Ok((StatusCode::OK, Json(routes)).into_response())
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/routes/{route_id}/schedule",
+    params(
+        (
+            "route_id",
+            path,
+            description = "Route identifier"
+        ),
+    ),
+    responses(
+        (
+            status = 200,
+            description = "Route schedule",
+            body = [Departure]
+        ),
+        (
+            status = 404,
+            description = "Route does not exist"
+        ),
+    )
+)]
 pub(crate) async fn get_schedule(
     Extension(state): Extension<Arc<State>>,
     Path(route_id): Path<i64>,
@@ -153,7 +208,7 @@ WHERE Subroutes.route=?
 
     let mut departures = vec![];
     for row in res {
-        departures.push(responses::Departure {
+        departures.push(Departure {
             subroute: row.subroute,
             time: row.time,
             calendar: serde_json::from_str(&row.calendar)
@@ -164,6 +219,39 @@ WHERE Subroutes.route=?
     Ok((StatusCode::OK, Json(departures)).into_response())
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/routes/{route_id}/schedule/{date}",
+    params(
+        (
+            "route_id",
+            path,
+            description = "Route identifier"
+        ),
+    ),
+    params(
+        (
+            "date",
+            path,
+            description = "Date of the schedule, in the YYYY-MM-DD format"
+        ),
+    ),
+    responses(
+        (
+            status = 200,
+            description = "Route schedule for a specific day",
+            body = [DateDeparture]
+        ),
+        (
+            status = 400,
+            description = "Invalid date"
+        ),
+        (
+            status = 404,
+            description = "Route does not exist"
+        ),
+    )
+)]
 pub(crate) async fn get_schedule_for_date(
     Extension(state): Extension<Arc<State>>,
     Path((route_id, date)): Path<(i64, String)>,
@@ -189,7 +277,7 @@ WHERE Subroutes.route=?
         let calendar: Calendar = serde_json::from_str(&row.calendar)
             .map_err(|_err| Error::DatabaseDeserialization)?;
         if calendar.includes(date) {
-            departures.push(responses::DateDeparture {
+            departures.push(DateDeparture {
                 subroute: row.subroute,
                 time: row.time,
             });
@@ -199,6 +287,28 @@ WHERE Subroutes.route=?
     Ok((StatusCode::OK, Json(departures)).into_response())
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/route/{route_id}/stops",
+    params(
+        (
+            "route_id",
+            path,
+            description = "Route identifier"
+        ),
+    ),
+    responses(
+        (
+            status = 200,
+            description = "Stops a route makes along its subroutes",
+            body = [DateDeparture]
+        ),
+        (
+            status = 404,
+            description = "Route does not exist"
+        ),
+    )
+)]
 pub(crate) async fn get_route_stops(
     Extension(state): Extension<Arc<State>>,
     Path(route_id): Path<i64>,
@@ -231,7 +341,7 @@ ORDER BY Subroutes.id ASC, SubrouteStops.idx ASC
                     .unzip(),
             )
         })
-        .map(|(key, (stops, diffs))| responses::SubrouteStops {
+        .map(|(key, (stops, diffs))| SubrouteStops {
             subroute: key,
             stops,
             diffs,
@@ -239,4 +349,26 @@ ORDER BY Subroutes.id ASC, SubrouteStops.idx ASC
         .collect::<Vec<_>>();
 
     Ok((StatusCode::OK, Json(subroute_stops)).into_response())
+}
+
+#[allow(clippy::unused_async)]
+pub(crate) async fn serve_swagger_ui(
+    Path(tail): Path<String>,
+    Extension(state): Extension<Arc<Config<'static>>>,
+) -> impl IntoResponse {
+    match utoipa_swagger_ui::serve(&tail[1..], state) {
+        Ok(file) => file.map_or_else(
+            || StatusCode::NOT_FOUND.into_response(),
+            |file| {
+                (
+                    StatusCode::OK,
+                    [("Content-Type", file.content_type)],
+                    file.bytes,
+                )
+                    .into_response()
+            },
+        ),
+        Err(error) => (StatusCode::INTERNAL_SERVER_ERROR, error.to_string())
+            .into_response(),
+    }
 }

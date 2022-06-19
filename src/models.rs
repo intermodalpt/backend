@@ -31,22 +31,37 @@ use utoipa::Component;
 #[derive(Debug, Serialize, Deserialize, Component)]
 pub struct Stop {
     pub id: i64,
+    #[component(example = "cmet")]
     pub source: String,
+    #[component(example = "Setúbal (ITS)")]
     pub name: Option<String>,
+    #[component(example = "Setúbal")]
     pub short_name: Option<String>,
+    #[component(example = "Rua do Não Sei Decor")]
     pub street: Option<String>,
+    #[component(example = "123-A")]
     pub door: Option<String>,
     pub parish: Option<i64>,
+    #[component(example = 38.123_456)]
     pub lat: Option<f32>,
+    #[component(example = -9.654_321)]
     pub lon: Option<f32>,
     pub guess_for: Option<i64>,
     pub osm_id: Option<i64>,
 }
 
 #[derive(
-    Serialize_repr, Deserialize_repr, PartialEq, Eq, Clone, Copy, Debug,
+    Serialize_repr,
+    Deserialize_repr,
+    PartialEq,
+    Eq,
+    Clone,
+    Copy,
+    Debug,
+    Component,
 )]
 #[repr(u8)]
+#[component(example = 4)]
 pub enum Weekday {
     Monday = 0,
     Tuesday = 1,
@@ -86,7 +101,7 @@ impl From<u8> for Weekday {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Component)]
 pub struct Calendar {
     pub weekdays: Vec<Weekday>,
     pub only_if: Vec<Condition>,
@@ -242,6 +257,8 @@ impl fmt::Display for Calendar {
     }
 }
 
+// https://github.com/juhaku/utoipa/issues/176
+// #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Component)]
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "condition")]
 pub enum Condition {
@@ -273,48 +290,62 @@ impl fmt::Display for Condition {
 
 pub(crate) mod responses {
     use crate::models::Calendar;
-    use serde::Serialize;
 
-    #[derive(Serialize)]
+    use serde::Serialize;
+    use utoipa::Component;
+
+    #[derive(Serialize, Component)]
     pub struct Parish {
         pub id: i64,
+        #[component(example = "Quinta do Conde")]
         pub name: String,
+        #[component(example = "Sesimbra")]
         pub municipality: String,
+        #[component(example = 3)]
         pub zone: i64,
+        #[component(example = "GeoJSON polygon")]
         pub polygon: Option<String>,
     }
 
-    #[derive(Serialize)]
+    #[derive(Serialize, Component)]
     pub struct Route {
         pub(crate) id: i64,
         pub(crate) subroutes: Vec<Subroute>,
+        #[component(example = "Azeitão (Circular)")]
         pub(crate) flag: Option<String>,
+        #[component(example = true)]
         pub(crate) circular: bool,
         pub(crate) main_subroute: Option<i64>,
     }
 
-    #[derive(Serialize)]
+    #[derive(Serialize, Component)]
     pub struct Subroute {
         pub(crate) id: i64,
+        #[component(example = "Azeitão (Circular)")]
         pub(crate) verbose_flag: Option<String>,
+        #[component(example = 123)]
         pub(crate) cached_from: Option<i64>,
+        #[component(example = 123)]
         pub(crate) cached_to: Option<i64>,
     }
 
-    #[derive(Serialize)]
+    #[derive(Serialize, Component)]
     pub struct Departure {
         pub subroute: i64,
+        // Departure time in minutes starting at midnight
+        #[component(example = 480)]
         pub time: i64,
         pub calendar: Calendar,
     }
 
-    #[derive(Serialize)]
+    #[derive(Serialize, Component)]
     pub struct DateDeparture {
         pub subroute: i64,
+        #[component(example = 480)]
         pub time: i64,
     }
 
-    #[derive(Serialize)]
+    #[derive(Serialize, Component)]
     pub struct SubrouteStops {
         pub subroute: i64,
         pub stops: Vec<i64>,

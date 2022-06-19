@@ -37,8 +37,10 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use axum::routing::get;
-use axum::{Extension, Router};
+use axum::{Extension, Json, Router};
 use sqlx::sqlite::SqlitePool;
+use utoipa::OpenApi;
+use utoipa_swagger_ui::Config;
 
 #[derive(Clone)]
 pub(crate) struct State {
@@ -46,18 +48,29 @@ pub(crate) struct State {
 }
 
 pub(crate) fn build_paths(state: State) -> Router {
+    let api_doc = ApiDoc::openapi();
+    let config = Arc::new(Config::from("/api-doc/openapi.json"));
+
     Router::new()
         // Basic roots
-        .route("/parishes", get(handlers::get_parishes))
-        .route("/stops", get(handlers::get_stops))
-        .route("/routes", get(handlers::get_routes))
-        .route("/route/:route_id/schedule", get(handlers::get_schedule))
+        .route("/api/parishes", get(handlers::get_parishes))
+        .route("/api/stops", get(handlers::get_stops))
+        .route("/api/routes", get(handlers::get_routes))
+        .route("/api/route/:route_id/schedule", get(handlers::get_schedule))
         .route(
-            "/route/:route_id/schedule/:date",
+            "/api/route/:route_id/schedule/:date",
             get(handlers::get_schedule_for_date),
         )
-        .route("/route/:route_id/stops", get(handlers::get_route_stops))
+        .route("/api/route/:route_id/stops", get(handlers::get_route_stops))
         .layer(Extension(Arc::new(state)))
+        .route(
+            "/api-doc/openapi.json",
+            get(move || async { Json(api_doc) }),
+        )
+        .route(
+            "/api/docs/*tail",
+            get(handlers::serve_swagger_ui).layer(Extension(config)),
+        )
 }
 
 #[tokio::main]
@@ -73,3 +86,35 @@ async fn main() {
         .await
         .expect("Unable to start service");
 }
+
+use models::{
+    responses::{
+        DateDeparture, Departure, Parish, Route, Subroute, SubrouteStops,
+    },
+    Calendar, Stop, Weekday,
+};
+
+#[derive(OpenApi)]
+#[openapi(
+    handlers(
+        handlers::get_parishes,
+        handlers::get_stops,
+        handlers::get_routes,
+        handlers::get_schedule,
+        handlers::get_schedule_for_date,
+        handlers::get_route_stops,
+    ),
+    components(
+        Stop,
+        Calendar,
+        Weekday,
+        DateDeparture,
+        Departure,
+        Parish,
+        Route,
+        Subroute,
+        SubrouteStops,
+    ),
+    tags()
+)]
+struct ApiDoc;

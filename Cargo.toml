@@ -14,6 +14,9 @@ sqlx = { version = "0.5", features = ["runtime-tokio-native-tls", "sqlite", "jso
 
 axum = "0.5.7"
 
+utoipa = "1.0.2"
+utoipa-swagger-ui = "1.0.0"
+
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_repr = "0.1.8"
 serde_json = { version = "1.0", features = ["preserve_order"] }
