@@ -16,14 +16,17 @@ class Municipality:
 
 
 class Stop:
-    def __init__(self, name, id=None, source='cmet', lat=None, lon=None):
-        if name.strip() == '':
-            print("Wtf")
+    def __init__(self, name, short_name=None, id=None, external_id=None, source='cmet', lat=None, lon=None,
+                 succeeded_by=None):
+
         self.id = id
+        self.external_id = external_id
         self.name = name
+        self.short_name = short_name
         self.source = source
         self.lat = lat
         self.lon = lon
+        self.succeeded_by = succeeded_by
 
     def __repr__(self):
         return f"({self.id if self.id else '-'}) {self.name}"
@@ -42,14 +45,11 @@ class Stop:
 
 
 class Subroute:
-    def __init__(self, route, stops, diffs, departures):
-        self.route = route
+    def __init__(self, name, stops, diffs, departures):
+        self.name = name
         self.stops = stops
         self.diffs = diffs
         self.departures = departures
-
-        if len(diffs) != len(stops) - 1:
-            raise Exception("Number of diffs does not match number of stops")
 
     def __repr__(self):
         return f"{self.stops[0].name} - {self.stops[-1].name}"

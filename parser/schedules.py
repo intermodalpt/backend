@@ -300,6 +300,8 @@ CALENDAR_MAPPING = {
     50: [Calendar(WEEKDAYS).except_if(SCHOOL).except_if(SUMMER)],
     # "Dias úteis de verão"
     51: [Calendar(WEEKDAYS).only_if(SUMMER)],
+    52: [Calendar(SATURDAYS).only_if(SUMMER)],
+    53: [Calendar(SUNDAYS).only_if(SUMMER)],
     # "Sábados, domingos/feriados de verão"
     54: [Calendar(WEEKEND).also_if(HOLIDAY).only_if(SUMMER)],
     # "Todos os dias de verão"
