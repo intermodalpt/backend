@@ -84,7 +84,7 @@ pub(crate) async fn get_stops(
 --SELECT id, name, short_name, parish, lat, lon, osm_id
 SELECT *
 FROM Stops
-WHERE source = 'cmet'
+--WHERE source = 'cmet'
     "#
     )
     .fetch_all(&state.pool)
@@ -289,7 +289,7 @@ WHERE Subroutes.route=?
 
 #[utoipa::path(
     get,
-    path = "/api/route/{route_id}/stops",
+    path = "/api/routes/{route_id}/stops",
     params(
         (
             "route_id",

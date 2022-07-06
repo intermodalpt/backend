@@ -56,12 +56,12 @@ pub(crate) fn build_paths(state: State) -> Router {
         .route("/api/parishes", get(handlers::get_parishes))
         .route("/api/stops", get(handlers::get_stops))
         .route("/api/routes", get(handlers::get_routes))
-        .route("/api/route/:route_id/schedule", get(handlers::get_schedule))
+        .route("/api/routes/:route_id/schedule", get(handlers::get_schedule))
         .route(
-            "/api/route/:route_id/schedule/:date",
+            "/api/routes/:route_id/schedule/:date",
             get(handlers::get_schedule_for_date),
         )
-        .route("/api/route/:route_id/stops", get(handlers::get_route_stops))
+        .route("/api/routes/:route_id/stops", get(handlers::get_route_stops))
         .layer(Extension(Arc::new(state)))
         .route(
             "/api-doc/openapi.json",
