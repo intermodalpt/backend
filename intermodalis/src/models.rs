@@ -46,8 +46,10 @@ pub struct Stop {
     pub lat: Option<f32>,
     #[component(example = -9.654_321)]
     pub lon: Option<f32>,
-    pub guess_for: Option<i64>,
-    pub osm_id: Option<i64>,
+    #[serde(default)]
+    pub external_id: Option<String>,
+    #[serde(default)]
+    pub succeeded_by: Option<i64>,
 }
 
 #[derive(
@@ -314,7 +316,7 @@ pub(crate) mod responses {
         #[component(example = "Azeitão (Circular)")]
         pub(crate) flag: Option<String>,
         #[component(example = true)]
-        pub(crate) circular: bool,
+        pub(crate) circular: Option<bool>,
         pub(crate) main_subroute: Option<i64>,
     }
 
@@ -322,7 +324,7 @@ pub(crate) mod responses {
     pub struct Subroute {
         pub(crate) id: i64,
         #[component(example = "Azeitão (Circular)")]
-        pub(crate) verbose_flag: Option<String>,
+        pub(crate) flag: Option<String>,
         #[component(example = 123)]
         pub(crate) cached_from: Option<i64>,
         #[component(example = 123)]

@@ -36,9 +36,11 @@ use errors::Error;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
+use axum::http::Method;
 use axum::routing::get;
 use axum::{Extension, Json, Router};
 use sqlx::sqlite::SqlitePool;
+use tower_http::cors::{Any, CorsLayer};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::Config;
 
@@ -51,17 +53,29 @@ pub(crate) fn build_paths(state: State) -> Router {
     let api_doc = ApiDoc::openapi();
     let config = Arc::new(Config::from("/api-doc/openapi.json"));
 
+    let cors = CorsLayer::new()
+        // allow `GET` and `POST` when accessing the resource
+        .allow_methods([Method::GET, Method::POST])
+        // allow requests from any origin
+        .allow_origin(Any);
+
     Router::new()
         // Basic roots
         .route("/api/parishes", get(handlers::get_parishes))
         .route("/api/stops", get(handlers::get_stops))
         .route("/api/routes", get(handlers::get_routes))
-        .route("/api/routes/:route_id/schedule", get(handlers::get_schedule))
+        .route(
+            "/api/routes/:route_id/schedule",
+            get(handlers::get_schedule),
+        )
         .route(
             "/api/routes/:route_id/schedule/:date",
             get(handlers::get_schedule_for_date),
         )
-        .route("/api/routes/:route_id/stops", get(handlers::get_route_stops))
+        .route(
+            "/api/routes/:route_id/stops",
+            get(handlers::get_route_stops),
+        )
         .layer(Extension(Arc::new(state)))
         .route(
             "/api-doc/openapi.json",
@@ -71,6 +85,7 @@ pub(crate) fn build_paths(state: State) -> Router {
             "/api/docs/*tail",
             get(handlers::serve_swagger_ui).layer(Extension(config)),
         )
+        .layer(cors)
 }
 
 #[tokio::main]

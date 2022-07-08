@@ -108,7 +108,7 @@ pub(crate) async fn get_routes(
         r#"
 SELECT Routes.id as route, Routes.flag as flag, Routes.circular as circular,
     Routes.main_subroute as main_subroute,
-    Subroutes.id as subroute, Subroutes.verbose_flag as subroute_flag,
+    Subroutes.id as subroute, Subroutes.flag as subroute_flag,
     Subroutes.cached_from as from_stop, Subroutes.cached_to as to_stop
 FROM Routes
 LEFT JOIN Subroutes on Routes.id = Subroutes.route
@@ -127,11 +127,11 @@ ORDER BY Routes.id asc
         let mut curr_route = Route {
             id: row.route,
             flag: row.flag,
-            circular: row.circular != 0,
+            circular: row.circular.map(|val| val != 0),
             main_subroute: row.main_subroute,
             subroutes: vec![Subroute {
                 id: row.subroute,
-                verbose_flag: row.subroute_flag,
+                flag: row.subroute_flag,
                 cached_from: row.from_stop,
                 cached_to: row.to_stop,
             }],
@@ -141,7 +141,7 @@ ORDER BY Routes.id asc
             if row.route == curr_route.id {
                 curr_route.subroutes.push(Subroute {
                     id: row.subroute,
-                    verbose_flag: row.subroute_flag,
+                    flag: row.subroute_flag,
                     cached_from: row.from_stop,
                     cached_to: row.to_stop,
                 });
@@ -150,11 +150,11 @@ ORDER BY Routes.id asc
                 curr_route = Route {
                     id: row.route,
                     flag: row.flag,
-                    circular: row.circular != 0,
+                    circular: row.circular.map(|val| val != 0),
                     main_subroute: row.main_subroute,
                     subroutes: vec![Subroute {
                         id: row.subroute,
-                        verbose_flag: row.subroute_flag,
+                        flag: row.subroute_flag,
                         cached_from: row.from_stop,
                         cached_to: row.to_stop,
                     }],
@@ -319,7 +319,7 @@ SELECT Subroutes.id as subroute, SubrouteStops.stop as stop, SubrouteStops.time_
 FROM Subroutes
 JOIN SubrouteStops on SubrouteStops.subroute = Subroutes.id
 WHERE Subroutes.route=?
-ORDER BY Subroutes.id ASC, SubrouteStops.idx ASC
+ORDER BY Subroutes.id ASC, SubrouteStops.'index' ASC
     "#,
         route_id
     )
