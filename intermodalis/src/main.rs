@@ -63,6 +63,11 @@ pub(crate) fn build_paths(state: State) -> Router {
         // Basic roots
         .route("/api/parishes", get(handlers::get_parishes))
         .route("/api/stops", get(handlers::get_stops))
+        .route(
+            "/api/stops/within_boundary/:x0/:y0/:x1/:y1",
+            get(handlers::get_bounded_stops),
+        )
+        .route("/api/stops/:stop_id/spider", get(handlers::get_stop_spider))
         .route("/api/routes", get(handlers::get_routes))
         .route(
             "/api/routes/:route_id/schedule",

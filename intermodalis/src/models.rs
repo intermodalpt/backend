@@ -293,6 +293,8 @@ impl fmt::Display for Condition {
 pub(crate) mod responses {
     use crate::models::Calendar;
 
+    use std::collections::HashMap;
+
     use serde::Serialize;
     use utoipa::Component;
 
@@ -352,5 +354,32 @@ pub(crate) mod responses {
         pub subroute: i64,
         pub stops: Vec<i64>,
         pub diffs: Vec<Option<i64>>,
+    }
+
+    #[derive(Serialize, Component)]
+    pub struct SpiderRoute {
+        pub flag: Option<String>,
+        pub circular: Option<bool>,
+    }
+
+    #[derive(Serialize, Component)]
+    pub struct SpiderSubroute {
+        pub route: i64,
+        pub flag: Option<String>,
+        pub stop_sequence: Vec<i64>,
+    }
+
+    #[derive(Serialize, Component)]
+    pub struct SpiderStop {
+        pub name: Option<String>,
+        pub lat: Option<f32>,
+        pub lon: Option<f32>,
+    }
+
+    #[derive(Serialize, Component)]
+    pub struct SpiderMap {
+        pub routes: HashMap<i64, SpiderRoute>,
+        pub subroutes: HashMap<i64, SpiderSubroute>,
+        pub stops: HashMap<i64, SpiderStop>,
     }
 }

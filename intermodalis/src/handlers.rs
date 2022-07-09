@@ -20,12 +20,14 @@ use crate::models::{
     // This whole ordeal instead of just writing `responses::` because of uitopa
     // The macros do not support module paths
     responses::{
-        DateDeparture, Departure, Parish, Route, Subroute, SubrouteStops,
+        DateDeparture, Departure, Parish, Route, SpiderMap, SpiderRoute,
+        SpiderStop, SpiderSubroute, Subroute, SubrouteStops,
     },
     Calendar,
     Stop,
 };
 use crate::{Error, State};
+use std::collections::HashMap;
 
 use std::sync::Arc;
 
@@ -92,6 +94,119 @@ FROM Stops
     .unwrap();
 
     Ok((StatusCode::OK, Json(res)).into_response())
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/stops/{x0}/{y0}/{x1}/{y1}",
+    responses(
+        (
+            status = 200,
+            description = "List of stops that fit within a boundary",
+            body = [Stop])
+    )
+)]
+pub(crate) async fn get_bounded_stops(
+    Extension(state): Extension<Arc<State>>,
+    Path((x0, y0, x1, y1)): Path<(f64, f64, f64, f64)>,
+) -> Result<impl IntoResponse, Error> {
+    let res = sqlx::query_as!(
+        Stop,
+        r#"
+SELECT *
+FROM Stops
+WHERE lon >= ? AND lon <= ? AND lat <= ? AND lat >= ?
+    "#,
+        x0,
+        x1,
+        y0,
+        y1
+    )
+    .fetch_all(&state.pool)
+    .await
+    .unwrap();
+
+    Ok((StatusCode::OK, Json(res)).into_response())
+}
+
+#[utoipa::path(get, path = "/api/stops/{stop_id}/spider")]
+pub(crate) async fn get_stop_spider(
+    Extension(state): Extension<Arc<State>>,
+    Path(stop_id): Path<i64>,
+) -> Result<impl IntoResponse, Error> {
+    let res = sqlx::query!(
+        r#"
+SELECT Routes.id as route_id, Routes.flag as route_flag,
+    Routes.circular as route_circular,
+    Subroutes.id as subroute_id, Subroutes.flag as subroute_flag,
+    SubrouteStops.stop as stop_id,
+    Stops.name as stop_name,
+    Stops.lon as lon,
+    Stops.lat as lat
+FROM Routes
+JOIN Subroutes ON Routes.id = Subroutes.route
+JOIN SubrouteStops ON Subroutes.id = SubrouteStops.stop
+JOIN Stops ON Stops.id = SubrouteStops.stop
+WHERE Subroutes.id IN (
+    SELECT Subroutes.id
+    FROM Subroutes
+    JOIN SubrouteStops ON Subroutes.id = SubrouteStops.subroute
+    WHERE SubrouteStops.stop = ?
+)
+    "#,
+        stop_id
+    )
+    .fetch_all(&state.pool)
+    .await
+    .unwrap();
+
+    let mut routes: HashMap<i64, SpiderRoute> = HashMap::new();
+    let mut subroutes: HashMap<i64, SpiderSubroute> = HashMap::new();
+    let mut stops: HashMap<i64, SpiderStop> = HashMap::new();
+
+    for row in res {
+        if !routes.contains_key(&row.route_id) {
+            routes.insert(
+                row.route_id,
+                SpiderRoute {
+                    flag: row.route_flag,
+                    circular: row.route_circular.map(|val| val != 0),
+                },
+            );
+        }
+
+        if let Some(subroute) = subroutes.get_mut(&row.route_id) {
+            subroute.stop_sequence.push(row.stop_id);
+        } else {
+            subroutes.insert(
+                row.route_id,
+                SpiderSubroute {
+                    route: row.route_id,
+                    flag: row.subroute_flag,
+                    stop_sequence: vec![],
+                },
+            );
+        }
+
+        if !stops.contains_key(&row.stop_id) {
+            stops.insert(
+                row.route_id,
+                SpiderStop {
+                    name: row.stop_name,
+                    lat: row.lat,
+                    lon: row.lon,
+                },
+            );
+        }
+    }
+
+    let map = SpiderMap {
+        routes,
+        subroutes,
+        stops,
+    };
+
+    Ok((StatusCode::OK, Json(map)).into_response())
 }
 
 #[utoipa::path(
