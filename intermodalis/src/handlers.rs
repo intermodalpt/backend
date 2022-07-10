@@ -17,6 +17,7 @@
 */
 
 use crate::models::{
+    requests,
     // This whole ordeal instead of just writing `responses::` because of uitopa
     // The macros do not support module paths
     responses::{
@@ -94,6 +95,64 @@ FROM Stops
     .unwrap();
 
     Ok((StatusCode::OK, Json(res)).into_response())
+}
+
+pub(crate) async fn create_stop(
+    Extension(state): Extension<Arc<State>>,
+    Json(stop): Json<requests::NewStop>,
+) -> Result<impl IntoResponse, Error> {
+    let res = sqlx::query!(
+        r#"
+INSERT INTO Stops(name, short_name, street, door, lon, lat, source)
+VALUES (?, ?, ?, ?, ?, ?, ?)
+RETURNING id
+    "#,
+        stop.name,
+        stop.short_name,
+        stop.street,
+        stop.door,
+        stop.lon,
+        stop.lat,
+        stop.source
+    )
+    .fetch_one(&state.pool)
+    .await
+    .unwrap();
+
+    let returned: HashMap<&str, i64> = {
+        let mut map = HashMap::new();
+        map.insert("id", res.id);
+        map
+    };
+
+    Ok((StatusCode::OK, Json(returned)).into_response())
+}
+
+pub(crate) async fn update_stop(
+    Extension(state): Extension<Arc<State>>,
+    Json(stop): Json<requests::NewStop>,
+    Path(stop_id): Path<i64>,
+) -> Result<impl IntoResponse, Error> {
+    let _res = sqlx::query!(
+        r#"
+UPDATE Stops
+SET name=?, short_name=?, street=?, door=?, lon=?, lat=?, source=?
+WHERE id=?
+    "#,
+        stop.name,
+        stop.short_name,
+        stop.street,
+        stop.door,
+        stop.lon,
+        stop.lat,
+        stop.source,
+        stop_id
+    )
+    .fetch_one(&state.pool)
+    .await
+    .unwrap();
+
+    Ok((StatusCode::OK, "").into_response())
 }
 
 #[utoipa::path(

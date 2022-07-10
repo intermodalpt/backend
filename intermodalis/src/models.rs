@@ -290,6 +290,23 @@ impl fmt::Display for Condition {
     }
 }
 
+pub(crate) mod requests {
+    use serde::Deserialize;
+    use utoipa::Component;
+
+    #[derive(Deserialize, Component)]
+    pub struct NewStop {
+        pub source: String,
+        pub lon: f32,
+        pub lat: f32,
+        pub name: Option<String>,
+        pub short_name: Option<String>,
+        pub street: Option<String>,
+        pub door: Option<String>,
+        pub notes: Option<String>,
+    }
+}
+
 pub(crate) mod responses {
     use crate::models::Calendar;
 

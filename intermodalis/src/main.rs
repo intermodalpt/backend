@@ -37,7 +37,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use axum::http::Method;
-use axum::routing::get;
+use axum::routing::{get, patch, post};
 use axum::{Extension, Json, Router};
 use sqlx::sqlite::SqlitePool;
 use tower_http::cors::{Any, CorsLayer};
@@ -54,15 +54,17 @@ pub(crate) fn build_paths(state: State) -> Router {
     let config = Arc::new(Config::from("/api-doc/openapi.json"));
 
     let cors = CorsLayer::new()
-        // allow `GET` and `POST` when accessing the resource
-        .allow_methods([Method::GET, Method::POST])
-        // allow requests from any origin
+        .allow_methods([Method::GET, Method::POST, Method::PATCH])
+        // .allow_headers([header::CONTENT_TYPE, header::AUTHORIZATION])
+        .allow_headers(Any)
         .allow_origin(Any);
 
     Router::new()
         // Basic roots
         .route("/api/parishes", get(handlers::get_parishes))
         .route("/api/stops", get(handlers::get_stops))
+        .route("/api/stops/create", post(handlers::create_stop))
+        .route("/api/stops/update/:stop_id", patch(handlers::update_stop))
         .route(
             "/api/stops/within_boundary/:x0/:y0/:x1/:y1",
             get(handlers::get_bounded_stops),
