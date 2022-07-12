@@ -214,7 +214,7 @@
       crossorigin=""/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
-<link rel="stylesheet" href="/src/assets/css.css"/>
+<link rel="stylesheet" href="/src/assets/map.css"/>
 <h1>Mapa</h1>
 <Box>
     <div class="map" use:mapAction></div>

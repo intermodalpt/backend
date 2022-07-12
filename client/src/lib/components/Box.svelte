@@ -1,16 +1,10 @@
 <script>
-    export let padded;
+    export let padded = false;
 </script>
 
-{#if padded}
-    <div class="content padded">
-        <slot></slot>
-    </div>
-{:else}
-    <div class="content">
-        <slot></slot>
-    </div>
-{/if}
+<div class="content" class:padded="{padded}">
+    <slot></slot>
+</div>
 
 <style>
     .content {

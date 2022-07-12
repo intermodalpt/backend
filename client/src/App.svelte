@@ -52,8 +52,8 @@
 </div>
 
 <div id="content">
-    <div class="content-wrapper">
-        {#if page === "home"}
+    {#if page === "home"}
+        <div className="content-wrapper">
             <h1>O que é o Intermodalis?</h1>
             <Box padded=true>
                 <p>
@@ -64,18 +64,24 @@
                     O projeto é desenvolvido por uma comunidade e não tem qualquer afiliação a empresas de transportes.
                 </p>
             </Box>
-        {:else if page === "issues"}
+        </div>
+    {:else if page === "issues"}
+        <div class="content-wrapper">
             <Issues/>
-        {:else if page === "routes"}
+        </div>
+    {:else if page === "routes"}
+        <div className="content-wrapper">
             <RouteViewer/>
-        {:else if page === "map"}
-            <GlobalMap/>
-        {:else if page === "simulator"}
+        </div>
+    {:else if page === "map"}
+        <GlobalMap/>
+    {:else if page === "simulator"}
+        <div class="content-wrapper">
             <Simulator/>
-        {:else if page === "editor"}
-            <Editor/>
-        {/if}
-    </div>
+        </div>
+    {:else if page === "editor"}
+        <Editor/>
+    {/if}
 </div>
 
 <div id="grass"></div>

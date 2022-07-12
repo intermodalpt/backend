@@ -4,6 +4,7 @@
     import {createEventDispatcher} from 'svelte';
 
     export let stop;
+
     let name = stop.name;
     let short_name = stop.short_name;
     let street = stop.street;
@@ -32,16 +33,14 @@
     const dispatch = createEventDispatcher();
 </script>
 
-<Box padded="true">
-    Name: <input bind:value={name}><br>
-    Short name: <input bind:value={short_name}><br>
-    Street: <input bind:value={street}><br>
-    Door: <input bind:value={door}><br>
-    Source: <input bind:value={source}><br>
-    Notes:<br>
-    <!--    <textarea bind:notes></textarea><br>-->
+Name: <input bind:value={name}><br>
+Short name: <input bind:value={short_name}><br>
+Street: <input bind:value={street}><br>
+Door: <input bind:value={door}><br>
+Source: <input bind:value={source}><br>
+Notes:<br>
+<!--    <textarea bind:notes></textarea><br>-->
 
-    <button on:click={save}>
-        Save
-    </button>
-</Box>
+<button on:click={save}>
+    Save
+</button>
