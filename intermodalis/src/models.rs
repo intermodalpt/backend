@@ -305,6 +305,18 @@ pub(crate) mod requests {
         pub door: Option<String>,
         pub notes: Option<String>,
     }
+
+    #[derive(Deserialize, Component)]
+    pub struct SubrouteStops {
+        pub stops: Vec<i64>,
+        pub diffs: Vec<Option<i64>>,
+    }
+
+    #[derive(Deserialize, Component)]
+    pub struct ChangeSubrouteStops {
+        pub from: SubrouteStops,
+        pub to: SubrouteStops,
+    }
 }
 
 pub(crate) mod responses {
@@ -333,7 +345,8 @@ pub(crate) mod responses {
         pub(crate) id: i64,
         pub(crate) subroutes: Vec<Subroute>,
         #[component(example = "Azeitão (Circular)")]
-        pub(crate) flag: Option<String>,
+        pub(crate) code: String,
+        pub(crate) name: String,
         #[component(example = true)]
         pub(crate) circular: Option<bool>,
         pub(crate) main_subroute: Option<i64>,
@@ -375,8 +388,9 @@ pub(crate) mod responses {
 
     #[derive(Serialize, Component)]
     pub struct SpiderRoute {
-        pub flag: Option<String>,
-        pub circular: Option<bool>,
+        pub code: String,
+        pub name: String,
+        pub circular: bool,
     }
 
     #[derive(Serialize, Component)]

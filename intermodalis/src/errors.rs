@@ -25,8 +25,8 @@ use utoipa::Component;
 pub enum Error {
     #[error("Storage credentials refused")]
     DatabaseDeserialization,
-    // #[error("Requested data not in the storage")]
-    // NotFoundUpstream,
+    #[error("Requested data not in the storage")]
+    NotFoundUpstream,
     #[error("The provided information failed validation")]
     ValidationFailure,
 }
@@ -38,9 +38,9 @@ impl IntoResponse for Error {
                 (StatusCode::INTERNAL_SERVER_ERROR, format!("{}", &self))
                     .into_response()
             }
-            // Error::NotFoundUpstream => {
-            //     (StatusCode::NOT_FOUND, format!("{}", &self)).into_response()
-            // }
+            Error::NotFoundUpstream => {
+                (StatusCode::NOT_FOUND, format!("{}", &self)).into_response()
+            }
             Error::ValidationFailure => {
                 (StatusCode::BAD_REQUEST, format!("{}", &self)).into_response()
             }

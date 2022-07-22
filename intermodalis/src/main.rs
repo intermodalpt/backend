@@ -70,7 +70,12 @@ pub(crate) fn build_paths(state: State) -> Router {
             get(handlers::get_bounded_stops),
         )
         .route("/api/stops/:stop_id/spider", get(handlers::get_stop_spider))
+        .route("/api/stops/spider", post(handlers::get_stops_spider))
         .route("/api/routes", get(handlers::get_routes))
+        .route(
+            "/api/routes/:route_id",
+            get(handlers::get_route),
+        )
         .route(
             "/api/routes/:route_id/schedule",
             get(handlers::get_schedule),
@@ -82,6 +87,10 @@ pub(crate) fn build_paths(state: State) -> Router {
         .route(
             "/api/routes/:route_id/stops",
             get(handlers::get_route_stops),
+        )
+        .route(
+            "/api/routes/:route_id/stops/subroutes/:subroute_id",
+            patch(handlers::patch_subroute_stops),
         )
         .layer(Extension(Arc::new(state)))
         .route(
@@ -101,7 +110,7 @@ async fn main() {
         pool: SqlitePool::connect("sqlite:db.sqlite").await.expect(""),
     };
 
-    let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
+    let addr = SocketAddr::from(([0, 0, 0, 0], 1893));
 
     axum::Server::bind(&addr)
         .serve(build_paths(state).into_make_service())

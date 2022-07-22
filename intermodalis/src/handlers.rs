@@ -38,6 +38,8 @@ use axum::response::IntoResponse;
 use axum::{Extension, Json};
 use chrono::NaiveDate;
 use itertools::Itertools;
+use sqlx::sqlite::SqliteRow;
+use sqlx::Row;
 use utoipa_swagger_ui::Config;
 
 #[utoipa::path(
@@ -84,10 +86,12 @@ pub(crate) async fn get_stops(
     let res = sqlx::query_as!(
         Stop,
         r#"
---SELECT id, name, short_name, parish, lat, lon, osm_id
 SELECT *
 FROM Stops
---WHERE source = 'cmet'
+--WHERE id IN (
+--    SELECT DISTINCT stop
+--    FROM SubrouteStops
+--)
     "#
     )
     .fetch_all(&state.pool)
@@ -174,7 +178,9 @@ pub(crate) async fn get_bounded_stops(
         r#"
 SELECT *
 FROM Stops
-WHERE lon >= ? AND lon <= ? AND lat <= ? AND lat >= ?
+WHERE lon >= ? AND lon <= ? AND lat <= ? AND lat >= ? AND id IN (
+    SELECT DISTINCT stop FROM SubrouteStops
+)
     "#,
         x0,
         x1,
@@ -195,8 +201,8 @@ pub(crate) async fn get_stop_spider(
 ) -> Result<impl IntoResponse, Error> {
     let res = sqlx::query!(
         r#"
-SELECT Routes.id as route_id, Routes.flag as route_flag,
-    Routes.circular as route_circular,
+SELECT Routes.id as route_id, Routes.code as route_code,
+    Routes.name as route_name, Routes.circular as route_circular,
     Subroutes.id as subroute_id, Subroutes.flag as subroute_flag,
     SubrouteStops.stop as stop_id,
     Stops.name as stop_name,
@@ -204,7 +210,7 @@ SELECT Routes.id as route_id, Routes.flag as route_flag,
     Stops.lat as lat
 FROM Routes
 JOIN Subroutes ON Routes.id = Subroutes.route
-JOIN SubrouteStops ON Subroutes.id = SubrouteStops.stop
+JOIN SubrouteStops ON Subroutes.id = SubrouteStops.subroute
 JOIN Stops ON Stops.id = SubrouteStops.stop
 WHERE Subroutes.id IN (
     SELECT Subroutes.id
@@ -212,6 +218,7 @@ WHERE Subroutes.id IN (
     JOIN SubrouteStops ON Subroutes.id = SubrouteStops.subroute
     WHERE SubrouteStops.stop = ?
 )
+ORDER BY SubrouteStops.idx
     "#,
         stop_id
     )
@@ -228,17 +235,21 @@ WHERE Subroutes.id IN (
             routes.insert(
                 row.route_id,
                 SpiderRoute {
-                    flag: row.route_flag,
-                    circular: row.route_circular.map(|val| val != 0),
+                    code: row.route_code,
+                    name: row.route_name,
+                    circular: row
+                        .route_circular
+                        .map(|val| val != 0)
+                        .unwrap_or(false),
                 },
             );
         }
 
-        if let Some(subroute) = subroutes.get_mut(&row.route_id) {
+        if let Some(subroute) = subroutes.get_mut(&row.subroute_id) {
             subroute.stop_sequence.push(row.stop_id);
         } else {
             subroutes.insert(
-                row.route_id,
+                row.subroute_id,
                 SpiderSubroute {
                     route: row.route_id,
                     flag: row.subroute_flag,
@@ -249,7 +260,119 @@ WHERE Subroutes.id IN (
 
         if !stops.contains_key(&row.stop_id) {
             stops.insert(
+                row.stop_id,
+                SpiderStop {
+                    name: row.stop_name,
+                    lat: row.lat,
+                    lon: row.lon,
+                },
+            );
+        }
+    }
+
+    let map = SpiderMap {
+        routes,
+        subroutes,
+        stops,
+    };
+
+    Ok((StatusCode::OK, Json(map)).into_response())
+}
+
+struct SpiderRow {
+    route_id: i64,
+    route_code: String,
+    route_name: String,
+    route_circular: Option<i64>,
+    subroute_id: i64,
+    subroute_flag: Option<String>,
+    stop_id: i64,
+    stop_name: Option<String>,
+    lon: Option<f32>,
+    lat: Option<f32>,
+}
+
+pub(crate) async fn get_stops_spider(
+    Extension(state): Extension<Arc<State>>,
+    Json(stops): Json<Vec<i64>>,
+) -> Result<impl IntoResponse, Error> {
+    let stop_ids = stops.iter().join(",");
+
+    let res = sqlx::query(&format!(
+        "\
+SELECT Routes.id as route_id,
+    Routes.code as route_code,
+    Routes.name as route_name,
+    Routes.circular as route_circular,
+    Subroutes.id as subroute_id,
+    Subroutes.flag as subroute_flag,
+    SubrouteStops.stop as stop_id,
+    Stops.name as stop_name,
+    Stops.lon as lon,
+    Stops.lat as lat
+FROM Routes
+JOIN Subroutes ON Routes.id = Subroutes.route
+JOIN SubrouteStops ON Subroutes.id = SubrouteStops.subroute
+JOIN Stops ON Stops.id = SubrouteStops.stop
+WHERE Subroutes.id IN (
+    SELECT Subroutes.id
+    FROM Subroutes
+    JOIN SubrouteStops ON Subroutes.id = SubrouteStops.subroute
+    WHERE SubrouteStops.stop IN ({stop_ids})
+)
+ORDER BY SubrouteStops.idx"
+    ))
+    .map(|row: SqliteRow| SpiderRow {
+        route_id: row.get(0),
+        route_code: row.get(1),
+        route_name: row.get(2),
+        route_circular: row.get(3),
+        subroute_id: row.get(4),
+        subroute_flag: row.get(5),
+        stop_id: row.get(6),
+        stop_name: row.get(7),
+        lon: row.get(8),
+        lat: row.get(9),
+    })
+    .fetch_all(&state.pool)
+    .await
+    .unwrap();
+
+    let mut routes: HashMap<i64, SpiderRoute> = HashMap::new();
+    let mut subroutes: HashMap<i64, SpiderSubroute> = HashMap::new();
+    let mut stops: HashMap<i64, SpiderStop> = HashMap::new();
+
+    for row in res {
+        if !routes.contains_key(&row.route_id) {
+            routes.insert(
                 row.route_id,
+                SpiderRoute {
+                    code: row.route_code,
+                    name: row.route_name,
+                    circular: row
+                        .route_circular
+                        .map(|val| val != 0)
+                        .unwrap_or(false),
+                },
+            );
+        }
+
+        if let Some(subroute) = subroutes.get_mut(&row.subroute_id) {
+            subroute.stop_sequence.push(row.stop_id);
+        } else {
+            subroutes.insert(
+                row.subroute_id,
+                SpiderSubroute {
+                    route: row.route_id,
+                    flag: row.subroute_flag,
+                    stop_sequence: vec![],
+                },
+            );
+        }
+
+        if !stops.contains_key(&row.stop_id) {
+            stops.insert(
+                row.stop_id,
                 SpiderStop {
                     name: row.stop_name,
                     lat: row.lat,
@@ -280,10 +403,15 @@ pub(crate) async fn get_routes(
 ) -> Result<impl IntoResponse, Error> {
     let res = sqlx::query!(
         r#"
-SELECT Routes.id as route, Routes.flag as flag, Routes.circular as circular,
+SELECT Routes.id as route,
+    Routes.code as code,
+    Routes.name as name,
+    Routes.circular as circular,
     Routes.main_subroute as main_subroute,
-    Subroutes.id as subroute, Subroutes.flag as subroute_flag,
-    Subroutes.cached_from as from_stop, Subroutes.cached_to as to_stop
+    Subroutes.id as subroute,
+    Subroutes.flag as subroute_flag,
+    Subroutes.cached_from as from_stop,
+    Subroutes.cached_to as to_stop
 FROM Routes
 LEFT JOIN Subroutes on Routes.id = Subroutes.route
 ORDER BY Routes.id asc
@@ -300,7 +428,8 @@ ORDER BY Routes.id asc
     if let Some(row) = row_iter.next() {
         let mut curr_route = Route {
             id: row.route,
-            flag: row.flag,
+            name: row.name,
+            code: row.code,
             circular: row.circular.map(|val| val != 0),
             main_subroute: row.main_subroute,
             subroutes: vec![Subroute {
@@ -323,7 +452,8 @@ ORDER BY Routes.id asc
                 routes.push(curr_route);
                 curr_route = Route {
                     id: row.route,
-                    flag: row.flag,
+                    code: row.code,
+                    name: row.name,
                     circular: row.circular.map(|val| val != 0),
                     main_subroute: row.main_subroute,
                     subroutes: vec![Subroute {
@@ -339,6 +469,63 @@ ORDER BY Routes.id asc
     }
 
     Ok((StatusCode::OK, Json(routes)).into_response())
+}
+
+pub(crate) async fn get_route(
+    Extension(state): Extension<Arc<State>>,
+    Path(route_id): Path<i64>,
+) -> Result<impl IntoResponse, Error> {
+    let res = sqlx::query!(
+        r#"
+SELECT Routes.id as route,
+    Routes.code as code,
+    Routes.name as name,
+    Routes.circular as circular,
+    Routes.main_subroute as main_subroute,
+    Subroutes.id as subroute,
+    Subroutes.flag as subroute_flag,
+    Subroutes.cached_from as from_stop,
+    Subroutes.cached_to as to_stop
+FROM Routes
+LEFT JOIN Subroutes on Routes.id = Subroutes.route
+WHERE Routes.id = ?
+ORDER BY Routes.id asc
+"#,
+        route_id
+    )
+    .fetch_all(&state.pool)
+    .await
+    .unwrap();
+
+    let mut row_iter = res.into_iter();
+
+    if let Some(row) = row_iter.next() {
+        let mut curr_route = Route {
+            id: row.route,
+            name: row.name,
+            code: row.code,
+            circular: row.circular.map(|val| val != 0),
+            main_subroute: row.main_subroute,
+            subroutes: vec![Subroute {
+                id: row.subroute,
+                flag: row.subroute_flag,
+                cached_from: row.from_stop,
+                cached_to: row.to_stop,
+            }],
+        };
+
+        for row in row_iter {
+            curr_route.subroutes.push(Subroute {
+                id: row.subroute,
+                flag: row.subroute_flag,
+                cached_from: row.from_stop,
+                cached_to: row.to_stop,
+            });
+        }
+        Ok((StatusCode::OK, Json(curr_route)).into_response())
+    } else {
+        Err(Error::NotFoundUpstream)
+    }
 }
 
 #[utoipa::path(
@@ -369,7 +556,9 @@ pub(crate) async fn get_schedule(
 ) -> Result<impl IntoResponse, Error> {
     let res = sqlx::query!(
         r#"
-SELECT Subroutes.id as subroute, Departures.time as time, Departures.calendar as calendar
+SELECT Subroutes.id as subroute,
+    Departures.time as time,
+    Departures.calendar as calendar
 FROM Subroutes
 JOIN Departures on Departures.subroute = Subroutes.id
 WHERE Subroutes.route=?
@@ -475,7 +664,6 @@ WHERE Subroutes.route=?
         (
             status = 200,
             description = "Stops a route makes along its subroutes",
-            body = [DateDeparture]
         ),
         (
             status = 404,
@@ -493,7 +681,7 @@ SELECT Subroutes.id as subroute, SubrouteStops.stop as stop, SubrouteStops.time_
 FROM Subroutes
 JOIN SubrouteStops on SubrouteStops.subroute = Subroutes.id
 WHERE Subroutes.route=?
-ORDER BY Subroutes.id ASC, SubrouteStops.'index' ASC
+ORDER BY Subroutes.id ASC, SubrouteStops.idx ASC
     "#,
         route_id
     )
@@ -523,6 +711,142 @@ ORDER BY Subroutes.id ASC, SubrouteStops.'index' ASC
         .collect::<Vec<_>>();
 
     Ok((StatusCode::OK, Json(subroute_stops)).into_response())
+}
+
+pub(crate) async fn patch_subroute_stops(
+    Extension(state): Extension<Arc<State>>,
+    Path((route_id, subroute_id)): Path<(i64, i64)>,
+    Json(request): Json<requests::ChangeSubrouteStops>,
+) -> Result<impl IntoResponse, String> {
+    // Check if the current stops match the requests's check
+    if request.from.stops.len() != request.from.diffs.len()
+        || request.to.stops.len() != request.to.diffs.len()
+    {
+        return Err("Size divergence".to_string());
+    }
+
+    let existing_query_res = sqlx::query!(
+        r#"
+SELECT SubrouteStops.stop as stop, SubrouteStops.time_to_next as diff
+FROM Subroutes
+JOIN SubrouteStops on SubrouteStops.subroute = Subroutes.id
+WHERE Subroutes.route=? AND Subroutes.id=?
+ORDER BY SubrouteStops.idx ASC
+    "#,
+        route_id,
+        subroute_id
+    )
+    .fetch_all(&state.pool)
+    .await
+    .unwrap();
+
+    // Check for the difference from stored to future
+    let stored_len = existing_query_res.len();
+    let check_len = request.from.stops.len();
+    let to_store_len = request.to.stops.len() as i64;
+    let stored_changes = to_store_len as i32 - stored_len as i32;
+
+    if check_len != stored_len {
+        return Err("Check mismatch".to_string());
+    }
+
+    let check_matched = existing_query_res
+        .iter()
+        .zip(request.from.stops.iter().zip(request.from.diffs.iter()))
+        .all(|(row, (from_stop, from_diff))| {
+            row.stop == *from_stop && row.diff == *from_diff
+        });
+
+    if !check_matched {
+        return Err("Check mismatch".to_string());
+    }
+
+    let existing_duplicates_count = existing_query_res
+        .iter()
+        .zip(request.to.stops.iter().zip(request.to.diffs.iter()))
+        .filter(|(row, (from_stop, from_diff))| {
+            row.stop == **from_stop && row.diff == **from_diff
+        })
+        .count();
+
+    if stored_changes == 0 && existing_duplicates_count == stored_len {
+        return Ok((StatusCode::OK, "No changes").into_response());
+    }
+
+    if stored_changes < 0 {
+        let deleted_rows = sqlx::query!(
+            r#"
+DELETE FROM SubrouteStops
+WHERE Subroute=? AND idx>=?
+    "#,
+            subroute_id,
+            to_store_len
+        )
+        .execute(&state.pool)
+        .await
+        .unwrap()
+        .rows_affected();
+
+        if deleted_rows != stored_changes.abs() as u64 {
+            return Err("Detected an unexpected amount of rows".to_string());
+        }
+    } else if stored_changes > 0 {
+        let additional_entries = request
+            .to
+            .stops
+            .iter()
+            .zip(request.to.diffs.iter())
+            .skip(stored_len)
+            .enumerate();
+
+        for (index, (stop, diff)) in additional_entries {
+            let index = (stored_len + index) as i64;
+            let _res = sqlx::query!(
+                r#"
+INSERT INTO SubrouteStops(subroute, stop, time_to_next, idx)
+VALUES (?, ?, ?, ?)
+    "#,
+                subroute_id,
+                stop,
+                diff,
+                index
+            )
+            .execute(&state.pool)
+            .await
+            .unwrap();
+        }
+    };
+
+    if existing_duplicates_count != stored_len {
+        // Update the already existing records
+        let overlapping_entries = request
+            .to
+            .stops
+            .iter()
+            .zip(request.to.diffs.into_iter())
+            .take(stored_len)
+            .enumerate();
+
+        for (index, (stop, diff)) in overlapping_entries {
+            let index = index as i64;
+            let _res = sqlx::query!(
+                r#"
+UPDATE SubrouteStops
+SET stop=?, time_to_next=?
+WHERE  subroute=? AND idx=?
+    "#,
+                stop,
+                diff,
+                subroute_id,
+                index
+            )
+            .execute(&state.pool)
+            .await
+            .unwrap();
+        }
+    }
+
+    Ok((StatusCode::OK, "").into_response())
 }
 
 #[allow(clippy::unused_async)]
