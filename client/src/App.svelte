@@ -1,10 +1,9 @@
 <script>
     import {onMount} from 'svelte';
     import Issues from './lib/Issues.svelte'
-    import RouteViewer from './lib/RouteViewer.svelte'
-    import GlobalMap from './lib/GlobalMap.svelte'
+    import RouteViewer from './lib/Operators.svelte'
+    import GlobalMap from './lib/Map.svelte'
     import Simulator from './lib/Simulator.svelte'
-    import Editor from './lib/editor/Editor.svelte'
     import Box from './lib/components/Box.svelte'
     import logo from './assets/logo.svg'
 
@@ -15,7 +14,7 @@
         // the poor man's router!
         const path = window.location.hash.slice(1);
 
-        if (path === '/') {
+        if (path === '') {
             page = "home";
         } else if (path.startsWith('/issues')) {
             page = "issues";
@@ -42,18 +41,17 @@
             <span>Intermodalis</span>
         </a>
         <ul id="menu">
-            <li><a href="#/issues">Avisos</a></li>
-            <li><a href="#/routes">Linhas</a></li>
             <li><a href="#/map">Mapa</a></li>
-            <li><a href="#/simulator">Simulador</a></li>
-            <li><a href="#/editor">Editor</a></li>
+            <li><a href="#/routes">Operadoras</a></li>
+            <li><a href="#/issues">Avisos</a></li>
+            <!--            <li><a href="#/simulator">Simulador</a></li>-->
         </ul>
     </div>
 </div>
 
 <div id="content">
     {#if page === "home"}
-        <div className="content-wrapper">
+        <div class="content-wrapper">
             <h1>O que é o Intermodalis?</h1>
             <Box padded=true>
                 <p>
@@ -70,17 +68,17 @@
             <Issues/>
         </div>
     {:else if page === "routes"}
-        <div className="content-wrapper">
+        <div class="content-wrapper">
             <RouteViewer/>
         </div>
     {:else if page === "map"}
-        <GlobalMap/>
+        <div class="content-wrapper">
+            <GlobalMap/>
+        </div>
     {:else if page === "simulator"}
         <div class="content-wrapper">
             <Simulator/>
         </div>
-    {:else if page === "editor"}
-        <Editor/>
     {/if}
 </div>
 
