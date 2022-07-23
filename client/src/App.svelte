@@ -6,6 +6,8 @@
     import Simulator from './lib/Simulator.svelte'
     import Box from './lib/components/Box.svelte'
     import logo from './assets/logo.svg'
+    import {initCache, routes, stops} from "./cache.js";
+    import {api_server} from "./settings.js";
 
 
     let page;
@@ -29,7 +31,10 @@
         }
     }
 
-    onMount(hashchange);
+    onMount(async () => {
+        hashchange();
+        await initCache();
+    });
 </script>
 
 <svelte:window on:hashchange={hashchange}/>

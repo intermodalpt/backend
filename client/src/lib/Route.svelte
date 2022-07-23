@@ -1,44 +1,59 @@
 <script>
-    import {createEventDispatcher} from "svelte";
     import L from "leaflet";
     import {api_server} from "../settings.js";
     import {calc_route_multipoly} from "../utils.js";
+    import {routes, stops} from "../cache.js";
 
-    export let spiderMap;
     export let routeId;
-    export let cache;
 
     let tab = 0;
 
-    let stops;
+    let routeStops;
     let stopIndex;
-    let route = cache.routes.find(r => r.id === routeId);
+    let route;
 
-    let selectedSubrouteId = route.subroutes[0].id;
-    let subroute = route.subroutes.find(sr => sr.id === selectedSubrouteId);
+    let selectedSubrouteId;
+    let subroute;
     let subrouteStops;
 
     let map;
     let subrouteLayer = L.layerGroup();
 
-    const dispatch = createEventDispatcher();
     let selectedStop = 0;
     let selectedStopMarker;
-
 
     $: subrouteStops && map && drawSubroute();
 
 
-    fetch(`${api_server}/api/routes/${routeId}/stops`)
-        .then(r => r.json())
-        .then(data => {
-            data.forEach(sr => sr.stops.map(stopId => cache.stops[stopId]));
-            stops = data;
-            subrouteStops = stops.find(stops => {
-                return stops.subroute === subroute.id
-            });
-            stopIndex = Object.fromEntries(subrouteStops.stops.map(stop => [stop, cache.stops[stop]]));
+    routeId.subscribe(routeId => {
+        if (routeId === undefined) {
+            return;
+        }
+        let cachedRoutes = $routes;
+
+        route = cachedRoutes.find(r => {
+            return r.id === routeId;
         });
+        if (!route) {
+            return;
+        }
+
+        selectedSubrouteId = route.subroutes[0].id;
+        subroute = route.subroutes.find(sr => {
+            return sr.id === selectedSubrouteId;
+        });
+
+        fetch(`${api_server}/api/routes/${routeId}/stops`)
+            .then(r => r.json())
+            .then(data => {
+                data.forEach(sr => sr.stops.map(stopId => stops[stopId]));
+                routeStops = data;
+                subrouteStops = routeStops.find(stops => {
+                    return stops.subroute === subroute.id
+                });
+                stopIndex = Object.fromEntries(subrouteStops.stops.map(stop => [stop, stops[stop]]));
+            });
+    });
 
 
     let stopIcon = L.icon({
@@ -47,18 +62,13 @@
         iconAnchor: [8, 8],
     });
 
-    function close() {
-        dispatch('close');
-    }
-
     function drawSubroute() {
-        let stops = cache.stops;
-
+        let cachedStops = $stops;
         subrouteLayer.removeFrom(map);
         subrouteLayer = L.layerGroup();
 
 
-        let segments = calc_route_multipoly(stops, subrouteStops.stops);
+        let segments = calc_route_multipoly(cachedStops, subrouteStops.stops);
 
         let outerPolyline = L.polyline(segments, {color: 'black', weight: 6}).addTo(subrouteLayer);
         let innerPolyline = L.polyline(segments, {color: 'white', weight: 4}).addTo(subrouteLayer);
@@ -70,7 +80,7 @@
 
 
         for (let i = 0; i < subrouteStops.stops.length; i++) {
-            let stop = stops[subrouteStops.stops[i]];
+            let stop = cachedStops[subrouteStops.stops[i]];
             let diff = subrouteStops.diffs[i];
 
             if (stop.lat && stop.lon) {
@@ -84,7 +94,7 @@
     }
 
     function selectStop(stopId) {
-        let stop = cache.stops[stopId];
+        let stop = $stops[stopId];
         if (stop.lat && stop.lon) {
             map.once("moveend zoomend", () => {
                 selectedStop = stopId;
@@ -103,7 +113,7 @@
 
     function changeSubroute(e) {
         subroute = route.subroutes.find(sr => sr.id === selectedSubrouteId);
-        subrouteStops = stops.find(stops => {
+        subrouteStops = routeStops.find(stops => {
             return stops.subroute === subroute.id
         });
     }
@@ -136,6 +146,7 @@
     function mapAction(container) {
         map = createMap(container);
 
+
         return {
             destroy: () => {
                 map.remove();
@@ -145,98 +156,101 @@
     }
 </script>
 
-<div class="header">
-    <span class="code">{route.code}</span>
-    <div class="title-sr-pair">
-        <span class="title">{route.name}</span>
-        <select bind:value={selectedSubrouteId} on:change={changeSubroute}>
+{#if route}
+    <div id="route-header">
+
+        <div class="title-sr-pair">
+            <span class="code">{route.code}</span>
+            <span class="title">{route.name}</span>
+        </div>
+        Variante:
+        <select class="subroute-selector" bind:value={selectedSubrouteId} on:change={changeSubroute}>
             {#each route.subroutes as subroute}
                 <option value={subroute.id}>{subroute.flag}</option>
             {/each}
         </select>
     </div>
-    <span style="flex-grow: 1"></span>
-    <span class="close" on:click={close}>x</span>
-</div>
 
-<div>
-    <div class="tabs">
-        <span class="tab" class:selected="{tab === 0}" on:click={() => {tab = 0}}>Percurso</span>
-        <span class="tab" class:selected="{tab === 1}" on:click={() => {tab = 1}}>Horário</span>
-    </div>
-    {#if tab === 0}
-        <div class="route-map">
-            <div class="stops-pane">
-                <div class="stops-header">Paragens (⬇)</div>
-                <ul class="stop-list">
-                    {#if subrouteStops}
-                        {#each subrouteStops.stops as stop, i}
-                            <li class="stop" class:selected="{selectedStop === stop}"
-                                on:click={() => selectStop(stop)}>
-                                {cache.stops[stop].short_name}
-                            </li>
-                        {/each}
-                    {/if}
-                </ul>
-                <div class="stops-footer"></div>
+    <div>
+        <div class="tabs">
+            <span class="tab" class:selected="{tab === 0}" on:click={() => {tab = 0}}>Percurso</span>
+            <span class="tab" class:selected="{tab === 1}" on:click={() => {tab = 1}}>Horário</span>
+        </div>
+        {#if tab === 0}
+            <div class="route-map">
+                <div class="stops-pane">
+                    <div class="stops-header">Paragens (⬇)</div>
+                    <ul class="stop-list">
+                        {#if subrouteStops}
+                            {#each subrouteStops.stops as stop, i}
+                                <li class="stop" class:selected="{selectedStop === stop}"
+                                    on:click={() => selectStop(stop)}>
+                                    {$stops[stop].short_name}
+                                    <br>
+                                </li>
+                            {/each}
+                        {/if}
+                    </ul>
+                    <div class="stops-footer"></div>
+                </div>
+                <div class="map" use:mapAction></div>
             </div>
-            <div class="map" use:mapAction></div>
-        </div>
-    {:else if tab === 1}
-        <div class="schedule">
-            <div>Não faças hoje o que podes fazer amanhã</div>
-            <table>
-                <thead>
-                <tr>
-                    <td>04</td>
-                    <td>05</td>
-                    <td>06</td>
-                    <td>07</td>
-                    <td>08</td>
-                    <td>09</td>
-                    <td>10</td>
-                    <td>11</td>
-                    <td>12</td>
-                    <td>13</td>
-                    <td>14</td>
-                    <td>15</td>
-                    <td>16</td>
-                    <td>17</td>
-                    <td>18</td>
-                    <td>19</td>
-                    <td>20</td>
-                    <td>21</td>
-                    <td>22</td>
-                    <td>23</td>
-                    <td>00</td>
-                    <td>01</td>
-                    <td>02</td>
-                </tr>
-                </thead>
-            </table>
-        </div>
-    {/if}
-</div>
+        {:else if tab === 1}
+            <div class="schedule">
+                <div>Não faças hoje o que podes fazer amanhã</div>
+                <table>
+                    <thead>
+                    <tr>
+                        <td>04</td>
+                        <td>05</td>
+                        <td>06</td>
+                        <td>07</td>
+                        <td>08</td>
+                        <td>09</td>
+                        <td>10</td>
+                        <td>11</td>
+                        <td>12</td>
+                        <td>13</td>
+                        <td>14</td>
+                        <td>15</td>
+                        <td>16</td>
+                        <td>17</td>
+                        <td>18</td>
+                        <td>19</td>
+                        <td>20</td>
+                        <td>21</td>
+                        <td>22</td>
+                        <td>23</td>
+                        <td>00</td>
+                        <td>01</td>
+                        <td>02</td>
+                    </tr>
+                    </thead>
+                </table>
+            </div>
+        {/if}
+    </div>
+{/if}
 
 
 <style>
-    .header {
-        font-size: 2rem;
-        display: flex;
-        align-items: start;
+    #route-header {
+        /*display: flex;*/
+        /*align-items: start;*/
         margin-bottom: 20px;
+        font-size: 1.5rem;
     }
 
     .title-sr-pair {
         display: flex;
-        flex-direction: column;
+        align-items: start;
     }
 
-    .close {
-        padding: 5px 15px;
-        background-color: #ce5252;
-        border-radius: 8px;
-        border: 2px solid #ad1717;
+    .subroute-selector {
+        border: 0;
+        border-radius: 12px;
+        font-size: 1.5rem;
+        background-color: #d8dee9;
     }
 
     .code {
@@ -245,9 +259,13 @@
         color: white;
         background-color: darkred;
         padding: 0.1em 0.3em;
-        font-size: 1.2em;
+        font-size: 2.5rem;
         display: inline-block;
         margin-right: 20px;
+    }
+
+    .title {
+        font-size: 2.3rem;
     }
 
     .route-map {

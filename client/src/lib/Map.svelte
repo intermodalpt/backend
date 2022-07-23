@@ -2,29 +2,17 @@
     import L from 'leaflet';
     import 'leaflet.markercluster';
     import {api_server} from "../settings.js";
-    import {calc_route_multipoly, randomHexColor} from "../utils.js";
+    import {calc_route_multipoly} from "../utils.js";
     import RouteListing from "./components/RouteListing.svelte";
     import Route from "./Route.svelte";
+    import {writable} from 'svelte/store';
+    import {stops} from "../cache.js";
 
     let map;
     let amlgeo;
     let parishesgeo;
-    let cache;
 
-    function loadCache() {
-        Promise.all([
-            fetch(`${api_server}/api/routes`).then(r => r.json()),
-            fetch(`${api_server}/api/stops`).then(r => r.json())
-        ]).then(([routes, stops]) => {
-
-            cache = {
-                routes: routes,
-                stops: Object.fromEntries(stops.map(stop => [stop.id, stop]))
-            }
-        });
-    }
-    loadCache();
-
+    $: cachedStops = stops;
 
     let mapLayers = {
         parishes: L.layerGroup(),
@@ -44,8 +32,7 @@
 
     let currentSpider;
     let selectedRoutes;
-    let selectedRoute;
-
+    const selectedRoute = writable(undefined);
 
     function zone_color(zone) {
         switch (zone) {
@@ -165,8 +152,10 @@
                 },
                 onEachFeature: onMunicipalityFeature
             }).addTo(mapLayers.municipalities);
-            mapLayers.municipalities.addTo(map);
-            map.fitBounds(amlgeo.getBounds());
+            if (map) {
+                mapLayers.municipalities.addTo(map);
+                map.fitBounds(amlgeo.getBounds());
+            }
         });
 
     fetch("/freguesias.min.geojson")
@@ -229,7 +218,9 @@
             polyline.addTo(mapLayers.spiderMap)
         });
         mapLayers.spiderMap.addTo(map);
-        map.fitBounds(bounds);
+        if (bounds.isValid()){
+            map.fitBounds(bounds);
+        }
         selectedPolylines = innerPolyLines;
     }
 
@@ -243,7 +234,9 @@
             stop.id = parseInt(key);
         }
 
-        selectedRoute = routeId;
+        $selectedRoute = routeId;
+
+        document.getElementById('route').scrollIntoView(true);
     }
 
     function hintRoute(e) {
@@ -399,23 +392,21 @@
 <link rel="stylesheet" href="/map.css"/>
 
 
-<div>
+<div class="map" use:mapAction></div>
 
-</div>
-<div class="{'map ' + (selectedRoute ? 'hide' : '')}" use:mapAction></div>
+<RouteListing
+        bind:routes={selectedRoutes}
+        on:openroute={openRoute}
+        on:hint={hintRoute}
+        on:drophint={dropRouteHint}/>
 
-{#if selectedRoute}
-    <Route bind:routeId={selectedRoute}
-           bind:spiderMap={currentSpider}
-           bind:cache={cache}
-           on:close={() => {selectedRoute = undefined}}/>
-{:else }
-    <RouteListing
-            bind:routes={selectedRoutes}
-            on:openroute={openRoute}
-            on:hint={hintRoute}
-            on:drophint={dropRouteHint}/>
+{#if $selectedRoute}
+    <hr class="separator">
 {/if}
+
+<div id="route">
+    <Route routeId={selectedRoute}/>
+</div>
 
 <style>
     .map {
@@ -423,7 +414,8 @@
         border-radius: 12px;
     }
 
-    .hide {
-        display: none
+    .separator {
+        margin-top: 2rem;
+        margin-bottom: 2rem;
     }
 </style>
