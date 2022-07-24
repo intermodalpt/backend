@@ -5,6 +5,7 @@ import sqlite3
 from itertools import zip_longest
 
 import requests
+import ftfy
 
 from consts import DB_PATH
 from entities import Subroute, Stop, Route, Departure
@@ -32,7 +33,7 @@ def extract_subroute(name, file):
         raise Exception("Dumbass bus without stops or departures")
 
     stops = [
-        Stop(stop_name) if stop_name else Stop(f"Misterio_{file.split('_')[0]}")
+        Stop(ftfy.fix_text(stop_name).strip()) if stop_name else Stop(f"Misterio_{file.split('_')[0]}")
         for stop_name, _stop_departures in subroute_info
     ]
 
@@ -78,15 +79,15 @@ def extract_subroute(name, file):
              for prev_stop_ts, next_stop_ts in zip(departures[0], departures[0][1:])]
 
     # Validate diffs for every other row (route timings)
-    diffs_consistent = all([
-        all([
-            # a stop is a tuple of (time, calendar)
-            next_stop_ts - prev_stop_ts == diffs[diff_index] or next_stop_ts == fake_midnight_ts
-            for diff_index, (prev_stop_ts, next_stop_ts) in enumerate(zip(departure, departure[1:]))])
-        for departure in departures[1:]])
-
-    if not diffs_consistent:
-        print(f"Subroute {file} schedule diffs inconsistent")
+    # diffs_consistent = all([
+    #     all([
+    #         # a stop is a tuple of (time, calendar)
+    #         next_stop_ts - prev_stop_ts == diffs[diff_index] or next_stop_ts == fake_midnight_ts
+    #         for diff_index, (prev_stop_ts, next_stop_ts) in enumerate(zip(departure, departure[1:]))])
+    #     for departure in departures[1:]])
+    #
+    # if not diffs_consistent:
+    #     print(f"Subroute {file} schedule diffs inconsistent")
 
     first_stop_departures = [departure[0] for departure in departures]
 
@@ -114,16 +115,38 @@ def load_cmet_data():
 
         root_script = response.text
 
-    script_subroutes_file_exp = re.compile('"(?P<subroute_name>[^"]*"): "(?P<file>\d{4}_\d_\d.json)"')
+    script_subroutes_file_exp = re.compile('"(?P<subroute_name>[^"]*)":\s*"(?P<file>\d{4}_\d_\d.json)"')
+    script_pdf_file_exp = re.compile('\"(?P<file>[\w\d\-_]+.pdf)\"')
+    script_line_types_exp = re.compile(
+        '[{\s,](?P<line_number>\d{4})\s*:\s*\[\"(?P<line_name>[^\"]*)\",\s*\"(?P<route_type>[^\"])*\"\]')
 
     stops = set()
     routes = {}
+    route_names = {}
+    route_types = {}
+
+    for pdf_schedule in script_pdf_file_exp.findall(root_script):
+        file_name = pdf_schedule
+        if not os.path.isfile(f'./data/pdf-schedules/{file_name}'):
+            response = requests.get(f'https://www.carrismetropolitana.pt/images/horarios_pdf/{file_name}')
+
+            with open(f'./data/pdf-schedules/{file_name}', 'wb') as f:
+                f.write(response.content)
+
+    for route in script_line_types_exp.findall(root_script):
+        number, name, route_type = route
+        number = int(number)
+        route_names[number] = ftfy.fix_text(name).strip()
+        route_types[number] = ftfy.fix_text(route_type).strip()
 
     for match_ in script_subroutes_file_exp.finditer(root_script):
         subroute_name, file = match_.groups()
+        subroute_name = ftfy.fix_text(subroute_name).strip()
         route_number = int(file.split("_")[0])
+        route_name = route_names[route_number]
+        route_type = route_types[route_number]
 
-        route = routes.setdefault(route_number, Route(route_number))
+        route = routes.setdefault(route_number, Route(number=route_number, name=route_name, rtype=route_type))
 
         route.subroutes.append(extract_subroute(subroute_name, file))
 
@@ -136,34 +159,8 @@ def load_cmet_data():
     return stops, routes.values()
 
 
-def save_stops():
-    # stops, routes = load_cmet_data()
-
-    with open('geocaching.json', 'r') as f:
-        geocaching = json.load(f)
-
-    conn = sqlite3.connect(DB_PATH)
-    cur = conn.cursor()
-
-    for short_name, full_name, guesses in geocaching:
-
-        res = cur.execute("INSERT INTO Stops(name, short_name, source) VALUES (?, ?, 'cmet') ON CONFLICT DO NOTHING;",
-                          (full_name, short_name))
-        original_id = res.lastrowid
-
-        for guess in guesses:
-            guess_lat = guess['lat']
-            guess_lon = guess['lon']
-
-            res = cur.execute(
-                "INSERT INTO Stops(name, source, lat, lon, guess_for) VALUES (?, 'geoc', ?, ?,?) ON CONFLICT DO NOTHING;",
-                (full_name, guess_lat, guess_lon, original_id))
-
-    conn.commit()
-
-
-def save_routes():
-    stops, routes = load_cmet_data()
+def save_cmet_data(cmet_data):
+    stops, routes = cmet_data
 
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
@@ -223,15 +220,15 @@ def save_routes():
     def upsert_route(route):
         cur = conn.cursor()
 
-        flag = str(route.number)
+        code = str(route.number)
         circular = route.circular
 
-        res = cur.execute("SELECT id FROM Routes WHERE flag=?", (flag,))
+        res = cur.execute("SELECT id FROM Routes WHERE code=?", (code,))
         db_route = cur.fetchone()
 
         if db_route is None:
-            res = cur.execute("INSERT INTO Routes(flag) VALUES (?) ON CONFLICT DO NOTHING;",
-                              (flag,))
+            res = cur.execute("INSERT INTO Routes(code, name, operator) VALUES (?, ?, 1) ON CONFLICT DO NOTHING;",
+                              (code, route.name))
             route.id = res.lastrowid
         else:
             route.id = db_route[0]
@@ -249,9 +246,9 @@ def save_routes():
                 subroute.id = subroute_flags.pop(subroute.name)
             else:
                 sql = '''
-                INSERT INTO Subroutes(route, flag)
-                VALUES(?, ?)'''
-                res = cur.execute(sql, (route.id, subroute.name))
+                INSERT INTO Subroutes(route, flag, circular)
+                VALUES(?, ?, ?)'''
+                res = cur.execute(sql, (route.id, subroute.name, 1 if 'circ' in subroute.name.lower() else 0))
                 subroute.id = res.lastrowid
 
         sql = f"DELETE FROM Subroutes WHERE id IN ({','.join(['?'] * len(subroute_flags))})"
@@ -271,13 +268,13 @@ def save_routes():
                 sql = '''
                 SELECT Stops.id, Stops.source FROM SubrouteStops
                 JOIN Stops ON SubrouteStops.stop = Stops.id
-                WHERE SubrouteStops.subroute = ? AND SubrouteStops.'index' = ?'''
+                WHERE SubrouteStops.subroute = ? AND SubrouteStops.idx = ?'''
                 res = cur.execute(sql, (subroute.id, index))
 
                 existing = res.fetchone()
 
                 if existing is not None:
-                    db_stop_id, db_stop_source = res.fetchone()
+                    db_stop_id, db_stop_source = existing
                     if stop.id == db_stop_id:
                         continue
 
@@ -289,7 +286,7 @@ def save_routes():
 
                     sql = '''
                     UPDATE SubrouteStops SET SubrouteStops.stop = ?
-                    WHERE SubrouteStops.subroute = ? AND SubrouteStops.index = ?'''
+                    WHERE SubrouteStops.subroute = ? AND SubrouteStops.idx = ?'''
                     res = cur.execute(sql, (stop.id, subroute.id, index))
                     if res.rowcount != 1:
                         print("Huh?")
@@ -297,22 +294,22 @@ def save_routes():
                     continue
 
                 sql = '''
-                INSERT INTO SubrouteStops(subroute, stop, 'index', time_to_next)
+                INSERT INTO SubrouteStops(subroute, stop, idx, time_to_next)
                 VALUES(?, ?, ?, ?)'''
                 res = cur.execute(sql, (subroute.id, stop.id, index, diff))
 
             sql = '''
-            DELETE FROM SubrouteStops WHERE subroute=? AND 'index'>=?'''
+            DELETE FROM SubrouteStops WHERE subroute=? AND idx>=?'''
             res = cur.execute(sql, (subroute.id, len(subroute.stops)))
 
-            # departures = []
-            # [departures.append(departure) for departure in subroute.departures if departure not in departures]
-            #
-            # if (lost_departures := len(subroute.departures) - len(departures)) > 0:
-            #     print(f"Lost {lost_departures} departures from {route.number}")
-            #
-            # for departure in departures:
-            #     sql = '''INSERT INTO Departures(subroute, time, calendar) VALUES(?, ?, ?)'''
-            #     res = cur.execute(sql, (subroute_id, departure.time, departure.calendar.export()))
+            departures = []
+            [departures.append(departure) for departure in subroute.departures if departure not in departures]
+
+            if (lost_departures := len(subroute.departures) - len(departures)) > 0:
+                print(f"Lost {lost_departures} departures from {route.number}")
+
+            for departure in departures:
+                sql = '''INSERT INTO Departures(subroute, time, calendar) VALUES(?, ?, ?) ON CONFLICT DO NOTHING;'''
+                res = cur.execute(sql, (subroute.id, departure.time, departure.calendar.export()))
 
     conn.commit()

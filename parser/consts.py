@@ -2,4 +2,4 @@ MUN_AML = ('CASCAIS', 'LISBOA', 'LOURES', 'MAFRA', 'OEIRAS', 'SINTRA', 'VILA FRA
            'AMADORA', 'ODIVELAS', 'ALCOCHETE', 'ALMADA', 'BARREIRO', 'MOITA', 'MONTIJO', 'PALMELA',
            'SEIXAL', 'SESIMBRA', 'SETÚBAL')
 
-DB_PATH = 'db.sqlite'
+DB_PATH = '../db.sqlite'

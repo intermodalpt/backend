@@ -10,11 +10,11 @@ from bs4 import BeautifulSoup
 from consts import MUN_AML, DB_PATH
 
 
-def get_osm_stops():
+def update_osm_stops(district="Setúbal"):
     osm_query = \
-        """
+        f"""
         area
-          ["name"="Setúbal"]
+          ["name"="{district}"]
           ["boundary"="administrative"];
         (
           node
@@ -53,16 +53,29 @@ def get_osm_stops():
         osm_id, name, lat, lon = node['id'], node.get('name', None), node['lat'], node['lon']
 
         res = cur.execute(
-            "INSERT INTO Stops(name, source, lat, lon, osm_id) VALUES (?, 'osm', ?, ?,?) ON CONFLICT DO NOTHING;",
-            (name, lat, lon, osm_id))
+            "SELECT name, lat, lon FROM Stops WHERE source='osm' AND external_id = ?;",
+            (osm_id,))
+
+        existing = res.fetchone()
+
+        if existing:
+            existing_name, existing_lat, existing_lon = existing
+            if existing_name == name and existing_lat == lat and existing_lon == lon:
+                continue
+            print(f"Updated: ({osm_id}){name} ({lon} {lat})")
+            res = cur.execute(
+                "UPDATE Stops SET name=?, lat=?, lon=? WHERE source='osm' AND external_id = ?;",
+                (name, lat, lon, osm_id))
+
+        else:
+            print(f"Inserted: ({osm_id}){name} ({lon} {lat})")
+            res = cur.execute(
+                "INSERT INTO Stops(name, source, lat, lon, external_id) "
+                "VALUES (?, 'osm', ?, ?,?) "
+                "ON CONFLICT DO NOTHING;",
+                (name, lat, lon, osm_id))
 
     conn.commit()
-    # data = quote_plus("blah blah+blue?&")
-    # location = "That place"
-    # query = f"https://nominatim.openstreetmap.org/search.php?" \
-    #         f"q={location}&polygon_geojson=1&viewbox=-9.31915%2C38.80118%2C-8.60161%2C38.40032&bounded=1&format=jsonv2"
-    # print(data)
-    # exit()
 
 
 def get_geocached_stops():

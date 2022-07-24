@@ -56,8 +56,10 @@ class Subroute:
 
 
 class Route:
-    def __init__(self, number, circular=False):
+    def __init__(self, number, name, rtype, circular=False):
         self.number = number
+        self.name = name
+        self.rtype = rtype
         self.circular = circular
         self.subroutes = []
 
@@ -65,7 +67,7 @@ class Route:
         self.subroutes.append(subroute)
 
     def __repr__(self):
-        return str(self.number)
+        return f"{self.number} - {self.name}"
 
 
 class Departure:

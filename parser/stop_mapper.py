@@ -1,5 +1,6 @@
 import pathlib
 
+from parser.consts import DB_PATH
 from parser.extraction import load_cmet_data
 
 import csv
@@ -22,7 +23,7 @@ def save_stop_mapping(mapping):
 
 
 def load_db_stops():
-    conn = sqlite3.connect("db.sqlite")
+    conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
 
     stops = []
@@ -59,7 +60,7 @@ def load_gtfs_stops(company):
 
 
 def save_stops(stops: [Stop]):
-    conn = sqlite3.connect("db.sqlite")
+    conn = sqlite3.connect(DB_PATH)
 
     def upsert_stop(stop: Stop):
         cur = conn.cursor()
@@ -115,13 +116,12 @@ def aided_stop_matcher(company="tst"):
     missing_cmet_stop_names = set(
         filter(lambda stop: stop not in current_mapping, map(lambda stop: stop.name, cmet_stops)))
 
-    for cmet_stop_name in missing_cmet_stop_names:
+    for cmet_stop_name in list(missing_cmet_stop_names):
         if cmet_stop_name in gtfs_stop_names:
             print(f"Exact lmatch for {cmet_stop_name}")
             missing_cmet_stop_names.remove(cmet_stop_name)
             current_mapping.setdefault(cmet_stop_name, []).append([company, cmet_stop_name])
             continue
-
 
     for missing_stop_name in missing_cmet_stop_names:
         fixed_missing_name = fix_name(missing_stop_name)
@@ -174,7 +174,9 @@ def remap_stops():
     db_stops = load_db_stops()
 
     cmet_stops = {stop.short_name: stop for stop in filter(lambda stop: stop.source == 'cmet', db_stops)}
-    tst_stops = {stop.short_name: stop for stop in filter(lambda stop: stop.source == 'tst', db_stops)}
+    replacement_stops = {(stop.source, stop.short_name): stop for stop in
+                         filter(lambda stop: stop.source in ('tst', 'sf', 'tcb'), db_stops)}
+    # sf_stops = {stop.short_name: stop for stop in filter(lambda stop: stop.source == 'sf', db_stops)}
     # iml_stops = {stop.name: stop for stop in filter(lambda stop: stop.source == 'iml', db_stops)}
 
     id_remap = dict()
@@ -185,31 +187,30 @@ def remap_stops():
                 continue
 
             if len(replacement_names) == 1:
-                chosen_replacement = tst_stops.get(replacement_names[0][0])
+                chosen_replacement = replacement_stops[(*replacement_names[0],)]
             else:
-                chosen_replacement = tst_stops.get(replacement_names[0][0], None)
+                chosen_replacement = replacement_stops[(*replacement_names[0],)]
                 # Default for first but end up preferring something not stating "fte" (aka. opsite side of the road)
                 for replacement_name in reversed(replacement_names):
                     if 'fte' not in replacement_name[0].lower():
-                        chosen_replacement = tst_stops.get(replacement_name[0], None)
+                        chosen_replacement = replacement_stops[(*replacement_names[0],)]
 
             if chosen_replacement is None:
                 continue
 
             id_remap[cmet_stops[stop_name].id] = chosen_replacement.id
 
-    conn = sqlite3.connect("db.sqlite")
+    conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
 
     stops = []
-    res = cur.execute(
-        f"SELECT DISTINCT stop FROM SubrouteStops "
-        f"WHERE stop IN ({','.join(['?'] * len(id_remap))})", list(id_remap.keys()))
-    for stop_id, in cur.fetchall():
+    # res = cur.execute(
+    #     f"SELECT DISTINCT id FROM Stops "
+    #     f"WHERE id IN ({','.join(['?'] * len(id_remap))})", list(id_remap.keys()))
 
-        res = cur.execute("UPDATE SubrouteStops SET  stop = ? WHERE stop = ?", (id_remap[stop_id], stop_id))
+    # for stop_id, in cur.fetchall():
+    for old_id, new_id in id_remap.items():
+        res = cur.execute("UPDATE SubrouteStops SET stop = ? WHERE stop = ?", (new_id, old_id))
+        res = cur.execute("UPDATE Stops SET  succeeded_by = ? WHERE id = ?", (new_id, old_id))
 
     conn.commit()
-
-
-remap_stops()
