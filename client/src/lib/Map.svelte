@@ -12,15 +12,24 @@
     let amlgeo;
     let parishesgeo;
 
-    $: cachedStops = stops;
-
     let mapLayers = {
         parishes: L.layerGroup(),
         municipalities: L.layerGroup(),
-        stops: L.layerGroup(),
+        stops: L.markerClusterGroup({
+            spiderfyOnMaxZoom: false,
+            showCoverageOnHover: false,
+            disableClusteringAtZoom: 15
+        }),
         spiderMap: L.layerGroup(),
         selectionArea: L.layerGroup(),
     };
+
+    mapLayers.stops.on('mouseover', () => {
+        mapLayers.selectionArea.removeFrom(map);
+    });
+    mapLayers.stops.on('mouseout', () => {
+        mapLayers.selectionArea.addTo(map);
+    });
 
     let selectionRadius = 750;
 
@@ -33,6 +42,21 @@
     let currentSpider;
     let selectedRoutes;
     const selectedRoute = writable(undefined);
+
+    stops.subscribe((stops) => {
+        Object.values(stops).forEach(stop => {
+            if (stop.lat && stop.lon) {
+                let marker = L.marker([stop.lat, stop.lon]);
+                marker.bindTooltip(`${stop.id} - ${stop.name || stop.short_name}`);
+                marker.info = stop;
+                marker.stopId = stop.id;
+
+                marker.on('click', (e) => loadSpiderMap(e.target.stopId));
+                mapLayers.stops.addLayer(marker);
+                stopMarkers[stop.id] = marker;
+            }
+        });
+    });
 
     function zone_color(zone) {
         switch (zone) {
@@ -49,42 +73,6 @@
         }
     }
 
-
-    function loadStops() {
-        let bounds = map.getBounds();
-        let x0 = bounds.getWest();
-        let y0 = bounds.getNorth();
-        let x1 = bounds.getEast();
-        let y1 = bounds.getSouth();
-        fetch(`${api_server}/api/stops/within_boundary/${x0}/${y0}/${x1}/${y1}`)
-            .then(r => r.json())
-            .then(nodes => {
-                map.removeLayer(mapLayers.stops);
-                mapLayers.stops = L.markerClusterGroup({
-                    spiderfyOnMaxZoom: false,
-                    showCoverageOnHover: false,
-                    disableClusteringAtZoom: 14
-                });
-                mapLayers.stops.on('mouseover', () => {
-                    mapLayers.selectionArea.removeFrom(map);
-                });
-                mapLayers.stops.on('mouseout', () => {
-                    mapLayers.selectionArea.addTo(map);
-                });
-                nodes.forEach(node => {
-                    let marker = L.marker([node.lat, node.lon]);
-                    marker.bindTooltip(`${node.id} - ${node.name || node.short_name}`);
-                    marker.info = node;
-                    marker.stopId = node.id;
-
-                    marker.on('click', (e) => loadSpiderMap(e.target.stopId));
-                    mapLayers.stops.addLayer(marker);
-                    stopMarkers[node.id] = marker;
-                });
-
-                map.addLayer(mapLayers.stops);
-            });
-    }
 
     function onParishFeature(feature, layer) {
         layer.on({
@@ -108,9 +96,11 @@
             },
             click: (e) => {
                 let bounds = e.target.getBounds();
-                map.fitBounds(bounds);
-                loadStops();
-                mapLayers.parishes.removeFrom(map);
+                if (map.getBounds().contains(bounds)) {
+                    map.setView(bounds.getCenter(), map.getZoom() + 1);
+                } else {
+                    map.zoomIn();
+                }
             }
         });
     }
@@ -218,7 +208,7 @@
             polyline.addTo(mapLayers.spiderMap)
         });
         mapLayers.spiderMap.addTo(map);
-        if (bounds.isValid()){
+        if (bounds.isValid()) {
             map.fitBounds(bounds);
         }
         selectedPolylines = innerPolyLines;
@@ -299,6 +289,24 @@
                 }
                 selectorCircle.setRadius(selectionRadius);
             }
+
+            if (zoomLevel >= 14) {
+                mapLayers.stops.addTo(map);
+            } else {
+                mapLayers.stops.removeFrom(map);
+            }
+
+            if (zoomLevel <= 11 && !selectedRoutes) {
+                mapLayers.municipalities.addTo(map);
+            } else {
+                mapLayers.municipalities.removeFrom(map);
+            }
+            if (zoomLevel > 11 && zoomLevel <= 13 && !selectedRoutes) {
+                mapLayers.parishes.addTo(map);
+            } else {
+                mapLayers.parishes.removeFrom(map);
+            }
+
         });
 
         selectorCircle.on('click', (e) => {
@@ -333,6 +341,7 @@
         m.maxBounds = new L.LatLngBounds(new L.LatLng(38.3, -10.0), new L.LatLng(39.35, -8.0));
         m.maxBoundsViscosity = 1.0;
         m.minZoom = 10;
+
 
         L.control.scale().addTo(m);
 

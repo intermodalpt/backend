@@ -57,7 +57,7 @@
 
 
     let stopIcon = L.icon({
-        iconUrl: `/public/markers/bus-minimal.svg`,
+        iconUrl: `/markers/bus-minimal.svg`,
         iconSize: [16, 16],
         iconAnchor: [8, 8],
     });

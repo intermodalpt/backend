@@ -23,7 +23,7 @@
 {#if routes}
     <div class="route-list">
     {#each routes as route}
-        <div class="route">
+        <div class="code">
             <span class="line-number">{route.flag}</span>
             <span>{route.flag}</span>
         </div>
@@ -35,7 +35,7 @@
 
 
 <style>
-    .route {
+    .code {
 
     }
     .line-number {
