@@ -5,6 +5,7 @@
     export let stops;
     export let selectedStop;
     export let selectedSubrouteStops;
+    let addAfterIndex = 0;
 
     let changes = false;
     const dispatch = createEventDispatcher();
@@ -48,6 +49,21 @@
         changes = true;
     }
 
+    function addStop() {
+        if (selectedStop === undefined) {
+            alert("Select a stop first...");
+            return
+        }
+
+        // stopList.indexOf(addAfterIndex)
+        if (confirm(`Do you want to add a stop after ${stopList[addAfterIndex]}?`)) {
+            stopList.splice(addAfterIndex + 1, 0, selectedStop);
+            diffList.splice(addAfterIndex + 1, 0, 0);
+            stopList = stopList;
+            diffList = diffList;
+        }
+    }
+
     function replaceStop(i) {
         if (selectedStop === undefined) {
             alert("Select another stop first...");
@@ -62,7 +78,7 @@
 
 
         // if (confirm(`Do you want to replace ${stops[stopList[i]].name} with ${stops[selectedStop].name}?`)) {
-        if (confirm(`"${stops[stopList[i]].short_name}":[["tst", "${stops[selectedStop].name}"}]]?`)) {
+        if (confirm(`"${stops[stopList[i]].short_name}":[["${stops[selectedStop].source}", "${stops[selectedStop].source === 'osm' ? stops[selectedStop].external_id : stops[selectedStop].name}"}]],`)) {
             stopList[i] = selectedStop;
             stopList = stopList;
             changes = true;
@@ -94,7 +110,7 @@
     }
 
     function redraw(i) {
-        dispatch('redraw',  {stops: stopList});
+        dispatch('redraw', {stops: stopList});
     }
 
     function save() {
@@ -117,6 +133,13 @@
                 </div>
             </div>
         {/each}
+        <input type="button" value="Add" on:click={addStop}/> after
+        <!--        <input type="number" min="0" max="{stopList.length}" bind:value={addAfterIndex}/>-->
+        <select bind:value={addAfterIndex}>
+            {#each stopList as stop, index }
+                <option value="{index}">{stops[stop].short_name || stops[stop].name || stop}</option>
+            {/each}
+        </select>
         {#if changes}
             <input type="button" value="Save" on:click={save}/>
         {/if}

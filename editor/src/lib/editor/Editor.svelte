@@ -21,9 +21,9 @@
         <label><input type=radio bind:group={mode} name="mode" value={2}>Lines</label>
     </div>
     {#if (mode === 1)}
-        <StopEditor bind:token={token}></StopEditor>
+        <StopEditor></StopEditor>
     {:else if (mode === 2) }
-        <LineEditor bind:token={token}></LineEditor>
+        <LineEditor></LineEditor>
     {:else }
         ???
     {/if}

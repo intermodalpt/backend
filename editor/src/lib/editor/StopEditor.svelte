@@ -5,8 +5,6 @@
     import {api_server} from "../../settings.js";
     import {icons} from "./assets.js";
 
-    export let token;
-
     let map;
     let stops;
     let selectedStop;

@@ -8,7 +8,6 @@
     import {writable} from 'svelte/store';
 
     let map;
-    let token;
 
     let stops;
     let routes;
@@ -51,7 +50,7 @@
             .then(data => {
                 routes = Object.fromEntries(data.map(line => [line.id, line]));
                 // selectedRoute = Object.keys(routes)[0];
-            });
+            }).catch(e => alert("Failed to load the routes"));
     }
 
     loadRoutes();
@@ -61,7 +60,8 @@
             .then(r => r.json())
             .then(data => {
                 selectedRouteStops = Object.fromEntries(data.map(subroute => [subroute.subroute, subroute]));
-            });
+            })
+            .catch(e => alert("Failed to load the route stops"));
     }
 
     function drawSubroute(stop_ids) {
@@ -102,8 +102,12 @@
     }
 
     function loadStops() {
-        fetch(`${api_server}/api/stops`)
+        fetch(`${api_server}/api/stops?all=true`)
             .then(r => r.json())
+            .catch(e => {
+                alert("Failed to load the stop list");
+                console.log(e);
+            })
             .then(data => {
                 stops = Object.fromEntries(data.map(stop => [stop.id, stop]));
                 map.removeLayer(mapLayers.stops);
@@ -123,38 +127,11 @@
             });
     }
 
-
-    function createStop(e) {
-        let stop = {
-            "source": "iml",
-            "lat": e.latlng.lat,
-            "lon": e.latlng.lng
-        };
-        fetch(`${api_server}/api/stops/create`, {
-                method: "post",
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Token': token
-                },
-                body: JSON.stringify(stop)
-            }
-        ).then(r => r.json())
-            .then(data => {
-                stop.id = data.id;
-                let marker = createStopMarker(stop);
-                mapLayers.stops.addLayer(marker);
-            });
-    }
-
     function createMap(container) {
         let m = L.map(container, {
             contextmenu: true,
 
-            contextmenuWidth: 140,
-            contextmenuItems: [{
-                text: 'Create a stop',
-                callback: createStop
-            }]
+            contextmenuWidth: 140
         }).setView([38.71856, -9.13720], 10);
 
         let osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -223,10 +200,14 @@
                     }
                 })
             }
-        ).then(r => r.json())
-            .then(data => {
-                //
-            });
+        ).then(resp => {
+            alert("We're good");
+        }).catch(
+            e => {
+                alert("Error saving");
+                console.log(e);
+            }
+        );
     }
 </script>
 
