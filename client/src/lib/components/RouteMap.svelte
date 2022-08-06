@@ -116,4 +116,3 @@
 </script>
 
 <div class="w-full" style="height: max(80vh, 20rem)" use:mapAction />
-

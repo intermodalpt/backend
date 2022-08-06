@@ -11,25 +11,27 @@
   }
 </script>
 
-<Box padded="true">
-  {#if operator}
-    <Operator bind:operator>
-      <div class="company {operator}" on:mouseup={choose} />
-    </Operator>
-  {:else}
-    <div id="route-list">
-      <div class="company carris unavailable" />
-      <div class="company cmet" on:mouseup={choose} />
-      <div class="company tcb unavailable" />
-      <div class="company mobicascais unavailable" />
-      <div class="company ttsl unavailable" />
-      <div class="company cp unavailable" />
-      <div class="company fertagus unavailable" />
-      <div class="company ml unavailable" />
-      <div class="company mts unavailable" />
-    </div>
-  {/if}
-</Box>
+<div class="card bg-base-100 shadow-xl mx-2">
+  <div class="card-body">
+    {#if operator}
+      <Operator bind:operator>
+        <div class="company {operator}" on:mouseup={choose} />
+      </Operator>
+    {:else}
+      <div id="route-list">
+        <div class="company carris unavailable" />
+        <div class="company cmet" on:mouseup={choose} />
+        <div class="company tcb unavailable" />
+        <div class="company mobicascais unavailable" />
+        <div class="company ttsl unavailable" />
+        <div class="company cp unavailable" />
+        <div class="company fertagus unavailable" />
+        <div class="company ml unavailable" />
+        <div class="company mts unavailable" />
+      </div>
+    {/if}
+  </div>
+</div>
 
 <style>
   #route-list {
@@ -104,4 +106,3 @@
     filter: blur(5px) grayscale(50%);
   }
 </style>
-

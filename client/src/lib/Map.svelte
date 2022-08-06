@@ -6,6 +6,7 @@
   import RouteListing from "./components/RouteListing.svelte";
   import RouteStops from "./components/RouteStops.svelte";
   import Schedule from "./components/Schedule.svelte";
+  import WHeader from "./components/WidgetHeader.svelte";
   import { derived, writable } from "svelte/store";
   import { routes, stops } from "../cache.js";
   import { tick } from "svelte";
@@ -511,44 +512,45 @@
     overflow-hidden shadow-xl w-full lg:w-[28rem] flex flex-row"
 >
   <div class="carousel w-full overflow-y-hidden">
-    <div id="routes" class="carousel-item w-full">
-      <RouteListing
-        bind:routes={selectedRoutes}
-        on:openroute={openRoute}
-        on:hint={hintRoute}
-        on:drophint={dropRouteHint}
-      />
+    <div id="routes" class="carousel-item w-full flex flex-col">
+      <WHeader>Rotas</WHeader>
+      <div class="overflow-y-scroll w-full">
+        <RouteListing
+          bind:routes={selectedRoutes}
+          on:openroute={openRoute}
+          on:hint={hintRoute}
+          on:drophint={dropRouteHint}
+        />
+      </div>
     </div>
     {#if $selectedRouteId}
-      <div id="route" class="carousel-item w-full">
-        <div class="flex flex-col w-full h-full">
-          <div
-            class="p-2 bg-primary flex flex-row items-center gap-1 h-12 lg:h-16 w-full text-primary-content"
-          >
-            <div class="rounded-full btn btn-ghost w-12 px-3" on:click={back}>
-              <span class="text-2xl">🡸</span>
-            </div>
-            <span class="text-lg font-bold whitespace-nowrap overflow-hidden">
-              [{$route.code}] {$route.name}
-            </span>
-          </div>
-          <div class="p-2 overflow-y-scroll flex flex-col gap-2">
-            <select
-              class="select select-primary select-sm w-full"
-              bind:value={$selectedSubrouteId}
-            >
-              {#each $route.subroutes as subroute}
-                <option value={subroute.id}>{subroute.flag}</option>
-              {/each}
-            </select>
-            <RouteStops on:openschedule={openSchedule} {subrouteStops} />
-          </div>
+      <div id="route" class="carousel-item w-full flex flex-col gap-1">
+        <WHeader back={() => back("routes")}>
+          [{$route.code}] {$route.name}
+        </WHeader>
+
+        <select
+          class="select select-primary select-sm w-[95%] mx-auto"
+          bind:value={$selectedSubrouteId}
+        >
+          {#each $route.subroutes as subroute}
+            <option value={subroute.id}>{subroute.flag}</option>
+          {/each}
+        </select>
+        <div class="overflow-y-scroll w-full">
+          <RouteStops on:openschedule={openSchedule} {subrouteStops} />
         </div>
       </div>
     {/if}
     {#if $currentScheduleId}
-      <div id="schedule" class="carousel-item w-full">
-        <Schedule back={() => back("route")} scheduleId={currentScheduleId} />
+      <div id="schedule" class="carousel-item w-full flex flex-col">
+        <WHeader back={() => back("route")}>
+          {$currentScheduleId}
+        </WHeader>
+
+        <div class="overflow-y-scroll w-full">
+          <Schedule scheduleId={currentScheduleId} />
+        </div>
       </div>
     {/if}
   </div>
