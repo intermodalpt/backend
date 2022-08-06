@@ -1,6 +1,7 @@
 <script>
     import StopEditor from './StopEditor.svelte';
     import LineEditor from './LineEditor.svelte';
+    import ImageEditor from './ImageEditor.svelte';
 
     import 'leaflet.markercluster';
     import 'leaflet-contextmenu';
@@ -15,30 +16,22 @@
     }
 </script>
 
-<div class="vwrapper">
-    <div>
-        <label><input type=radio bind:group={mode} name="mode" value={1}>Stops</label>
-        <label><input type=radio bind:group={mode} name="mode" value={2}>Lines</label>
+<div class="flex flex-col flex-1 gap-2 p-2">
+    <div class="tabs mx-auto">
+      <label class={`tab tab-bordered ${mode==1&&"tab-active"}`}><input class="hidden" type=radio bind:group={mode} name="mode" value={1}>Stops</label>
+      <label class={`tab tab-bordered ${mode==2&&"tab-active"}`}><input class="hidden" type=radio bind:group={mode} name="mode" value={2}>Lines</label>
+      <label class={`tab tab-bordered ${mode==3&&"tab-active"}`}><input class="hidden" type=radio bind:group={mode} name="mode" value={3}>Images</label>
     </div>
-    {#if (mode === 1)}
-        <StopEditor></StopEditor>
-    {:else if (mode === 2) }
-        <LineEditor></LineEditor>
-    {:else }
-        ???
-    {/if}
+  {#if (mode === 1)}
+    <StopEditor></StopEditor>
+  {:else if (mode === 2) }
+    <LineEditor></LineEditor>
+  {:else if (mode === 3) }
+    <ImageEditor/>
+  {:else}
+    ???
+  {/if}
 </div>
-
-
-<style>
-    .vwrapper {
-        display: flex;
-        flex-direction: column;
-        flex-grow: 1;
-        padding: 0 20px;
-        margin-bottom: 40px;
-    }
-</style>
 
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.8.0/dist/leaflet.css"

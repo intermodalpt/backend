@@ -1,16 +1,45 @@
 <script>
-    import L from 'leaflet';
-    import 'leaflet.markercluster';
+    import L from "leaflet";
+    import "leaflet.markercluster";
     import {api_server} from "../settings.js";
     import {calc_route_multipoly} from "../utils.js";
     import RouteListing from "./components/RouteListing.svelte";
-    import Route from "./Route.svelte";
-    import {writable} from 'svelte/store';
-    import {stops} from "../cache.js";
+    import RouteStops from "./components/RouteStops.svelte";
+    import Schedule from "./components/Schedule.svelte";
+    import {derived, writable} from "svelte/store";
+    import {routes, stops} from "../cache.js";
+    import {tick} from "svelte";
 
     let map;
     let amlgeo;
     let parishesgeo;
+
+
+    let routeStops = [];
+    const selectedRouteId = writable(undefined);
+    const selectedSubrouteId = writable(undefined);
+    const route = derived(
+        selectedRouteId,
+        $selectedRouteId => {
+            return $routes.find((r) => {
+                return r.id === $selectedRouteId;
+            });
+        }
+    );
+    const subrouteStops = derived(
+        selectedSubrouteId,
+        $selectedSubrouteId => {
+            return routeStops.find((stops) => {
+                return stops.subroute === $selectedSubrouteId;
+            });
+        }
+    );
+
+    subrouteStops.subscribe(() => {
+        if ($subrouteStops && map) {
+            drawSubroute()
+        }
+    })
 
     let mapLayers = {
         parishes: L.layerGroup(),
@@ -18,40 +47,41 @@
         stops: L.markerClusterGroup({
             spiderfyOnMaxZoom: false,
             showCoverageOnHover: false,
-            disableClusteringAtZoom: 15
+            disableClusteringAtZoom: 15,
         }),
         spiderMap: L.layerGroup(),
         selectionArea: L.layerGroup(),
+        subrouteLayer: L.layerGroup(),
+        legend: L.control({position: "bottomleft"})
     };
 
-    mapLayers.stops.on('mouseover', () => {
+    mapLayers.stops.on("mouseover", () => {
         mapLayers.selectionArea.removeFrom(map);
     });
-    mapLayers.stops.on('mouseout', () => {
+    mapLayers.stops.on("mouseout", () => {
         mapLayers.selectionArea.addTo(map);
     });
 
     let selectionRadius = 750;
 
     let info = L.control();
-    let zoom = 0;
+
     let stopMarkers = {};
     let selectedMarkers = [];
     let selectedPolylines = [];
 
     let currentSpider;
     let selectedRoutes;
-    const selectedRoute = writable(undefined);
 
     stops.subscribe((stops) => {
-        Object.values(stops).forEach(stop => {
+        Object.values(stops).forEach((stop) => {
             if (stop.lat && stop.lon) {
                 let marker = L.marker([stop.lat, stop.lon]);
                 marker.bindTooltip(`${stop.id} - ${stop.name || stop.short_name}`);
                 marker.info = stop;
                 marker.stopId = stop.id;
 
-                marker.on('click', (e) => loadSpiderMap(e.target.stopId));
+                marker.on("click", (e) => loadSpiderMap(e.target.stopId));
                 mapLayers.stops.addLayer(marker);
                 stopMarkers[stop.id] = marker;
             }
@@ -73,7 +103,6 @@
         }
     }
 
-
     function onParishFeature(feature, layer) {
         layer.on({
             mouseover: (e) => {
@@ -81,9 +110,9 @@
 
                 layer.setStyle({
                     weight: 5,
-                    color: '#666',
-                    dashArray: '',
-                    fillOpacity: 0.7
+                    color: "#666",
+                    dashArray: "",
+                    fillOpacity: 0.7,
                 });
 
                 layer.bringToFront();
@@ -101,7 +130,7 @@
                 } else {
                     map.zoomIn();
                 }
-            }
+            },
         });
     }
 
@@ -112,9 +141,9 @@
 
                 layer.setStyle({
                     weight: 5,
-                    color: '#666',
-                    dashArray: '',
-                    fillOpacity: 0.7
+                    color: "#666",
+                    dashArray: "",
+                    fillOpacity: 0.7,
                 });
 
                 layer.bringToFront();
@@ -129,18 +158,18 @@
                 map.fitBounds(e.target.getBounds());
                 mapLayers.municipalities.removeFrom(map);
                 mapLayers.parishes.addTo(map);
-            }
+            },
         });
     }
 
-    fetch('/aml.min.geojson')
-        .then(r => r.json())
-        .then(obj => {
+    fetch("/aml.min.geojson")
+        .then((r) => r.json())
+        .then((obj) => {
             amlgeo = L.geoJSON(obj, {
                 style: (feature) => {
-                    return zone_color(feature.properties.zone)
+                    return zone_color(feature.properties.zone);
                 },
-                onEachFeature: onMunicipalityFeature
+                onEachFeature: onMunicipalityFeature,
             }).addTo(mapLayers.municipalities);
             if (map) {
                 mapLayers.municipalities.addTo(map);
@@ -149,45 +178,45 @@
         });
 
     fetch("/freguesias.min.geojson")
-        .then(x => x.json()).then(obj => {
-        parishesgeo = L.geoJSON(obj, {
-            // style: (feature) => {return zone_color(feature.properties.zone)},
-            onEachFeature: onParishFeature
-        }).addTo(mapLayers.parishes);
-    });
+        .then((x) => x.json())
+        .then((obj) => {
+            parishesgeo = L.geoJSON(obj, {
+                // style: (feature) => {return zone_color(feature.properties.zone)},
+                onEachFeature: onParishFeature,
+            }).addTo(mapLayers.parishes);
+        });
 
     function loadSpiderMap(stopId) {
         fetch(`${api_server}/api/stops/${stopId}/spider`)
-            .then(x => x.json())
-            .then(spiderMap => {
+            .then((x) => x.json())
+            .then((spiderMap) => {
                 currentSpider = spiderMap;
                 selectedRoutes = spiderMap.routes;
                 drawSpiderMap(spiderMap);
             });
-
     }
 
     function loadAggregateMap(stop_ids) {
         fetch(`${api_server}/api/stops/spider`, {
             method: "POST",
             headers: {
-                'Content-Type': 'application/json',
+                "Content-Type": "application/json",
             },
-            body: JSON.stringify(stop_ids)
+            body: JSON.stringify(stop_ids),
         })
-            .then(x => x.json())
-            .then(spiderMap => {
+            .then((x) => x.json())
+            .then((spiderMap) => {
                 currentSpider = spiderMap;
                 selectedRoutes = spiderMap.routes;
                 drawSpiderMap(spiderMap);
             });
-
     }
 
     function drawSpiderMap(spiderMap) {
         let stops = spiderMap.stops;
 
         mapLayers.spiderMap.removeFrom(map);
+        mapLayers.subrouteLayer.removeFrom(map);
         mapLayers.stops.removeFrom(map);
         mapLayers.spiderMap = L.layerGroup();
         let bounds;
@@ -195,17 +224,21 @@
         // used to have a contour
         let innerPolyLines = [];
         Object.values(spiderMap.subroutes).forEach((subroute) => {
-                let segments = calc_route_multipoly(stops, subroute.stop_sequence);
+            let segments = calc_route_multipoly(stops, subroute.stop_sequence);
 
-                let innerPolyline = L.polyline(segments, {color: 'white', weight: 4});
-                innerPolyline.routeId = subroute.route;
-                innerPolyLines.push(innerPolyline);
-                let outerPolyline = L.polyline(segments, {color: 'black', weight: 6}).addTo(mapLayers.spiderMap);
-                bounds = bounds ? bounds.extend(outerPolyline.getBounds()) : outerPolyline.getBounds();
-            }
-        );
-        innerPolyLines.forEach(polyline => {
-            polyline.addTo(mapLayers.spiderMap)
+            let innerPolyline = L.polyline(segments, {color: "white", weight: 4});
+            innerPolyline.routeId = subroute.route;
+            innerPolyLines.push(innerPolyline);
+            let outerPolyline = L.polyline(segments, {
+                color: "black",
+                weight: 6,
+            }).addTo(mapLayers.spiderMap);
+            bounds = bounds
+                ? bounds.extend(outerPolyline.getBounds())
+                : outerPolyline.getBounds();
+        });
+        innerPolyLines.forEach((polyline) => {
+            polyline.addTo(mapLayers.spiderMap);
         });
         mapLayers.spiderMap.addTo(map);
         if (bounds.isValid()) {
@@ -214,7 +247,43 @@
         selectedPolylines = innerPolyLines;
     }
 
-    function openRoute(e) {
+    function drawSubroute() {
+        let cachedStops = $stops;
+        mapLayers.spiderMap.removeFrom(map);
+        mapLayers.subrouteLayer.removeFrom(map);
+        mapLayers.subrouteLayer = L.layerGroup();
+
+        let segments = calc_route_multipoly(cachedStops, $subrouteStops.stops);
+
+        let outerPolyline = L.polyline(segments, {
+            color: "black",
+            weight: 6,
+        }).addTo(mapLayers.subrouteLayer);
+        let innerPolyline = L.polyline(segments, {
+            color: "white",
+            weight: 4,
+        }).addTo(mapLayers.subrouteLayer);
+        mapLayers.subrouteLayer.addTo(map);
+        let bounds = outerPolyline.getBounds();
+        if (bounds.isValid()) {
+            map.fitBounds(bounds);
+        }
+
+        for (let i = 0; i < $subrouteStops.stops.length; i++) {
+            let stop = cachedStops[$subrouteStops.stops[i]];
+            let diff = $subrouteStops.diffs[i];
+
+            if (stop.lat && stop.lon) {
+                let marker = L.marker([stop.lat, stop.lon], {icon: stopIcon});
+                marker.on("click", () => {
+                    selectStop(stop.id);
+                });
+                marker.addTo(mapLayers.subrouteLayer);
+            }
+        }
+    }
+
+    async function openRoute(e) {
         let routeId = e.detail.routeId;
 
         for (const [key, subroute] of Object.entries(currentSpider.subroutes)) {
@@ -224,43 +293,56 @@
             stop.id = parseInt(key);
         }
 
-        $selectedRoute = routeId;
+        fetch(`${api_server}/api/routes/${routeId}/stops`)
+            .then((r) => r.json())
+            .then(async (data) => {
+                data.forEach((sr) => sr.stops.map((stopId) => stops[stopId]));
+                routeStops = data;
+                $selectedRouteId = routeId;
+                $selectedSubrouteId = $route.subroutes[0].id;
+                await tick();
+                document.getElementById("route").scrollIntoView(true);
+            });
 
-        document.getElementById('route').scrollIntoView(true);
     }
 
     function hintRoute(e) {
         let routeId = e.detail.routeId;
-        selectedPolylines.filter((line) => {
-            return line.routeId === routeId
-        }).forEach((line) => {
-            line.bringToFront();
-            line.setStyle({'color': 'green'});
-        });
+        selectedPolylines
+            .filter((line) => {
+                return line.routeId === routeId;
+            })
+            .forEach((line) => {
+                line.bringToFront();
+                line.setStyle({color: "green"});
+            });
     }
 
     function dropRouteHint(e) {
         let routeId = e.detail.routeId;
-        selectedPolylines.filter((line) => {
-            return line.routeId === routeId
-        }).forEach((line) => line.setStyle({'color': 'white'}));
+        selectedPolylines
+            .filter((line) => {
+                return line.routeId === routeId;
+            })
+            .forEach((line) => line.setStyle({color: "white"}));
     }
 
+
     function createMap(container) {
-        let m = L.map(container).setView([38.71856, -9.13720], 10);
+        let m = L.map(container).setView([38.71856, -9.1372], 10);
 
         let selectorCircle = L.circle([51.508, -0.11], {
-            color: 'green',
-            fillColor: '#12ff00',
+            color: "green",
+            fillColor: "#12ff00",
             fillOpacity: 0.2,
-            radius: 500
+            radius: 500,
         }).addTo(mapLayers.selectionArea);
 
-        m.on('mousemove', (e) => {
+        m.on("mousemove", (e) => {
             selectorCircle.setLatLng(e.latlng);
         });
 
-        m.on('zoomend', (e) => {
+        m.on("zoomend", (e) => {
             let zoomLevel = m.getZoom();
             if (zoomLevel < 14) {
                 mapLayers.selectionArea.removeFrom(map);
@@ -307,9 +389,14 @@
                 mapLayers.parishes.removeFrom(map);
             }
 
+            if (zoomLevel < 12) {
+                mapLayers.legend.addTo(map);
+            } else {
+                mapLayers.legend.remove();
+            }
         });
 
-        selectorCircle.on('click', (e) => {
+        selectorCircle.on("click", (e) => {
             let center = selectorCircle.getLatLng();
 
             selectedMarkers = [];
@@ -323,31 +410,31 @@
             if (selectedMarkers.length === 0) {
                 alert("A area escolhida não seleccionou nada");
             } else {
-                loadAggregateMap(selectedMarkers.map(m => {
-                    return m.stopId
-                }))
+                loadAggregateMap(
+                    selectedMarkers.map((m) => {
+                        return m.stopId;
+                    })
+                );
             }
-
         });
 
-
-        // L.tileLayer('https://tile.openstreetmap.bzh/br/{z}/{x}/{y}.png', {
-        L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+        L.tileLayer("https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png", {
             maxZoom: 19,
-            subdomains: ['a', 'b'],
-            attribution: '© OpenStreetMap'
+            subdomains: ["a", "b"],
+            attribution: "© OpenStreetMap",
         }).addTo(m);
 
-        m.maxBounds = new L.LatLngBounds(new L.LatLng(38.3, -10.0), new L.LatLng(39.35, -8.0));
+        m.maxBounds = new L.LatLngBounds(
+            new L.LatLng(38.3, -10.0),
+            new L.LatLng(39.35, -8.0)
+        );
         m.maxBoundsViscosity = 1.0;
         m.minZoom = 10;
 
-
         L.control.scale().addTo(m);
 
-
         info.onAdd = function (map) {
-            this._div = L.DomUtil.create('div', 'info'); // create a div with a class "info"
+            this._div = L.DomUtil.create("div", "info"); // create a div with a class "info"
             this.update();
             return this._div;
         };
@@ -355,17 +442,15 @@
         // method that we will use to update the control based on feature properties passed
         info.update = function (props) {
             if (props) {
-                this._div.innerHTML = '<b>' + props.name + '</b><br />';
+                this._div.innerHTML = "<b>" + props.name + "</b><br />";
             }
         };
         info.addTo(m);
 
-
-        var legend = L.control({position: 'bottomleft'});
-
-        legend.onAdd = function (map) {
-            const div = L.DomUtil.create('div', 'info legend');
-            div.innerHTML = '' +
+        mapLayers.legend.onAdd = function (map) {
+            const div = L.DomUtil.create("div", "info legend");
+            div.innerHTML =
+                "" +
                 '<i style="background:#f59f00"></i>Area 1<br>' +
                 '<i style="background:#0ca678"></i>Area 2<br>' +
                 '<i style="background:#ff6b00"></i>Area 3<br>' +
@@ -375,10 +460,16 @@
             return div;
         };
 
-        legend.addTo(m);
+        mapLayers.legend.addTo(m);
 
         return m;
     }
+
+    let stopIcon = L.icon({
+        iconUrl: `/markers/bus-minimal.svg`,
+        iconSize: [16, 16],
+        iconAnchor: [8, 8],
+    });
 
     function mapAction(container) {
         map = createMap(container);
@@ -387,44 +478,74 @@
             destroy: () => {
                 map.remove();
                 map = null;
-            }
+            },
         };
+    }
+
+    function back(to) {
+        document.getElementById(to).scrollIntoView(true);
+    }
+
+    let currentScheduleId = writable(null);
+
+    async function openSchedule(e) {
+        $currentScheduleId = e.detail.scheduleId;
+        await tick();
+        document.getElementById("schedule").scrollIntoView(true);
     }
 </script>
 
-
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.8.0/dist/leaflet.css"
+<link rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.8.0/dist/leaflet.css"
       integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ=="
-      crossorigin=""/>
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+      crossorigin=""
+/>
+<link rel="stylesheet"
+      href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+<link rel="stylesheet"
+      href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
 <link rel="stylesheet" href="/map.css"/>
 
-
-<div class="map" use:mapAction></div>
-
-<RouteListing
-        bind:routes={selectedRoutes}
-        on:openroute={openRoute}
-        on:hint={hintRoute}
-        on:drophint={dropRouteHint}/>
-
-{#if $selectedRoute}
-    <hr class="separator">
-{/if}
-
-<div id="route">
-    <Route routeId={selectedRoute}/>
+<div class="inset-0 fixed">
+  <div class="w-full h-screen" use:mapAction/>
 </div>
 
-<style>
-    .map {
-        height: 650px;
-        border-radius: 12px;
-    }
+<div class="fixed right-0 bottom-0 h-2/5 lg:h-3/5 bg-base-100 rounded-t-2xl lg:rounded-t-none lg:rounded-tl-2xl
+    overflow-hidden shadow-xl w-full lg:w-[28rem] flex flex-row">
+  <div class="carousel w-full overflow-y-hidden">
+    <div id="routes" class="carousel-item w-full">
+      <RouteListing bind:routes={selectedRoutes}
+                    on:openroute={openRoute}
+                    on:hint={hintRoute}
+                    on:drophint={dropRouteHint}/>
+    </div>
+    {#if $selectedRouteId}
+      <div id="route" class="carousel-item w-full">
 
-    .separator {
-        margin-top: 2rem;
-        margin-bottom: 2rem;
-    }
-</style>
+        <div class="flex flex-col w-full h-full">
+          <div class="p-2 bg-primary flex flex-row items-center gap-1 h-12 lg:h-16 w-full text-primary-content">
+            <div class="rounded-full btn btn-ghost w-12 px-3" on:click={back}>
+              <span class="text-2xl">🡸</span>
+            </div>
+            <span class="text-lg font-bold whitespace-nowrap overflow-hidden">
+              [{$route.code}] {$route.name}
+            </span>
+          </div>
+          <div class="p-2 overflow-y-scroll flex flex-col gap-2">
+            <select class="select select-primary select-sm w-full" bind:value={$selectedSubrouteId}>
+              {#each $route.subroutes as subroute}
+                <option value={subroute.id}>{subroute.flag}</option>
+              {/each}
+            </select>
+            <RouteStops on:openschedule={openSchedule} subrouteStops={subrouteStops}/>
+          </div>
+        </div>
+      </div>
+    {/if}
+    {#if $currentScheduleId}
+      <div id="schedule" class="carousel-item w-full">
+        <Schedule back={() => back("route")} scheduleId={currentScheduleId} />
+      </div>
+    {/if}
+  </div>
+</div>
