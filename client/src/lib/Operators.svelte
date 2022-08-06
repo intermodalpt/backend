@@ -36,7 +36,7 @@
     #route-list {
         display: grid;
         gap: 20px;
-        grid-template-columns: repeat(auto-fit, minmax(30em, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
     }
 
     .tcb {

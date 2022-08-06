@@ -1,48 +1,40 @@
 <script>
-    import {api_server} from "../settings.js";
+    import {routes, stops} from "../cache.js";
+    import RouteMap from "./components/Route.svelte";
+    import {writable} from "svelte/store";
 
     export let operator;
 
-    let routes;
-
-    fetch(`${api_server}/api/routes`)
-        .then(r => r.json())
-        .then(data => {
-            routes = data;
-            window.scrollTo(0, 0);
-        });
+    const selectedRoute = writable(undefined);
 </script>
 
 
 <div>
-    <span on:mouseup={_ => operator = null}>Go bak</span>
-    <slot></slot>
+  <slot></slot>
 </div>
 
-<h2>Linhas</h2>
-{#if routes}
-    <div class="route-list">
-    {#each routes as route}
-        <div class="code">
-            <span class="line-number">{route.flag}</span>
-            <span>{route.flag}</span>
-        </div>
+<h2 class="text-2xl">Linhas</h2>
+<div class="route-list">
+  {#if ($selectedRoute)}
+    <RouteMap routeId={selectedRoute}/>
+  {:else}
+    {#each $routes as route}
+      <div class="code" on:click={() => $selectedRoute = route.id}>
+        <span class="line-number">{route.code}</span>
+        <span>{route.name}</span>
+      </div>
     {/each}
-    </div>
-{:else}
-    <p>A carregar...</p>
-{/if}
+  {/if}
+</div>
 
 
 <style>
-    .code {
-
-    }
     .line-number {
         background-color: red;
         padding: 0.2em 10px;
         border-radius: 1em;
-        font-weight: bold;
+        font-weight: 900;
+        font-size: 1.2rem;
         display: inline-block;
     }
 </style>

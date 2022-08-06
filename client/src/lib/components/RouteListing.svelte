@@ -6,7 +6,7 @@
 
     const dispatch = createEventDispatcher();
 
-    function onClick(routeId) {
+    function onClick(routeId,a) {
         dispatch('openroute', {routeId: parseInt(routeId)});
     }
 
@@ -19,75 +19,39 @@
     }
 </script>
 
-
-<div class="content-wrapper">
-    <h2 style="margin-top: 0.9rem; margin-bottom: 0.6rem">Rotas</h2>
-    {#if routes}
-        <div class="grid">
-            {#each routeEntries as [id, info]}
-                <div>
-                    <span class="route"
-                          on:click={() => onClick(id)}
-                          on:mouseenter={() => onEnter(id)}
-                          on:mouseleave={() => onLeave(id)}>
-                        <span class="operator"><img src="/logos/cmet-min.svg" alt="CM"/></span>
-                        <span class="code">{info.code}</span>
-                    </span>
-                    <span class="name">{info.name}</span>
-                </div>
-            {/each}
-        </div>
-    {:else }
-        Selecione uma região do mapa para visualizar as rotas existentes.
-    {/if}
+<div class="w-full h-full flex-col flex">
+  <h2 class="p-3 lg:p-4 font-bold text-xl lg:text-2xl text-primary-content bg-primary h-12 lg:h-16">Rotas</h2>
+  {#if routes}
+    <div class="overflow-y-scroll">
+      <div class="flex flex-col gap-1 p-2">
+        {#each routeEntries as [id, info]}
+          <div class="cursor-pointer flex flex-row items-center p-1 gap-1 sm:gap-2 hover:bg-base-300 rounded-full"
+            on:click={() => onClick(id)}
+            on:mouseenter={() => onEnter(id)}
+            on:mouseleave={() => onLeave(id)}>
+            <div class="flex flex-row items-center rounded-full bg-base-100 border-base-content border-2 shrink-0">
+              <img class="ml-1 w-7 px-[2px]" src="/logos/cmet-min.svg" alt="CM"/>
+              <div class="rounded-full bg-primary px-2 py-1 -my-[2px] -mr-[2px] font-black text-primary-content text-lg"
+                    style="">{info.code}</div>
+            </div>
+            {#if (info.name.split(' - ').length === 2)}
+              <div>
+                <span>{info.name.split(' - ')[0]}</span><br>
+                <span>{info.name.split(' - ')[1]}</span>
+              </div>
+            {:else}
+              <div>{info.name}</div>
+            {/if}
+          </div>
+          <hr>
+        {/each}
+      </div>
+    </div>
+  {:else }
+    <div class="p-4">
+      Selecione uma região do mapa para visualizar as rotas existentes.
+    </div>
+  {/if}
 </div>
 
-<style>
-    .grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(25rem, 1fr));
-        grid-gap: 0.2rem;
-        max-height: 200px;
-        overflow-y: scroll;
-
-
-        background: linear-gradient(white 30%, rgba(255, 255, 255, 0)) center top,
-        linear-gradient(rgba(255, 255, 255, 0), white 70%) center bottom,
-        radial-gradient(farthest-side at 50% 0, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0)) center top,
-        radial-gradient(farthest-side at 50% 100%, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0)) center bottom;
-
-        background-repeat: no-repeat;
-        background-size: 100% 40px, 100% 40px, 100% 14px, 100% 14px;
-        background-attachment: local, local, scroll, scroll;
-
-    }
-
-    .route {
-        border-radius: 12px 16px 16px 12px;
-        margin: 2px 2px 5px 5px;
-        cursor: pointer;
-        min-width: 0;
-        display: inline-block;
-        box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.03), 0 1px 3px 1px rgba(0, 0, 0, 0.07), 0 2px 6px 2px rgba(0, 0, 0, 0.03);
-    }
-
-    .code {
-        border-radius: 14px;
-        font-weight: bold;
-        color: white;
-        background-color: darkred;
-        padding: 4px 3px;
-        font-size: 1.2rem;
-        display: inline-block;
-    }
-
-    .name {
-        display: inline-block;
-        overflow: auto;
-    }
-
-    .operator img {
-        max-height: 16px;
-    }
-</style>
 <link rel="stylesheet" href="https://unpkg.com/balloon-css/balloon.min.css">

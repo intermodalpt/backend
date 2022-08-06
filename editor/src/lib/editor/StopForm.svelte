@@ -32,15 +32,42 @@
 
     const dispatch = createEventDispatcher();
 </script>
+<div class="flex flex-col gap-1 p-2">
+  <div class="form-control w-full max-w-xs">
+    <label class="input-group">
+      <span class="label-text w-24">Name</span>
+      <input type="text" placeholder={name} class="input input-bordered w-full" />
+    </label>
+  </div>
+  <div class="form-control w-full max-w-xs">
+    <label class="input-group">
+      <span class="label-text w-24">Short name</span>
+      <input type="text" placeholder={short_name} class="input input-bordered w-full" />
+    </label>
+  </div>
+  <div class="form-control w-full max-w-xs">
+    <label class="input-group">
+      <span class="label-text w-24">Street</span>
+      <input type="text" placeholder={street} class="input input-bordered w-full" />
+    </label>
+  </div>
+  <div class="form-control w-full max-w-xs">
+    <label class="input-group">
+      <span class="label-text w-24">Door</span>
+      <input type="text" placeholder={door} class="input input-bordered w-full " />
+    </label>
+  </div>
+  <div class="form-control w-full max-w-xs">
+    <label class="input-group">
+      <span class="label-text w-24">Source</span>
+      <input type="text" placeholder={source} class="input input-bordered w-full" />
+    </label>
+  </div>
 
-Name: <input bind:value={name}><br>
-Short name: <input bind:value={short_name}><br>
-Street: <input bind:value={street}><br>
-Door: <input bind:value={door}><br>
-Source: <input bind:value={source}><br>
-Notes:<br>
-<!--    <textarea bind:notes></textarea><br>-->
-
-<button on:click={save}>
+<button class="btn btn-primary w-20" on:click={save}>
     Save
 </button>
+</div>
+  
+<!--    <textarea bind:notes></textarea><br>-->
+
