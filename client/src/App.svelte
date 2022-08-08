@@ -1,5 +1,5 @@
 <script>
-  import { onMount } from "svelte";
+  import { onMount, tick } from "svelte";
   import Issues from "./lib/Issues.svelte";
   import RouteViewer from "./lib/Operators.svelte";
   import GlobalMap from "./lib/Map.svelte";
@@ -7,8 +7,10 @@
   import Home from "./lib/Home.svelte";
   import Simulator from "./lib/Simulator.svelte";
   import { initCache } from "./cache.js";
+  import { writable } from "svelte/store";
 
   let page;
+  let path;
 
   const pages = {
     issues: Issues,
@@ -18,10 +20,17 @@
     about: About,
   };
 
+  let links = [
+    ["", "Início"],
+    ["map", "Rede"],
+    ["routes", "Serviços"],
+    ["issues", "Avisos"],
+    ["about", "Sobre nós"],
+  ];
+
   async function hashchange() {
     // the poor man's router!
-    const path = window.location.hash.slice(1).replace("/", "");
-
+    path = window.location.hash.slice(1).replace("/", "");
     page = pages[path];
     if (page === undefined) {
       page = Home;
@@ -32,6 +41,31 @@
     hashchange();
     await initCache();
   });
+
+  let ddopen = writable(false);
+  let ddClasses = writable("hidden");
+  function toggleDD(delay = 0) {
+    function doToggle() {
+      $ddopen = !$ddopen;
+      $ddClasses = "absolute scale-95 opacity-10";
+      tick();
+      if (!$ddopen) {
+        setTimeout(() => ($ddClasses = "hidden"), 150);
+      } else {
+        setTimeout(
+          () => ($ddClasses = $ddopen ? "absolute" : "absolute scale-95"),
+          1
+        );
+      }
+    }
+    if (delay === 0) {
+      doToggle();
+    } else {
+      setTimeout(() => {
+        doToggle();
+      }, delay);
+    }
+  }
 </script>
 
 <svelte:window on:hashchange={hashchange} />
@@ -39,8 +73,8 @@
 <div class="w-[min(920px,100%)] mx-auto z-[3000] p-2 xl:pt-4">
   <div class="navbar bg-base-100 shadow-xl rounded-xl">
     <div class="navbar-start">
-      <div class="dropdown">
-        <label tabindex="0" class="btn btn-ghost lg:hidden">
+      <div class="">
+        <span class="btn btn-ghost lg:hidden" on:click={() => toggleDD(0)}>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             class="h-5 w-5"
@@ -55,16 +89,19 @@
               d="M4 6h16M4 12h8m-8 6h16"
             />
           </svg>
-        </label>
+        </span>
         <ul
-          tabindex="0"
-          class="menu menu-compact dropdown-content mt-3 p-2 shadow bg-base-100 rounded-box w-52"
+          class="menu menu-compact mt-3 p-2 dropdown-content shadow bg-base-100 rounded-box w-52 duration-200 transition-all {$ddClasses}"
+          on:click={() => toggleDD(150)}
         >
-          <li><a href="#/">Início</a></li>
-          <li><a href="#/map">Rede</a></li>
-          <li><a href="#/routes">Serviços</a></li>
-          <li><a href="#/issues">Avisos</a></li>
-          <li><a href="#/about">Sobre nós</a></li>
+          {#each links as k}
+            <li>
+              <a
+                class={k[0] === path ? "bg-primary text-primary-content" : ""}
+                href="#/{k[0]}">{k[1]}</a
+              >
+            </li>
+          {/each}
         </ul>
       </div>
       <a
@@ -82,11 +119,13 @@
     </div>
     <div class="navbar-end hidden lg:flex">
       <ul class="menu menu-horizontal p-0">
-        <li><a href="#/">Início</a></li>
-        <li><a href="#/map">Rede</a></li>
-        <li><a href="#/routes">Serviços</a></li>
-        <li><a href="#/issues">Avisos</a></li>
-        <li><a href="#/about">Sobre nós</a></li>
+        {#each links as k}
+          <li>
+            <a class={k[0] === path ? "bg-base-300" : ""} href="#/{k[0]}"
+              >{k[1]}</a
+            >
+          </li>
+        {/each}
       </ul>
     </div>
   </div>
