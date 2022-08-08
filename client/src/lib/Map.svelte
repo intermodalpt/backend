@@ -15,9 +15,13 @@
   let amlgeo;
   let parishesgeo;
 
+  let color = (b) =>
+    `hsl(${getComputedStyle(document.body).getPropertyValue("--" + b)})`;
+
   let routeStops = [];
   const selectedRouteId = writable(undefined);
   const selectedSubrouteId = writable(undefined);
+
   const route = derived(selectedRouteId, ($selectedRouteId) => {
     return $routes.find((r) => {
       return r.id === $selectedRouteId;
@@ -220,11 +224,14 @@
     Object.values(spiderMap.subroutes).forEach((subroute) => {
       let segments = calc_route_multipoly(stops, subroute.stop_sequence);
 
-      let innerPolyline = L.polyline(segments, { color: "white", weight: 4 });
+      let innerPolyline = L.polyline(segments, {
+        color: color("s"),
+        weight: 4,
+      });
       innerPolyline.routeId = subroute.route;
       innerPolyLines.push(innerPolyline);
       let outerPolyline = L.polyline(segments, {
-        color: "black",
+        color: "#0000",
         weight: 6,
       }).addTo(mapLayers.spiderMap);
       bounds = bounds
@@ -250,11 +257,11 @@
     let segments = calc_route_multipoly(cachedStops, $subrouteStops.stops);
 
     let outerPolyline = L.polyline(segments, {
-      color: "black",
+      color: color("n"),
       weight: 6,
     }).addTo(mapLayers.subrouteLayer);
     let innerPolyline = L.polyline(segments, {
-      color: "white",
+      color: color("s"),
       weight: 4,
     }).addTo(mapLayers.subrouteLayer);
     mapLayers.subrouteLayer.addTo(map);
@@ -307,7 +314,7 @@
       })
       .forEach((line) => {
         line.bringToFront();
-        line.setStyle({ color: "green" });
+        line.setStyle({ color: color("p") });
       });
   }
 
@@ -317,15 +324,15 @@
       .filter((line) => {
         return line.routeId === routeId;
       })
-      .forEach((line) => line.setStyle({ color: "white" }));
+      .forEach((line) => line.setStyle({ color: color("s") }));
   }
 
   function createMap(container) {
     let m = L.map(container).setView([38.71856, -9.1372], 10);
 
     let selectorCircle = L.circle([51.508, -0.11], {
-      color: "green",
-      fillColor: "#12ff00",
+      color: color("p"),
+      fillColor: color("p"),
       fillOpacity: 0.2,
       radius: 500,
     }).addTo(mapLayers.selectionArea);
