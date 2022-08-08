@@ -29,6 +29,12 @@ pub enum Error {
     NotFoundUpstream,
     #[error("The provided information failed validation")]
     ValidationFailure,
+    #[error("The data could not be handled")]
+    Processing,
+    #[error("Unable to comunicate with the storage")]
+    ObjectStorageFailure,
+    #[error("Unable to execute database transaction")]
+    DatabaseExecution,
 }
 
 impl IntoResponse for Error {
@@ -43,6 +49,9 @@ impl IntoResponse for Error {
             }
             Error::ValidationFailure => {
                 (StatusCode::BAD_REQUEST, format!("{}", &self)).into_response()
+            }
+            Error::Processing | Error::ObjectStorageFailure | Error::DatabaseExecution => {
+                (StatusCode::INTERNAL_SERVER_ERROR, format!("{}", &self)).into_response()
             }
             // _ => (StatusCode::INTERNAL_SERVER_ERROR, format!("{}", &self))
             //     .into_response(),
