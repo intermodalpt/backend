@@ -1,8 +1,18 @@
 <script>
-  import Box from "./components/Box.svelte";
   import Operator from "./Operator.svelte";
 
   let operator = null;
+  const operators = [
+    "carris",
+    "cmet",
+    "tcb",
+    "mobicascais",
+    "ttsl",
+    "cp",
+    "fertagus",
+    "ml",
+    "mts",
+  ];
 
   function choose(e) {
     this.classList.add("selected");
@@ -11,35 +21,30 @@
   }
 </script>
 
-<div class="card bg-base-100 shadow-xl mx-2">
-  <div class="card-body">
-    {#if operator}
+{#if operator}
+  <div class="card bg-base-100 shadow-xl mx-2">
+    <div class="card-body">
       <Operator bind:operator>
         <div class="company {operator}" on:mouseup={choose} />
       </Operator>
-    {:else}
-      <div id="route-list">
-        <div class="company carris unavailable" />
-        <div class="company cmet" on:mouseup={choose} />
-        <div class="company tcb unavailable" />
-        <div class="company mobicascais unavailable" />
-        <div class="company ttsl unavailable" />
-        <div class="company cp unavailable" />
-        <div class="company fertagus unavailable" />
-        <div class="company ml unavailable" />
-        <div class="company mts unavailable" />
-      </div>
-    {/if}
+    </div>
   </div>
-</div>
+{:else}
+  <div class="grid gap-3 grid-cols-[repeat(auto-fit,minmax(20rem,1fr))] mx-2">
+    {#each operators as op}
+      <div
+        class="card bg-base-100 shadow-xl cursor-pointer"
+        onmouseup={() => op === "cmet" && choose}
+      >
+        <div
+          class="rounded-xl aspect-[3.6] {op !== 'cmet' && 'blur-sm'} {op}"
+        />
+      </div>
+    {/each}
+  </div>
+{/if}
 
 <style>
-  #route-list {
-    display: grid;
-    gap: 20px;
-    grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
-  }
-
   .tcb {
     background: top 0.7em left 0.7em no-repeat url("/src/assets/logos/tcb.svg"),
       bottom 0.7em right 0.7em no-repeat url("/src/assets/veiculos/tcb.svg");
@@ -50,7 +55,6 @@
     background: top 0.7em left 0.7em no-repeat url("/src/assets/logos/cmet.svg"),
       bottom 0.7em right 0.7em no-repeat url("/src/assets/veiculos/cmet.svg");
     background-size: 35%, 60%;
-    /*background-color: #aaccaa !important;*/
   }
 
   .mobicascais {
