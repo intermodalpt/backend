@@ -141,56 +141,6 @@
             });
     }
 
-    function createMap(container) {
-        let m = L.map(container, {
-            contextmenu: true,
-
-            contextmenuWidth: 140,
-        }).setView([38.71856, -9.1372], 10);
-
-        let osm = L.tileLayer(
-            "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-            {
-                maxZoom: 19,
-                attribution: "© OpenStreetMap",
-            }
-        ).addTo(m);
-        // let satellite = L.tileLayer('https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
-        //     maxZoom: 19,
-        //     attribution: '© Google; Do not use this',
-        //     subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
-        // }).addTo(m);
-
-        // let baseMaps = {
-        //     "OSM": osm,
-        //     // "Satellite": satellite
-        // };
-        // L.control.layers(baseMaps).addTo(m);
-
-        m.maxBounds = new L.LatLngBounds(
-            new L.LatLng(38.3, -10.0),
-            new L.LatLng(39.35, -8.0)
-        );
-        m.maxBoundsViscosity = 1.0;
-        m.minZoom = 10;
-        m.setView([38.605, -9.0], 0);
-        m.setZoom(11);
-
-        return m;
-    }
-
-    function mapAction(container) {
-        map = createMap(container);
-        loadStops();
-
-        return {
-            destroy: () => {
-                map.remove();
-                map = null;
-            },
-        };
-    }
-
     function goTo(e) {
         if (e.detail.lat && e.detail.lon) {
             map.setView([e.detail.lat, e.detail.lon], 17);
@@ -199,35 +149,6 @@
 
     function redraw(e) {
         drawSubroute(e.detail.stops);
-    }
-
-    function saveSubrouteStops(e) {
-        fetch(
-            `${api_server}/api/routes/${selectedRoute}/stops/subroutes/${selectedSubroute}`,
-            {
-                method: "PATCH",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    from: {
-                        stops: selectedRouteStops[selectedSubroute].stops,
-                        diffs: selectedRouteStops[selectedSubroute].diffs,
-                    },
-                    to: {
-                        stops: e.detail.stops,
-                        diffs: e.detail.diffs,
-                    },
-                }),
-            }
-        )
-            .then((resp) => {
-                alert("We're good");
-            })
-            .catch((e) => {
-                alert("Error saving");
-                console.log(e);
-            });
     }
 
     function createMap(container) {
@@ -241,17 +162,6 @@
             maxZoom: 19,
             attribution: '© OpenStreetMap'
         }).addTo(m);
-        // let satellite = L.tileLayer('https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
-        //     maxZoom: 19,
-        //     attribution: '© Google; Do not use this',
-        //     subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
-        // }).addTo(m);
-
-        // let baseMaps = {
-        //     "OSM": osm,
-        //     // "Satellite": satellite
-        // };
-        // L.control.layers(baseMaps).addTo(m);
 
 
         m.maxBounds = new L.LatLngBounds(new L.LatLng(38.3, -10.0), new L.LatLng(39.35, -8.0));
@@ -274,16 +184,6 @@
                 map = null;
             }
         };
-    }
-
-    function goTo(e) {
-        if (e.detail.lat && e.detail.lon) {
-            map.setView([e.detail.lat, e.detail.lon], 17)
-        }
-    }
-
-    function redraw(e) {
-        drawSubroute(e.detail.stops)
     }
 
     function saveSubrouteStops(e) {
