@@ -25,8 +25,10 @@ use s3;
 use sha1::{Digest, Sha1};
 
 use crate::models::StopPic;
+use crate::utils::{
+    datetime_from_exif_ascii, extract_f64_gps_coord, string_from_exif_ascii,
+};
 use crate::{Error, SqlitePool};
-use crate::utils::{datetime_from_exif_ascii, extract_f64_gps_coord, string_from_exif_ascii};
 
 const THUMBNAIL_MAX_WIDTH: u32 = 300;
 const THUMBNAIL_MAX_HEIGHT: u32 = 200;
@@ -49,6 +51,7 @@ pub(crate) async fn upload_stop_picture(
 
     let original_img = image::load_from_memory(content.as_ref())
         .map_err(|_err| Error::ValidationFailure)?;
+    let original_img_mime = mime_guess::from_path(&name);
 
     let medium_img = original_img.resize(
         MEDIUM_IMG_MAX_WIDTH,
@@ -60,7 +63,11 @@ pub(crate) async fn upload_stop_picture(
         .encode(MEDIUM_IMG_MAX_QUALITY)
         .to_vec();
     let _status_code = bucket
-        .put_object(format!("/{}m.webp", hex_hash), &medium_img_webp)
+        .put_object_with_content_type(
+            format!("/medium/{}", hex_hash),
+            &medium_img_webp,
+            "image/webp",
+        )
         .await
         .map_err(|_err| Error::ObjectStorageFailure)?;
 
@@ -74,14 +81,29 @@ pub(crate) async fn upload_stop_picture(
         .encode(THUMBNAIL_MAX_QUALITY)
         .to_vec();
     let _status_code = bucket
-        .put_object(format!("/{}t.webp", hex_hash), &thumbnail_img_webp)
+        .put_object_with_content_type(
+            format!("/thumb/{}", hex_hash),
+            &thumbnail_img_webp,
+            "image/webp",
+        )
         .await
         .map_err(|_err| Error::ObjectStorageFailure)?;
 
-    let _status_code = bucket
-        .put_object(format!("/{}.webp", hex_hash), content.as_ref())
-        .await
-        .map_err(|_err| Error::ObjectStorageFailure)?;
+    let _status_code = if let Some(mime) = original_img_mime.first() {
+        bucket
+            .put_object_with_content_type(
+                format!("/ori/{}", hex_hash),
+                content.as_ref(),
+                mime.as_ref(),
+            )
+            .await
+            .map_err(|_err| Error::ObjectStorageFailure)?
+    } else {
+        bucket
+            .put_object(format!("/{}", hex_hash), content.as_ref())
+            .await
+            .map_err(|_err| Error::ObjectStorageFailure)?
+    };
 
     let mut stop_pic_entry = StopPic {
         id: 0,
@@ -137,10 +159,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     )
     .execute(db_pool)
     .await
-    .map_err(|e| {
-        println!("{:?}", e);
-        Error::DatabaseExecution
-    })?;
+    .map_err(|e| Error::DatabaseExecution)?;
 
     Ok(())
 }
