@@ -1,5 +1,5 @@
 <script>
-  import { createEventDispatcher } from "svelte";
+  import {createEventDispatcher} from "svelte";
 
   export let routes;
   export let stops;
@@ -127,11 +127,11 @@
   }
 
   function redraw(i) {
-    dispatch("redraw", { stops: stopList });
+    dispatch("redraw", {stops: stopList});
   }
 
   function save() {
-    dispatch("savesubroutestops", { stops: stopList, diffs: diffList });
+    dispatch("savesubroutestops", {stops: stopList, diffs: diffList});
   }
 </script>
 
@@ -139,46 +139,20 @@
   {#if stopList}
     {#each stopList as stop, index}
       <div class="list-item">
-        <a
-          on:click={() => {
-            goTo(index);
-          }}
-          >({stops[stop].source}{stop}) - {stops[stop].name ||
-            stops[stop].short_name}</a
-        >
+        <a on:click={() => goTo(index)}>
+          ({stops[stop].source}{stop}) - {stops[stop].name || stops[stop].short_name}
+        </a>
         +
-        <input
-          class="time-diff"
-          type="number"
-          maxlength="2"
-          max="99"
-          bind:value={diffList[index]}
-        />
+        <input class="time-diff" type="number" maxlength="2" max="99" bind:value={diffList[index]} />
         <div class="controls">
-          {#if index > 0}<span
-              class="cursor-pointer"
-              on:click={() => {
-                moveUp(index);
-              }}>🡹</span
-            >{/if}
-          {#if index !== stopList.length - 1}<span
-              class="cursor-pointer"
-              on:click={() => {
-                moveDown(index);
-              }}>🡻</span
-            >{/if}
-          <span
-            class="cursor-pointer"
-            on:click={() => {
-              replaceStop(index);
-            }}>⮰</span
-          >
-          <span
-            class="cursor-pointer"
-            on:click={() => {
-              removeStop(index);
-            }}>❌</span
-          >
+          {#if index > 0}
+            <span class="cursor-pointer" on:click={() => moveUp(index)}>🡹</span>
+          {/if}
+          {#if index !== stopList.length - 1}
+            <span class="cursor-pointer" on:click={() => moveDown(index)}>🡻</span>
+          {/if}
+          <span class="cursor-pointer" on:click={() => replaceStop(index)}>⮰</span>
+          <span class="cursor-pointer" on:click={() => removeStop(index)}>❌</span>
         </div>
       </div>
     {/each}
@@ -186,9 +160,7 @@
     <!--        <input type="number" min="0" max="{stopList.length}" bind:value={addAfterIndex}/>-->
     <select bind:value={addAfterIndex}>
       {#each stopList as stop, index}
-        <option value={index}
-          >{stops[stop].short_name || stops[stop].name || stop}</option
-        >
+        <option value={index}>{stops[stop].short_name || stops[stop].name || stop}</option>
       {/each}
     </select>
     {#if changes}

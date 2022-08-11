@@ -2,8 +2,8 @@
   import Box from "../components/Box.svelte";
   import StopForm from "./StopForm.svelte";
   import L from "leaflet";
-  import { api_server } from "../../settings.js";
-  import { icons } from "./assets.js";
+  import {api_server} from "../../settings.js";
+  import {icons} from "./assets.js";
 
   let map;
   let stops;
@@ -81,13 +81,13 @@
 
   function createStopMarker(info) {
     let marker;
-    let markerOptions = { rinseOnHover: true, draggable: true };
+    let markerOptions = {rinseOnHover: true, draggable: true};
     if (icons[info.source] === undefined) {
       marker = L.marker([info.lat, info.lon], markerOptions);
     } else {
       marker = L.marker(
         [info.lat, info.lon],
-        Object.assign({}, markerOptions, { icon: icons[info.source] })
+        Object.assign({}, markerOptions, {icon: icons[info.source]})
       );
     }
 
@@ -168,11 +168,6 @@
         attribution: "© OpenStreetMap",
       }
     ).addTo(m);
-    // let satellite = L.tileLayer('https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
-    //     maxZoom: 19,
-    //     attribution: '© Google; Do not use this',
-    //     subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
-    // }).addTo(m);
 
     let baseMaps = {
       OSM: osm,
@@ -224,19 +219,15 @@
         {#if op.op === updateStop}
           <li>
             <div class="changes">
-              <span class="title"
-                >Atualização de paragem {op.stop.id} - {op.stop.name}</span
-              >
+              <span class="title">
+                Atualização de paragem {op.stop.id} - {op.stop.name}
+              </span>
               <span>
                 {JSON.stringify(op)}
               </span>
             </div>
-            <button
-              on:click={(e) => {
-                pendingOps.splice(i, 1);
-                pendingOps = pendingOps;
-              }}
-              >Call it quitz
+            <button on:click={(e) => { pendingOps.splice(i, 1); pendingOps = pendingOps; }}>
+              Call it quitz
             </button>
           </li>
         {:else}

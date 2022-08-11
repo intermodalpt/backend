@@ -1,36 +1,34 @@
 <script>
-    import Box from '../components/Box.svelte';
+  import {createEventDispatcher} from 'svelte';
 
-    import {createEventDispatcher} from 'svelte';
+  export let stop;
 
-    export let stop;
+  let name = stop.name;
+  let short_name = stop.short_name;
+  let street = stop.street;
+  let door = stop.door;
+  let source = stop.source;
+  let notes = "";
 
-    let name = stop.name;
-    let short_name = stop.short_name;
-    let street = stop.street;
-    let door = stop.door;
-    let source = stop.source;
-    let notes = "";
+  $: name = stop.name;
+  $: short_name = stop.short_name;
+  $: street = stop.street;
+  $: door = stop.door;
+  $: source = stop.source;
+  notes = "";
 
-    $: name = stop.name;
-    $: short_name = stop.short_name;
-    $: street = stop.street;
-    $: door = stop.door;
-    $: source = stop.source;
-    notes = "";
-
-    function save() {
-        dispatch('save', Object.assign(stop, {
-            name: name,
-            short_name: short_name,
-            street: street,
-            door: door,
-            source: source,
-        }));
-    }
+  function save() {
+    dispatch('save', Object.assign(stop, {
+      name: name,
+      short_name: short_name,
+      street: street,
+      door: door,
+      source: source,
+    }));
+  }
 
 
-    const dispatch = createEventDispatcher();
+  const dispatch = createEventDispatcher();
 </script>
 <div class="flex flex-col gap-1 p-2">
   <div class="form-control w-full max-w-xs">
@@ -64,10 +62,10 @@
     </label>
   </div>
 
-<button class="btn btn-primary w-20" on:click={save}>
+  <button class="btn btn-primary w-20" on:click={save}>
     Save
-</button>
+  </button>
 </div>
-  
+
 <!--    <textarea bind:notes></textarea><br>-->
 
