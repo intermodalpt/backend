@@ -92,6 +92,10 @@ pub(crate) fn build_paths(state: State) -> Router {
         )
         .route("/upload/stops", post(handlers::upload_stop_picture))
         .route(
+            "/upload/stops/:picture_id",
+            post(handlers::upload_stop_picture_meta),
+        )
+        .route(
             "/tagging/stops/untagged",
             get(handlers::get_untagged_stop_pictures),
         )

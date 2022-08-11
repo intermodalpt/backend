@@ -37,10 +37,10 @@ use crate::models::{
     // The macros do not support module paths
     responses::{
         DateDeparture, Departure, Parish, Route, SpiderMap, SpiderRoute,
-        SpiderStop, SpiderSubroute, Subroute, SubrouteStops, UntaggedStopPic
+        SpiderStop, SpiderSubroute, Subroute, SubrouteStops, UntaggedStopPic,
     },
     Calendar,
-    Stop
+    Stop,
 };
 use crate::{middleware, Error, State};
 
@@ -913,7 +913,7 @@ LIMIT ? OFFSET ?
             lat: row.lat,
             width: row.width as u32,
             height: row.height as u32,
-            camera_ref: row.camera_ref
+            camera_ref: row.camera_ref,
         })
     }
 
@@ -948,6 +948,60 @@ pub(crate) async fn upload_stop_picture(
             content,
         )
         .await?;
+    }
+
+    Ok((StatusCode::OK, "").into_response())
+}
+
+#[debug_handler]
+pub(crate) async fn upload_stop_picture_meta(
+    Extension(state): Extension<Arc<State>>,
+    Path(stop_picture_id): Path<i64>,
+    Json(stop_pic_meta): Json<requests::ChangeStopPic>,
+) -> Result<impl IntoResponse, Error> {
+    let stop_ids = stop_pic_meta.stops.iter().join(",");
+
+    let tags = serde_json::to_string(&stop_pic_meta.tags).unwrap();
+    let _res = sqlx::query!(
+        r#"
+UPDATE StopPics
+SET public=?, sensitive=?, lon=?, lat=?, tags=?, tagged=1
+WHERE id=?
+    "#,
+        stop_pic_meta.public,
+        stop_pic_meta.sensitive,
+        stop_pic_meta.lon,
+        stop_pic_meta.lat,
+        tags,
+        stop_picture_id
+    )
+    .execute(&state.pool)
+    .await
+    .unwrap();
+
+    let _res = sqlx::query(&format!(
+        r#"
+DELETE FROM StopPicStops
+WHERE pic=? AND stop NOT IN ({stop_ids})
+    "#
+    ))
+    .bind(stop_picture_id)
+    .execute(&state.pool)
+    .await
+    .unwrap();
+
+    for stop_id in stop_pic_meta.stops {
+        let _res = sqlx::query!(
+            r#"
+INSERT INTO StopPicStops(pic, stop)
+VALUES (?, ?)
+    "#,
+            stop_picture_id,
+            stop_id
+        )
+        .execute(&state.pool)
+        .await
+        .unwrap();
     }
 
     Ok((StatusCode::OK, "").into_response())
