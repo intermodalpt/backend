@@ -23,6 +23,7 @@
   let isSensitive = image.sensitive;
   let isPublic = image.public;
   let notes = image.notes;
+  let quality = 0;
 
   function createMap(container) {
     let m = L.map(container);
@@ -56,7 +57,7 @@
       marker.on("moveend", markerMoved);
     }
 
-    m.on('dblclick', function (e) {
+    m.on('click', function (e) {
       if (marker) {
         marker.removeFrom(map);
       }
@@ -139,6 +140,47 @@
     stopIds = stopIds;
   }
 
+  function adjustQualityLabel() {
+    let label = document.getElementById("quality-label");
+    switch (quality) {
+      case 0:
+        label.textContent = "Sem informação"
+        break
+      case 10:
+        label.textContent = "Desfocada"
+        break
+      case 20:
+        label.textContent = "De dentro de um veiculo (visível na imagem)"
+        break
+      case 30:
+        label.textContent = "De dentro de um veiculo (reflexos ou filto no vidro)"
+        break
+      case 40:
+        label.textContent = "Mal direccionada"
+        break
+      case 50:
+        label.textContent = "Noturna"
+        break
+      case 60:
+        label.textContent = "Excesso ou falta de brilho"
+        break
+      case 70:
+        label.textContent = "Paragem não é sujeito principal"
+        break
+      case 80:
+        label.textContent = "Pessoas, veiculos ou lixo"
+        break
+      case 90:
+        label.textContent = "Imperfeições menores (seria possivel fazer melhor?)"
+        break
+      case 100:
+        label.textContent = "Absolutamente nada de assinalável"
+        break
+      default:
+        label.textContent = "?"
+    }
+  }
+
   function save() {
     let newMeta = {
       lat: image.lat,
@@ -148,6 +190,7 @@
       sensitive: isSensitive,
       public: isPublic,
       notes: notes,
+      quality: quality,
     };
 
     if (location.lat != null) {
@@ -191,7 +234,7 @@
     <img class="rounded-lg h-96"
          src="https://intermodal-storage-worker.claudioap.workers.dev/medium/{image.sha1}/stop"/>
   </a>
-  <div class="rounded-lg w-96 h-96 shrink-0" use:mapAction></div>
+  <div class="rounded-lg w-96 h-96 shrink-0 cursor-crosshair" use:mapAction></div>
 </div>
       <div class="flex space-x-5">
         <label for="is-sensitive">Sensitive
@@ -206,6 +249,26 @@
         </div>
       </div>
       <div>
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text">Quality</span>
+            <span class="label-text" id="quality-label">Sem informação</span>
+          </label>
+          <input type="range" min="0" max="100" class="range" step="10" bind:value={quality} on:change={adjustQualityLabel}/>
+          <div class="w-full flex justify-between text-xs px-2">
+            <span>|</span>
+            <span>|</span>
+            <span>|</span>
+            <span>|</span>
+            <span>|</span>
+            <span>|</span>
+            <span>|</span>
+            <span>|</span>
+            <span>|</span>
+            <span>|</span>
+            <span>|</span>
+          </div>
+        </div>
         <div class="form-control">
           <label class="label">
             <span class="label-text">Stops</span>
