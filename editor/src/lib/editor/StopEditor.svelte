@@ -193,7 +193,7 @@
       <div class="map" use:mapAction />
     </Box>
   </div>
-  <div>
+  <div class="z-[100000]">
     {#if selectedStop}
       <StopForm bind:stop={selectedStop} on:save={saveStopInfo} />
     {:else}

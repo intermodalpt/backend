@@ -1,7 +1,20 @@
 <script>
   import { createEventDispatcher } from "svelte";
+  import StopCheckbox from "./StopCheckbox.svelte";
 
   export let stop;
+
+  const simpleCheckboxes = [
+    "Tem um passeio",
+    "Tem uma passadeira",
+    "A paragem está imune a estacionisses",
+    "Tem horários",
+    "Tem postaletes",
+    "Tem informação obsoleta",
+    "Tem abrigo",
+    "Tem bancos",
+    "Danificada",
+  ];
 
   let name = stop.name;
   let short_name = stop.short_name;
@@ -33,7 +46,7 @@
   const dispatch = createEventDispatcher();
 </script>
 
-<div class="flex flex-col gap-1 p-2">
+<div class="flex flex-col gap-1 p-2 overflow-visible ">
   <div class="form-control w-full max-w-xs">
     <label class="input-group">
       <span class="label-text w-24">Name</span>
@@ -65,6 +78,14 @@
     </label>
   </div>
 
+  {#each simpleCheckboxes as text}
+    <StopCheckbox {text} description="Descricao temporaria" />
+  {/each}
+  <StopCheckbox text={"Paragem"} icon={"light"} />
+  <StopCheckbox text={"Acesso"} icon={"light"} />
+  <StopCheckbox text={"Abrigo -> Autocarro"} icon={"eye"} />
+  <StopCheckbox text={"Paragem -> Autocarro"} icon={"eye"} />
+  <StopCheckbox text={"Autocarro -> Paragem"} icon={"eye"} />
   <button class="btn btn-primary w-20" on:click={save}> Save </button>
 </div>
 
