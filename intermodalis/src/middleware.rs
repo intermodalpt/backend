@@ -42,7 +42,7 @@ pub(crate) async fn upload_stop_picture(
     name: String,
     bucket: &s3::Bucket,
     db_pool: &SqlitePool,
-    content: Bytes,
+    content: &Bytes,
 ) -> Result<i64, Error> {
     let mut hasher = Sha1::new();
     hasher.update(&content);
@@ -57,14 +57,14 @@ WHERE sha1=?"#,
     )
     .fetch_optional(db_pool)
     .await
-    .map_err(|_| Error::DatabaseExecution)?;
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     if let Some(res) = res {
         return Ok(res.id);
     }
 
     let original_img = image::load_from_memory(content.as_ref())
-        .map_err(|_err| Error::ValidationFailure)?;
+        .map_err(|err| Error::ValidationFailure(err.to_string()))?;
     let original_img_mime = mime_guess::from_path(&name);
 
     let medium_img = original_img.resize(
@@ -73,9 +73,10 @@ WHERE sha1=?"#,
         image::imageops::FilterType::CatmullRom,
     );
     let medium_img_webp = webp::Encoder::from_image(&medium_img)
-        .map_err(|_| Error::Processing)?
+        .map_err(|err| Error::Processing(err.to_string()))?
         .encode(MEDIUM_IMG_MAX_QUALITY)
         .to_vec();
+    // TODO handle status codes
     let _status_code = bucket
         .put_object_with_content_type(
             format!("/medium/{}", hex_hash),
@@ -83,7 +84,7 @@ WHERE sha1=?"#,
             "image/webp",
         )
         .await
-        .map_err(|_err| Error::ObjectStorageFailure)?;
+        .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?;
 
     let thumbnail_img = original_img.resize(
         THUMBNAIL_MAX_WIDTH,
@@ -91,7 +92,7 @@ WHERE sha1=?"#,
         image::imageops::FilterType::CatmullRom,
     );
     let thumbnail_img_webp = webp::Encoder::from_image(&thumbnail_img)
-        .map_err(|_err| Error::Processing)?
+        .map_err(|err| Error::Processing(err.to_string()))?
         .encode(THUMBNAIL_MAX_QUALITY)
         .to_vec();
     let _status_code = bucket
@@ -101,7 +102,7 @@ WHERE sha1=?"#,
             "image/webp",
         )
         .await
-        .map_err(|_err| Error::ObjectStorageFailure)?;
+        .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?;
 
     let _status_code = if let Some(mime) = original_img_mime.first() {
         bucket
@@ -111,12 +112,12 @@ WHERE sha1=?"#,
                 mime.as_ref(),
             )
             .await
-            .map_err(|_err| Error::ObjectStorageFailure)?
+            .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?
     } else {
         bucket
             .put_object(format!("/{}", hex_hash), content.as_ref())
             .await
-            .map_err(|_err| Error::ObjectStorageFailure)?
+            .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?
     };
 
     let mut stop_pic_entry = StopPic {
@@ -176,7 +177,7 @@ RETURNING id
     )
     .fetch_one(db_pool)
     .await
-    .map_err(|_| Error::DatabaseExecution)?;
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     Ok(res.id)
 }

@@ -16,8 +16,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use chrono::NaiveDateTime;
 use crate::Error;
+use chrono::NaiveDateTime;
 
 pub fn within_dates(date: (u8, u8), start: (u8, u8), end: (u8, u8)) -> bool {
     let (from_month, from_day) = start;
@@ -33,7 +33,7 @@ pub fn within_dates(date: (u8, u8), start: (u8, u8), end: (u8, u8)) -> bool {
 
 pub fn extract_f64_gps_coord(repr: &[exif::Rational]) -> Result<f64, Error> {
     if repr.len() != 3 {
-        return Err(Error::Processing);
+        return Err(Error::Processing("Invalid EXIF coord".to_string()));
     }
     let deg = repr[0];
     let min = repr[1];
@@ -45,23 +45,29 @@ pub fn extract_f64_gps_coord(repr: &[exif::Rational]) -> Result<f64, Error> {
 
 pub fn string_from_exif_ascii(repr: &[Vec<u8>]) -> Result<String, Error> {
     if repr.len() != 1 {
-        return Err(Error::Processing);
+        return Err(Error::Processing("Invalid EXIF String".to_string()));
     }
 
     let string = std::str::from_utf8(&repr[0])
-        .map_err(|_| Error::Processing)?
+        .map_err(|_e| {
+            Error::Processing("Invalid EXIF String encoding".to_string())
+        })?
         .to_string();
     Ok(string)
 }
 
-pub fn datetime_from_exif_ascii(repr: &[Vec<u8>]) -> Result<NaiveDateTime, Error> {
+pub fn datetime_from_exif_ascii(
+    repr: &[Vec<u8>],
+) -> Result<NaiveDateTime, Error> {
     if repr.len() != 1 {
-        return Err(Error::Processing);
+        return Err(Error::Processing("Invalid EXIF String".to_string()));
     }
 
-    let string =
-        std::str::from_utf8(&repr[0]).map_err(|_| Error::Processing)?;
-    let datetime = NaiveDateTime::parse_from_str(string, "%Y:%m:%d %H:%M:%S")
-        .map_err(|_| Error::Processing)?;
+    let string = std::str::from_utf8(&repr[0]).map_err(|_err| {
+        Error::Processing("Invalid EXIF String encoding".to_string())
+    })?;
+    let datetime =
+        NaiveDateTime::parse_from_str(string, "%Y:%m:%d %H:%M:%S")
+            .map_err(|_| Error::Processing("Invalid EXIF date".to_string()))?;
     Ok(datetime)
 }

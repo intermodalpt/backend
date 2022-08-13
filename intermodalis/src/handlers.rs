@@ -18,6 +18,8 @@
 
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::thread::sleep;
+use std::time::Duration;
 
 use axum::extract::{ContentLengthLimit, Multipart, Path, Query};
 use axum::http::StatusCode;
@@ -641,7 +643,7 @@ pub(crate) async fn get_schedule_for_date(
     Path((route_id, date)): Path<(i64, String)>,
 ) -> Result<impl IntoResponse, Error> {
     let date = NaiveDate::parse_from_str(&date, "%Y-%m-%d")
-        .map_err(|_err| Error::ValidationFailure)?;
+        .map_err(|err| Error::ValidationFailure(err.to_string()))?;
 
     let res = sqlx::query!(
         r#"
@@ -935,27 +937,44 @@ pub(crate) async fn upload_stop_picture(
     Extension(state): Extension<Arc<State>>,
     ContentLengthLimit(mut multipart): ContentLengthLimit<
         Multipart,
-        { 50 * 1024 * 1024 },
+        { 500 * 1024 * 1024 },
     >,
 ) -> Result<impl IntoResponse, Error> {
     while let Some(field) = multipart
         .next_field()
         .await
-        .map_err(|_err| Error::ValidationFailure)?
+        .map_err(|err| Error::ValidationFailure(err.to_string()))?
     {
         let filename = field
             .file_name()
-            .ok_or(Error::ValidationFailure)?
+            .ok_or(Error::ValidationFailure(
+                "File without a filename".to_string(),
+            ))?
             .to_string();
         let content = field
             .bytes()
             .await
-            .map_err(|_err| Error::ValidationFailure)?;
-        middleware::upload_stop_picture(
-            filename,
+            .map_err(|err| Error::ValidationFailure(err.to_string()))?;
+
+        let res = middleware::upload_stop_picture(
+            filename.clone(),
             &state.bucket,
             &state.pool,
-            content,
+            &content,
+        )
+        .await;
+
+        if res.is_err() {
+            sleep(Duration::from_secs(1));
+        } else {
+            continue;
+        }
+        // Retry, just in case
+        middleware::upload_stop_picture(
+            filename.clone(),
+            &state.bucket,
+            &state.pool,
+            &content,
         )
         .await?;
     }

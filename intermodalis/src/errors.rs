@@ -27,14 +27,14 @@ pub enum Error {
     DatabaseDeserialization,
     #[error("Requested data not in the storage")]
     NotFoundUpstream,
-    #[error("The provided information failed validation")]
-    ValidationFailure,
-    #[error("The data could not be handled")]
-    Processing,
-    #[error("Unable to comunicate with the storage")]
-    ObjectStorageFailure,
-    #[error("Unable to execute database transaction")]
-    DatabaseExecution,
+    #[error("The provided information failed validation:: `{0}`")]
+    ValidationFailure(String),
+    #[error("The data could not be handled: `{0}`")]
+    Processing(String),
+    #[error("Unable to comunicate with the storage: `{0}`")]
+    ObjectStorageFailure(String),
+    #[error("Unable to execute database transaction: `{0}`")]
+    DatabaseExecution(String),
 }
 
 impl IntoResponse for Error {
@@ -47,11 +47,12 @@ impl IntoResponse for Error {
             Error::NotFoundUpstream => {
                 (StatusCode::NOT_FOUND, format!("{}", &self)).into_response()
             }
-            Error::ValidationFailure => {
+            Error::ValidationFailure(_) => {
                 (StatusCode::BAD_REQUEST, format!("{}", &self)).into_response()
             }
-            Error::Processing | Error::ObjectStorageFailure | Error::DatabaseExecution => {
-                (StatusCode::INTERNAL_SERVER_ERROR, format!("{}", &self)).into_response()
+            Error::Processing(_) | Error::ObjectStorageFailure(_) | Error::DatabaseExecution(_) => {
+                eprintln!("{:?}", &self);
+                (StatusCode::INTERNAL_SERVER_ERROR, "The server had an internal error").into_response()
             }
             // _ => (StatusCode::INTERNAL_SERVER_ERROR, format!("{}", &self))
             //     .into_response(),
