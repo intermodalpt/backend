@@ -135,71 +135,41 @@
   }
 </script>
 
-<div class="list">
+<div class="flex flex-col gap-1">
   {#if stopList}
     {#each stopList as stop, index}
-      <div class="list-item">
-        <a on:click={() => goTo(index)}>
+      <div class="flex flex-row justify-between gap-1">
+        <!--        <input type="text" on:click={() => goTo(index)} value="({stops[stop].source}{stop}) - {stops[stop].name || stops[stop].short_name}">-->
+        <a class="btn btn-xs btn-ghost" on:click={() => goTo(index)}>
           ({stops[stop].source}{stop}) - {stops[stop].name || stops[stop].short_name}
         </a>
-        +
-        <input class="time-diff" type="number" maxlength="2" max="99" bind:value={diffList[index]} />
-        <div class="controls">
+        <div class="flex flex-row gap-1">
+          ∇
+          <input class="input input-bordered input-xs w-12" type="number" maxlength="2" max="99"
+                 bind:value={diffList[index]} />
           {#if index > 0}
-            <span class="cursor-pointer" on:click={() => moveUp(index)}>🡹</span>
+            <input class="btn btn-xs w-8 cursor-pointer" on:click={() => moveUp(index)} value="🡹" />
           {/if}
           {#if index !== stopList.length - 1}
-            <span class="cursor-pointer" on:click={() => moveDown(index)}>🡻</span>
+            <input class="btn btn-xs w-8 cursor-pointer" on:click={() => moveDown(index)} value="🡻" />
           {/if}
-          <span class="cursor-pointer" on:click={() => replaceStop(index)}>⮰</span>
-          <span class="cursor-pointer" on:click={() => removeStop(index)}>❌</span>
+          <input class="btn btn-xs w-8 cursor-pointer" on:click={() => replaceStop(index)} value="⮰" />
+          <input class="btn btn-xs w-8 cursor-pointer" on:click={() => removeStop(index)} value="❌" />
         </div>
       </div>
     {/each}
-    <input type="button" value="Add" on:click={addStop} /> after
-    <!--        <input type="number" min="0" max="{stopList.length}" bind:value={addAfterIndex}/>-->
-    <select bind:value={addAfterIndex}>
-      {#each stopList as stop, index}
-        <option value={index}>{stops[stop].short_name || stops[stop].name || stop}</option>
-      {/each}
-    </select>
-    {#if changes}
-      <input type="button" value="Save" on:click={save} />
-    {/if}
+    <div class="flex-row bg-base-300">
+      <input type="button" class="btn btn-xs" value="Add" on:click={addStop} /> after
+      <!--        <input type="number" min="0" max="{stopList.length}" bind:value={addAfterIndex}/>-->
+      <select class="select select-bordered select-xs" bind:value={addAfterIndex}>
+        {#each stopList as stop, index}
+          <option value={index}>{stops[stop].short_name || stops[stop].name || stop}</option>
+        {/each}
+      </select>
+      {#if changes}
+        <input type="button" value="Save" on:click={save} />
+      {/if}
+    </div>
   {/if}
 </div>
-
-<style>
-  .list {
-    background-color: white;
-    border-radius: 4px;
-    box-shadow: 0 2px 3px rgba(10, 10, 10, 0.1), 0 0 0 1px rgba(10, 10, 10, 0.1);
-  }
-
-  .list-item {
-    display: flex;
-    justify-content: space-between;
-    padding: 2px 5px;
-  }
-
-  .list-item a {
-    border-radius: 4px;
-    padding: 3px;
-    border: 1px solid black;
-    cursor: pointer;
-  }
-
-  .list-item:not(:last-child) {
-    border-bottom: 1px solid #dbdbdb;
-  }
-
-  .list-item.is-active {
-    background-color: #3273dc;
-    color: #fff;
-  }
-
-  .time-diff {
-    width: 40px;
-  }
-</style>
 

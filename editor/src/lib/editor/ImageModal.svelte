@@ -230,22 +230,27 @@
 <div class="modal modal-bottom sm:modal-middle modal-open">
   <div class="modal-box max-w-full sm:max-w-full w-max sm:w-max">
     <div class="flex flex-col">
-<div class="flex flex-row gap-1">
-  <a target="_blank"
-     href="https://intermodal-storage-worker.claudioap.workers.dev/ori/{image.sha1}/{image.original_filename}">
-    <img class="rounded-lg h-96"
-         src="https://intermodal-storage-worker.claudioap.workers.dev/medium/{image.sha1}/stop"/>
-  </a>
-  <div class="rounded-lg w-96 h-96 shrink-0 cursor-crosshair" use:mapAction></div>
-</div>
-      <div class="flex space-x-5">
-        <label for="is-sensitive">Sensitive
-          <input id="is-sensitive" type="checkbox" bind:checked={isSensitive} /> (eg. faces)
-        </label>
-        <label for="is-public">Public
-          <input id="is-public" type="checkbox" bind:checked={isPublic} /> (after sensitivities removed)
-        </label>
+      <div class="flex lg:flex-row flex-col-reverse gap-1">
+        <a target="_blank"
+           href="https://intermodal-storage-worker.claudioap.workers.dev/ori/{image.sha1}/{image.original_filename}">
+          <img class="rounded-lg w-full max-h-96"
+               alt="Visualização paragem"
+               src="https://intermodal-storage-worker.claudioap.workers.dev/medium/{image.sha1}/stop" />
+        </a>
+        <div class="rounded-lg lg:w-96 w-full h-96 shrink-0 cursor-crosshair" use:mapAction></div>
+      </div>
+      <div class="flex justify-between space-x-5">
         <div>
+          <label class="btn btn-success w-40" class:btn-error={isSensitive} for="is-sensitive">
+            {#if isSensitive}Sensitive{:else }Not sensitive{/if}
+            <input id="is-sensitive" type="checkbox" class="hidden" bind:checked={isSensitive} />
+          </label>
+          <label class="btn btn-success w-40" class:btn-error={!isPublic} for="is-public">
+            {#if isPublic}Can be public{:else }Private{/if}
+            <input id="is-public" type="checkbox" class="hidden" bind:checked={isPublic} />
+          </label>
+        </div>
+        <div class="">
           <span>Location:</span>
           <span>{#if location.lat}{location.lat};{location.lon}{:else}Unset{/if}</span>
         </div>
@@ -256,7 +261,9 @@
             <span class="label-text">Quality</span>
             <span class="label-text" id="quality-label">Sem informação</span>
           </label>
-          <input type="range" min="0" max="100" class="range" step="10" bind:value={quality} on:change={adjustQualityLabel}/>
+          <input type="range" min="0" max="100" class="range" step="10"
+                 bind:value={quality}
+                 on:change={adjustQualityLabel} />
           <div class="w-full flex justify-between text-xs px-2">
             <span>|</span>
             <span>|</span>

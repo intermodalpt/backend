@@ -58,7 +58,7 @@
   </div>
 </div>
 {#if uploadModal}
-  <ImageUpload on:close={close}/>
+  <ImageUpload on:close={close} />
 {/if}
 {#if openedImage }
   <ImageModal bind:image={openedImage} on:close={close} />
