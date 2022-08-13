@@ -16,31 +16,35 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+use std::collections::HashMap;
+use std::sync::Arc;
+use std::thread::sleep;
+use std::time::Duration;
+
+use axum::extract::{ContentLengthLimit, Multipart, Path, Query};
+use axum::http::StatusCode;
+use axum::response::IntoResponse;
+use axum::{Extension, Json};
+use axum_macros::debug_handler;
+use chrono::NaiveDate;
+use itertools::Itertools;
+use serde::Deserialize;
+use sqlx::sqlite::SqliteRow;
+use sqlx::Row;
+use utoipa_swagger_ui::Config;
+
 use crate::models::{
     requests,
     // This whole ordeal instead of just writing `responses::` because of uitopa
     // The macros do not support module paths
     responses::{
         DateDeparture, Departure, Parish, Route, SpiderMap, SpiderRoute,
-        SpiderStop, SpiderSubroute, Subroute, SubrouteStops,
+        SpiderStop, SpiderSubroute, Subroute, SubrouteStops, UntaggedStopPic,
     },
     Calendar,
     Stop,
 };
-use crate::{Error, State};
-use std::collections::HashMap;
-
-use std::sync::Arc;
-
-use axum::extract::Path;
-use axum::http::StatusCode;
-use axum::response::IntoResponse;
-use axum::{Extension, Json};
-use chrono::NaiveDate;
-use itertools::Itertools;
-use sqlx::sqlite::SqliteRow;
-use sqlx::Row;
-use utoipa_swagger_ui::Config;
+use crate::{middleware, Error, State};
 
 #[utoipa::path(
     get,
@@ -70,6 +74,12 @@ JOIN Municipalities where Parishes.municipality = Municipalities.id
     Ok((StatusCode::OK, Json(res)).into_response())
 }
 
+#[derive(Deserialize)]
+pub(crate) struct StopQueryParam {
+    #[serde(default)]
+    all: bool,
+}
+
 #[utoipa::path(
     get,
     path = "/api/stops",
@@ -82,20 +92,33 @@ JOIN Municipalities where Parishes.municipality = Municipalities.id
 )]
 pub(crate) async fn get_stops(
     Extension(state): Extension<Arc<State>>,
+    params: Query<StopQueryParam>,
 ) -> Result<impl IntoResponse, Error> {
-    let res = sqlx::query_as!(
-        Stop,
-        r#"
+    let res = if params.0.all {
+        sqlx::query_as!(
+            Stop,
+            r#"
 SELECT *
 FROM Stops
---WHERE id IN (
---    SELECT DISTINCT stop
---    FROM SubrouteStops
---)
     "#
-    )
-    .fetch_all(&state.pool)
-    .await
+        )
+        .fetch_all(&state.pool)
+        .await
+    } else {
+        sqlx::query_as!(
+            Stop,
+            r#"
+SELECT *
+FROM Stops
+WHERE id IN (
+    SELECT DISTINCT stop
+    FROM SubrouteStops
+)
+    "#
+        )
+        .fetch_all(&state.pool)
+        .await
+    }
     .unwrap();
 
     Ok((StatusCode::OK, Json(res)).into_response())
@@ -620,7 +643,7 @@ pub(crate) async fn get_schedule_for_date(
     Path((route_id, date)): Path<(i64, String)>,
 ) -> Result<impl IntoResponse, Error> {
     let date = NaiveDate::parse_from_str(&date, "%Y-%m-%d")
-        .map_err(|_err| Error::ValidationFailure)?;
+        .map_err(|err| Error::ValidationFailure(err.to_string()))?;
 
     let res = sqlx::query!(
         r#"
@@ -844,6 +867,170 @@ WHERE  subroute=? AND idx=?
             .await
             .unwrap();
         }
+    }
+
+    Ok((StatusCode::OK, "").into_response())
+}
+
+#[derive(Deserialize, Default)]
+pub(crate) struct Page {
+    #[serde(default)]
+    p: u32,
+}
+
+const PAGE_SIZE: u32 = 100;
+
+pub(crate) async fn get_untagged_stop_pictures(
+    Extension(state): Extension<Arc<State>>,
+    paginator: Query<Page>,
+) -> Result<impl IntoResponse, Error> {
+    let offset = paginator.p.saturating_sub(1) * PAGE_SIZE;
+    let res = sqlx::query!(
+        r#"
+SELECT id, original_filename, sha1, public, sensitive, tagged, uploader,
+	upload_date, capture_date, width, height, lon, lat, camera_ref, tags, notes
+FROM StopPics
+WHERE tagged = 0
+LIMIT ? OFFSET ?
+    "#,
+        PAGE_SIZE,
+        offset
+    )
+    .fetch_all(&state.pool)
+    .await
+    .unwrap();
+
+    let mut pics = vec![];
+    for row in res {
+        let tags: Vec<String> =
+            if let Ok(tags) = serde_json::from_str(&row.tags) {
+                tags
+            } else {
+                // todo warn
+                vec![]
+            };
+
+        pics.push(UntaggedStopPic {
+            id: row.id,
+            original_filename: row.original_filename,
+            sha1: row.sha1,
+            public: row.public != 0,
+            sensitive: row.sensitive != 0,
+            uploader: row.uploader,
+            upload_date: row.upload_date,
+            capture_date: row.capture_date,
+            lon: row.lon,
+            lat: row.lat,
+            width: row.width as u32,
+            height: row.height as u32,
+            camera_ref: row.camera_ref,
+            tags,
+            notes: row.notes,
+        })
+    }
+
+    Ok((StatusCode::OK, Json(pics)).into_response())
+}
+
+#[debug_handler]
+pub(crate) async fn upload_stop_picture(
+    Extension(state): Extension<Arc<State>>,
+    ContentLengthLimit(mut multipart): ContentLengthLimit<
+        Multipart,
+        { 500 * 1024 * 1024 },
+    >,
+) -> Result<impl IntoResponse, Error> {
+    while let Some(field) = multipart
+        .next_field()
+        .await
+        .map_err(|err| Error::ValidationFailure(err.to_string()))?
+    {
+        let filename = field
+            .file_name()
+            .ok_or(Error::ValidationFailure(
+                "File without a filename".to_string(),
+            ))?
+            .to_string();
+        let content = field
+            .bytes()
+            .await
+            .map_err(|err| Error::ValidationFailure(err.to_string()))?;
+
+        let res = middleware::upload_stop_picture(
+            filename.clone(),
+            &state.bucket,
+            &state.pool,
+            &content,
+        )
+        .await;
+
+        if res.is_err() {
+            sleep(Duration::from_secs(1));
+        } else {
+            continue;
+        }
+        // Retry, just in case
+        middleware::upload_stop_picture(
+            filename.clone(),
+            &state.bucket,
+            &state.pool,
+            &content,
+        )
+        .await?;
+    }
+
+    Ok((StatusCode::OK, "").into_response())
+}
+
+#[debug_handler]
+pub(crate) async fn patch_stop_picture_meta(
+    Extension(state): Extension<Arc<State>>,
+    Path(stop_picture_id): Path<i64>,
+    Json(stop_pic_meta): Json<requests::ChangeStopPic>,
+) -> Result<impl IntoResponse, Error> {
+    let stop_ids = stop_pic_meta.stops.iter().join(",");
+
+    let tags = serde_json::to_string(&stop_pic_meta.tags).unwrap();
+    let _res = sqlx::query!(
+        r#"
+UPDATE StopPics
+SET public=?, sensitive=?, lon=?, lat=?, tags=?, tagged=1
+WHERE id=?
+    "#,
+        stop_pic_meta.public,
+        stop_pic_meta.sensitive,
+        stop_pic_meta.lon,
+        stop_pic_meta.lat,
+        tags,
+        stop_picture_id
+    )
+    .execute(&state.pool)
+    .await
+    .unwrap();
+
+    let _res = sqlx::query(&format!(
+        r#"
+DELETE FROM StopPicStops
+WHERE pic=? AND stop NOT IN ({stop_ids})
+    "#
+    ))
+    .bind(stop_picture_id)
+    .execute(&state.pool)
+    .await
+    .unwrap();
+
+    for stop_id in stop_pic_meta.stops {
+        let _res = sqlx::query!(
+            r#"
+INSERT OR IGNORE INTO StopPicStops(pic, stop)
+VALUES (?, ?)
+    "#,
+            stop_picture_id,
+            stop_id
+        )
+        .execute(&state.pool)
+        .await
+        .unwrap();
     }
 
     Ok((StatusCode::OK, "").into_response())

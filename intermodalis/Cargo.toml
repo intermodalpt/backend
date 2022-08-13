@@ -12,17 +12,31 @@ tokio = { version = "1", features = ["full"] }
 
 sqlx = { version = "0.5", features = ["runtime-tokio-native-tls", "sqlite", "json", "macros", "decimal"] }
 
-axum = "0.5.7"
-tower-http = { version="0.3.4", features = ["cors"]}
+axum = { version = "0.5.13", features = ["multipart"] }
+axum-macros = "0.2.3"
+tower-http = { version = "0.3.4", features = ["cors"] }
+bytes = "1.1.0"
 
-utoipa = "1.0.2"
-utoipa-swagger-ui = "1.0.0"
+utoipa = "1.1.0"
+utoipa-swagger-ui = "1.1.0"
 
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_repr = "0.1.8"
 serde_json = { version = "1.0", features = ["preserve_order"] }
 
+rust-s3 = { version = "0.32.3", features = ["default"] }
+
 thiserror = "1.0.30"
 itertools = "0.10.3"
 
-chrono = "0.4.19"
+chrono = { version = "0.4.20", features = ["serde"] }
+
+image = { version = "0.24.2", features = ["default"] }
+webp = "0.2.2"
+kamadak-exif = "0.5.4"
+mime_guess = "2.0.4"
+
+sha1 = "0.10.1"
+base16ct = { version = "0.1.1", features = ["alloc"] }
+
+config = { version = "0.13.2", features = ["toml"] }

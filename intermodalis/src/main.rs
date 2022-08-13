@@ -28,6 +28,7 @@
 mod consts;
 mod errors;
 mod handlers;
+mod middleware;
 mod models;
 mod utils;
 
@@ -72,10 +73,7 @@ pub(crate) fn build_paths(state: State) -> Router {
         .route("/api/stops/:stop_id/spider", get(handlers::get_stop_spider))
         .route("/api/stops/spider", post(handlers::get_stops_spider))
         .route("/api/routes", get(handlers::get_routes))
-        .route(
-            "/api/routes/:route_id",
-            get(handlers::get_route),
-        )
+        .route("/api/routes/:route_id", get(handlers::get_route))
         .route(
             "/api/routes/:route_id/schedule",
             get(handlers::get_schedule),
@@ -92,6 +90,15 @@ pub(crate) fn build_paths(state: State) -> Router {
             "/api/routes/:route_id/stops/subroutes/:subroute_id",
             patch(handlers::patch_subroute_stops),
         )
+        .route("/upload/stops", post(handlers::upload_stop_picture))
+        .route(
+            "/upload/stops/:picture_id",
+            patch(handlers::patch_stop_picture_meta),
+        )
+        .route(
+            "/tagging/stops/untagged",
+            get(handlers::get_untagged_stop_pictures),
+        )
         .layer(Extension(Arc::new(state)))
         .route(
             "/api-doc/openapi.json",
@@ -106,11 +113,50 @@ pub(crate) fn build_paths(state: State) -> Router {
 
 #[tokio::main]
 async fn main() {
+    let settings = Config::builder()
+        .add_source(config::File::with_name("./settings.toml"))
+        .add_source(config::Environment::with_prefix("SETTINGS"))
+        .build()
+        .unwrap();
+
+    let credentials = s3::creds::Credentials::new(
+        Some(
+            &settings
+                .get_string("access_key")
+                .expect("access_key not set"),
+        ),
+        Some(
+            &settings
+                .get_string("secret_key")
+                .expect("secret_key not set"),
+        ),
+        None,
+        None,
+        None,
+    )
+    .unwrap();
+
+    let bucket = s3::Bucket::new(
+        "stoppics",
+        s3::Region::R2 {
+            account_id: settings
+                .get_string("account_id")
+                .expect("account_id not set"),
+        },
+        credentials,
+    )
+    .unwrap()
+    .with_path_style();
+
     let state = State {
+        bucket,
         pool: SqlitePool::connect("sqlite:db.sqlite").await.expect(""),
     };
 
-    let addr = SocketAddr::from(([0, 0, 0, 0], 1893));
+    let addr = SocketAddr::from((
+        [0, 0, 0, 0],
+        settings.get_int("port").expect("port not set") as u16,
+    ));
 
     axum::Server::bind(&addr)
         .serve(build_paths(state).into_make_service())

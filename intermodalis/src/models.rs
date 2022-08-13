@@ -290,6 +290,33 @@ impl fmt::Display for Condition {
     }
 }
 
+#[derive(Debug, Serialize, Deserialize, Component)]
+pub struct User {
+    pub id: i64,
+    pub username: String,
+    pub token: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Component)]
+pub struct StopPic {
+    pub id: i64,
+    pub original_filename: String,
+    pub sha1: String,
+    pub public: bool,
+    pub sensitive: bool,
+    pub tagged: bool,
+    pub uploader: i64,
+    pub upload_date: String,
+    pub capture_date: Option<String>,
+    pub lon: Option<f32>,
+    pub lat: Option<f32>,
+    pub width: u32,
+    pub height: u32,
+    pub camera_ref: Option<String>,
+    pub tags: Vec<String>,
+    pub notes: Option<String>,
+}
+
 pub(crate) mod requests {
     use serde::Deserialize;
     use utoipa::Component;
@@ -316,6 +343,17 @@ pub(crate) mod requests {
     pub struct ChangeSubrouteStops {
         pub from: SubrouteStops,
         pub to: SubrouteStops,
+    }
+
+    #[derive(Debug, Deserialize, Component)]
+    pub struct ChangeStopPic {
+        pub public: bool,
+        pub sensitive: bool,
+        pub lon: Option<f32>,
+        pub lat: Option<f32>,
+        pub tags: Vec<String>,
+        pub stops: Vec<i64>,
+        pub notes: Option<String>,
     }
 }
 
@@ -412,5 +450,24 @@ pub(crate) mod responses {
         pub routes: HashMap<i64, SpiderRoute>,
         pub subroutes: HashMap<i64, SpiderSubroute>,
         pub stops: HashMap<i64, SpiderStop>,
+    }
+
+    #[derive(Debug, Serialize, Component)]
+    pub struct UntaggedStopPic {
+        pub id: i64,
+        pub original_filename: String,
+        pub sha1: String,
+        pub public: bool,
+        pub sensitive: bool,
+        pub uploader: i64,
+        pub upload_date: String,
+        pub capture_date: Option<String>,
+        pub lon: Option<f32>,
+        pub lat: Option<f32>,
+        pub width: u32,
+        pub height: u32,
+        pub camera_ref: Option<String>,
+        pub tags: Vec<String>,
+        pub notes: Option<String>,
     }
 }

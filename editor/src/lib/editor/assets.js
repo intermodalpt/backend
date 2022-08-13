@@ -4,11 +4,11 @@ export const sources = ["carris", "cmet", "tcb", "tst", "sf", "mobicascais", "os
 export const icons = {};
 
 for (let source of sources) {
-    icons[source] = L.icon({
-        iconUrl: `/markers/${source}.svg`,
-        iconSize: [32, 32],
-        iconAnchor: [16, 31],
-    });
+  icons[source] = L.icon({
+    iconUrl: `/markers/${source}.svg`,
+    iconSize: [32, 32],
+    iconAnchor: [16, 31],
+  });
 }
 
 
