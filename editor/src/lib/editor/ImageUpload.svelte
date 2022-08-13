@@ -1,5 +1,8 @@
 <script>
   import {api_server} from "../../settings.js";
+  import {createEventDispatcher} from "svelte";
+
+  const dispatch = createEventDispatcher();
 
   let files;
   let uploading = false;
@@ -24,6 +27,7 @@
       uploading = false;
     }).catch(() => {
       alert("Something wrong didn't go right");
+      uploading = false;
     });
   }
 </script>
@@ -48,13 +52,11 @@
             <div class="text-base-content text-bold opacity-50 p-2">
               Select a few files to begin
             </div>
-            <div class="btn btn-error btn-circle btn-sm" on:click={() => { close(i)}}>✕</div>
+            <div class="btn btn-error btn-circle btn-sm" on:click={() => { dispatch("close")}}>✕</div>
           </div>
         {/if}
       </div>
-      <div
-          class="btn float-right mt-3 btn-secondary {files && files[0] ? '' : 'btn-disabled'}"
-          on:click={upload}>
+      <div class="btn float-right mt-3 btn-secondary {files && files[0] ? '' : 'btn-disabled'}" on:click={upload}>
         Upload
       </div>
 

@@ -18,7 +18,6 @@
         untaggedStopPictures = data;
       })
       .catch((e) => alert("Failed to load the untagged stops"));
-
   }
 
   loadUntaggedStops();
@@ -30,6 +29,7 @@
   }
 
   function close() {
+    uploadModal = false;
     openedImage = null;
     untaggedStopPictures = untaggedStopPictures;
   }
@@ -54,7 +54,7 @@
   </div>
 </div>
 {#if uploadModal}
-  <ImageUpload />
+  <ImageUpload on:close={close}/>
 {/if}
 {#if openedImage }
   <ImageModal bind:image={openedImage} on:close={close} />
