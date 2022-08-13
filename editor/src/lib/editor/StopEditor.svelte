@@ -2,7 +2,7 @@
   import Box from "../components/Box.svelte";
   import StopForm from "./StopForm.svelte";
   import L from "leaflet";
-  import {api_server} from "../../settings.js";
+  import {api_server, token} from "../../settings.js";
   import {icons} from "./assets.js";
 
   let map;

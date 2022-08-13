@@ -2,7 +2,7 @@
   // import tagger from '@jcubic/tagger';
   import {stops} from '../../cache.js';
   import L from "leaflet";
-  import {api_server} from "../../settings.js";
+  import {api_server, token} from "../../settings.js";
   import {icons} from "./assets.js";
   import {createEventDispatcher} from "svelte";
 
@@ -210,7 +210,9 @@
       body: JSON.stringify(newMeta),
       headers: {
         "Content-Type": "application/json",
-        // Token: token,
+        headers: {
+          authorization: `Bearer ${$token}`
+        }
       },
     })
       .catch((e) => alert("Failed to save the stop meta"))

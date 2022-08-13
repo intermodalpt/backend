@@ -1,7 +1,7 @@
 <script>
   import ImageModal from "./ImageModal.svelte";
   import ImageUpload from "./ImageUpload.svelte";
-  import {api_server} from "../../settings.js";
+  import {api_server, token} from "../../settings.js";
 
   let uploadModal = false;
   let openedImage = null;
@@ -9,7 +9,11 @@
   let untaggedStopPictures = [];
 
   function loadUntaggedStops() {
-    fetch(`${api_server}/tagging/stops/untagged`)
+    fetch(`${api_server}/tagging/stops/untagged`, {
+      headers: {
+        authorization: `Bearer ${$token}`
+      }
+    })
       .then((r) => r.json())
       .then((data) => {
         data.forEach((image) => {
