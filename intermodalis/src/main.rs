@@ -99,6 +99,10 @@ pub(crate) fn build_paths(state: State) -> Router {
             "/tagging/stops/untagged",
             get(handlers::get_untagged_stop_pictures),
         )
+        .route(
+            "/auth/check",
+            post(handlers::check_auth),
+        )
         .layer(Extension(Arc::new(state)))
         .route(
             "/api-doc/openapi.json",
