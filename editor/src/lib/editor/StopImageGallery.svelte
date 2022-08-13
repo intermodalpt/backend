@@ -1,6 +1,6 @@
 <script>
-  import ImageModal from "./ImageModal.svelte";
-  import ImageUpload from "./ImageUpload.svelte";
+  import ImageModal from "./StopImageEditor.svelte";
+  import ImageUpload from "./StopImageUploader.svelte";
   import {api_server, token} from "../../settings.js";
 
   let uploadModal = false;

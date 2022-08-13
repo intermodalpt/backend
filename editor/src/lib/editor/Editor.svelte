@@ -1,7 +1,7 @@
 <script>
   import StopEditor from './StopEditor.svelte';
   import LineEditor from './LineEditor.svelte';
-  import ImageEditor from './ImageEditor.svelte';
+  import ImageEditor from './StopImageGallery.svelte';
 
   import 'leaflet.markercluster';
   import 'leaflet-contextmenu';
