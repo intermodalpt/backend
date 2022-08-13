@@ -8,7 +8,7 @@
 
   let token = sessionStorage.getItem("authToken");
 
-  let mode = 2;
+  let mode = null;
 
   if (token == null) {
     token = prompt("Insert the authorization token");

@@ -1,5 +1,12 @@
 <script>
   import Editor from "./lib/editor/Editor.svelte";
+  import {initCache} from "./cache.js";
+  import {onMount} from "svelte";
+
+
+  onMount(async () => {
+    await initCache();
+  });
 </script>
 
 <svelte:window />
