@@ -1,11 +1,11 @@
 <script>
   import Box from "../components/Box.svelte";
   import LineStopsEditor from "./LineStopsEditor.svelte";
-  import {api_server} from "../../settings.js";
-  import {icons} from "./assets.js";
+  import { api_server } from "../../settings.js";
+  import { icons } from "./assets.js";
   import L from "leaflet";
-  import {calc_route_multipoly} from "../../utils.js";
-  import {writable} from "svelte/store";
+  import { calc_route_multipoly } from "../../utils.js";
+  import { writable } from "svelte/store";
 
   let map;
 
@@ -22,19 +22,12 @@
 
   $: loading = !(stops && routes && map);
   $: subroutes = selectedRoute
-    ? Object.fromEntries(
-      routes[selectedRoute].subroutes.map((subroute) => [
-        subroute.id,
-        subroute,
-      ])
-    )
+    ? Object.fromEntries(routes[selectedRoute].subroutes.map((subroute) => [subroute.id, subroute]))
     : undefined;
 
   $: selectedRoute && loadRouteStops();
 
-  $: selectedSubroute &&
-  selectedRouteStops &&
-  selectedSubrouteStops.set(selectedRouteStops[selectedSubroute]);
+  $: selectedSubroute && selectedRouteStops && selectedSubrouteStops.set(selectedRouteStops[selectedSubroute]);
 
   let mapLayers = {
     stops: L.layerGroup(),
@@ -67,9 +60,7 @@
     fetch(`${api_server}/api/routes/${selectedRoute}/stops?all=true`)
       .then((r) => r.json())
       .then((data) => {
-        selectedRouteStops = Object.fromEntries(
-          data.map((subroute) => [subroute.subroute, subroute])
-        );
+        selectedRouteStops = Object.fromEntries(data.map((subroute) => [subroute.subroute, subroute]));
       })
       .catch((e) => alert("Failed to load the route stops"));
   }
@@ -80,9 +71,7 @@
     mapLayers.subrouteDrawing.removeFrom(map);
     mapLayers.subrouteDrawing = L.layerGroup();
     if (segments) {
-      let polyLine = L.polyline(segments, {color: "red"}).addTo(
-        mapLayers.subrouteDrawing
-      );
+      let polyLine = L.polyline(segments, { color: "red" }).addTo(mapLayers.subrouteDrawing);
 
       mapLayers.subrouteDrawing.addTo(map);
       return polyLine;
@@ -91,14 +80,11 @@
 
   function createStopMarker(info) {
     let marker;
-    let markerOptions = {rinseOnHover: true, draggable: true};
+    let markerOptions = { rinseOnHover: true, draggable: true };
     if (icons[info.source] === undefined) {
       marker = L.marker([info.lat, info.lon], markerOptions);
     } else {
-      marker = L.marker(
-        [info.lat, info.lon],
-        Object.assign({}, markerOptions, {icon: icons[info.source]})
-      );
+      marker = L.marker([info.lat, info.lon], Object.assign({}, markerOptions, { icon: icons[info.source] }));
     }
 
     marker.stopId = info.id;
@@ -155,21 +141,19 @@
     let m = L.map(container, {
       contextmenu: true,
 
-      contextmenuWidth: 140
-    }).setView([38.71856, -9.13720], 10);
+      contextmenuWidth: 140,
+    }).setView([38.71856, -9.1372], 10);
 
-    let osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    let osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
-      attribution: '© OpenStreetMap'
+      attribution: "© OpenStreetMap",
     }).addTo(m);
-
 
     m.maxBounds = new L.LatLngBounds(new L.LatLng(38.3, -10.0), new L.LatLng(39.35, -8.0));
     m.maxBoundsViscosity = 1.0;
     m.minZoom = 10;
     m.setView([38.605, -9.0], 0);
     m.setZoom(11);
-
 
     return m;
   }
@@ -182,36 +166,34 @@
       destroy: () => {
         map.remove();
         map = null;
-      }
+      },
     };
   }
 
   function saveSubrouteStops(e) {
-    fetch(`${api_server}/api/routes/${selectedRoute}/stops/subroutes/${selectedSubroute}`,
-      {
-        method: "PATCH",
-        headers: {
-          'Content-Type': 'application/json'
+    fetch(`${api_server}/api/routes/${selectedRoute}/stops/subroutes/${selectedSubroute}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: {
+          stops: selectedRouteStops[selectedSubroute].stops,
+          diffs: selectedRouteStops[selectedSubroute].diffs,
         },
-        body: JSON.stringify({
-          from: {
-            stops: selectedRouteStops[selectedSubroute].stops,
-            diffs: selectedRouteStops[selectedSubroute].diffs,
-          },
-          to: {
-            stops: e.detail.stops,
-            diffs: e.detail.diffs,
-          }
-        })
-      }
-    ).then(resp => {
-      alert("We're good");
-    }).catch(
-      e => {
+        to: {
+          stops: e.detail.stops,
+          diffs: e.detail.diffs,
+        },
+      }),
+    })
+      .then((resp) => {
+        alert("We're good");
+      })
+      .catch((e) => {
         alert("Error saving");
         console.log(e);
-      }
-    );
+      });
   }
 </script>
 
@@ -235,7 +217,8 @@
           {/each}
         </select>
       </label><br />
-      <span>Selected stop:
+      <span
+        >Selected stop:
         {#if selectedStop}
           {stops[selectedStop].name} ({stops[selectedStop].id})
         {:else}
@@ -315,4 +298,3 @@
     list-style: none;
   }
 </style>
-

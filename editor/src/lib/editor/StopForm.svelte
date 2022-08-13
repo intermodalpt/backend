@@ -1,5 +1,5 @@
 <script>
-  import {createEventDispatcher} from 'svelte';
+  import { createEventDispatcher } from "svelte";
 
   export let stop;
 
@@ -18,18 +18,21 @@
   notes = "";
 
   function save() {
-    dispatch('save', Object.assign(stop, {
-      name: name,
-      short_name: short_name,
-      street: street,
-      door: door,
-      source: source,
-    }));
+    dispatch(
+      "save",
+      Object.assign(stop, {
+        name: name,
+        short_name: short_name,
+        street: street,
+        door: door,
+        source: source,
+      })
+    );
   }
-
 
   const dispatch = createEventDispatcher();
 </script>
+
 <div class="flex flex-col gap-1 p-2">
   <div class="form-control w-full max-w-xs">
     <label class="input-group">
@@ -62,10 +65,7 @@
     </label>
   </div>
 
-  <button class="btn btn-primary w-20" on:click={save}>
-    Save
-  </button>
+  <button class="btn btn-primary w-20" on:click={save}> Save </button>
 </div>
 
 <!--    <textarea bind:notes></textarea><br>-->
-

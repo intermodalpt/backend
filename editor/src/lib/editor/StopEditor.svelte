@@ -18,9 +18,7 @@
   export function moveStop(e) {
     let stopId = e.target.stopId;
     let newPos = e.target.getLatLng();
-    let existing = pendingOps.find(
-      (el) => el.op === updateStop && el.stop.id === stopId
-    );
+    let existing = pendingOps.find((el) => el.op === updateStop && el.stop.id === stopId);
     if (existing) {
       existing.stop.lat = newPos.lat;
       existing.stop.lon = newPos.lng;
@@ -38,9 +36,7 @@
 
   function saveStopInfo(e) {
     let stopId = e.detail.id;
-    let existing = pendingOps.find(
-      (el) => el.op === updateStop && el.stop.id === stopId
-    );
+    let existing = pendingOps.find((el) => el.op === updateStop && el.stop.id === stopId);
     if (existing) {
       existing.stop = Object.assign(existing.stop, e.detail);
     } else {
@@ -59,7 +55,7 @@
       method: "patch",
       headers: {
         "Content-Type": "application/json",
-        Token: token,
+        // Token: token,
       },
       body: JSON.stringify(stop),
     })
@@ -81,14 +77,11 @@
 
   function createStopMarker(info) {
     let marker;
-    let markerOptions = {rinseOnHover: true, draggable: true};
+    let markerOptions = { rinseOnHover: true, draggable: true };
     if (icons[info.source] === undefined) {
       marker = L.marker([info.lat, info.lon], markerOptions);
     } else {
-      marker = L.marker(
-        [info.lat, info.lon],
-        Object.assign({}, markerOptions, {icon: icons[info.source]})
-      );
+      marker = L.marker([info.lat, info.lon], Object.assign({}, markerOptions, { icon: icons[info.source] }));
     }
 
     marker.stopId = info.id;
@@ -136,7 +129,7 @@
       method: "post",
       headers: {
         "Content-Type": "application/json",
-        Token: token,
+        // Token: token,
       },
       body: JSON.stringify(stop),
     })
@@ -161,13 +154,10 @@
       ],
     }).setView([38.71856, -9.1372], 10);
 
-    let osm = L.tileLayer(
-      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-      {
-        maxZoom: 19,
-        attribution: "© OpenStreetMap",
-      }
-    ).addTo(m);
+    let osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: "© OpenStreetMap",
+    }).addTo(m);
 
     let baseMaps = {
       OSM: osm,
@@ -175,10 +165,7 @@
     };
     L.control.layers(baseMaps).addTo(m);
 
-    m.maxBounds = new L.LatLngBounds(
-      new L.LatLng(38.3, -10.0),
-      new L.LatLng(39.35, -8.0)
-    );
+    m.maxBounds = new L.LatLngBounds(new L.LatLng(38.3, -10.0), new L.LatLng(39.35, -8.0));
     m.maxBoundsViscosity = 1.0;
     m.minZoom = 10;
     m.setView([38.605, -9.0], 0);
@@ -283,4 +270,3 @@
     font-weight: bold;
   }
 </style>
-
