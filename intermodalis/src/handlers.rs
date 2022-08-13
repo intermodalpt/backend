@@ -886,7 +886,7 @@ pub(crate) async fn get_untagged_stop_pictures(
     let res = sqlx::query!(
         r#"
 SELECT id, original_filename, sha1, public, sensitive, tagged, uploader,
-	upload_date, capture_date, width, height, lon, lat, camera_ref
+	upload_date, capture_date, width, height, lon, lat, camera_ref, tags, notes
 FROM StopPics
 WHERE tagged = 0
 LIMIT ? OFFSET ?
@@ -900,6 +900,14 @@ LIMIT ? OFFSET ?
 
     let mut pics = vec![];
     for row in res {
+        let tags: Vec<String> =
+            if let Ok(tags) = serde_json::from_str(&row.tags) {
+                tags
+            } else {
+                // todo warn
+                vec![]
+            };
+
         pics.push(UntaggedStopPic {
             id: row.id,
             original_filename: row.original_filename,
@@ -914,6 +922,8 @@ LIMIT ? OFFSET ?
             width: row.width as u32,
             height: row.height as u32,
             camera_ref: row.camera_ref,
+            tags,
+            notes: row.notes,
         })
     }
 
@@ -954,7 +964,7 @@ pub(crate) async fn upload_stop_picture(
 }
 
 #[debug_handler]
-pub(crate) async fn upload_stop_picture_meta(
+pub(crate) async fn patch_stop_picture_meta(
     Extension(state): Extension<Arc<State>>,
     Path(stop_picture_id): Path<i64>,
     Json(stop_pic_meta): Json<requests::ChangeStopPic>,
@@ -993,7 +1003,7 @@ WHERE pic=? AND stop NOT IN ({stop_ids})
     for stop_id in stop_pic_meta.stops {
         let _res = sqlx::query!(
             r#"
-INSERT INTO StopPicStops(pic, stop)
+INSERT OR IGNORE INTO StopPicStops(pic, stop)
 VALUES (?, ?)
     "#,
             stop_picture_id,

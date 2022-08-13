@@ -120,6 +120,8 @@ pub(crate) async fn upload_stop_picture(
         width: original_img.width(),
         height: original_img.height(),
         camera_ref: None,
+        tags: vec![],
+        notes: None,
     };
 
     let mut source_buffer = BufReader::new(Cursor::new(content.as_ref()));
@@ -135,14 +137,15 @@ pub(crate) async fn upload_stop_picture(
             exif_data.capture.map(|date| date.to_string());
     };
 
-    let _res = sqlx::query!(
+    let res = sqlx::query!(
         r#"
 INSERT INTO StopPics(
-	original_filename, sha1, public, sensitive, tagged, uploader,
-	upload_date, capture_date, width, height, lon, lat, camera_ref
+    original_filename, sha1, public, sensitive, tagged, uploader,
+    upload_date, capture_date, width, height, lon, lat, camera_ref
 )
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    "#,
+RETURNING id
+        "#,
         stop_pic_entry.original_filename,
         stop_pic_entry.sha1,
         stop_pic_entry.public,

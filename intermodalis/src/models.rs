@@ -313,6 +313,8 @@ pub struct StopPic {
     pub width: u32,
     pub height: u32,
     pub camera_ref: Option<String>,
+    pub tags: Vec<String>,
+    pub notes: Option<String>,
 }
 
 pub(crate) mod requests {
@@ -351,6 +353,7 @@ pub(crate) mod requests {
         pub lat: Option<f32>,
         pub tags: Vec<String>,
         pub stops: Vec<i64>,
+        pub notes: Option<String>,
     }
 }
 
@@ -464,5 +467,7 @@ pub(crate) mod responses {
         pub width: u32,
         pub height: u32,
         pub camera_ref: Option<String>,
+        pub tags: Vec<String>,
+        pub notes: Option<String>,
     }
 }
