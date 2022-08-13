@@ -43,11 +43,25 @@ pub(crate) async fn upload_stop_picture(
     bucket: &s3::Bucket,
     db_pool: &SqlitePool,
     content: Bytes,
-) -> Result<(), Error> {
+) -> Result<i64, Error> {
     let mut hasher = Sha1::new();
     hasher.update(&content);
     let hash = hasher.finalize();
     let hex_hash = base16ct::lower::encode_string(&hash);
+
+    let res = sqlx::query!(
+        r#"
+SELECT id FROM StopPics
+WHERE sha1=?"#,
+        hex_hash,
+    )
+    .fetch_optional(db_pool)
+    .await
+    .map_err(|_| Error::DatabaseExecution)?;
+
+    if let Some(res) = res {
+        return Ok(res.id);
+    }
 
     let original_img = image::load_from_memory(content.as_ref())
         .map_err(|_err| Error::ValidationFailure)?;
@@ -160,11 +174,11 @@ RETURNING id
         stop_pic_entry.lon,
         stop_pic_entry.camera_ref
     )
-    .execute(db_pool)
+    .fetch_one(db_pool)
     .await
-    .map_err(|e| Error::DatabaseExecution)?;
+    .map_err(|_| Error::DatabaseExecution)?;
 
-    Ok(())
+    Ok(res.id)
 }
 
 #[derive(Default, Debug)]
