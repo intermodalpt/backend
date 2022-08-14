@@ -308,6 +308,8 @@ pub struct StopPic {
     pub uploader: i64,
     pub upload_date: String,
     pub capture_date: Option<String>,
+    pub updater: Option<i64>,
+    pub update_date: Option<String>,
     pub lon: Option<f32>,
     pub lat: Option<f32>,
     pub width: u32,
@@ -354,6 +356,7 @@ pub(crate) mod requests {
         pub tags: Vec<String>,
         pub stops: Vec<i64>,
         pub notes: Option<String>,
+        pub quality: i64,
     }
 }
 

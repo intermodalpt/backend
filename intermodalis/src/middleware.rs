@@ -39,6 +39,7 @@ const MEDIUM_IMG_MAX_HEIGHT: u32 = 800;
 const MEDIUM_IMG_MAX_QUALITY: f32 = 85.0;
 
 pub(crate) async fn upload_stop_picture(
+    user_id: i64,
     name: String,
     bucket: &s3::Bucket,
     db_pool: &SqlitePool,
@@ -126,10 +127,12 @@ WHERE sha1=?"#,
         sha1: hex_hash,
         public: false,
         sensitive: false,
-        tagged: true,
-        uploader: 1,
+        tagged: false,
+        uploader: user_id,
         upload_date: Local::now().to_string(),
         capture_date: None,
+        updater: None,
+        update_date: None,
         lon: None,
         lat: None,
         width: original_img.width(),
@@ -180,6 +183,37 @@ RETURNING id
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     Ok(res.id)
+}
+
+pub(crate) async fn try_get_user(
+    token: &str,
+    db_pool: &SqlitePool,
+) -> Result<Option<i64>, Error> {
+    let res = sqlx::query!(
+        r#"
+SELECT id
+FROM Users
+WHERE token=?
+    "#,
+        token
+    )
+    .fetch_optional(db_pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    Ok(if let Some(row) = res { row.id } else { None })
+}
+
+pub(crate) async fn get_user(
+    token: &str,
+    db_pool: &SqlitePool,
+) -> Result<i64, Error> {
+    let user = try_get_user(token, db_pool).await?;
+    if let Some(id) = user {
+        Ok(id)
+    } else {
+        Err(Error::Forbidden)
+    }
 }
 
 #[derive(Default, Debug)]

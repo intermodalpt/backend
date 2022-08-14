@@ -27,6 +27,8 @@ pub enum Error {
     DatabaseDeserialization,
     #[error("Requested data not in the storage")]
     NotFoundUpstream,
+    #[error("Access denied")]
+    Forbidden,
     #[error("The provided information failed validation:: `{0}`")]
     ValidationFailure(String),
     #[error("The data could not be handled: `{0}`")]
@@ -46,6 +48,9 @@ impl IntoResponse for Error {
             }
             Error::NotFoundUpstream => {
                 (StatusCode::NOT_FOUND, format!("{}", &self)).into_response()
+            }
+            Error::Forbidden => {
+                (StatusCode::FORBIDDEN, format!("{}", &self)).into_response()
             }
             Error::ValidationFailure(_) => {
                 (StatusCode::BAD_REQUEST, format!("{}", &self)).into_response()

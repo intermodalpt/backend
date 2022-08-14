@@ -22,11 +22,12 @@ use std::thread::sleep;
 use std::time::Duration;
 
 use axum::extract::{ContentLengthLimit, Multipart, Path, Query};
+use axum::headers::{authorization::Bearer, Authorization};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::{Extension, Json};
+use axum::{Extension, Json, TypedHeader};
 use axum_macros::debug_handler;
-use chrono::NaiveDate;
+use chrono::{Local, NaiveDate};
 use itertools::Itertools;
 use serde::Deserialize;
 use sqlx::sqlite::SqliteRow;
@@ -738,14 +739,21 @@ ORDER BY Subroutes.id ASC, SubrouteStops.idx ASC
 
 pub(crate) async fn patch_subroute_stops(
     Extension(state): Extension<Arc<State>>,
+    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
     Path((route_id, subroute_id)): Path<(i64, i64)>,
     Json(request): Json<requests::ChangeSubrouteStops>,
-) -> Result<impl IntoResponse, String> {
+) -> Result<impl IntoResponse, Error> {
+    let user_id = middleware::get_user(auth.token(), &state.pool).await?;
+
+    if user_id != 1 {
+        return Err(Error::Forbidden);
+    }
+
     // Check if the current stops match the requests's check
     if request.from.stops.len() != request.from.diffs.len()
         || request.to.stops.len() != request.to.diffs.len()
     {
-        return Err("Size divergence".to_string());
+        return Err(Error::ValidationFailure("Size divergence".to_string()));
     }
 
     let existing_query_res = sqlx::query!(
@@ -770,7 +778,7 @@ ORDER BY SubrouteStops.idx ASC
     let stored_changes = to_store_len as i32 - stored_len as i32;
 
     if check_len != stored_len {
-        return Err("Check mismatch".to_string());
+        return Err(Error::ValidationFailure("Check mismatch".to_string()));
     }
 
     let check_matched = existing_query_res
@@ -781,7 +789,7 @@ ORDER BY SubrouteStops.idx ASC
         });
 
     if !check_matched {
-        return Err("Check mismatch".to_string());
+        return Err(Error::ValidationFailure("Check mismatch".to_string()));
     }
 
     let existing_duplicates_count = existing_query_res
@@ -811,7 +819,9 @@ WHERE Subroute=? AND idx>=?
         .rows_affected();
 
         if deleted_rows != stored_changes.abs() as u64 {
-            return Err("Detected an unexpected amount of rows".to_string());
+            return Err(Error::Processing(
+                "Detected an unexpected amount of rows".to_string(),
+            ));
         }
     } else if stored_changes > 0 {
         let additional_entries = request
@@ -878,12 +888,15 @@ pub(crate) struct Page {
     p: u32,
 }
 
-const PAGE_SIZE: u32 = 100;
+const PAGE_SIZE: u32 = 20;
 
 pub(crate) async fn get_untagged_stop_pictures(
     Extension(state): Extension<Arc<State>>,
+    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
     paginator: Query<Page>,
 ) -> Result<impl IntoResponse, Error> {
+    let _user_id = middleware::get_user(auth.token(), &state.pool).await?;
+
     let offset = paginator.p.saturating_sub(1) * PAGE_SIZE;
     let res = sqlx::query!(
         r#"
@@ -935,11 +948,14 @@ LIMIT ? OFFSET ?
 #[debug_handler]
 pub(crate) async fn upload_stop_picture(
     Extension(state): Extension<Arc<State>>,
+    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
     ContentLengthLimit(mut multipart): ContentLengthLimit<
         Multipart,
         { 500 * 1024 * 1024 },
     >,
 ) -> Result<impl IntoResponse, Error> {
+    let user_id = middleware::get_user(auth.token(), &state.pool).await?;
+
     while let Some(field) = multipart
         .next_field()
         .await
@@ -957,6 +973,7 @@ pub(crate) async fn upload_stop_picture(
             .map_err(|err| Error::ValidationFailure(err.to_string()))?;
 
         let res = middleware::upload_stop_picture(
+            user_id,
             filename.clone(),
             &state.bucket,
             &state.pool,
@@ -971,6 +988,7 @@ pub(crate) async fn upload_stop_picture(
         }
         // Retry, just in case
         middleware::upload_stop_picture(
+            user_id,
             filename.clone(),
             &state.bucket,
             &state.pool,
@@ -985,16 +1003,22 @@ pub(crate) async fn upload_stop_picture(
 #[debug_handler]
 pub(crate) async fn patch_stop_picture_meta(
     Extension(state): Extension<Arc<State>>,
+    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
     Path(stop_picture_id): Path<i64>,
     Json(stop_pic_meta): Json<requests::ChangeStopPic>,
 ) -> Result<impl IntoResponse, Error> {
+    let updater = middleware::get_user(auth.token(), &state.pool).await?;
+    let update_date = Local::now().to_string();
+
+    // TODO add updater and update date
     let stop_ids = stop_pic_meta.stops.iter().join(",");
 
     let tags = serde_json::to_string(&stop_pic_meta.tags).unwrap();
     let _res = sqlx::query!(
         r#"
 UPDATE StopPics
-SET public=?, sensitive=?, lon=?, lat=?, tags=?, tagged=1
+SET public=?, sensitive=?, lon=?, lat=?, tags=?, quality=?, updater=?,
+    update_date=?, tagged=1
 WHERE id=?
     "#,
         stop_pic_meta.public,
@@ -1002,6 +1026,9 @@ WHERE id=?
         stop_pic_meta.lon,
         stop_pic_meta.lat,
         tags,
+        stop_pic_meta.quality,
+        updater,
+        update_date,
         stop_picture_id
     )
     .execute(&state.pool)
@@ -1034,6 +1061,20 @@ VALUES (?, ?)
     }
 
     Ok((StatusCode::OK, "").into_response())
+}
+
+pub(crate) async fn check_auth(
+    Extension(state): Extension<Arc<State>>,
+    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+) -> Result<impl IntoResponse, Error> {
+    if middleware::try_get_user(auth.token(), &state.pool)
+        .await?
+        .is_some()
+    {
+        Ok((StatusCode::OK, "Success").into_response())
+    } else {
+        Ok((StatusCode::UNAUTHORIZED, "Failure").into_response())
+    }
 }
 
 #[allow(clippy::unused_async)]

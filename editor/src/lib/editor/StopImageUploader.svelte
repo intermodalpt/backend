@@ -1,5 +1,5 @@
 <script>
-  import {api_server} from "../../settings.js";
+  import {api_server, token} from "../../settings.js";
   import {createEventDispatcher} from "svelte";
 
   const dispatch = createEventDispatcher();
@@ -21,7 +21,10 @@
     uploading = true;
     fetch(`${api_server}/upload/stops`, {
       method: 'POST',
-      body: formData
+      body: formData,
+      headers: {
+        authorization: `Bearer ${$token}`
+      }
     }).then(data => {
       alert("Done");
       uploading = false;

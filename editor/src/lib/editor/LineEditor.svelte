@@ -227,7 +227,7 @@
     {:else}
       <label>
         Selected line:
-        <select bind:value={selectedRoute}>
+        <select class="select select-bordered select-xs" bind:value={selectedRoute}>
           {#each Object.values(routes) as line}
             <option value={line.id}>
               {line.code} - {line.name.substring(0, 60)}
@@ -243,10 +243,10 @@
         {/if}
       </span>
       {#if selectedRoute}
-        <h2>
+        <h2 class="font-bold">
           {routes[selectedRoute].code} - {routes[selectedRoute].name} ({routes[selectedRoute].id})
         </h2>
-        <select bind:value={selectedSubroute}>
+        <select class="select select-bordered select-xs" bind:value={selectedSubroute}>
           {#each routes[selectedRoute].subroutes as subroute}
             <option value={subroute.id}>{subroute.flag.substring(0, 60)}</option>
           {/each}
