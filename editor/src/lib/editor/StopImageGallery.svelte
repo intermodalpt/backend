@@ -42,7 +42,7 @@
 <div class="flex flex-col">
   <div class="w-full flex justify-between p-4 items-center">
     <h2 class="text-lg font-bold md:text-3xl text-base-content">Por Catalogar</h2>
-    <button class="btn btn-primary" on:click={() => uploadModal = true;}>Upload</button>
+    <button class="btn btn-primary" on:click={() => uploadModal = true}>Upload</button>
   </div>
   <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
     {#each untaggedStopPictures as picture}

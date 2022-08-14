@@ -52,7 +52,7 @@
         {:else}
           <div class="flex flex-row justify-between items-center">
             <div class="text-base-content text-bold opacity-50 p-2">Select a few files to begin</div>
-            <div class="btn btn-error btn-circle btn-sm" on:click={() => dispatch("close");}>✕</div>
+            <div class="btn btn-error btn-circle btn-sm" on:click={() => dispatch("close")}>✕</div>
           </div>
         {/if}
       </div>

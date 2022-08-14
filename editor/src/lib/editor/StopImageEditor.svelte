@@ -285,7 +285,7 @@
             {#each stopIds as stopId}
               <div class="badge badge-outline badge-lg">
                 {stopId} - {$stops[stopId].short_name || $stops[stopId].name}
-                <div class="btn btn-error btn-circle btn-xs" on:click={() => removeStop(stopId);}>✕</div>
+                <div class="btn btn-error btn-circle btn-xs" on:click={() => removeStop(stopId)}>✕</div>
               </div>
             {/each}
             <input
@@ -314,7 +314,7 @@
             {#each tags as tag}
               <div class="badge badge-outline badge-lg">
                 {tag}
-                <div class="btn btn-error btn-circle btn-xs" on:click={() => removeTag(tag);}>✕</div>
+                <div class="btn btn-error btn-circle btn-xs" on:click={() => removeTag(tag)}>✕</div>
               </div>
             {/each}
             <input id="tag-text" type="text" class="input input-bordered" placeholder="Creche ABC123" />
