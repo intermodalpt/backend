@@ -1,5 +1,5 @@
 <script>
-  import {createEventDispatcher} from "svelte";
+  import { createEventDispatcher } from "svelte";
 
   export let routes;
   export let stops;
@@ -55,9 +55,7 @@
     }
 
     // stopList.indexOf(addAfterIndex)
-    if (
-      confirm(`Do you want to add a stop after ${stopList[addAfterIndex]}?`)
-    ) {
+    if (confirm(`Do you want to add a stop after ${stopList[addAfterIndex]}?`)) {
       stopList.splice(addAfterIndex + 1, 0, selectedStop);
       diffList.splice(addAfterIndex + 1, 0, 0);
       stopList = stopList;
@@ -80,12 +78,8 @@
     // if (confirm(`Do you want to replace ${stops[stopList[i]].name} with ${stops[selectedStop].name}?`)) {
     if (
       confirm(
-        `"${stops[stopList[i]].short_name}":[["${
-          stops[selectedStop].source
-        }", "${
-          stops[selectedStop].source === "osm"
-            ? stops[selectedStop].external_id
-            : stops[selectedStop].name
+        `"${stops[stopList[i]].short_name}":[["${stops[selectedStop].source}", "${
+          stops[selectedStop].source === "osm" ? stops[selectedStop].external_id : stops[selectedStop].name
         }"}]],`
       )
     ) {
@@ -96,11 +90,7 @@
   }
 
   function removeStop(i) {
-    if (
-      confirm(
-        `Do you want to remove ${stops[stopList[i]].name} from this route?`
-      )
-    ) {
+    if (confirm(`Do you want to remove ${stops[stopList[i]].name} from this route?`)) {
       stopList.splice(i, 1);
       let removedDiff = diffList.splice(i, 1)[0];
       if (diffList.length > 0) {
@@ -127,11 +117,11 @@
   }
 
   function redraw(i) {
-    dispatch("redraw", {stops: stopList});
+    dispatch("redraw", { stops: stopList });
   }
 
   function save() {
-    dispatch("savesubroutestops", {stops: stopList, diffs: diffList});
+    dispatch("savesubroutestops", { stops: stopList, diffs: diffList });
   }
 </script>
 

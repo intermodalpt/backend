@@ -17,8 +17,8 @@
       .then((r) => r.json())
       .then((data) => {
         data.forEach((image) => {
-          image.stops = []
-        })
+          image.stops = [];
+        });
         untaggedStopPictures = data;
       })
       .catch((e) => alert("Failed to load the untagged stops"));
@@ -41,17 +41,20 @@
 
 <div class="flex flex-col">
   <div class="w-full flex justify-between p-4 items-center">
-    <h2 class="text-lg font-bold md:text-3xl text-base-content">
-      Por Catalogar
-    </h2>
-    <button class="btn btn-primary" on:click={() => {uploadModal=true}}>Upload</button>
+    <h2 class="text-lg font-bold md:text-3xl text-base-content">Por Catalogar</h2>
+    <button class="btn btn-primary" on:click={() => uploadModal = true;}>Upload</button>
   </div>
   <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
     {#each untaggedStopPictures as picture}
-      {#if (!picture.tagged)}
+      {#if !picture.tagged}
         <div class="p-2 flex justify-center items-center cursor-pointer">
-          <img src="https://intermodal-storage-worker.claudioap.workers.dev/thumb/{picture.sha1}/preview"
-               class="rounded-box transition-all hover:scale-105" on:click={() => {openPic(picture.id)}} />
+          <img
+            src="https://intermodal-storage-worker.claudioap.workers.dev/thumb/{picture.sha1}/preview"
+            class="rounded-box transition-all hover:scale-105"
+            on:click={() => {
+              openPic(picture.id);
+            }}
+          />
         </div>
       {/if}
     {/each}
@@ -60,6 +63,6 @@
 {#if uploadModal}
   <ImageUpload on:close={close} />
 {/if}
-{#if openedImage }
+{#if openedImage}
   <ImageModal bind:image={openedImage} on:close={close} />
 {/if}

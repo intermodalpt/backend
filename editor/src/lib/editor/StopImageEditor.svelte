@@ -1,6 +1,6 @@
 <script>
   // import tagger from '@jcubic/tagger';
-  import {stops} from '../../cache.js';
+  import { stops } from "../../cache.js";
   import L from "leaflet";
   import {api_server, token} from "../../settings.js";
   import {icons} from "./assets.js";
@@ -15,8 +15,8 @@
   let stopInput;
   let location = {
     lat: image.lat,
-    lon: image.lon
-  }
+    lon: image.lon,
+  };
 
   let tags = [...image.tags];
   let stopIds = [...image.stops];
@@ -34,15 +34,12 @@
       m.setView([38.71856, -9.1372], 10);
     }
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
-      attribution: '© OpenStreetMap'
+      attribution: "© OpenStreetMap",
     }).addTo(m);
 
-    m.maxBounds = new L.LatLngBounds(
-      new L.LatLng(38.3, -10.0),
-      new L.LatLng(39.35, -8.0)
-    );
+    m.maxBounds = new L.LatLngBounds(new L.LatLng(38.3, -10.0), new L.LatLng(39.35, -8.0));
     m.maxBoundsViscosity = 1.0;
     m.minZoom = 10;
 
@@ -52,22 +49,21 @@
       location.lat = targetLoc.lat;
     };
     if (location.lat) {
-      marker = L.marker([location.lat, location.lng], {"draggable": true});
+      marker = L.marker([location.lat, location.lng], { draggable: true });
       marker.addTo(map);
       marker.on("moveend", markerMoved);
     }
 
-    m.on('click', function (e) {
+    m.on("click", function (e) {
       if (marker) {
         marker.removeFrom(map);
       }
-      marker = L.marker([e.latlng.lat, e.latlng.lng], {"draggable": true});
+      marker = L.marker([e.latlng.lat, e.latlng.lng], { draggable: true });
       location.lon = e.latlng.lng;
       location.lat = e.latlng.lat;
       marker.addTo(map);
       marker.on("moveend", markerMoved);
     });
-
 
     let stopsLayer = L.markerClusterGroup({
       showCoverageOnHover: false,
@@ -76,14 +72,11 @@
 
     Object.values($stops).forEach((stop) => {
       if (stop.lat != null && stop.lon != null && stop.source === "osm") {
-        let marker = L.marker(
-          [stop.lat, stop.lon],
-          Object.assign({}, {icon: icons[stop.source]})
-        );
+        let marker = L.marker([stop.lat, stop.lon], Object.assign({}, { icon: icons[stop.source] }));
 
         marker.stopId = stop.id;
 
-        marker.on("click", (e) => stopInput.value = e.target.stopId);
+        marker.on("click", (e) => (stopInput.value = e.target.stopId));
 
         let name = stop.name || stop.short_name;
 
@@ -144,40 +137,40 @@
     let label = document.getElementById("quality-label");
     switch (quality) {
       case 0:
-        label.textContent = "Sem informação"
-        break
+        label.textContent = "Sem informação";
+        break;
       case 10:
-        label.textContent = "Desfocada"
-        break
+        label.textContent = "Desfocada";
+        break;
       case 20:
-        label.textContent = "De dentro de um veiculo (visível na imagem)"
-        break
+        label.textContent = "De dentro de um veiculo (visível na imagem)";
+        break;
       case 30:
-        label.textContent = "De dentro de um veiculo (reflexos ou filto no vidro)"
-        break
+        label.textContent = "De dentro de um veiculo (reflexos ou filto no vidro)";
+        break;
       case 40:
-        label.textContent = "Mal direccionada"
-        break
+        label.textContent = "Mal direccionada";
+        break;
       case 50:
-        label.textContent = "Noturna"
-        break
+        label.textContent = "Noturna";
+        break;
       case 60:
-        label.textContent = "Excesso ou falta de brilho"
-        break
+        label.textContent = "Excesso ou falta de brilho";
+        break;
       case 70:
-        label.textContent = "Paragem não é sujeito principal"
-        break
+        label.textContent = "Paragem não é sujeito principal";
+        break;
       case 80:
-        label.textContent = "Pessoas, veiculos ou lixo"
-        break
+        label.textContent = "Pessoas, veiculos ou lixo";
+        break;
       case 90:
-        label.textContent = "Imperfeições menores (seria possivel fazer melhor?)"
-        break
+        label.textContent = "Imperfeições menores (seria possivel fazer melhor?)";
+        break;
       case 100:
-        label.textContent = "Absolutamente nada de assinalável"
-        break
+        label.textContent = "Absolutamente nada de assinalável";
+        break;
       default:
-        label.textContent = "?"
+        label.textContent = "?";
     }
   }
 
@@ -206,7 +199,7 @@
     }
 
     fetch(`${api_server}/upload/stops/${image.id}`, {
-      method: 'PATCH',
+      method: "PATCH",
       body: JSON.stringify(newMeta),
       headers: {
         "Content-Type": "application/json",
@@ -261,9 +254,15 @@
             <span class="label-text">Quality</span>
             <span class="label-text" id="quality-label">Sem informação</span>
           </label>
-          <input type="range" min="0" max="100" class="range" step="10"
-                 bind:value={quality}
-                 on:change={adjustQualityLabel} />
+          <input
+            type="range"
+            min="0"
+            max="100"
+            class="range"
+            step="10"
+            bind:value={quality}
+            on:change={adjustQualityLabel}
+          />
           <div class="w-full flex justify-between text-xs px-2">
             <span>|</span>
             <span>|</span>
@@ -283,19 +282,20 @@
             <span class="label-text">Stops</span>
           </label>
           <div>
-            {#each stopIds as stopId }
+            {#each stopIds as stopId}
               <div class="badge badge-outline badge-lg">
                 {stopId} - {$stops[stopId].short_name || $stops[stopId].name}
-                <div class="btn btn-error btn-circle btn-xs" on:click={() => { removeStop(stopId) }}>✕</div>
+                <div class="btn btn-error btn-circle btn-xs" on:click={() => removeStop(stopId);}>✕</div>
               </div>
             {/each}
             <input
-                type="number"
-                disabled
-                class="input input-bordered"
-                id="stop-id"
-                placeholder="Select on map"
-                bind:this={stopInput} />
+              type="number"
+              disabled
+              class="input input-bordered"
+              id="stop-id"
+              placeholder="Select on map"
+              bind:this={stopInput}
+            />
             <select id="stop-pos" class="select select-bordered">
               <option>Foreground</option>
               <option>Background</option>
@@ -311,10 +311,10 @@
           </label>
           <!-- <input type="text" id="tags" placeholder="Insert previous tags here" />-->
           <div>
-            {#each tags as tag }
+            {#each tags as tag}
               <div class="badge badge-outline badge-lg">
                 {tag}
-                <div class="btn btn-error btn-circle btn-xs" on:click={() => { removeTag(tag) }}>✕</div>
+                <div class="btn btn-error btn-circle btn-xs" on:click={() => removeTag(tag);}>✕</div>
               </div>
             {/each}
             <input id="tag-text" type="text" class="input input-bordered" placeholder="Creche ABC123" />
@@ -327,9 +327,11 @@
           <label class="label">
             <span class="label-text">Notes</span>
           </label>
-          <textarea class="textarea textarea-bordered h-24"
-                    placeholder="Eg. While not seen properly there's a schedule to that side."
-                    on:change={(e) => notes = e.target.value.trim() === "" ? null : e.target.value}></textarea>
+          <textarea
+            class="textarea textarea-bordered h-24"
+            placeholder="Eg. While not seen properly there's a schedule to that side."
+            on:change={(e) => (notes = e.target.value.trim() === "" ? null : e.target.value)}
+          />
         </div>
       </div>
     </div>

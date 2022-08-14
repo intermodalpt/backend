@@ -12,7 +12,6 @@
   // }
 
   function upload() {
-
     const formData = new FormData();
 
     for (let x = 0; x < files.length; x++) {
@@ -39,9 +38,9 @@
 <div class="modal modal-bottom sm:modal-middle">
   <div class="modal-box">
     {#if uploading}
-      <span>Upload in progress</span><br>
+      <span>Upload in progress</span><br />
       <div class="radial-progress" style="--value:90; --size:12rem; --thickness: 2rem;">99%</div>
-    {:else }
+    {:else}
       <div class="flex flex-col gap-1 ">
         {#if files && files[0]}
           {#each files as file, i}
@@ -52,10 +51,8 @@
           {/each}
         {:else}
           <div class="flex flex-row justify-between items-center">
-            <div class="text-base-content text-bold opacity-50 p-2">
-              Select a few files to begin
-            </div>
-            <div class="btn btn-error btn-circle btn-sm" on:click={() => { dispatch("close")}}>✕</div>
+            <div class="text-base-content text-bold opacity-50 p-2">Select a few files to begin</div>
+            <div class="btn btn-error btn-circle btn-sm" on:click={() => dispatch("close");}>✕</div>
           </div>
         {/if}
       </div>
@@ -65,14 +62,7 @@
 
       <label for="dropzone-file" class="float-left mt-3 btn btn-primary">
         Select Files
-        <input
-            bind:files
-            multiple
-            accept="image/*"
-            id="dropzone-file"
-            type="file"
-            class="hidden"
-        />
+        <input bind:files multiple accept="image/*" id="dropzone-file" type="file" class="hidden" />
       </label>
     {/if}
   </div>
