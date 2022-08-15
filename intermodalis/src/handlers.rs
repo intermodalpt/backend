@@ -120,15 +120,17 @@ WHERE id IN (
         .fetch_all(&state.pool)
         .await
     }
-    .unwrap();
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     Ok((StatusCode::OK, Json(res)).into_response())
 }
 
 pub(crate) async fn create_stop(
     Extension(state): Extension<Arc<State>>,
+    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
     Json(stop): Json<requests::NewStop>,
 ) -> Result<impl IntoResponse, Error> {
+    let _user_id = middleware::get_user(auth.token(), &state.pool).await?;
     let res = sqlx::query!(
         r#"
 INSERT INTO Stops(name, short_name, street, door, lon, lat, source)
@@ -158,27 +160,85 @@ RETURNING id
 
 pub(crate) async fn update_stop(
     Extension(state): Extension<Arc<State>>,
-    Json(stop): Json<requests::NewStop>,
+    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    Json(stop): Json<requests::ChangeStop>,
     Path(stop_id): Path<i64>,
 ) -> Result<impl IntoResponse, Error> {
+    let user_id = middleware::get_user(auth.token(), &state.pool).await?;
+    let update_date = Local::now().to_string();
+
+    let has_crossing = stop.has_crossing.map(|val| if val { 1 } else { 0 });
+    let has_accessibility =
+        stop.has_accessibility.map(|val| if val { 1 } else { 0 });
+    let has_abusive_parking =
+        stop.has_abusive_parking.map(|val| if val { 1 } else { 0 });
+    let has_outdated_info =
+        stop.has_outdated_info.map(|val| if val { 1 } else { 0 });
+    let is_damaged = stop.is_damaged.map(|val| if val { 1 } else { 0 });
+    let is_vandalized = stop.is_vandalized.map(|val| if val { 1 } else { 0 });
+    let has_flag = stop.has_flag.map(|val| if val { 1 } else { 0 });
+    let has_schedules = stop.has_schedules.map(|val| if val { 1 } else { 0 });
+    let has_sidewalk = stop.has_sidewalk.map(|val| if val { 1 } else { 0 });
+    let has_shelter = stop.has_shelter.map(|val| if val { 1 } else { 0 });
+    let has_bench = stop.has_bench.map(|val| if val { 1 } else { 0 });
+    let has_trash_can = stop.has_trash_can.map(|val| if val { 1 } else { 0 });
+    let is_illuminated = stop.is_illuminated.map(|val| if val { 1 } else { 0 });
+    let has_illuminated_path =
+        stop.has_illuminated_path.map(|val| if val { 1 } else { 0 });
+    let has_visibility_from_within = stop
+        .has_visibility_from_within
+        .map(|val| if val { 1 } else { 0 });
+    let has_visibility_from_area =
+        stop.has_visibility_from_area
+            .map(|val| if val { 1 } else { 0 });
+    let is_visible_from_outside =
+        stop.is_visible_from_outside
+            .map(|val| if val { 1 } else { 0 });
+
     let _res = sqlx::query!(
         r#"
 UPDATE Stops
-SET name=?, short_name=?, street=?, door=?, lon=?, lat=?, source=?
+SET name=?, short_name=?, official_name=?, street=?, door=?, lon=?, lat=?,
+    notes = ?, has_crossing = ?, has_accessibility = ?, has_abusive_parking = ?,
+    has_outdated_info = ?, is_damaged = ?, is_vandalized = ?, has_flag = ?,
+    has_schedules = ?, has_sidewalk = ?, has_shelter = ?, has_bench = ?,
+    has_trash_can = ?, is_illuminated = ?, has_illuminated_path = ?,
+    has_visibility_from_within = ?, has_visibility_from_area = ?,
+    is_visible_from_outside = ?, updater=?, update_date=?
 WHERE id=?
     "#,
         stop.name,
         stop.short_name,
+        stop.official_name,
         stop.street,
         stop.door,
         stop.lon,
         stop.lat,
-        stop.source,
+        stop.notes,
+        has_crossing,
+        has_accessibility,
+        has_abusive_parking,
+        has_outdated_info,
+        is_damaged,
+        is_vandalized,
+        has_flag,
+        has_schedules,
+        has_sidewalk,
+        has_shelter,
+        has_bench,
+        has_trash_can,
+        is_illuminated,
+        has_illuminated_path,
+        has_visibility_from_within,
+        has_visibility_from_area,
+        is_visible_from_outside,
+        user_id,
+        update_date,
         stop_id
     )
-    .fetch_one(&state.pool)
+    .execute(&state.pool)
     .await
-    .unwrap();
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     Ok((StatusCode::OK, "").into_response())
 }

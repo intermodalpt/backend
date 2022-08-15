@@ -35,6 +35,10 @@ pub struct Stop {
     pub source: String,
     #[component(example = "Setúbal (ITS)")]
     pub name: Option<String>,
+    #[component(example = "Setúbal (ITS)")]
+    pub official_name: Option<String>,
+    #[component(example = "Setúbal (ITS)")]
+    pub osm_name: Option<String>,
     #[component(example = "Setúbal")]
     pub short_name: Option<String>,
     #[component(example = "Rua do Não Sei Decor")]
@@ -50,6 +54,44 @@ pub struct Stop {
     pub external_id: Option<String>,
     #[serde(default)]
     pub succeeded_by: Option<i64>,
+    #[serde(default)]
+    pub notes: Option<i64>,
+    #[serde(default)]
+    pub has_crossing: Option<i64>,
+    #[serde(default)]
+    pub has_accessibility: Option<i64>,
+    #[serde(default)]
+    pub has_abusive_parking: Option<i64>,
+    #[serde(default)]
+    pub has_outdated_info: Option<i64>,
+    #[serde(default)]
+    pub is_damaged: Option<i64>,
+    #[serde(default)]
+    pub is_vandalized: Option<i64>,
+    #[serde(default)]
+    pub has_flag: Option<i64>,
+    #[serde(default)]
+    pub has_schedules: Option<i64>,
+    #[serde(default)]
+    pub has_sidewalk: Option<i64>,
+    #[serde(default)]
+    pub has_shelter: Option<i64>,
+    #[serde(default)]
+    pub has_bench: Option<i64>,
+    #[serde(default)]
+    pub has_trash_can: Option<i64>,
+    #[serde(default)]
+    pub is_illuminated: Option<i64>,
+    #[serde(default)]
+    pub has_illuminated_path: Option<i64>,
+    #[serde(default)]
+    pub has_visibility_from_within: Option<i64>,
+    #[serde(default)]
+    pub has_visibility_from_area: Option<i64>,
+    #[serde(default)]
+    pub is_visible_from_outside: Option<i64>,
+    pub updater: i64,
+    pub update_date: String,
 }
 
 #[derive(
@@ -330,9 +372,92 @@ pub(crate) mod requests {
         pub lat: f32,
         pub name: Option<String>,
         pub short_name: Option<String>,
+        pub official_name: Option<String>,
         pub street: Option<String>,
         pub door: Option<String>,
+        #[serde(default)]
         pub notes: Option<String>,
+        #[serde(default)]
+        pub has_crossing: Option<bool>,
+        #[serde(default)]
+        pub has_accessibility: Option<bool>,
+        #[serde(default)]
+        pub has_abusive_parking: Option<bool>,
+        #[serde(default)]
+        pub has_outdated_info: Option<bool>,
+        #[serde(default)]
+        pub is_damaged: Option<bool>,
+        #[serde(default)]
+        pub is_vandalized: Option<bool>,
+        #[serde(default)]
+        pub has_flag: Option<bool>,
+        #[serde(default)]
+        pub has_schedules: Option<bool>,
+        #[serde(default)]
+        pub has_sidewalk: Option<bool>,
+        #[serde(default)]
+        pub has_shelter: Option<bool>,
+        #[serde(default)]
+        pub has_bench: Option<bool>,
+        #[serde(default)]
+        pub has_trash_can: Option<bool>,
+        #[serde(default)]
+        pub is_illuminated: Option<bool>,
+        #[serde(default)]
+        pub has_illuminated_path: Option<bool>,
+        #[serde(default)]
+        pub has_visibility_from_within: Option<bool>,
+        #[serde(default)]
+        pub has_visibility_from_area: Option<bool>,
+        #[serde(default)]
+        pub is_visible_from_outside: Option<bool>,
+    }
+
+    #[derive(Deserialize, Component)]
+    pub struct ChangeStop {
+        pub lon: f32,
+        pub lat: f32,
+        pub name: Option<String>,
+        pub short_name: Option<String>,
+        pub official_name: Option<String>,
+        pub street: Option<String>,
+        pub door: Option<String>,
+        #[serde(default)]
+        pub notes: Option<String>,
+        #[serde(default)]
+        pub has_crossing: Option<bool>,
+        #[serde(default)]
+        pub has_accessibility: Option<bool>,
+        #[serde(default)]
+        pub has_abusive_parking: Option<bool>,
+        #[serde(default)]
+        pub has_outdated_info: Option<bool>,
+        #[serde(default)]
+        pub is_damaged: Option<bool>,
+        #[serde(default)]
+        pub is_vandalized: Option<bool>,
+        #[serde(default)]
+        pub has_flag: Option<bool>,
+        #[serde(default)]
+        pub has_schedules: Option<bool>,
+        #[serde(default)]
+        pub has_sidewalk: Option<bool>,
+        #[serde(default)]
+        pub has_shelter: Option<bool>,
+        #[serde(default)]
+        pub has_bench: Option<bool>,
+        #[serde(default)]
+        pub has_trash_can: Option<bool>,
+        #[serde(default)]
+        pub is_illuminated: Option<bool>,
+        #[serde(default)]
+        pub has_illuminated_path: Option<bool>,
+        #[serde(default)]
+        pub has_visibility_from_within: Option<bool>,
+        #[serde(default)]
+        pub has_visibility_from_area: Option<bool>,
+        #[serde(default)]
+        pub is_visible_from_outside: Option<bool>,
     }
 
     #[derive(Deserialize, Component)]
