@@ -70,7 +70,7 @@ JOIN Municipalities where Parishes.municipality = Municipalities.id
     )
     .fetch_all(&state.pool)
     .await
-    .unwrap();
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     Ok((StatusCode::OK, Json(res)).into_response())
 }
@@ -147,7 +147,7 @@ RETURNING id
     )
     .fetch_one(&state.pool)
     .await
-    .unwrap();
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     let returned: HashMap<&str, i64> = {
         let mut map = HashMap::new();
@@ -273,7 +273,7 @@ WHERE lon >= ? AND lon <= ? AND lat <= ? AND lat >= ? AND id IN (
     )
     .fetch_all(&state.pool)
     .await
-    .unwrap();
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     Ok((StatusCode::OK, Json(res)).into_response())
 }
@@ -308,7 +308,7 @@ ORDER BY SubrouteStops.idx
     )
     .fetch_all(&state.pool)
     .await
-    .unwrap();
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     let mut routes: HashMap<i64, SpiderRoute> = HashMap::new();
     let mut subroutes: HashMap<i64, SpiderSubroute> = HashMap::new();
@@ -420,7 +420,7 @@ ORDER BY SubrouteStops.idx"
     })
     .fetch_all(&state.pool)
     .await
-    .unwrap();
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     let mut routes: HashMap<i64, SpiderRoute> = HashMap::new();
     let mut subroutes: HashMap<i64, SpiderSubroute> = HashMap::new();
@@ -503,7 +503,7 @@ ORDER BY Routes.id asc
     )
     .fetch_all(&state.pool)
     .await
-    .unwrap();
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     let mut row_iter = res.into_iter();
 
@@ -579,7 +579,7 @@ ORDER BY Routes.id asc
     )
     .fetch_all(&state.pool)
     .await
-    .unwrap();
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     let mut row_iter = res.into_iter();
 
@@ -651,7 +651,7 @@ WHERE Subroutes.route=?
     )
     .fetch_all(&state.pool)
     .await
-    .unwrap();
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     let mut departures = vec![];
     for row in res {
@@ -717,7 +717,7 @@ WHERE Subroutes.route=?
     )
     .fetch_all(&state.pool)
     .await
-    .unwrap();
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     let mut departures = vec![];
     for row in res {
@@ -758,7 +758,7 @@ WHERE Subroutes.route=?
 pub(crate) async fn get_route_stops(
     Extension(state): Extension<Arc<State>>,
     Path(route_id): Path<i64>,
-) -> Result<impl IntoResponse, String> {
+) -> Result<impl IntoResponse, Error> {
     let res = sqlx::query!(
         r#"
 SELECT Subroutes.id as subroute, SubrouteStops.stop as stop, SubrouteStops.time_to_next as diff
@@ -771,7 +771,7 @@ ORDER BY Subroutes.id ASC, SubrouteStops.idx ASC
     )
     .fetch_all(&state.pool)
     .await
-    .unwrap();
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     let subroute_stops = res
         .into_iter()
@@ -829,7 +829,7 @@ ORDER BY SubrouteStops.idx ASC
     )
     .fetch_all(&state.pool)
     .await
-    .unwrap();
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     // Check for the difference from stored to future
     let stored_len = existing_query_res.len();
@@ -875,7 +875,7 @@ WHERE Subroute=? AND idx>=?
         )
         .execute(&state.pool)
         .await
-        .unwrap()
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?
         .rows_affected();
 
         if deleted_rows != stored_changes.abs() as u64 {
@@ -906,7 +906,7 @@ VALUES (?, ?, ?, ?)
             )
             .execute(&state.pool)
             .await
-            .unwrap();
+            .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
         }
     };
 
@@ -935,7 +935,7 @@ WHERE  subroute=? AND idx=?
             )
             .execute(&state.pool)
             .await
-            .unwrap();
+            .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
         }
     }
 
@@ -964,6 +964,7 @@ SELECT id, original_filename, sha1, public, sensitive, tagged, uploader,
 	upload_date, capture_date, width, height, lon, lat, camera_ref, tags, notes
 FROM StopPics
 WHERE tagged = 0
+ORDER BY capture_date ASC
 LIMIT ? OFFSET ?
     "#,
         PAGE_SIZE,
@@ -971,7 +972,7 @@ LIMIT ? OFFSET ?
     )
     .fetch_all(&state.pool)
     .await
-    .unwrap();
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     let mut pics = vec![];
     for row in res {
@@ -1093,7 +1094,7 @@ WHERE id=?
     )
     .execute(&state.pool)
     .await
-    .unwrap();
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     let _res = sqlx::query(&format!(
         r#"
@@ -1104,7 +1105,7 @@ WHERE pic=? AND stop NOT IN ({stop_ids})
     .bind(stop_picture_id)
     .execute(&state.pool)
     .await
-    .unwrap();
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     for stop_id in stop_pic_meta.stops {
         let _res = sqlx::query!(
@@ -1117,7 +1118,7 @@ VALUES (?, ?)
         )
         .execute(&state.pool)
         .await
-        .unwrap();
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
     }
 
     Ok((StatusCode::OK, "").into_response())

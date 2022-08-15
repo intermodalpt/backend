@@ -40,19 +40,23 @@ use std::sync::Arc;
 use axum::http::Method;
 use axum::routing::{get, patch, post};
 use axum::{Extension, Json, Router};
+use config::Config;
+use s3;
 use sqlx::sqlite::SqlitePool;
 use tower_http::cors::{Any, CorsLayer};
 use utoipa::OpenApi;
-use utoipa_swagger_ui::Config;
+use utoipa_swagger_ui;
 
 #[derive(Clone)]
 pub(crate) struct State {
+    pub(crate) bucket: s3::Bucket,
     pub(crate) pool: SqlitePool,
 }
 
 pub(crate) fn build_paths(state: State) -> Router {
     let api_doc = ApiDoc::openapi();
-    let config = Arc::new(Config::from("/api-doc/openapi.json"));
+    let config =
+        Arc::new(utoipa_swagger_ui::Config::from("/api-doc/openapi.json"));
 
     let cors = CorsLayer::new()
         .allow_methods([Method::GET, Method::POST, Method::PATCH])
