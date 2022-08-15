@@ -1,38 +1,64 @@
 <script>
   import Box from "../components/Box.svelte";
   import LineStopsEditor from "./LineStopsEditor.svelte";
-  import { api_server } from "../../settings.js";
-  import { icons } from "./assets.js";
+  import {api_server, token} from "../../settings.js";
+  import {icons} from "./assets.js";
+  import {stops, routes} from "../../cache.js";
   import L from "leaflet";
-  import { calc_route_multipoly } from "../../utils.js";
-  import { writable } from "svelte/store";
+  import {calc_route_multipoly} from "../../utils.js";
+  import {derived, writable} from "svelte/store";
 
   let map;
 
-  let stops;
-  let routes;
-  let subroutes;
-  let selectedStop;
-  let selectedRoute;
-  let selectedRouteStops;
-  let selectedSubroute;
-  let stopsEditor;
+  const selectedStop = writable(undefined);
+  const selectedRouteId = writable(undefined);
+  const selectedRouteStops = writable(undefined);
+  const selectedSubrouteId = writable(undefined);
+  const selectedSubrouteStops = derived(
+      [selectedRouteStops, selectedSubrouteId],
+      ([$selectedRouteStops, $selectedSubrouteId]) => {
+        return $selectedRouteStops ? $selectedRouteStops[$selectedSubrouteId] : undefined
+      }
+  );
+  const subroutes = derived(
+      selectedRouteId,
+      $selectedRouteId => {
+        return $selectedRouteId
+            ? Object.fromEntries($routes[$selectedRouteId].subroutes.map((subroute) => [subroute.id, subroute]))
+            : undefined
+      }
+  );
+  const selectedRoute = derived(selectedRouteId, $selectedRouteId => {
+    return $routes.find((route) => {
+      return route.id === $selectedRouteId
+    })
+  });
 
-  const selectedSubrouteStops = writable(undefined);
+  selectedRoute.subscribe((route) => {
+    if (route && route.subroutes.length > 0) {
+      $selectedSubrouteId = route.subroutes[0].id;
+    }
+  });
 
-  $: loading = !(stops && routes && map);
-  $: subroutes = selectedRoute
-    ? Object.fromEntries(routes[selectedRoute].subroutes.map((subroute) => [subroute.id, subroute]))
-    : undefined;
-
-  $: selectedRoute && loadRouteStops();
-
-  $: selectedSubroute && selectedRouteStops && selectedSubrouteStops.set(selectedRouteStops[selectedSubroute]);
+  let loading = false;
 
   let mapLayers = {
     stops: L.layerGroup(),
     subrouteDrawing: L.layerGroup(),
   };
+
+
+  selectedRouteId.subscribe((id) => {
+    if (id === undefined) {
+      return;
+    }
+    fetch(`${api_server}/api/routes/${id}/stops?all=true`)
+        .then((r) => r.json())
+        .then((data) => {
+          $selectedRouteStops = Object.fromEntries(data.map((subroute) => [subroute.subroute, subroute]));
+        })
+        .catch((e) => alert("Failed to load the route stops"));
+  })
 
   selectedSubrouteStops.subscribe((value) => {
     if (value) {
@@ -44,34 +70,14 @@
     }
   });
 
-  function loadRoutes() {
-    fetch(`${api_server}/api/routes`)
-      .then((r) => r.json())
-      .then((data) => {
-        routes = Object.fromEntries(data.map((line) => [line.id, line]));
-        // selectedRoute = Object.keys(routes)[0];
-      })
-      .catch((e) => alert("Failed to load the routes"));
-  }
-
-  loadRoutes();
-
-  function loadRouteStops() {
-    fetch(`${api_server}/api/routes/${selectedRoute}/stops?all=true`)
-      .then((r) => r.json())
-      .then((data) => {
-        selectedRouteStops = Object.fromEntries(data.map((subroute) => [subroute.subroute, subroute]));
-      })
-      .catch((e) => alert("Failed to load the route stops"));
-  }
 
   function drawSubroute(stop_ids) {
-    let segments = calc_route_multipoly(stops, stop_ids);
+    let segments = calc_route_multipoly($stops, stop_ids);
 
     mapLayers.subrouteDrawing.removeFrom(map);
     mapLayers.subrouteDrawing = L.layerGroup();
     if (segments) {
-      let polyLine = L.polyline(segments, { color: "red" }).addTo(mapLayers.subrouteDrawing);
+      let polyLine = L.polyline(segments, {color: "red"}).addTo(mapLayers.subrouteDrawing);
 
       mapLayers.subrouteDrawing.addTo(map);
       return polyLine;
@@ -80,18 +86,17 @@
 
   function createStopMarker(info) {
     let marker;
-    let markerOptions = { rinseOnHover: true, draggable: true };
+    let markerOptions = {rinseOnHover: true, draggable: true};
     if (icons[info.source] === undefined) {
       marker = L.marker([info.lat, info.lon], markerOptions);
     } else {
-      marker = L.marker([info.lat, info.lon], Object.assign({}, markerOptions, { icon: icons[info.source] }));
+      marker = L.marker([info.lat, info.lon], Object.assign({}, markerOptions, {icon: icons[info.source]}));
     }
 
     marker.stopId = info.id;
-    marker.meta = info;
 
     marker.on("click", (e) => {
-      $: selectedStop = e.target.stopId;
+      $selectedStop = $stops[e.target.stopId];
     });
 
     let name = info.name || info.short_name;
@@ -102,29 +107,20 @@
   }
 
   function loadStops() {
-    fetch(`${api_server}/api/stops?all=true`)
-      .then((r) => r.json())
-      .catch((e) => {
-        alert("Failed to load the stop list");
-        console.log(e);
-      })
-      .then((data) => {
-        stops = Object.fromEntries(data.map((stop) => [stop.id, stop]));
-        map.removeLayer(mapLayers.stops);
-        mapLayers.stops = L.markerClusterGroup({
-          // spiderfyOnMaxZoom: false,
-          showCoverageOnHover: false,
-          disableClusteringAtZoom: 16,
-        });
-        data.forEach((node) => {
-          if (node.lat != null && node.lon != null) {
-            let marker = createStopMarker(node);
-            mapLayers.stops.addLayer(marker);
-          }
-        });
 
-        map.addLayer(mapLayers.stops);
-      });
+    mapLayers.stops = L.markerClusterGroup({
+      // spiderfyOnMaxZoom: false,
+      showCoverageOnHover: false,
+      disableClusteringAtZoom: 16,
+    });
+    Object.values($stops).forEach((node) => {
+      if (node.lat != null && node.lon != null) {
+        let marker = createStopMarker(node);
+        mapLayers.stops.addLayer(marker);
+      }
+    });
+
+    map.addLayer(mapLayers.stops);
   }
 
   function goTo(e) {
@@ -171,15 +167,17 @@
   }
 
   function saveSubrouteStops(e) {
-    fetch(`${api_server}/api/routes/${selectedRoute}/stops/subroutes/${selectedSubroute}`, {
+    let routeStops = $selectedRouteStops[$selectedSubrouteId];
+    fetch(`${api_server}/api/routes/${$selectedRouteId}/stops/subroutes/${$selectedSubrouteId}`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
+        authorization: `Bearer ${$token}`
       },
       body: JSON.stringify({
         from: {
-          stops: selectedRouteStops[selectedSubroute].stops,
-          diffs: selectedRouteStops[selectedSubroute].diffs,
+          stops: routeStops.stops,
+          diffs: routeStops.diffs,
         },
         to: {
           stops: e.detail.stops,
@@ -187,13 +185,18 @@
         },
       }),
     })
-      .then((resp) => {
-        alert("We're good");
-      })
-      .catch((e) => {
-        alert("Error saving");
-        console.log(e);
-      });
+        .then((resp) => {
+          if (resp.ok) {
+            alert("We're good");
+            routeStops.stops = e.detail.stops;
+            routeStops.diffs = e.detail.diffs;
+          } else {
+            alert("The server didn't like this data");
+          }
+        })
+        .catch((e) => {
+          alert("Error saving");
+        });
   }
 </script>
 
@@ -209,45 +212,38 @@
     {:else}
       <label>
         Selected line:
-        <select class="select select-bordered select-xs" bind:value={selectedRoute}>
-          {#each Object.values(routes) as line}
-            <option value={line.id}>
-              {line.code} - {line.name.substring(0, 60)}
+        <select class="select select-bordered select-xs" bind:value={$selectedRouteId}>
+          {#each Object.values($routes) as route}
+            <option value={route.id}>
+              {route.code} - {route.name.substring(0, 60)}
             </option>
           {/each}
         </select>
       </label><br />
-      <span
-        >Selected stop:
-        {#if selectedStop}
-          {stops[selectedStop].name} ({stops[selectedStop].id})
+      <span>
+        Selected stop:
+        {#if $selectedStop}
+          {$selectedStop.name} ({$selectedStop.id})
         {:else}
           None
         {/if}
       </span>
-      {#if selectedRoute}
+      {#if $selectedRoute}
         <h2 class="font-bold">
-          {routes[selectedRoute].code} - {routes[selectedRoute].name} ({routes[selectedRoute].id})
+          {$selectedRoute.code} - {$selectedRoute.name} ({$selectedRoute.id})
         </h2>
-        <select class="select select-bordered select-xs" bind:value={selectedSubroute}>
-          {#each routes[selectedRoute].subroutes as subroute}
+        <select class="select select-bordered select-xs" bind:value={$selectedSubrouteId}>
+          {#each $selectedRoute.subroutes as subroute}
             <option value={subroute.id}>{subroute.flag.substring(0, 60)}</option>
           {/each}
         </select>
-        {#if selectedSubroute && subroutes[selectedSubroute]}
-          {#if selectedRouteStops}
-            <LineStopsEditor
-              {routes}
-              {stops}
-              bind:this={stopsEditor}
-              bind:selectedStop
-              {selectedSubrouteStops}
-              on:goto={goTo}
-              on:redraw={redraw}
-              on:savesubroutestops={saveSubrouteStops}
-            />
-          {/if}
-        {/if}
+        <LineStopsEditor
+            selectedStop={selectedStop}
+            selectedSubrouteStops={selectedSubrouteStops}
+            on:goto={goTo}
+            on:redraw={redraw}
+            on:savesubroutestops={saveSubrouteStops}
+        />
       {/if}
     {/if}
   </div>
@@ -259,7 +255,7 @@
   }
 
   .hwrapper div:first-child {
-    flex-basis: max(60vw, 600px);
+    flex-basis: max(50vw, 600px);
     flex-shrink: 0;
   }
 
@@ -270,31 +266,8 @@
   }
 
   .map {
-    height: calc(100vh - 50px);
+    height: calc(100vh - 80px);
     border-radius: 12px;
     cursor: crosshair !important;
-  }
-
-  .pending-changes li {
-    display: flex;
-    justify-content: space-between;
-  }
-
-  .pending-changes button {
-    width: 60px;
-  }
-
-  .pending-changes .changes {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .pending-changes .changes .title {
-    font-size: 1.2em;
-    font-weight: bold;
-  }
-
-  .subroute {
-    list-style: none;
   }
 </style>
