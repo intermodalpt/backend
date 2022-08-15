@@ -203,9 +203,7 @@
       body: JSON.stringify(newMeta),
       headers: {
         "Content-Type": "application/json",
-        headers: {
-          authorization: `Bearer ${$token}`
-        }
+        authorization: `Bearer ${$token}`
       },
     })
       .catch((e) => alert("Failed to save the stop meta"))
@@ -289,12 +287,12 @@
               </div>
             {/each}
             <input
-              type="number"
-              disabled
-              class="input input-bordered"
-              id="stop-id"
-              placeholder="Select on map"
-              bind:this={stopInput}
+                type="number"
+                disabled
+                class="input input-bordered"
+                id="stop-id"
+                placeholder="Select on map"
+                bind:this={stopInput}
             />
             <select id="stop-pos" class="select select-bordered">
               <option>Foreground</option>
@@ -328,9 +326,9 @@
             <span class="label-text">Notes</span>
           </label>
           <textarea
-            class="textarea textarea-bordered h-24"
-            placeholder="Eg. While not seen properly there's a schedule to that side."
-            on:change={(e) => (notes = e.target.value.trim() === "" ? null : e.target.value)}
+              class="textarea textarea-bordered h-12"
+              placeholder="Eg. While not seen properly there's a schedule to that side."
+              on:change={(e) => (notes = e.target.value.trim() === "" ? null : e.target.value)}
           />
         </div>
       </div>
