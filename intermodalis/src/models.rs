@@ -94,6 +94,8 @@ pub struct Stop {
     pub is_visible_from_outside: Option<i64>,
     pub updater: i64,
     pub update_date: String,
+    #[serde(default)]
+    pub tags: Vec<String>,
 }
 
 #[derive(
@@ -414,6 +416,8 @@ pub(crate) mod requests {
         pub has_visibility_from_area: Option<bool>,
         #[serde(default)]
         pub is_visible_from_outside: Option<bool>,
+        #[serde(default)]
+        pub tags: Vec<String>,
     }
 
     #[derive(Deserialize, Component)]
@@ -462,6 +466,8 @@ pub(crate) mod requests {
         pub has_visibility_from_area: Option<bool>,
         #[serde(default)]
         pub is_visible_from_outside: Option<bool>,
+        #[serde(default)]
+        pub tags: Vec<String>,
     }
 
     #[derive(Deserialize, Component)]

@@ -96,8 +96,7 @@ pub(crate) async fn get_stops(
     params: Query<StopQueryParam>,
 ) -> Result<impl IntoResponse, Error> {
     let res = if params.0.all {
-        sqlx::query_as!(
-            Stop,
+        sqlx::query!(
             r#"
 SELECT *
 FROM Stops
@@ -105,9 +104,57 @@ FROM Stops
         )
         .fetch_all(&state.pool)
         .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+        .into_iter()
+        .map(|row| {
+            let tags: Vec<String> =
+                if let Ok(tags) = serde_json::from_str(&row.tags) {
+                    tags
+                } else {
+                    // todo warn
+                    vec![]
+                };
+            Stop {
+                id: row.id,
+                source: row.source,
+                name: row.name,
+                official_name: row.official_name,
+                osm_name: row.osm_name,
+                short_name: row.short_name,
+                locality: row.locality,
+                street: row.street,
+                door: row.door,
+                parish: row.parish,
+                lat: row.lat,
+                lon: row.lon,
+                external_id: row.external_id,
+                succeeded_by: row.succeeded_by,
+                notes: row.notes,
+                has_crossing: row.has_crossing,
+                has_accessibility: row.has_accessibility,
+                has_abusive_parking: row.has_abusive_parking,
+                has_outdated_info: row.has_outdated_info,
+                is_damaged: row.is_damaged,
+                is_vandalized: row.is_vandalized,
+                has_flag: row.has_flag,
+                has_schedules: row.has_schedules,
+                has_sidewalk: row.has_sidewalk,
+                has_shelter: row.has_shelter,
+                has_bench: row.has_bench,
+                has_trash_can: row.has_trash_can,
+                is_illuminated: row.is_illuminated,
+                has_illuminated_path: row.has_illuminated_path,
+                has_visibility_from_within: row.has_visibility_from_within,
+                has_visibility_from_area: row.has_visibility_from_area,
+                is_visible_from_outside: row.is_visible_from_outside,
+                updater: row.updater,
+                update_date: row.update_date,
+                tags,
+            }
+        })
+        .collect::<Vec<_>>()
     } else {
-        sqlx::query_as!(
-            Stop,
+        sqlx::query!(
             r#"
 SELECT *
 FROM Stops
@@ -119,8 +166,57 @@ WHERE id IN (
         )
         .fetch_all(&state.pool)
         .await
-    }
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+        .into_iter()
+        .map(|row| {
+            let tags: Vec<String> =
+                if let Ok(tags) = serde_json::from_str(&row.tags) {
+                    tags
+                } else {
+                    // todo warn
+                    vec![]
+                };
+
+            Stop {
+                id: row.id,
+                source: row.source,
+                name: row.name,
+                official_name: row.official_name,
+                osm_name: row.osm_name,
+                short_name: row.short_name,
+                locality: row.locality,
+                street: row.street,
+                door: row.door,
+                parish: row.parish,
+                lat: row.lat,
+                lon: row.lon,
+                external_id: row.external_id,
+                succeeded_by: row.succeeded_by,
+                notes: row.notes,
+                has_crossing: row.has_crossing,
+                has_accessibility: row.has_accessibility,
+                has_abusive_parking: row.has_abusive_parking,
+                has_outdated_info: row.has_outdated_info,
+                is_damaged: row.is_damaged,
+                is_vandalized: row.is_vandalized,
+                has_flag: row.has_flag,
+                has_schedules: row.has_schedules,
+                has_sidewalk: row.has_sidewalk,
+                has_shelter: row.has_shelter,
+                has_bench: row.has_bench,
+                has_trash_can: row.has_trash_can,
+                is_illuminated: row.is_illuminated,
+                has_illuminated_path: row.has_illuminated_path,
+                has_visibility_from_within: row.has_visibility_from_within,
+                has_visibility_from_area: row.has_visibility_from_area,
+                is_visible_from_outside: row.is_visible_from_outside,
+                updater: row.updater,
+                update_date: row.update_date,
+                tags,
+            }
+        })
+        .collect::<Vec<_>>()
+    };
 
     Ok((StatusCode::OK, Json(res)).into_response())
 }
@@ -164,18 +260,19 @@ pub(crate) async fn create_stop(
     let is_visible_from_outside =
         stop.is_visible_from_outside
             .map(|val| if val { 1 } else { 0 });
-    
+    let tags = serde_json::to_string(&stop.tags).unwrap_or("[]".to_string());
+
     let res = sqlx::query!(
         r#"
 INSERT INTO Stops(name, short_name, official_name, locality, street, door,
-    lon, lat, notes, has_crossing, has_accessibility,
+    lon, lat, notes, tags, has_crossing, has_accessibility,
     has_abusive_parking, has_outdated_info, is_damaged,
     is_vandalized, has_flag, has_schedules, has_sidewalk,
     has_shelter, has_bench, has_trash_can, is_illuminated,
     has_illuminated_path, has_visibility_from_within,
     has_visibility_from_area, is_visible_from_outside,
     updater, update_date, source)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 RETURNING id
     "#,
         stop.name,
@@ -187,6 +284,7 @@ RETURNING id
         stop.lon,
         stop.lat,
         stop.notes,
+        tags,
         has_crossing,
         has_accessibility,
         has_abusive_parking,
@@ -257,12 +355,13 @@ pub(crate) async fn update_stop(
     let is_visible_from_outside =
         stop.is_visible_from_outside
             .map(|val| if val { 1 } else { 0 });
+    let tags = serde_json::to_string(&stop.tags).unwrap();
 
     let _res = sqlx::query!(
         r#"
 UPDATE Stops
 SET name=?, short_name=?, official_name=?, locality=?, street=?, door=?,
-    lon=?, lat=?, notes = ?, has_crossing = ?, has_accessibility = ?,
+    lon=?, lat=?, notes = ?, tags=?, has_crossing = ?, has_accessibility = ?,
     has_abusive_parking = ?, has_outdated_info = ?, is_damaged = ?,
     is_vandalized = ?, has_flag = ?, has_schedules = ?, has_sidewalk = ?,
     has_shelter = ?, has_bench = ?, has_trash_can = ?, is_illuminated = ?,
@@ -280,6 +379,7 @@ WHERE id=?
         stop.lon,
         stop.lat,
         stop.notes,
+        tags,
         has_crossing,
         has_accessibility,
         has_abusive_parking,
@@ -322,8 +422,7 @@ pub(crate) async fn get_bounded_stops(
     Extension(state): Extension<Arc<State>>,
     Path((x0, y0, x1, y1)): Path<(f64, f64, f64, f64)>,
 ) -> Result<impl IntoResponse, Error> {
-    let res = sqlx::query_as!(
-        Stop,
+    let res = sqlx::query!(
         r#"
 SELECT *
 FROM Stops
@@ -338,7 +437,56 @@ WHERE lon >= ? AND lon <= ? AND lat <= ? AND lat >= ? AND id IN (
     )
     .fetch_all(&state.pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .into_iter()
+    .map(|row| {
+        let tags: Vec<String> =
+            if let Ok(tags) = serde_json::from_str(&row.tags) {
+                tags
+            } else {
+                // todo warn
+                vec![]
+            };
+
+        Stop {
+            id: row.id,
+            source: row.source,
+            name: row.name,
+            official_name: row.official_name,
+            osm_name: row.osm_name,
+            short_name: row.short_name,
+            locality: row.locality,
+            street: row.street,
+            door: row.door,
+            parish: row.parish,
+            lat: row.lat,
+            lon: row.lon,
+            external_id: row.external_id,
+            succeeded_by: row.succeeded_by,
+            notes: row.notes,
+            has_crossing: row.has_crossing,
+            has_accessibility: row.has_accessibility,
+            has_abusive_parking: row.has_abusive_parking,
+            has_outdated_info: row.has_outdated_info,
+            is_damaged: row.is_damaged,
+            is_vandalized: row.is_vandalized,
+            has_flag: row.has_flag,
+            has_schedules: row.has_schedules,
+            has_sidewalk: row.has_sidewalk,
+            has_shelter: row.has_shelter,
+            has_bench: row.has_bench,
+            has_trash_can: row.has_trash_can,
+            is_illuminated: row.is_illuminated,
+            has_illuminated_path: row.has_illuminated_path,
+            has_visibility_from_within: row.has_visibility_from_within,
+            has_visibility_from_area: row.has_visibility_from_area,
+            is_visible_from_outside: row.is_visible_from_outside,
+            updater: row.updater,
+            update_date: row.update_date,
+            tags,
+        }
+    })
+    .collect::<Vec<_>>();
 
     Ok((StatusCode::OK, Json(res)).into_response())
 }

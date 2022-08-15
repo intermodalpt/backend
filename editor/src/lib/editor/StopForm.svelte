@@ -13,6 +13,7 @@
   let street = $stop.street;
   let door = $stop.door;
   let notes = $stop.notes;
+  let tags = $stop.tags;
 
   let has_crossing = writable($stop.has_crossing);
   let has_accessibility = writable($stop.has_accessibility);
@@ -45,10 +46,12 @@
     id = selectedStop.id;
     name = selectedStop.name;
     short_name = selectedStop.short_name;
+    official_name = selectedStop.official_name;
     locality = selectedStop.locality;
     street = selectedStop.street;
     door = selectedStop.door;
     notes = selectedStop.notes;
+    tags = selectedStop.tags;
 
     $has_crossing = selectedStop.has_crossing;
     $has_accessibility = selectedStop.has_accessibility;
@@ -90,6 +93,22 @@
     }
   });
 
+  function addTag() {
+    let entry = document.getElementById("tag-text");
+    let entryValue = entry.value.trim();
+
+    if (entryValue !== "") {
+      tags.push(entryValue);
+      tags = tags;
+    }
+    entry.value = "";
+  }
+
+  function removeTag(tag) {
+    tags.splice(tags.indexOf(tag), 1);
+    tags = tags;
+  }
+
   function save() {
     let newMeta = {
       id: id,
@@ -99,6 +118,7 @@
       locality: locality,
       street: street,
       door: door,
+      tags: tags,
       notes: !notes || notes.trim() === "" ? null : notes.trim(),
 
       has_crossing: $has_crossing,
@@ -194,17 +214,6 @@
         text="Caixote do lixo"
         description="A paragem dispõe de um caixote do lixo a menos de 20 metros"
         state={has_trash_can} />
-  </div>
-  <div>
-    <label class="label"><span class="label-text">Acesso</span></label>
-    <StopCheckbox
-        text="Atravessamento de via"
-        description="Existem infraestruturas ou sinalizações que permitam o atravessamento de via"
-        state={has_crossing} />
-    <StopCheckbox
-        text="Acesso mobilidade reduzida"
-        description="A paragem dispõe de acesso para pessoas com mobilidade reduzida"
-        state={has_accessibility} />
     <label class="label"><span class="label-text">Defeitos</span></label>
     <StopCheckbox
         text="Estacionamento abusivo"
@@ -224,6 +233,15 @@
         state={is_vandalized} />
   </div>
   <div>
+    <label class="label"><span class="label-text">Acesso</span></label>
+    <StopCheckbox
+        text="Atravessamento de via"
+        description="Existem infraestruturas ou sinalizações que permitam o atravessamento de via"
+        state={has_crossing} />
+    <StopCheckbox
+        text="Acesso mobilidade reduzida"
+        description="A paragem dispõe de acesso para pessoas com mobilidade reduzida"
+        state={has_accessibility} />
     <label class="label"><span class="label-text">Iluminação</span></label>
     <StopCheckbox
         text="Na paragem"
@@ -246,6 +264,25 @@
         text="Do autocarro para paragem"
         description="Enquanto motorista, é possível ver devidamente a paragem sem abrandar"
         state={is_visible_from_outside} />
+  </div>
+  <div>
+    <div class="form-control">
+      <label class="label">
+        <span class="label-text">Tags</span>
+      </label>
+      <div class="flex flex-col gap-2">
+        <div>
+          <input id="tag-text" type="text" class="input input-bordered" placeholder="Creche ABC123" />
+          <input class="btn" type="button" value="Add" on:click={addTag} />
+        </div>
+        {#each tags as tag}
+          <div class="badge badge-outline badge-lg">
+            {tag}
+            <div class="btn btn-error btn-circle btn-xs" on:click={() => removeTag(tag)}>✕</div>
+          </div>
+        {/each}
+      </div>
+    </div>
   </div>
 </div>
 
