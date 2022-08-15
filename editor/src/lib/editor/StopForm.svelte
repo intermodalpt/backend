@@ -9,6 +9,7 @@
   let name = $stop.name;
   let short_name = $stop.short_name;
   let official_name = $stop.official_name;
+  let locality = $stop.locality;
   let street = $stop.street;
   let door = $stop.door;
   let notes = $stop.notes;
@@ -44,6 +45,7 @@
     id = selectedStop.id;
     name = selectedStop.name;
     short_name = selectedStop.short_name;
+    locality = selectedStop.locality;
     street = selectedStop.street;
     door = selectedStop.door;
     notes = selectedStop.notes;
@@ -94,6 +96,7 @@
       name: name,
       short_name: short_name,
       official_name: official_name,
+      locality: locality,
       street: street,
       door: door,
       notes: !notes || notes.trim() === "" ? null : notes.trim(),
@@ -137,31 +140,37 @@
     <div class="form-control w-full max-w-xs">
       <label class="input-group">
         <span class="label-text w-24">Oficial</span>
-        <input type="text" bind:value={official_name} class="input input-bordered w-full h-10" />
+        <input type="text" bind:value={official_name} placeholder="Vl. Qts. R Pessoa 29" class="input input-bordered w-full h-10" />
       </label>
     </div>
     <div class="form-control w-full max-w-xs">
       <label class="input-group">
         <span class="label-text w-24">Nome</span>
-        <input type="text" bind:value={name} placeholder={name} class="input input-bordered w-full h-10" />
+        <input type="text" bind:value={name} placeholder="Vale das Quintas, Rua Pessoa, 29" class="input input-bordered w-full h-10" />
       </label>
     </div>
     <div class="form-control w-full max-w-xs">
       <label class="input-group">
         <span class="label-text w-24">Abrev.</span>
-        <input type="text" bind:value={short_name} placeholder={short_name} class="input input-bordered w-full h-10" />
+        <input type="text" bind:value={short_name} placeholder="Vl. Quintas, Pessoa" class="input input-bordered w-full h-10" />
+      </label>
+    </div>
+    <div class="form-control w-full max-w-xs">
+      <label class="input-group">
+        <span class="label-text w-24">Loc.</span>
+        <input type="text" bind:value={locality} placeholder="Vale das Quintas" class="input input-bordered w-full h-10" />
       </label>
     </div>
     <div class="form-control w-full max-w-xs">
       <label class="input-group">
         <span class="label-text w-24">Via</span>
-        <input type="text" bind:value={street} placeholder={street} class="input input-bordered w-full h-10" />
+        <input type="text" bind:value={street} placeholder="Rua Pessoa" class="input input-bordered w-full h-10" />
       </label>
     </div>
     <div class="form-control w-full max-w-xs">
       <label class="input-group">
         <span class="label-text w-24">Porta</span>
-        <input type="text" bind:value={door} placeholder={door} class="input input-bordered w-full h-10" />
+        <input type="text" bind:value={door} placeholder="29" class="input input-bordered w-full h-10" />
       </label>
     </div>
   </div>

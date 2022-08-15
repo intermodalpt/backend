@@ -41,6 +41,8 @@ pub struct Stop {
     pub osm_name: Option<String>,
     #[component(example = "Setúbal")]
     pub short_name: Option<String>,
+    #[component(example = "Bairro das bairradas")]
+    pub locality: Option<String>,
     #[component(example = "Rua do Não Sei Decor")]
     pub street: Option<String>,
     #[component(example = "123-A")]
@@ -373,6 +375,7 @@ pub(crate) mod requests {
         pub name: Option<String>,
         pub short_name: Option<String>,
         pub official_name: Option<String>,
+        pub locality: Option<String>,
         pub street: Option<String>,
         pub door: Option<String>,
         #[serde(default)]
@@ -420,6 +423,7 @@ pub(crate) mod requests {
         pub name: Option<String>,
         pub short_name: Option<String>,
         pub official_name: Option<String>,
+        pub locality: Option<String>,
         pub street: Option<String>,
         pub door: Option<String>,
         #[serde(default)]
