@@ -4,16 +4,17 @@
   import {token, api_server} from "./settings.js";
   import {onMount} from "svelte";
 
+  let loading = true;
 
   onMount(async () => {
     await initCache();
-  });
 
-  let ls_token = localStorage.getItem("editor-token");
-  if (ls_token != null) {
-    $token = ls_token;
-    checkToken();
-  }
+    let ls_token = localStorage.getItem("editor-token");
+    if (ls_token != null && await checkToken(ls_token)) {
+      $token = ls_token;
+    }
+    loading = false;
+  });
 
   async function checkToken(token) {
     let res = await fetch(`${api_server}/auth/check`, {
@@ -22,15 +23,16 @@
         authorization: `Bearer ${token}`
       }
     });
-    console.log(res);
     return res.ok;
   }
 
-  function saveToken() {
+  async function saveToken() {
     let token_val = document.getElementById("auth-token").value;
-    if (checkToken(token_val)) {
+    if (await checkToken(token_val)) {
       localStorage.setItem("editor-token", token_val);
       $token = token_val;
+    } else {
+      alert("Auth failed");
     }
   }
 </script>
@@ -38,14 +40,18 @@
 <svelte:window />
 
 <div id="content">
-  {#if $token}
-    <Editor />
+  {#if loading}
+    Pensando com muita força...
   {:else }
-    <div>
-      Token:
-      <input type="text" class="input input-bordered" id="auth-token" />
-      <input type="button" value="Save" class="input btn btn-primary" on:click={saveToken} />
-    </div>
+    {#if $token}
+      <Editor />
+    {:else }
+      <div>
+        Token:
+        <input type="text" class="input input-bordered" id="auth-token" />
+        <input type="button" value="Save" class="input btn btn-primary" on:click={saveToken} />
+      </div>
+    {/if}
   {/if}
 </div>
 

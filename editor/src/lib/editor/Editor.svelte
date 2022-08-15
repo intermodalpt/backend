@@ -34,7 +34,7 @@
   {:else if mode === 3}
     <ImageEditor />
   {:else}
-    ???
+    <span class="justify-center text-center">Pick a pane</span>
   {/if}
 </div>
 
