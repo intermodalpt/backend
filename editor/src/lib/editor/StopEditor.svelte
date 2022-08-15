@@ -1,12 +1,14 @@
 <script>
   import StopForm from "./StopForm.svelte";
   import L from "leaflet";
+  import "leaflet.featuregroup.subgroup";
   import {api_server, token} from "../../settings.js";
   import {icons} from "./assets.js";
   import {writable} from "svelte/store";
   import {stops} from "../../cache.js";
 
   let map;
+  let control = L.control.layers(null, null, { collapsed: false });
   let selectedStop = writable(undefined);
 
   export function selectStop(stopId) {
@@ -37,10 +39,9 @@
   }
 
   let mapLayers = {
-    parishes: L.layerGroup(),
-    municipalities: L.layerGroup(),
     stops: L.layerGroup(),
-    lineSeq: L.layerGroup(),
+    osm_stops: L.layerGroup(),
+    other_stops: L.layerGroup(),
   };
 
   let info = L.control();
@@ -74,14 +75,28 @@
       disableClusteringAtZoom: 16,
     });
 
+    let osm_markers = [];
+    let other_markers = [];
+
     Object.values($stops).forEach((stop) => {
       if (stop.lat != null && stop.lon != null) {
         let marker = createStopMarker(stop);
-        mapLayers.stops.addLayer(marker);
+        if (stop.source === "osm") {
+          osm_markers.push(marker);
+        } else {
+          other_markers.push(marker);
+        }
       }
     });
 
+    mapLayers.osm_stops = L.featureGroup.subGroup(mapLayers.stops, osm_markers);
+    mapLayers.other_stops = L.featureGroup.subGroup(mapLayers.stops, other_markers);
+    control.addOverlay(mapLayers.osm_stops, 'OSM');
+    control.addOverlay(mapLayers.other_stops, 'GTFS');
+
     map.addLayer(mapLayers.stops);
+    map.addLayer(mapLayers.osm_stops);
+    // map.addLayer(mapLayers.other_stops);
   }
 
   function createStop(e) {
@@ -110,12 +125,12 @@
       contextmenu: true,
 
       contextmenuWidth: 140,
-      contextmenuItems: [
-        {
-          text: "Create a stop",
-          callback: createStop,
-        },
-      ],
+      // contextmenuItems: [
+      //   {
+      //     text: "Create a stop",
+      //     callback: createStop,
+      //   },
+      // ],
     }).setView([38.71856, -9.1372], 10);
 
     let osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -123,11 +138,7 @@
       attribution: "© OpenStreetMap",
     }).addTo(m);
 
-    let baseMaps = {
-      OSM: osm,
-      // "Satellite": satellite
-    };
-    L.control.layers(baseMaps).addTo(m);
+    control.addTo(m);
 
     m.maxBounds = new L.LatLngBounds(new L.LatLng(38.3, -10.0), new L.LatLng(39.35, -8.0));
     m.maxBoundsViscosity = 1.0;
@@ -157,33 +168,7 @@
     {#if $selectedStop}
       <StopForm stop={selectedStop} on:save={saveStopMeta} />
     {:else}
-      <p>Select a stop to edit
-        <it></it>
-        .
-      </p>
+      <p>Select a stop to edit.</p>
     {/if}
   </div>
 </div>
-
-<style>
-  .pending-changes li {
-    display: flex;
-    justify-content: space-between;
-    overflow: auto;
-  }
-
-  .pending-changes button {
-    width: 60px;
-  }
-
-  .pending-changes .changes {
-    display: flex;
-    flex-direction: column;
-    overflow: auto;
-  }
-
-  .pending-changes .changes .title {
-    font-size: 1.2em;
-    font-weight: bold;
-  }
-</style>
