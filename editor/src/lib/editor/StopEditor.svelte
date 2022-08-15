@@ -1,68 +1,39 @@
 <script>
-  import Box from "../components/Box.svelte";
   import StopForm from "./StopForm.svelte";
   import L from "leaflet";
   import {api_server, token} from "../../settings.js";
   import {icons} from "./assets.js";
+  import {writable} from "svelte/store";
+  import {stops} from "../../cache.js";
 
   let map;
-  let stops;
-  let selectedStop;
-
-  let pendingOps = [];
+  let selectedStop = writable(undefined);
 
   export function selectStop(stopId) {
-    selectedStop = stops[stopId];
+    $selectedStop = $stops[stopId];
   }
 
-  export function moveStop(e) {
-    let stopId = e.target.stopId;
-    let newPos = e.target.getLatLng();
-    let existing = pendingOps.find((el) => el.op === updateStop && el.stop.id === stopId);
-    if (existing) {
-      existing.stop.lat = newPos.lat;
-      existing.stop.lon = newPos.lng;
-    } else {
-      let metaCopy = Object.assign({}, e.target.meta);
-      metaCopy.lat = newPos.lat;
-      metaCopy.lon = newPos.lng;
-      pendingOps.push({
-        op: updateStop,
-        stop: e.target.meta,
-      });
-      pendingOps = pendingOps;
-    }
-  }
+  function saveStopMeta(e) {
+    let newMeta = Object.assign(Object.assign({}, $selectedStop), e.detail);
 
-  function saveStopInfo(e) {
-    let stopId = e.detail.id;
-    let existing = pendingOps.find((el) => el.op === updateStop && el.stop.id === stopId);
-    if (existing) {
-      existing.stop = Object.assign(existing.stop, e.detail);
-    } else {
-      pendingOps.push({
-        op: updateStop,
-        stop: e.detail,
-      });
-      pendingOps = pendingOps;
-    }
-
-    selectedStop = null;
+    updateStop(newMeta);
+    $selectedStop = null;
   }
 
   function updateStop(stop) {
     fetch(`${api_server}/api/stops/update/${stop.id}`, {
-      method: "patch",
+      method: "PATCH",
       headers: {
         "Content-Type": "application/json",
-        // Token: token,
+        authorization: `Bearer ${$token}`
       },
       body: JSON.stringify(stop),
-    })
-      .then((r) => r.json())
-      .then((data) => {
-        //
-      });
+    }).then((data) => {
+      alert("Done");
+      Object.assign($stops[stop.id], stop);
+    }).catch(() => {
+      alert("Error updating")
+    });
   }
 
   let mapLayers = {
@@ -77,17 +48,16 @@
 
   function createStopMarker(info) {
     let marker;
-    let markerOptions = { rinseOnHover: true, draggable: true };
+    let markerOptions = {rinseOnHover: true, draggable: true};
     if (icons[info.source] === undefined) {
       marker = L.marker([info.lat, info.lon], markerOptions);
     } else {
-      marker = L.marker([info.lat, info.lon], Object.assign({}, markerOptions, { icon: icons[info.source] }));
+      marker = L.marker([info.lat, info.lon], Object.assign({}, markerOptions, {icon: icons[info.source]}));
     }
 
     marker.stopId = info.id;
     marker.meta = info;
 
-    marker.on("dragend", (e) => moveStop(e));
     marker.on("click", (e) => selectStop(e.target.stopId));
 
     let name = info.name || info.short_name;
@@ -98,25 +68,20 @@
   }
 
   function loadStops() {
-    fetch(`${api_server}/api/stops?all=true`)
-      .then((r) => r.json())
-      .then((data) => {
-        $: stops = Object.fromEntries(data.map((stop) => [stop.id, stop]));
-        map.removeLayer(mapLayers.stops);
-        mapLayers.stops = L.markerClusterGroup({
-          // spiderfyOnMaxZoom: false,
-          showCoverageOnHover: false,
-          disableClusteringAtZoom: 16,
-        });
-        data.forEach((node) => {
-          if (node.lat != null && node.lon != null) {
-            let marker = createStopMarker(node);
-            mapLayers.stops.addLayer(marker);
-          }
-        });
+    mapLayers.stops = L.markerClusterGroup({
+      spiderfyOnMaxZoom: false,
+      showCoverageOnHover: false,
+      disableClusteringAtZoom: 16,
+    });
 
-        map.addLayer(mapLayers.stops);
-      });
+    Object.values($stops).forEach((stop) => {
+      if (stop.lat != null && stop.lon != null) {
+        let marker = createStopMarker(stop);
+        mapLayers.stops.addLayer(marker);
+      }
+    });
+
+    map.addLayer(mapLayers.stops);
   }
 
   function createStop(e) {
@@ -126,19 +91,18 @@
       lon: e.latlng.lng,
     };
     fetch(`${api_server}/api/stops/create`, {
-      method: "post",
+      method: "POST",
       headers: {
         "Content-Type": "application/json",
-        // Token: token,
       },
       body: JSON.stringify(stop),
     })
-      .then((r) => r.json())
-      .then((data) => {
-        stop.id = data.id;
-        let marker = createStopMarker(stop);
-        mapLayers.stops.addLayer(marker);
-      });
+        .then((r) => r.json())
+        .then((data) => {
+          stop.id = data.id;
+          let marker = createStopMarker(stop);
+          mapLayers.stops.addLayer(marker);
+        });
   }
 
   function createMap(container) {
@@ -187,68 +151,21 @@
   }
 </script>
 
-<div class="hwrapper">
+<div class="flex flex-col">
+  <div class="map h-96 cursor-crosshair" use:mapAction />
   <div>
-    <Box>
-      <div class="map" use:mapAction />
-    </Box>
-  </div>
-  <div class="z-[100000]">
-    {#if selectedStop}
-      <StopForm bind:stop={selectedStop} on:save={saveStopInfo} />
+    {#if $selectedStop}
+      <StopForm stop={selectedStop} on:save={saveStopMeta} />
     {:else}
-      <p>Carregue ou arraste uma paragem para a editar.</p>
+      <p>Select a stop to edit
+        <it></it>
+        .
+      </p>
     {/if}
-
-    <h2>Alterações</h2>
-    <ul class="pending-changes">
-      {#each pendingOps as op, i}
-        {#if op.op === updateStop}
-          <li>
-            <div class="changes">
-              <span class="title">
-                Atualização de paragem {op.stop.id} - {op.stop.name}
-              </span>
-              <span>
-                {JSON.stringify(op)}
-              </span>
-            </div>
-            <button on:click={(e) => { pendingOps.splice(i, 1); pendingOps = pendingOps; }}>
-              Call it quitz
-            </button>
-          </li>
-        {:else}
-          <li>???</li>
-        {/if}
-      {/each}
-    </ul>
-    <br />
-    <input type="button" value="Guardar" disabled />
   </div>
 </div>
 
 <style>
-  .hwrapper {
-    display: flex;
-  }
-
-  .hwrapper div:first-child {
-    flex-basis: max(60vw, 600px);
-    flex-shrink: 0;
-  }
-
-  .hwrapper div:nth-of-type(2) {
-    margin-left: 10px;
-    flex-grow: 1;
-    overflow: auto;
-  }
-
-  .map {
-    height: calc(100vh - 50px);
-    border-radius: 12px;
-    cursor: crosshair !important;
-  }
-
   .pending-changes li {
     display: flex;
     justify-content: space-between;
