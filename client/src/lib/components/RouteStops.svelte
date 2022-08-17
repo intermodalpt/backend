@@ -1,8 +1,7 @@
 <script>
   import { stops } from "../../cache.js";
   import { createEventDispatcher } from "svelte";
-
-  export let subrouteStops;
+  import {subrouteStops} from "../../context.js";
 
   const dispatch = createEventDispatcher();
 
@@ -20,8 +19,7 @@
         <li
           class:selected={selectedStop === stop}
           on:click={() => onClick(stop)}
-          class="step hover:bg-base-200 rounded-xl cursor-pointer"
-        >
+          class="step hover:bg-base-200 rounded-xl cursor-pointer">
           {$stops[stop].short_name}
         </li>
       {/each}

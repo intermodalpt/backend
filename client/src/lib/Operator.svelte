@@ -1,33 +1,35 @@
 <script>
-  import { routes, stops } from "../cache.js";
-  import RouteMap from "./components/Route.svelte";
-  import { writable } from "svelte/store";
-
-  export let operator;
-
-  const selectedRoute = writable(undefined);
+  import {routes} from "../cache.js";
+  import {selectedRouteId} from "../context.js";
+  import Route from "./components/Route.svelte";
 </script>
 
-<div>
-  <slot />
-</div>
-
-<h2 class="text-2xl">Linhas</h2>
-<div class="route-list">
-  {#if $selectedRoute}
-    <RouteMap routeId={selectedRoute} />
+<div class="overflow-x-auto">
+  {#if $selectedRouteId}
+    <Route />
   {:else}
-    {#each $routes as route}
-      <div class="code" on:click={() => ($selectedRoute = route.id)}>
-        <span class="line-number">{route.code}</span>
-        <span>{route.name}</span>
-      </div>
-    {/each}
+    <table class="table table-zebra table-compact w-full">
+      <thead>
+      <tr>
+        <th></th>
+        <th>Linha</th>
+      </tr>
+      </thead>
+      <tbody>
+      {#each $routes as route}
+        <tr class="cursor-pointer hover" on:click={() => ($selectedRouteId = route.id)}>
+          <th><span class="line-number" style="background-color: #{route.badge_bg}; color: #{route.badge_text}">{route.code}</span></th>
+          <td>{route.name}</td>
+        </tr>
+      {/each}
+      </tbody>
+    </table>
   {/if}
 </div>
 
 <style>
   .line-number {
+    color: white;
     background-color: red;
     padding: 0.2em 10px;
     border-radius: 1em;

@@ -4,8 +4,7 @@
   import { stops } from "../../cache.js";
 
   import { createEventDispatcher } from "svelte";
-
-  export let subrouteStops;
+  import {subrouteStops} from "../../context.js";
 
   const dispatch = createEventDispatcher();
 
@@ -15,7 +14,11 @@
   let selectedStop = 0;
   let selectedStopMarker;
 
-  $: map && $subrouteStops && drawSubroute();
+  subrouteStops.subscribe(() => {
+    if (map) {
+      drawSubroute();
+    }
+  });
 
   let stopIcon = L.icon({
     iconUrl: `/markers/bus-minimal.svg`,
@@ -24,6 +27,9 @@
   });
 
   function drawSubroute() {
+    if ($subrouteStops === undefined) {
+      return;
+    }
     let cachedStops = $stops;
     subrouteLayer.removeFrom(map);
     subrouteLayer = L.layerGroup();
@@ -105,6 +111,7 @@
 
   function mapAction(container) {
     map = createMap(container);
+    drawSubroute();
 
     return {
       destroy: () => {
