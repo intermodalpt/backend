@@ -48,9 +48,11 @@ const selectedSubroute = derived(selectedSubrouteId, $selectedSubrouteId => {
 export const subrouteStops = derived(
     ([selectedRouteStops, selectedSubrouteId]),
     ([$selectedRouteStops, $selectedSubrouteId]) => {
-      return $selectedRouteStops.find((stops) => {
-        return stops.subroute === $selectedSubrouteId;
-      });
+      if ($selectedRouteStops) {
+        return $selectedRouteStops.find((stops) => {
+          return stops.subroute === $selectedSubrouteId;
+        });
+      }
     }
 );
 

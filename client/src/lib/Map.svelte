@@ -1,40 +1,38 @@
 <script>
   import L from "leaflet";
   import "leaflet.markercluster";
-  import { api_server } from "../settings.js";
-  import { calc_route_multipoly } from "../utils.js";
   import RouteListing from "./components/RouteListing.svelte";
   import RouteStops from "./components/RouteStops.svelte";
   import Schedule from "./components/Schedule.svelte";
   import WHeader from "./components/WidgetHeader.svelte";
-  import { derived, writable } from "svelte/store";
-  import { routes, stops } from "../cache.js";
-  import { tick } from "svelte";
+  import {writable} from "svelte/store";
+  import {api_server} from "../settings.js";
+  import {routes, stops} from "../cache.js";
+  import {calc_route_multipoly} from "../utils.js";
+  import {tick} from "svelte";
+  import {selectedRouteId, selectedSubrouteId, subrouteStops} from "../context.js";
+  import {selectedRoute} from "../context";
 
   let map;
   let amlgeo;
   let parishesgeo;
+  const touchOriented = window.matchMedia("(pointer: coarse)").matches;
 
-  let color = (b) =>
-    `hsl(${getComputedStyle(document.body).getPropertyValue("--" + b)})`;
+  const color = (b) => `hsl(${getComputedStyle(document.body).getPropertyValue("--" + b)})`;
 
-  let routeStops = [];
-  const selectedRouteId = writable(undefined);
-  const selectedSubrouteId = writable(undefined);
+  let selectionRadius = 750;
 
-  const route = derived(selectedRouteId, ($selectedRouteId) => {
-    return $routes.find((r) => {
-      return r.id === $selectedRouteId;
-    });
-  });
-  const subrouteStops = derived(selectedSubrouteId, ($selectedSubrouteId) => {
-    return routeStops.find((stops) => {
-      return stops.subroute === $selectedSubrouteId;
-    });
-  });
+  let info = L.control();
 
-  subrouteStops.subscribe(() => {
-    if ($subrouteStops && map) {
+  let stopMarkers = {};
+  let selectedMarkers = [];
+  let selectedPolylines = [];
+
+  let currentSpider;
+  let selectedRoutes;
+
+  subrouteStops.subscribe((val) => {
+    if (val && map) {
       drawSubroute();
     }
   });
@@ -50,7 +48,7 @@
     spiderMap: L.layerGroup(),
     selectionArea: L.layerGroup(),
     subrouteLayer: L.layerGroup(),
-    legend: L.control({ position: "bottomleft" }),
+    legend: L.control({position: "bottomleft"}),
   };
 
   mapLayers.stops.on("mouseover", () => {
@@ -59,17 +57,6 @@
   mapLayers.stops.on("mouseout", () => {
     mapLayers.selectionArea.addTo(map);
   });
-
-  let selectionRadius = 750;
-
-  let info = L.control();
-
-  let stopMarkers = {};
-  let selectedMarkers = [];
-  let selectedPolylines = [];
-
-  let currentSpider;
-  let selectedRoutes;
 
   stops.subscribe((stops) => {
     Object.values(stops).forEach((stop) => {
@@ -89,22 +76,22 @@
   function zone_color(zone) {
     switch (zone) {
       case 1:
-        return { color: "#f59f00" };
+        return {color: "#f59f00"};
       case 2:
-        return { color: "#0ca678" };
+        return {color: "#0ca678"};
       case 3:
-        return { color: "#ff6b00" };
+        return {color: "#ff6b00"};
       case 4:
-        return { color: "#228be6" };
+        return {color: "#228be6"};
       default:
-        return { color: "#6f7479" };
+        return {color: "#6f7479"};
     }
   }
 
   function onParishFeature(feature, layer) {
     layer.on({
       mouseover: (e) => {
-        var layer = e.target;
+        let layer = e.target;
 
         layer.setStyle({
           weight: 5,
@@ -161,37 +148,36 @@
   }
 
   fetch("/aml.min.geojson")
-    .then((r) => r.json())
-    .then((obj) => {
-      amlgeo = L.geoJSON(obj, {
-        style: (feature) => {
-          return zone_color(feature.properties.zone);
-        },
-        onEachFeature: onMunicipalityFeature,
-      }).addTo(mapLayers.municipalities);
-      if (map) {
-        mapLayers.municipalities.addTo(map);
-        map.fitBounds(amlgeo.getBounds());
-      }
-    });
+      .then((r) => r.json())
+      .then((obj) => {
+        amlgeo = L.geoJSON(obj, {
+          style: (feature) => {
+            return zone_color(feature.properties.zone);
+          },
+          onEachFeature: onMunicipalityFeature,
+        }).addTo(mapLayers.municipalities);
+        if (map) {
+          map.fitBounds(amlgeo.getBounds());
+        }
+      });
 
   fetch("/freguesias.min.geojson")
-    .then((x) => x.json())
-    .then((obj) => {
-      parishesgeo = L.geoJSON(obj, {
-        // style: (feature) => {return zone_color(feature.properties.zone)},
-        onEachFeature: onParishFeature,
-      }).addTo(mapLayers.parishes);
-    });
+      .then((x) => x.json())
+      .then((obj) => {
+        parishesgeo = L.geoJSON(obj, {
+          // style: (feature) => {return zone_color(feature.properties.zone)},
+          onEachFeature: onParishFeature,
+        }).addTo(mapLayers.parishes);
+      });
 
   function loadSpiderMap(stopId) {
     fetch(`${api_server}/api/stops/${stopId}/spider`)
-      .then((x) => x.json())
-      .then((spiderMap) => {
-        currentSpider = spiderMap;
-        selectedRoutes = spiderMap.routes;
-        drawSpiderMap(spiderMap);
-      });
+        .then((x) => x.json())
+        .then((spiderMap) => {
+          currentSpider = spiderMap;
+          selectedRoutes = Object.keys(spiderMap.routes).map((id) => {return $routes[id]});
+          drawSpiderMap(spiderMap);
+        });
   }
 
   function loadAggregateMap(stop_ids) {
@@ -202,12 +188,12 @@
       },
       body: JSON.stringify(stop_ids),
     })
-      .then((x) => x.json())
-      .then((spiderMap) => {
-        currentSpider = spiderMap;
-        selectedRoutes = spiderMap.routes;
-        drawSpiderMap(spiderMap);
-      });
+        .then((x) => x.json())
+        .then((spiderMap) => {
+          currentSpider = spiderMap;
+          selectedRoutes = Object.keys(spiderMap.routes).map((id) => {return $routes[id]});
+          drawSpiderMap(spiderMap);
+        });
   }
 
   function drawSpiderMap(spiderMap) {
@@ -225,18 +211,18 @@
       let segments = calc_route_multipoly(stops, subroute.stop_sequence);
 
       let innerPolyline = L.polyline(segments, {
-        color: color("s"),
+        color: "white",
         weight: 4,
       });
       innerPolyline.routeId = subroute.route;
       innerPolyLines.push(innerPolyline);
       let outerPolyline = L.polyline(segments, {
-        color: "#0000",
+        color: "#000",
         weight: 6,
       }).addTo(mapLayers.spiderMap);
       bounds = bounds
-        ? bounds.extend(outerPolyline.getBounds())
-        : outerPolyline.getBounds();
+          ? bounds.extend(outerPolyline.getBounds())
+          : outerPolyline.getBounds();
     });
     innerPolyLines.forEach((polyline) => {
       polyline.addTo(mapLayers.spiderMap);
@@ -257,11 +243,11 @@
     let segments = calc_route_multipoly(cachedStops, $subrouteStops.stops);
 
     let outerPolyline = L.polyline(segments, {
-      color: color("n"),
+      color: "black",
       weight: 6,
     }).addTo(mapLayers.subrouteLayer);
     let innerPolyline = L.polyline(segments, {
-      color: color("s"),
+      color: "white",
       weight: 4,
     }).addTo(mapLayers.subrouteLayer);
     mapLayers.subrouteLayer.addTo(map);
@@ -275,9 +261,9 @@
       let diff = $subrouteStops.diffs[i];
 
       if (stop.lat && stop.lon) {
-        let marker = L.marker([stop.lat, stop.lon], { icon: stopIcon });
+        let marker = L.marker([stop.lat, stop.lon], {icon: stopIcon});
         marker.on("click", () => {
-          selectStop(stop.id);
+          // selectStop(stop.id);
         });
         marker.addTo(mapLayers.subrouteLayer);
       }
@@ -285,8 +271,6 @@
   }
 
   async function openRoute(e) {
-    let routeId = e.detail.routeId;
-
     for (const [key, subroute] of Object.entries(currentSpider.subroutes)) {
       subroute.id = parseInt(key);
     }
@@ -294,37 +278,49 @@
       stop.id = parseInt(key);
     }
 
-    fetch(`${api_server}/api/routes/${routeId}/stops`)
-      .then((r) => r.json())
-      .then(async (data) => {
-        data.forEach((sr) => sr.stops.map((stopId) => stops[stopId]));
-        routeStops = data;
-        $selectedRouteId = routeId;
-        $selectedSubrouteId = $route.subroutes[0].id;
-        await tick();
-        document.getElementById("route").scrollIntoView(true);
-      });
+    await tick();
+    document.getElementById("route").scrollIntoView(true);
   }
 
   function hintRoute(e) {
     let routeId = e.detail.routeId;
     selectedPolylines
-      .filter((line) => {
-        return line.routeId === routeId;
-      })
-      .forEach((line) => {
-        line.bringToFront();
-        line.setStyle({ color: color("p") });
-      });
+        .filter((line) => {
+          return line.routeId === routeId;
+        })
+        .forEach((line) => {
+          line.bringToFront();
+          line.setStyle({color: color("p")});
+        });
   }
 
   function dropRouteHint(e) {
     let routeId = e.detail.routeId;
     selectedPolylines
-      .filter((line) => {
-        return line.routeId === routeId;
-      })
-      .forEach((line) => line.setStyle({ color: color("s") }));
+        .filter((line) => {
+          return line.routeId === routeId;
+        })
+        .forEach((line) => line.setStyle({color: "white"}));
+  }
+
+  function selectArea(center) {
+    selectedMarkers = [];
+
+    for (let marker of Object.values(stopMarkers)) {
+      let distance = marker.getLatLng().distanceTo(center);
+      if (distance <= selectionRadius) {
+        selectedMarkers.push(marker);
+      }
+    }
+    if (selectedMarkers.length === 0) {
+      alert("A area escolhida não seleccionou nada");
+    } else {
+      loadAggregateMap(
+          selectedMarkers.map((m) => {
+            return m.stopId;
+          })
+      );
+    }
   }
 
   function createMap(container) {
@@ -337,9 +333,22 @@
       radius: 500,
     }).addTo(mapLayers.selectionArea);
 
-    m.on("mousemove", (e) => {
-      selectorCircle.setLatLng(e.latlng);
-    });
+    if (touchOriented) {
+      selectorCircle.on("click", (e) => {
+        selectArea(selectorCircle.getLatLng());
+      })
+      m.on("move", (e) => {
+        selectorCircle.setLatLng(e.target.getCenter());
+      });
+    } else {
+      selectorCircle.on("click", (e) => {
+        selectArea(selectorCircle.getLatLng());
+      });
+      m.on("mousemove", (e) => {
+        selectorCircle.setLatLng(e.latlng);
+      });
+    }
+
 
     m.on("zoomend", (e) => {
       let zoomLevel = m.getZoom();
@@ -395,28 +404,6 @@
       }
     });
 
-    selectorCircle.on("click", (e) => {
-      let center = selectorCircle.getLatLng();
-
-      selectedMarkers = [];
-
-      for (let marker of Object.values(stopMarkers)) {
-        let distance = marker.getLatLng().distanceTo(center);
-        if (distance <= selectionRadius) {
-          selectedMarkers.push(marker);
-        }
-      }
-      if (selectedMarkers.length === 0) {
-        alert("A area escolhida não seleccionou nada");
-      } else {
-        loadAggregateMap(
-          selectedMarkers.map((m) => {
-            return m.stopId;
-          })
-        );
-      }
-    });
-
     L.tileLayer("https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png", {
       maxZoom: 19,
       subdomains: ["a", "b"],
@@ -424,8 +411,8 @@
     }).addTo(m);
 
     m.maxBounds = new L.LatLngBounds(
-      new L.LatLng(38.3, -10.0),
-      new L.LatLng(39.35, -8.0)
+        new L.LatLng(38.3, -10.0),
+        new L.LatLng(39.35, -8.0)
     );
     m.maxBoundsViscosity = 1.0;
     m.minZoom = 10;
@@ -446,15 +433,18 @@
     };
     info.addTo(m);
 
+
+    mapLayers.municipalities.addTo(m);
+
     mapLayers.legend.onAdd = function (map) {
       const div = L.DomUtil.create("div", "info legend");
       div.innerHTML =
-        "" +
-        '<i style="background:#f59f00"></i>Area 1<br>' +
-        '<i style="background:#0ca678"></i>Area 2<br>' +
-        '<i style="background:#ff6b00"></i>Area 3<br>' +
-        '<i style="background:#228be6"></i>Area 4<br>' +
-        '<i style="background:#abb3bb"></i>Independente';
+          "" +
+          '<i style="background:#f59f00"></i>Area 1<br>' +
+          '<i style="background:#0ca678"></i>Area 2<br>' +
+          '<i style="background:#ff6b00"></i>Area 3<br>' +
+          '<i style="background:#228be6"></i>Area 4<br>' +
+          '<i style="background:#abb3bb"></i>Independente';
 
       return div;
     };
@@ -495,19 +485,13 @@
 </script>
 
 <link
-  rel="stylesheet"
-  href="https://unpkg.com/leaflet@1.8.0/dist/leaflet.css"
-  integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ=="
-  crossorigin=""
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.8.0/dist/leaflet.css"
+    integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ=="
+    crossorigin=""
 />
-<link
-  rel="stylesheet"
-  href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"
-/>
-<link
-  rel="stylesheet"
-  href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"
-/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
 <link rel="stylesheet" href="/map.css" />
 
 <div class="inset-0 fixed">
@@ -515,32 +499,28 @@
 </div>
 
 <div
-  class="fixed right-0 bottom-0 h-2/5 lg:h-3/5 bg-base-100 rounded-t-2xl lg:rounded-t-none lg:rounded-tl-2xl
-    overflow-hidden shadow-xl w-full lg:w-[28rem] flex flex-row"
+    class="fixed right-0 bottom-0 h-2/5 lg:h-3/5 bg-base-100 rounded-t-2xl lg:rounded-t-none lg:rounded-tl-2xl overflow-hidden shadow-xl w-full lg:w-[28rem] flex flex-row"
 >
   <div class="carousel w-full overflow-y-hidden">
     <div id="routes" class="carousel-item w-full flex flex-col">
       <WHeader>Rotas</WHeader>
       <div class="overflow-y-scroll w-full">
         <RouteListing
-          bind:routes={selectedRoutes}
-          on:openroute={openRoute}
-          on:hint={hintRoute}
-          on:drophint={dropRouteHint}
+            bind:selectedRoutes={selectedRoutes}
+            on:openroute={openRoute}
+            on:hint={hintRoute}
+            on:drophint={dropRouteHint}
         />
       </div>
     </div>
     {#if $selectedRouteId}
       <div id="route" class="carousel-item w-full flex flex-col gap-1">
         <WHeader back={() => back("routes")}>
-          [{$route.code}] {$route.name}
+          [{$selectedRoute.code}] {$selectedRoute.name}
         </WHeader>
 
-        <select
-          class="select select-primary select-sm w-[95%] mx-auto"
-          bind:value={$selectedSubrouteId}
-        >
-          {#each $route.subroutes as subroute}
+        <select class="select select-primary select-sm w-[95%] mx-auto" bind:value={$selectedSubrouteId}>
+          {#each $selectedRoute.subroutes as subroute}
             <option value={subroute.id}>{subroute.flag}</option>
           {/each}
         </select>

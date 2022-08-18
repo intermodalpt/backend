@@ -1,10 +1,4 @@
 <script>
-  import L from "leaflet";
-  import { api_server } from "../../settings.js";
-  import { calc_route_multipoly } from "../../utils.js";
-  import { routes, stops } from "../../cache.js";
-  export let scheduleId;
-  console.log($scheduleId);
   let schedule = {
     0: [45],
     7: [15, 45],
@@ -26,10 +20,7 @@
   <div class="flex flex-col gap-2 pt-2">
     {#each Object.keys(schedule) as key}
       <div class="flex flex-row items-center gap-2">
-        <span
-          class="text-base-content rounded-full w-10 px-2 text-lg font-bold text-right"
-          >{key}</span
-        >
+        <span class="text-base-content rounded-full w-10 px-2 text-lg font-bold text-right">{key}</span>
         <span class="text-lg">
           {schedule[key].map((a) => (a < 10 ? "0" + a : a)).join(" ")}
         </span>
