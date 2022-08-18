@@ -5,14 +5,7 @@
   import "leaflet.markercluster";
   import "leaflet-contextmenu";
 
-  let token = sessionStorage.getItem("authToken");
-
   let mode = null;
-
-  if (token == null) {
-    token = prompt("Insert the authorization token");
-    sessionStorage.setItem("authToken", token);
-  }
 </script>
 
 <div class="flex flex-col flex-1 gap-2 p-2">
