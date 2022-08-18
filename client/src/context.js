@@ -2,6 +2,8 @@ import {derived, writable} from "svelte/store";
 import {api_server} from "./settings.js";
 import {routes, stops} from "./cache.js";
 
+export const mode = writable(localStorage.getItem("mode"));
+
 export const selectedOperatorTag = writable(undefined);
 
 export const selectedRouteId = writable(undefined);
