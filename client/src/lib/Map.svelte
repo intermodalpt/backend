@@ -3,15 +3,13 @@
   import "leaflet.markercluster";
   import RouteListing from "./components/RouteListing.svelte";
   import RouteStops from "./components/RouteStops.svelte";
-  import Schedule from "./components/Schedule.svelte";
+  import CompactSchedule from "./components/CompactSchedule.svelte";
   import WHeader from "./components/WidgetHeader.svelte";
-  import {writable} from "svelte/store";
   import {api_server} from "../settings.js";
   import {routes, stops} from "../cache.js";
+  import {selectedRoute, selectedRouteId, selectedSubrouteId, subrouteStops} from "../context.js";
   import {calc_route_multipoly} from "../utils.js";
   import {tick} from "svelte";
-  import {selectedRouteId, selectedSubrouteId, subrouteStops} from "../context.js";
-  import {selectedRoute} from "../context";
 
   let map;
   let amlgeo;
@@ -175,7 +173,9 @@
         .then((x) => x.json())
         .then((spiderMap) => {
           currentSpider = spiderMap;
-          selectedRoutes = Object.keys(spiderMap.routes).map((id) => {return $routes[id]});
+          selectedRoutes = Object.keys(spiderMap.routes).map((id) => {
+            return $routes[id]
+          });
           drawSpiderMap(spiderMap);
         });
   }
@@ -191,7 +191,9 @@
         .then((x) => x.json())
         .then((spiderMap) => {
           currentSpider = spiderMap;
-          selectedRoutes = Object.keys(spiderMap.routes).map((id) => {return $routes[id]});
+          selectedRoutes = Object.keys(spiderMap.routes).map((id) => {
+            return $routes[id]
+          });
           drawSpiderMap(spiderMap);
         });
   }
@@ -271,15 +273,19 @@
   }
 
   async function openRoute(e) {
-    for (const [key, subroute] of Object.entries(currentSpider.subroutes)) {
-      subroute.id = parseInt(key);
-    }
-    for (const [key, stop] of Object.entries(currentSpider.stops)) {
-      stop.id = parseInt(key);
-    }
-
+    $selectedRouteId = e.detail.routeId;
     await tick();
     document.getElementById("route").scrollIntoView(true);
+  }
+
+  async function openSchedule(e) {
+    $selectedRouteId = e.detail.routeId;
+    await tick();
+    document.getElementById("schedule").scrollIntoView(true);
+  }
+
+  async function openInfo(e) {
+    alert("Por fazer");
   }
 
   function hintRoute(e) {
@@ -474,14 +480,6 @@
   function back(to) {
     document.getElementById(to).scrollIntoView(true);
   }
-
-  let currentScheduleId = writable(null);
-
-  async function openSchedule(e) {
-    $currentScheduleId = e.detail.scheduleId;
-    await tick();
-    document.getElementById("schedule").scrollIntoView(true);
-  }
 </script>
 
 <link
@@ -503,11 +501,13 @@
 >
   <div class="carousel w-full overflow-y-hidden">
     <div id="routes" class="carousel-item w-full flex flex-col">
-      <WHeader>Rotas</WHeader>
+      <WHeader></WHeader>
       <div class="overflow-y-scroll w-full">
         <RouteListing
             bind:selectedRoutes={selectedRoutes}
             on:openroute={openRoute}
+            on:openschedule={openSchedule}
+            on:openinfo={openInfo}
             on:hint={hintRoute}
             on:drophint={dropRouteHint}
         />
@@ -515,7 +515,7 @@
     </div>
     {#if $selectedRouteId}
       <div id="route" class="carousel-item w-full flex flex-col gap-1">
-        <WHeader back={() => back("routes")}>
+        <WHeader back={() => {$selectedRouteId = undefined;}}>
           [{$selectedRoute.code}] {$selectedRoute.name}
         </WHeader>
 
@@ -525,18 +525,19 @@
           {/each}
         </select>
         <div class="overflow-y-scroll w-full">
-          <RouteStops on:openschedule={openSchedule} {subrouteStops} />
+          <RouteStops />
         </div>
       </div>
-    {/if}
-    {#if $currentScheduleId}
-      <div id="schedule" class="carousel-item w-full flex flex-col">
-        <WHeader back={() => back("route")}>
-          {$currentScheduleId}
-        </WHeader>
 
+      <div id="schedule" class="carousel-item w-full flex flex-col">
+        <WHeader
+            back={() => {$selectedRouteId = undefined;}}
+            fg={$selectedRoute.badge_text}
+            bg={$selectedRoute.badge_bg}>
+          {$selectedRoute.code}: {$selectedRoute.name}
+        </WHeader>
         <div class="overflow-y-scroll w-full">
-          <Schedule scheduleId={currentScheduleId} />
+          <CompactSchedule />
         </div>
       </div>
     {/if}
