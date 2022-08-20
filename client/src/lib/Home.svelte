@@ -3,7 +3,11 @@
 
   function setMode(newMode) {
     $mode = newMode;
-    localStorage.setItem("mode", newMode);
+    if (newMode === null){
+      localStorage.removeItem("mode");
+    } else {
+      localStorage.setItem("mode", newMode);
+    }
   }
 </script>
 
@@ -28,7 +32,7 @@
   </div>
   <div class="card lg:card-side bg-base-100 mx-2 shadow-xl">
     <div class="card-body">
-      {#if mode === null }
+      {#if $mode === null }
         <h2 class="card-title">Sê bem vindo</h2>
         <p>
           Temos na ementa uma navegação mais <b>acessivel</b> de uso simplificado.<br>
@@ -44,12 +48,12 @@
         </div>
       {:else }
         <div>
-          <span>Navegando em modo <b>{#if mode === "advanced" }Avançado{:else }Simples{/if       }</b></span>
+          <span>Navegando em modo <b>{#if $mode === "advanced" }Avançado{:else }Simples{/if}</b></span>
           <button class="btn btn-primary" on:mouseup={() => setMode(null)}>Alterar</button>
         </div>
       {/if}
     </div>
-    <figure><img src="/mascot.svg" class="w-24" class:w-64={mode === null} alt="Mascote"></figure>
+    <figure><img src="/mascot.svg" class="w-24" class:w-64={$mode === null} alt="Mascote"></figure>
   </div>
   <div class="card sm:card-side lg:card-side bg-base-100 mx-2 shadow-xl">
     <figure><img src="/icons/tram.svg" class="w-36 p-4" alt="Elétrico"></figure>
