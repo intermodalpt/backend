@@ -1,7 +1,16 @@
 <script>
   import { stops } from "../../cache.js";
+  import {derived} from "svelte/store";
   let page = 0;
   const pageSize = 100;
+
+  const osmStops = derived(stops, $stops => {
+    return Object.values($stops).filter((stop) => stop.source === "osm");
+  });
+
+  const stopLen = derived(osmStops, $osmStops => {
+    return Object.values($stops).length;
+  });
 </script>
 
 <div class="flex flex-col items-center">
@@ -21,7 +30,7 @@
       </thead>
       <tbody>
         {#each Object.values($stops)
-          .filter((stop) => stop.source == "osm")
+          .filter((stop) => stop.source === "osm")
           .slice(page * pageSize, (page + 1) * pageSize) as stop}
           <tr>
             <td> {stop.osm_name} </td>
@@ -57,13 +66,13 @@
         />
       </svg>
     </button>
-    {`${page} / ${Math.floor(Object.values($stops).filter((stop) => stop.source == "osm").length / pageSize)}`}
+    {`${page} / ${Math.floor($stopLen / pageSize)}`}
     <button
       class="btn btn-square btn-ghost fill-base-content flex flex-col justify-center items-center"
       on:click={() =>
         (page = Math.min(
           page + 1,
-          Math.floor(Object.values($stops).filter((stop) => stop.source == "osm").length / pageSize)
+          Math.floor($stopLen / pageSize)
         ))}
     >
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512">
