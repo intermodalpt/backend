@@ -1,5 +1,4 @@
 <script>
-  // import tagger from '@jcubic/tagger';
   import { stops } from "../../cache.js";
   import L from "leaflet";
   import {api_server, token} from "../../settings.js";
@@ -334,8 +333,9 @@
       </div>
     </div>
     <div class="modal-action">
+      <button class="btn btn-error" on:click={close}>Delete</button>
       <button class="btn" on:click={close}>Close without saving</button>
-      <button class="btn" on:click={save}>Save</button>
+      <button class="btn btn-primary" on:click={save}>Save</button>
     </div>
   </div>
 </div>

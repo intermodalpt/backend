@@ -5,26 +5,47 @@
 
   let uploadModal = false;
   let openedImage = null;
+  const pageSize = 20;
 
   let untaggedStopPictures = [];
 
-  function loadUntaggedStops() {
-    fetch(`${api_server}/tagging/stops/untagged`, {
-      headers: {
-        authorization: `Bearer ${$token}`
-      }
-    })
-      .then((r) => r.json())
-      .then((data) => {
-        data.forEach((image) => {
-          image.stops = [];
-        });
-        untaggedStopPictures = data;
+  function loadMoreUntaggedStops() {
+    let page = untaggedStopPictures.length / pageSize;
+    let pages = [];
+    if (Math.floor(page) !== page) {
+      pages.push(Math.floor(page));
+      pages.push(Math.floor(page) + 1);
+    } else {
+      pages.push(Math.floor(page));
+    }
+
+    Promise.all(pages.forEach((page) => {
+      return fetch(`${api_server}/tagging/stops/untagged?p=${page}`, {
+        headers: {
+          authorization: `Bearer ${$token}`
+        }
       })
-      .catch((e) => alert("Failed to load the untagged stops"));
+          .then((r) => r.json())
+
+    }))
+        .catch((e) => alert("Failed to load the untagged stops"))
+        .then(
+            (pages) => {
+              pages.forEach((results) => {
+                results.forEach((image) => {
+                  image.stops = [];
+                });
+                for (let image of results) {
+                  if (untaggedStopPictures.indexOf(image) === -1) {
+                    untaggedStopPictures.push(image)
+                  }
+                }
+              })
+            }
+        )
   }
 
-  loadUntaggedStops();
+  loadMoreUntaggedStops();
 
   function openPic(id) {
     openedImage = untaggedStopPictures.find((stop) => {
@@ -49,9 +70,9 @@
       {#if !picture.tagged}
         <div class="p-2 flex justify-center items-center cursor-pointer">
           <img
-            src="https://intermodal-storage-worker.claudioap.workers.dev/thumb/{picture.sha1}/preview"
-            class="rounded-box transition-all hover:scale-105"
-            on:click={() => {
+              src="https://intermodal-storage-worker.claudioap.workers.dev/medium/{picture.sha1}/preview"
+              class="rounded-box transition-all hover:scale-105"
+              on:click={() => {
               openPic(picture.id);
             }}
           />
