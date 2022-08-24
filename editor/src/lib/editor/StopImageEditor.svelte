@@ -213,11 +213,28 @@
         authorization: `Bearer ${$token}`
       },
     })
-      .catch((e) => alert("Failed to save the stop meta"))
-      .then(() => {
-        image.tagged = true;
-        dispatch("close");
-      });
+        .catch((e) => alert("Failed to save the stop meta"))
+        .then(() => {
+          image.tagged = true;
+          dispatch("close");
+        });
+  }
+
+  function deleteImage() {
+    if (confirm("Are you really really sure?")) {
+      fetch(`${api_server}/upload/stops/${image.id}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          authorization: `Bearer ${$token}`
+        },
+      })
+          .catch(() => alert("Failed to delete the image"))
+          .then(() => {
+            image.tagged = true;
+            dispatch("close");
+          });
+    }
   }
 
   function close() {
@@ -341,7 +358,8 @@
       </div>
     </div>
     <div class="modal-action">
-      <button class="btn btn-error" on:click={close}>Delete</button>
+      <button class="btn btn-error" on:click={deleteImage}>Delete</button>
+      <span class="grow"></span>
       <button class="btn" on:click={close}>Close without saving</button>
       <button class="btn btn-primary" on:click={save}>Save</button>
     </div>
