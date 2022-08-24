@@ -1,5 +1,5 @@
 <script>
-  import { stops } from "../../cache.js";
+  import {stops} from "../../cache.js";
   import L from "leaflet";
   import {api_server, token} from "../../settings.js";
   import {icons} from "./assets.js";
@@ -27,8 +27,12 @@
   function createMap(container) {
     let m = L.map(container);
 
+    const lastPos = JSON.parse(sessionStorage.getItem("lastPos"));
+
     if (image.lat && image.lon) {
       m.setView([image.lat, image.lon], 16);
+    } else if (lastPos) {
+      m.setView([lastPos[0], lastPos[1]], lastPos[2]);
     } else {
       m.setView([38.71856, -9.1372], 10);
     }
@@ -48,8 +52,8 @@
       location.lat = targetLoc.lat;
     };
     if (location.lat) {
-      marker = L.marker([location.lat, location.lng], { draggable: true });
-      marker.addTo(map);
+      marker = L.marker([location.lat, location.lon], {draggable: true});
+      marker.addTo(m);
       marker.on("moveend", markerMoved);
     }
 
@@ -57,11 +61,15 @@
       if (marker) {
         marker.removeFrom(map);
       }
-      marker = L.marker([e.latlng.lat, e.latlng.lng], { draggable: true });
+      marker = L.marker([e.latlng.lat, e.latlng.lng], {draggable: true});
       location.lon = e.latlng.lng;
       location.lat = e.latlng.lat;
       marker.addTo(map);
       marker.on("moveend", markerMoved);
+    });
+
+    m.on("moveend", (e) => {
+      sessionStorage.setItem("lastPos", JSON.stringify([e.target.getCenter().lat, e.target.getCenter().lng, e.target.getZoom()]));
     });
 
     let stopsLayer = L.markerClusterGroup({
@@ -71,7 +79,7 @@
 
     Object.values($stops).forEach((stop) => {
       if (stop.lat != null && stop.lon != null && stop.source === "osm") {
-        let marker = L.marker([stop.lat, stop.lon], Object.assign({}, { icon: icons[stop.source] }));
+        let marker = L.marker([stop.lat, stop.lon], Object.assign({}, {icon: icons[stop.source]}));
 
         marker.stopId = stop.id;
 
@@ -252,13 +260,13 @@
             <span class="label-text" id="quality-label">Sem informação</span>
           </label>
           <input
-            type="range"
-            min="0"
-            max="100"
-            class="range"
-            step="10"
-            bind:value={quality}
-            on:change={adjustQualityLabel}
+              type="range"
+              min="0"
+              max="100"
+              class="range"
+              step="10"
+              bind:value={quality}
+              on:change={adjustQualityLabel}
           />
           <div class="w-full flex justify-between text-xs px-2">
             <span>|</span>
