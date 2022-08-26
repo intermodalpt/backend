@@ -185,6 +185,72 @@ RETURNING id
     Ok(res.id)
 }
 
+pub(crate) async fn delete_stop_picture(
+    stop_picture_id: i64,
+    bucket: &s3::Bucket,
+    db_pool: &SqlitePool,
+) -> Result<(), Error> {
+    let tagged_stops: i32 = sqlx::query!(
+        r#"
+SELECT count(*) as count
+FROM StopPicStops
+WHERE pic=?
+"#,
+        stop_picture_id
+    )
+    .fetch_one(db_pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .count;
+
+    if tagged_stops > 0 {
+        return Err(Error::DependenciesNotMet);
+    }
+
+    let stop_pic = sqlx::query!(
+        r#"
+SELECT sha1 FROM StopPics
+WHERE id=?
+    "#,
+        stop_picture_id,
+    )
+    .fetch_optional(db_pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    if let Some(stop_pic) = stop_pic {
+        let hex_hash = stop_pic.sha1;
+
+        bucket
+            .delete_object(format!("/thumb/{}", hex_hash))
+            .await
+            .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?;
+        bucket
+            .delete_object(format!("/medium/{}", hex_hash))
+            .await
+            .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?;
+        bucket
+            .delete_object(format!("/ori/{}", hex_hash))
+            .await
+            .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?;
+    } else {
+        return Err(Error::NotFoundUpstream);
+    }
+
+    let _res = sqlx::query(
+        r#"
+DELETE FROM StopPics
+WHERE id=?
+    "#,
+    )
+    .bind(stop_picture_id)
+    .execute(db_pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()));
+
+    Ok(())
+}
+
 pub(crate) async fn try_get_user(
     token: &str,
     db_pool: &SqlitePool,

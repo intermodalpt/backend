@@ -29,6 +29,8 @@ pub enum Error {
     NotFoundUpstream,
     #[error("Access denied")]
     Forbidden,
+    #[error("Dependencies for this action were not met")]
+    DependenciesNotMet,
     #[error("The provided information failed validation:: `{0}`")]
     ValidationFailure(String),
     #[error("The data could not be handled: `{0}`")]
@@ -51,6 +53,9 @@ impl IntoResponse for Error {
             }
             Error::Forbidden => {
                 (StatusCode::FORBIDDEN, format!("{}", &self)).into_response()
+            }
+            Error::DependenciesNotMet => {
+                (StatusCode::FAILED_DEPENDENCY, format!("{}", &self)).into_response()
             }
             Error::ValidationFailure(_) => {
                 (StatusCode::BAD_REQUEST, format!("{}", &self)).into_response()

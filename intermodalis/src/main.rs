@@ -38,7 +38,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use axum::http::Method;
-use axum::routing::{get, patch, post};
+use axum::routing::{get, patch, post, delete};
 use axum::{Extension, Json, Router};
 use config::Config;
 use s3;
@@ -59,7 +59,13 @@ pub(crate) fn build_paths(state: State) -> Router {
         Arc::new(utoipa_swagger_ui::Config::from("/api-doc/openapi.json"));
 
     let cors = CorsLayer::new()
-        .allow_methods([Method::GET, Method::POST, Method::PATCH])
+        .allow_methods([
+            Method::HEAD,
+            Method::GET,
+            Method::POST,
+            Method::PATCH,
+            Method::DELETE,
+        ])
         // .allow_headers([header::CONTENT_TYPE, header::AUTHORIZATION])
         .allow_headers(Any)
         .allow_origin(Any);
@@ -97,16 +103,14 @@ pub(crate) fn build_paths(state: State) -> Router {
         .route("/upload/stops", post(handlers::upload_stop_picture))
         .route(
             "/upload/stops/:picture_id",
-            patch(handlers::patch_stop_picture_meta),
+            patch(handlers::patch_stop_picture_meta)
+                .delete(handlers::delete_stop_picture),
         )
         .route(
             "/tagging/stops/untagged",
             get(handlers::get_untagged_stop_pictures),
         )
-        .route(
-            "/auth/check",
-            post(handlers::check_auth),
-        )
+        .route("/auth/check", post(handlers::check_auth))
         .layer(Extension(Arc::new(state)))
         .route(
             "/api-doc/openapi.json",

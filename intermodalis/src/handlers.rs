@@ -1337,6 +1337,28 @@ VALUES (?, ?)
     Ok((StatusCode::OK, "").into_response())
 }
 
+#[debug_handler]
+pub(crate) async fn delete_stop_picture(
+    Extension(state): Extension<Arc<State>>,
+    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    Path(stop_picture_id): Path<i64>,
+) -> Result<impl IntoResponse, Error> {
+    let user_id = middleware::get_user(auth.token(), &state.pool).await?;
+
+    if user_id != 1 {
+        return Err(Error::Forbidden);
+    }
+
+    middleware::delete_stop_picture(
+        stop_picture_id,
+        &state.bucket,
+        &state.pool,
+    )
+    .await?;
+
+    Ok((StatusCode::OK, "").into_response())
+}
+
 pub(crate) async fn check_auth(
     Extension(state): Extension<Arc<State>>,
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
