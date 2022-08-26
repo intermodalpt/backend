@@ -1,2 +1,5 @@
-export const api_server = "https://api.intermodalis.claudiop.com"
-// export const api_server = "http://localhost:1893";
+import {writable} from "svelte/store";
+
+export const api_server = "https://api.intermodal.pt"
+
+export const mode = writable(localStorage.getItem("mode"));
