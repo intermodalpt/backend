@@ -162,7 +162,7 @@ impl Calendar {
     pub(crate) fn includes(&self, date: NaiveDate) -> bool {
         let month = date.month() as u8;
         let day = date.day() as u8;
-        let weekday = date.weekday().number_from_monday() as u8;
+        let weekday = date.weekday().num_days_from_monday() as u8;
 
         let date = (month, day);
         let is_holiday = HOLIDAYS.contains(&date);
@@ -179,7 +179,7 @@ impl Calendar {
             Condition::Range { start, end } => within_dates(date, *start, *end),
         };
 
-        if !self
+        if self
             .only_if
             .iter()
             .all(|condition| condition_matches(condition))
@@ -360,6 +360,7 @@ pub struct StopPic {
     pub lat: Option<f32>,
     pub width: u32,
     pub height: u32,
+    pub quality: u32,
     pub camera_ref: Option<String>,
     pub tags: Vec<String>,
     pub notes: Option<String>,
@@ -491,7 +492,7 @@ pub(crate) mod requests {
         pub tags: Vec<String>,
         pub stops: Vec<i64>,
         pub notes: Option<String>,
-        pub quality: i64,
+        pub quality: u32,
     }
 }
 
@@ -526,6 +527,9 @@ pub(crate) mod responses {
         #[component(example = true)]
         pub(crate) circular: Option<bool>,
         pub(crate) main_subroute: Option<i64>,
+        pub(crate) badge_text: String,
+        pub(crate) badge_bg: String,
+        pub(crate) active: bool,
     }
 
     #[derive(Serialize, Component)]

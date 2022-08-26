@@ -1,6 +1,5 @@
 <script>
-  // import tagger from '@jcubic/tagger';
-  import { stops } from "../../cache.js";
+  import {stops} from "../../cache.js";
   import L from "leaflet";
   import {api_server, token} from "../../settings.js";
   import {icons} from "./assets.js";
@@ -28,8 +27,12 @@
   function createMap(container) {
     let m = L.map(container);
 
+    const lastPos = JSON.parse(sessionStorage.getItem("lastPos"));
+
     if (image.lat && image.lon) {
       m.setView([image.lat, image.lon], 16);
+    } else if (lastPos) {
+      m.setView([lastPos[0], lastPos[1]], lastPos[2]);
     } else {
       m.setView([38.71856, -9.1372], 10);
     }
@@ -49,8 +52,8 @@
       location.lat = targetLoc.lat;
     };
     if (location.lat) {
-      marker = L.marker([location.lat, location.lng], { draggable: true });
-      marker.addTo(map);
+      marker = L.marker([location.lat, location.lon], {draggable: true});
+      marker.addTo(m);
       marker.on("moveend", markerMoved);
     }
 
@@ -58,11 +61,15 @@
       if (marker) {
         marker.removeFrom(map);
       }
-      marker = L.marker([e.latlng.lat, e.latlng.lng], { draggable: true });
+      marker = L.marker([e.latlng.lat, e.latlng.lng], {draggable: true});
       location.lon = e.latlng.lng;
       location.lat = e.latlng.lat;
       marker.addTo(map);
       marker.on("moveend", markerMoved);
+    });
+
+    m.on("moveend", (e) => {
+      sessionStorage.setItem("lastPos", JSON.stringify([e.target.getCenter().lat, e.target.getCenter().lng, e.target.getZoom()]));
     });
 
     let stopsLayer = L.markerClusterGroup({
@@ -72,7 +79,7 @@
 
     Object.values($stops).forEach((stop) => {
       if (stop.lat != null && stop.lon != null && stop.source === "osm") {
-        let marker = L.marker([stop.lat, stop.lon], Object.assign({}, { icon: icons[stop.source] }));
+        let marker = L.marker([stop.lat, stop.lon], Object.assign({}, {icon: icons[stop.source]}));
 
         marker.stopId = stop.id;
 
@@ -206,11 +213,28 @@
         authorization: `Bearer ${$token}`
       },
     })
-      .catch((e) => alert("Failed to save the stop meta"))
-      .then(() => {
-        image.tagged = true;
-        dispatch("close");
-      });
+        .catch((e) => alert("Failed to save the stop meta"))
+        .then(() => {
+          image.tagged = true;
+          dispatch("close");
+        });
+  }
+
+  function deleteImage() {
+    if (confirm("Are you really really sure?")) {
+      fetch(`${api_server}/upload/stops/${image.id}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          authorization: `Bearer ${$token}`
+        },
+      })
+          .catch(() => alert("Failed to delete the image"))
+          .then(() => {
+            image.tagged = true;
+            dispatch("close");
+          });
+    }
   }
 
   function close() {
@@ -219,16 +243,17 @@
 </script>
 
 <div class="modal modal-bottom sm:modal-middle modal-open">
-  <div class="modal-box max-w-full sm:max-w-full w-max sm:w-max">
-    <div class="flex flex-col">
-      <div class="flex lg:flex-row flex-col-reverse gap-1">
+  <div class="modal-box max-w-full sm:max-w-full w-max">
+    <div class="flex flex-col gap-1">
+      <div class="flex lg:flex-row flex-col-reverse gap-1 items-center">
         <a target="_blank"
-           href="https://intermodal-storage-worker.claudioap.workers.dev/ori/{image.sha1}/{image.original_filename}">
-          <img class="rounded-lg w-full max-h-96"
+           href="https://intermodal-storage-worker.claudioap.workers.dev/ori/{image.sha1}/{image.original_filename}"
+           class="block shrink-0">
+          <img class="rounded-lg h-96"
                alt="Visualização paragem"
                src="https://intermodal-storage-worker.claudioap.workers.dev/medium/{image.sha1}/stop" />
         </a>
-        <div class="rounded-lg lg:w-96 w-full h-96 shrink-0 cursor-crosshair" use:mapAction></div>
+        <div class="rounded-lg grow-1 h-96 w-full cursor-crosshair" use:mapAction></div>
       </div>
       <div class="flex justify-between space-x-5">
         <div>
@@ -253,13 +278,13 @@
             <span class="label-text" id="quality-label">Sem informação</span>
           </label>
           <input
-            type="range"
-            min="0"
-            max="100"
-            class="range"
-            step="10"
-            bind:value={quality}
-            on:change={adjustQualityLabel}
+              type="range"
+              min="0"
+              max="100"
+              class="range"
+              step="10"
+              bind:value={quality}
+              on:change={adjustQualityLabel}
           />
           <div class="w-full flex justify-between text-xs px-2">
             <span>|</span>
@@ -334,8 +359,10 @@
       </div>
     </div>
     <div class="modal-action">
+      <button class="btn btn-error" on:click={deleteImage}>Delete</button>
+      <span class="grow"></span>
       <button class="btn" on:click={close}>Close without saving</button>
-      <button class="btn" on:click={save}>Save</button>
+      <button class="btn btn-primary" on:click={save}>Save</button>
     </div>
   </div>
 </div>

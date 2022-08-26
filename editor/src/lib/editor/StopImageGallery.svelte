@@ -5,26 +5,48 @@
 
   let uploadModal = false;
   let openedImage = null;
+  const pageSize = 20;
 
   let untaggedStopPictures = [];
 
-  function loadUntaggedStops() {
-    fetch(`${api_server}/tagging/stops/untagged`, {
-      headers: {
-        authorization: `Bearer ${$token}`
-      }
-    })
-      .then((r) => r.json())
-      .then((data) => {
-        data.forEach((image) => {
-          image.stops = [];
-        });
-        untaggedStopPictures = data;
+  function loadMoreUntaggedStops() {
+    let page = untaggedStopPictures.length / pageSize;
+    let pages = [];
+    if (Math.floor(page) !== page) {
+      pages.push(Math.floor(page));
+      pages.push(Math.floor(page) + 1);
+    } else {
+      pages.push(Math.floor(page));
+    }
+
+    Promise.all(pages.map((page) => {
+      return fetch(`${api_server}/tagging/stops/untagged?p=${page}`, {
+        headers: {
+          authorization: `Bearer ${$token}`
+        }
       })
-      .catch((e) => alert("Failed to load the untagged stops"));
+          .then((r) => r.json())
+
+    }))
+        .then(
+            (pages) => {
+              pages.forEach((results) => {
+                results.forEach((image) => {
+                  image.stops = [];
+                });
+                for (let image of results) {
+                  if (untaggedStopPictures.indexOf(image) === -1) {
+                    untaggedStopPictures.push(image);
+                  }
+                }
+                untaggedStopPictures = untaggedStopPictures;
+              })
+            }
+        )
+        .catch(() => alert("Unable to load untagged stops"))
   }
 
-  loadUntaggedStops();
+  loadMoreUntaggedStops();
 
   function openPic(id) {
     openedImage = untaggedStopPictures.find((stop) => {
@@ -39,7 +61,7 @@
   }
 </script>
 
-<div class="flex flex-col">
+<div class="flex flex-col items-center">
   <div class="w-full flex justify-between p-4 items-center">
     <h2 class="text-lg font-bold md:text-3xl text-base-content">Por Catalogar</h2>
     <button class="btn btn-primary" on:click={() => uploadModal = true}>Upload</button>
@@ -49,9 +71,9 @@
       {#if !picture.tagged}
         <div class="p-2 flex justify-center items-center cursor-pointer">
           <img
-            src="https://intermodal-storage-worker.claudioap.workers.dev/thumb/{picture.sha1}/preview"
-            class="rounded-box transition-all hover:scale-105"
-            on:click={() => {
+              src="https://intermodal-storage-worker.claudioap.workers.dev/medium/{picture.sha1}/preview"
+              class="rounded-box transition-all hover:scale-105"
+              on:click={() => {
               openPic(picture.id);
             }}
           />
@@ -59,6 +81,7 @@
       {/if}
     {/each}
   </div>
+  <div class="btn btn-primary" on:click={() => loadMoreUntaggedStops()}>Load more</div>
 </div>
 {#if uploadModal}
   <ImageUpload on:close={close} />

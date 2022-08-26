@@ -20,14 +20,12 @@ use std::io::{BufReader, Cursor};
 
 use base16ct;
 use bytes::Bytes;
-use chrono::{Local, NaiveDateTime};
+use chrono::{Local};
 use s3;
 use sha1::{Digest, Sha1};
 
 use crate::models::StopPic;
-use crate::utils::{
-    datetime_from_exif_ascii, extract_f64_gps_coord, string_from_exif_ascii,
-};
+use crate::utils::Exif;
 use crate::{Error, SqlitePool};
 
 const THUMBNAIL_MAX_WIDTH: u32 = 300;
@@ -116,7 +114,7 @@ WHERE sha1=?"#,
             .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?
     } else {
         bucket
-            .put_object(format!("/{}", hex_hash), content.as_ref())
+            .put_object(format!("/ori/{}", hex_hash), content.as_ref())
             .await
             .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?
     };
@@ -137,6 +135,7 @@ WHERE sha1=?"#,
         lat: None,
         width: original_img.width(),
         height: original_img.height(),
+        quality: 0,
         camera_ref: None,
         tags: vec![],
         notes: None,
@@ -185,6 +184,72 @@ RETURNING id
     Ok(res.id)
 }
 
+pub(crate) async fn delete_stop_picture(
+    stop_picture_id: i64,
+    bucket: &s3::Bucket,
+    db_pool: &SqlitePool,
+) -> Result<(), Error> {
+    let tagged_stops: i32 = sqlx::query!(
+        r#"
+SELECT count(*) as count
+FROM StopPicStops
+WHERE pic=?
+"#,
+        stop_picture_id
+    )
+    .fetch_one(db_pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .count;
+
+    if tagged_stops > 0 {
+        return Err(Error::DependenciesNotMet);
+    }
+
+    let stop_pic = sqlx::query!(
+        r#"
+SELECT sha1 FROM StopPics
+WHERE id=?
+    "#,
+        stop_picture_id,
+    )
+    .fetch_optional(db_pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    if let Some(stop_pic) = stop_pic {
+        let hex_hash = stop_pic.sha1;
+
+        bucket
+            .delete_object(format!("/thumb/{}", hex_hash))
+            .await
+            .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?;
+        bucket
+            .delete_object(format!("/medium/{}", hex_hash))
+            .await
+            .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?;
+        bucket
+            .delete_object(format!("/ori/{}", hex_hash))
+            .await
+            .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?;
+    } else {
+        return Err(Error::NotFoundUpstream);
+    }
+
+    let _res = sqlx::query(
+        r#"
+DELETE FROM StopPics
+WHERE id=?
+    "#,
+    )
+    .bind(stop_picture_id)
+    .execute(db_pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()));
+
+    Ok(())
+}
+
 pub(crate) async fn try_get_user(
     token: &str,
     db_pool: &SqlitePool,
@@ -213,86 +278,5 @@ pub(crate) async fn get_user(
         Ok(id)
     } else {
         Err(Error::Forbidden)
-    }
-}
-
-#[derive(Default, Debug)]
-struct Exif {
-    lat: Option<f64>,
-    lon: Option<f64>,
-    capture: Option<NaiveDateTime>,
-    camera: Option<String>,
-}
-
-impl From<exif::Exif> for Exif {
-    fn from(data: exif::Exif) -> Self {
-        let mut result = Exif::default();
-
-        if let Some(field) =
-            data.get_field(exif::Tag::GPSLatitude, exif::In::PRIMARY)
-        {
-            if let exif::Value::Rational(val) = &field.value {
-                if let Ok(coord) = extract_f64_gps_coord(&val) {
-                    result.lat = Some(coord);
-                } else {
-                    println!("Invalid value for GPS Lat");
-                }
-            } else {
-                println!("Invalid value for GPS Lat");
-            }
-        }
-
-        if let Some(field) =
-            data.get_field(exif::Tag::GPSLongitude, exif::In::PRIMARY)
-        {
-            if let exif::Value::Rational(val) = &field.value {
-                if let Ok(coord) = extract_f64_gps_coord(&val) {
-                    result.lon = Some(coord);
-                } else {
-                    println!("Invalid value for GPS Lon");
-                }
-            } else {
-                println!("Invalid value for GPS Lon");
-            }
-        }
-
-        if let Some(field) =
-            data.get_field(exif::Tag::DateTimeOriginal, exif::In::PRIMARY)
-        {
-            if let exif::Value::Ascii(val) = &field.value {
-                if let Ok(datetime) = datetime_from_exif_ascii(val) {
-                    result.capture = Some(datetime);
-                }
-            } else {
-                println!("Invalid value for Original Datetime");
-            }
-        }
-
-        if result.capture.is_none() {
-            if let Some(field) =
-                data.get_field(exif::Tag::DateTimeDigitized, exif::In::PRIMARY)
-            {
-                if let exif::Value::Ascii(val) = &field.value {
-                    if let Ok(datetime) = datetime_from_exif_ascii(val) {
-                        result.capture = Some(datetime);
-                    }
-                } else {
-                    println!("Invalid value for Digitized Datetime");
-                }
-            }
-        }
-
-        if let Some(field) = data.get_field(exif::Tag::Model, exif::In::PRIMARY)
-        {
-            if let exif::Value::Ascii(val) = &field.value {
-                if let Ok(datetime) = string_from_exif_ascii(val) {
-                    result.camera = Some(datetime);
-                }
-            } else {
-                println!("Invalid value for Camera Model");
-            }
-        }
-
-        result
     }
 }

@@ -2,10 +2,11 @@
   import StopForm from "./StopForm.svelte";
   import L from "leaflet";
   import "leaflet.featuregroup.subgroup";
-  import {api_server, token} from "../../settings.js";
-  import {icons} from "./assets.js";
-  import {writable} from "svelte/store";
-  import {stops} from "../../cache.js";
+  import { api_server, token } from "../../settings.js";
+  import { icons } from "./assets.js";
+  import { writable } from "svelte/store";
+  import { stops } from "../../cache.js";
+  import StopMassEditor from "./StopMassEditor.svelte";
 
   let map;
   let control = L.control.layers(null, null, { collapsed: false });
@@ -27,15 +28,17 @@
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
-        authorization: `Bearer ${$token}`
+        authorization: `Bearer ${$token}`,
       },
       body: JSON.stringify(stop),
-    }).then((data) => {
-      alert("Done");
-      Object.assign($stops[stop.id], stop);
-    }).catch(() => {
-      alert("Error updating")
-    });
+    })
+      .then((data) => {
+        alert("Done");
+        Object.assign($stops[stop.id], stop);
+      })
+      .catch(() => {
+        alert("Error updating");
+      });
   }
 
   let mapLayers = {
@@ -49,11 +52,11 @@
 
   function createStopMarker(info) {
     let marker;
-    let markerOptions = {rinseOnHover: true, draggable: true};
+    let markerOptions = { rinseOnHover: true, draggable: true };
     if (icons[info.source] === undefined) {
       marker = L.marker([info.lat, info.lon], markerOptions);
     } else {
-      marker = L.marker([info.lat, info.lon], Object.assign({}, markerOptions, {icon: icons[info.source]}));
+      marker = L.marker([info.lat, info.lon], Object.assign({}, markerOptions, { icon: icons[info.source] }));
     }
 
     marker.stopId = info.id;
@@ -91,8 +94,8 @@
 
     mapLayers.osm_stops = L.featureGroup.subGroup(mapLayers.stops, osm_markers);
     mapLayers.other_stops = L.featureGroup.subGroup(mapLayers.stops, other_markers);
-    control.addOverlay(mapLayers.osm_stops, 'OSM');
-    control.addOverlay(mapLayers.other_stops, 'GTFS');
+    control.addOverlay(mapLayers.osm_stops, "OSM");
+    control.addOverlay(mapLayers.other_stops, "GTFS");
 
     map.addLayer(mapLayers.stops);
     map.addLayer(mapLayers.osm_stops);
@@ -112,12 +115,12 @@
       },
       body: JSON.stringify(stop),
     })
-        .then((r) => r.json())
-        .then((data) => {
-          stop.id = data.id;
-          let marker = createStopMarker(stop);
-          mapLayers.stops.addLayer(marker);
-        });
+      .then((r) => r.json())
+      .then((data) => {
+        stop.id = data.id;
+        let marker = createStopMarker(stop);
+        mapLayers.stops.addLayer(marker);
+      });
   }
 
   function createMap(container) {
@@ -160,15 +163,28 @@
       },
     };
   }
+  let massEditing = false;
 </script>
 
-<div class="flex flex-col">
-  <div class="map h-96 cursor-crosshair" use:mapAction />
-  <div>
-    {#if $selectedStop}
-      <StopForm stop={selectedStop} on:save={saveStopMeta} />
-    {:else}
-      <p>Select a stop to edit.</p>
-    {/if}
+<div class="absolute right-8 top-8">
+  <div class="form-control">
+    <label class="label cursor-pointer">
+      <span class="label-text mr-2">Mass Edit</span>
+      <input type="checkbox" class="toggle toggle-primary" bind:checked={massEditing} />
+    </label>
   </div>
 </div>
+{#if !massEditing}
+  <div class="flex flex-col">
+    <div class="map h-96 cursor-crosshair" use:mapAction />
+    <div>
+      {#if $selectedStop}
+        <StopForm stop={selectedStop} on:save={saveStopMeta} />
+      {:else}
+        <p>Select a stop to edit.</p>
+      {/if}
+    </div>
+  </div>
+{:else}
+  <StopMassEditor />
+{/if}
