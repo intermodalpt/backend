@@ -940,6 +940,7 @@ SELECT Subroutes.id as subroute, Departures.time as time, Departures.calendar as
 FROM Subroutes
 JOIN Departures on Departures.subroute = Subroutes.id
 WHERE Subroutes.route=?
+ORDER BY time asc
     "#,
         route_id
     )
