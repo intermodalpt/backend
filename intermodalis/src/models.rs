@@ -162,7 +162,7 @@ impl Calendar {
     pub(crate) fn includes(&self, date: NaiveDate) -> bool {
         let month = date.month() as u8;
         let day = date.day() as u8;
-        let weekday = date.weekday().number_from_monday() as u8;
+        let weekday = date.weekday().num_days_from_monday() as u8;
 
         let date = (month, day);
         let is_holiday = HOLIDAYS.contains(&date);
@@ -179,7 +179,7 @@ impl Calendar {
             Condition::Range { start, end } => within_dates(date, *start, *end),
         };
 
-        if !self
+        if self
             .only_if
             .iter()
             .all(|condition| condition_matches(condition))
