@@ -705,6 +705,9 @@ SELECT Routes.id as route,
     Routes.name as name,
     Routes.circular as circular,
     Routes.main_subroute as main_subroute,
+    Routes.active as active,
+    Routes.badge_bg as bg_color,
+    Routes.badge_text as text_color,
     Subroutes.id as subroute,
     Subroutes.flag as subroute_flag,
     Subroutes.cached_from as from_stop,
@@ -729,12 +732,15 @@ ORDER BY Routes.id asc
             code: row.code,
             circular: row.circular.map(|val| val != 0),
             main_subroute: row.main_subroute,
+            badge_text: row.text_color,
+            badge_bg: row.bg_color,
             subroutes: vec![Subroute {
                 id: row.subroute,
                 flag: row.subroute_flag,
                 cached_from: row.from_stop,
                 cached_to: row.to_stop,
             }],
+            active: row.active != 0,
         };
 
         for row in row_iter {
@@ -753,12 +759,15 @@ ORDER BY Routes.id asc
                     name: row.name,
                     circular: row.circular.map(|val| val != 0),
                     main_subroute: row.main_subroute,
+                    badge_text: row.text_color,
+                    badge_bg: row.bg_color,
                     subroutes: vec![Subroute {
                         id: row.subroute,
                         flag: row.subroute_flag,
                         cached_from: row.from_stop,
                         cached_to: row.to_stop,
                     }],
+                    active: row.active != 0,
                 };
             }
         }
@@ -779,6 +788,9 @@ SELECT Routes.id as route,
     Routes.name as name,
     Routes.circular as circular,
     Routes.main_subroute as main_subroute,
+    Routes.active as active,
+    Routes.badge_bg as bg_color,
+    Routes.badge_text as text_color,
     Subroutes.id as subroute,
     Subroutes.flag as subroute_flag,
     Subroutes.cached_from as from_stop,
@@ -803,12 +815,15 @@ ORDER BY Routes.id asc
             code: row.code,
             circular: row.circular.map(|val| val != 0),
             main_subroute: row.main_subroute,
+            badge_text: row.text_color,
+            badge_bg: row.bg_color,
             subroutes: vec![Subroute {
                 id: row.subroute,
                 flag: row.subroute_flag,
                 cached_from: row.from_stop,
                 cached_to: row.to_stop,
             }],
+            active: row.active != 0,
         };
 
         for row in row_iter {
