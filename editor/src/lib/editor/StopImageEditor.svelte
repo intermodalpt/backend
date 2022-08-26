@@ -243,16 +243,17 @@
 </script>
 
 <div class="modal modal-bottom sm:modal-middle modal-open">
-  <div class="modal-box max-w-full sm:max-w-full w-max sm:w-max">
-    <div class="flex flex-col">
-      <div class="flex lg:flex-row flex-col-reverse gap-1">
+  <div class="modal-box max-w-full sm:max-w-full w-max">
+    <div class="flex flex-col gap-1">
+      <div class="flex lg:flex-row flex-col-reverse gap-1 items-center">
         <a target="_blank"
-           href="https://intermodal-storage-worker.claudioap.workers.dev/ori/{image.sha1}/{image.original_filename}">
-          <img class="rounded-lg w-full max-h-96"
+           href="https://intermodal-storage-worker.claudioap.workers.dev/ori/{image.sha1}/{image.original_filename}"
+           class="block shrink-0">
+          <img class="rounded-lg h-96"
                alt="Visualização paragem"
                src="https://intermodal-storage-worker.claudioap.workers.dev/medium/{image.sha1}/stop" />
         </a>
-        <div class="rounded-lg lg:w-96 w-full h-96 shrink-0 cursor-crosshair" use:mapAction></div>
+        <div class="rounded-lg grow-1 h-96 w-full cursor-crosshair" use:mapAction></div>
       </div>
       <div class="flex justify-between space-x-5">
         <div>
