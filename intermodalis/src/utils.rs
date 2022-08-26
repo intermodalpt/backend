@@ -71,3 +71,84 @@ pub fn datetime_from_exif_ascii(
             .map_err(|_| Error::Processing("Invalid EXIF date".to_string()))?;
     Ok(datetime)
 }
+
+#[derive(Default, Debug)]
+pub(crate) struct Exif {
+    pub(crate) lat: Option<f64>,
+    pub(crate) lon: Option<f64>,
+    pub(crate) capture: Option<NaiveDateTime>,
+    pub(crate) camera: Option<String>,
+}
+
+impl From<exif::Exif> for Exif {
+    fn from(data: exif::Exif) -> Self {
+        let mut result = Exif::default();
+
+        if let Some(field) =
+            data.get_field(exif::Tag::GPSLatitude, exif::In::PRIMARY)
+        {
+            if let exif::Value::Rational(val) = &field.value {
+                if let Ok(coord) = extract_f64_gps_coord(&val) {
+                    result.lat = Some(coord);
+                } else {
+                    println!("Invalid value for GPS Lat");
+                }
+            } else {
+                println!("Invalid value for GPS Lat");
+            }
+        }
+
+        if let Some(field) =
+            data.get_field(exif::Tag::GPSLongitude, exif::In::PRIMARY)
+        {
+            if let exif::Value::Rational(val) = &field.value {
+                if let Ok(coord) = extract_f64_gps_coord(&val) {
+                    result.lon = Some(coord);
+                } else {
+                    println!("Invalid value for GPS Lon");
+                }
+            } else {
+                println!("Invalid value for GPS Lon");
+            }
+        }
+
+        if let Some(field) =
+            data.get_field(exif::Tag::DateTimeOriginal, exif::In::PRIMARY)
+        {
+            if let exif::Value::Ascii(val) = &field.value {
+                if let Ok(datetime) = datetime_from_exif_ascii(val) {
+                    result.capture = Some(datetime);
+                }
+            } else {
+                println!("Invalid value for Original Datetime");
+            }
+        }
+
+        if result.capture.is_none() {
+            if let Some(field) =
+                data.get_field(exif::Tag::DateTimeDigitized, exif::In::PRIMARY)
+            {
+                if let exif::Value::Ascii(val) = &field.value {
+                    if let Ok(datetime) = datetime_from_exif_ascii(val) {
+                        result.capture = Some(datetime);
+                    }
+                } else {
+                    println!("Invalid value for Digitized Datetime");
+                }
+            }
+        }
+
+        if let Some(field) = data.get_field(exif::Tag::Model, exif::In::PRIMARY)
+        {
+            if let exif::Value::Ascii(val) = &field.value {
+                if let Ok(datetime) = string_from_exif_ascii(val) {
+                    result.camera = Some(datetime);
+                }
+            } else {
+                println!("Invalid value for Camera Model");
+            }
+        }
+
+        result
+    }
+}
