@@ -19,7 +19,7 @@
       pages.push(Math.floor(page));
     }
 
-    Promise.all(pages.forEach((page) => {
+    Promise.all(pages.map((page) => {
       return fetch(`${api_server}/tagging/stops/untagged?p=${page}`, {
         headers: {
           authorization: `Bearer ${$token}`
@@ -28,7 +28,6 @@
           .then((r) => r.json())
 
     }))
-        .catch((e) => alert("Failed to load the untagged stops"))
         .then(
             (pages) => {
               pages.forEach((results) => {
@@ -37,12 +36,14 @@
                 });
                 for (let image of results) {
                   if (untaggedStopPictures.indexOf(image) === -1) {
-                    untaggedStopPictures.push(image)
+                    untaggedStopPictures.push(image);
                   }
                 }
+                untaggedStopPictures = untaggedStopPictures;
               })
             }
         )
+        .catch(() => alert("Unable to load untagged stops"))
   }
 
   loadMoreUntaggedStops();
@@ -60,7 +61,7 @@
   }
 </script>
 
-<div class="flex flex-col">
+<div class="flex flex-col items-center">
   <div class="w-full flex justify-between p-4 items-center">
     <h2 class="text-lg font-bold md:text-3xl text-base-content">Por Catalogar</h2>
     <button class="btn btn-primary" on:click={() => uploadModal = true}>Upload</button>
@@ -80,6 +81,7 @@
       {/if}
     {/each}
   </div>
+  <div class="btn btn-primary" on:click={() => loadMoreUntaggedStops()}>Load more</div>
 </div>
 {#if uploadModal}
   <ImageUpload on:close={close} />
