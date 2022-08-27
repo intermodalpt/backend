@@ -1,28 +1,32 @@
 <script>
-  import { stops } from "../../cache.js";
-  import { createEventDispatcher } from "svelte";
+  import {stops} from "../../cache.js";
+  import {createEventDispatcher} from "svelte";
   import {subrouteStops} from "../../context.js";
 
   const dispatch = createEventDispatcher();
 
   let selectedStop = 0;
 
-  function onClick(scheduleId, a) {
-    dispatch("openschedule", { scheduleId: parseInt(scheduleId) });
+  function onClick(stopId) {
+    dispatch("gotoStop", {stopId: parseInt(stopId)});
   }
 </script>
 
-<div class="flex flex-col gap-1">
-  <ul class="steps steps-vertical">
-    {#if $subrouteStops}
-      {#each $subrouteStops.stops as stop, i}
-        <li
+<ul class="overflow-y-scroll steps steps-vertical">
+  {#if $subrouteStops}
+    {#each $subrouteStops.stops as stop, i}
+      <li
           class:selected={selectedStop === stop}
           on:click={() => onClick(stop)}
           class="step hover:bg-base-200 rounded-xl cursor-pointer">
-          {$stops[stop].short_name}
-        </li>
-      {/each}
-    {/if}
-  </ul>
-</div>
+        <div>
+          {$stops[stop].short_name}<br>
+          sdjfoised<br>
+          sdjfoised<br>
+          sdjfoised<br>
+          sdjfoised
+        </div>
+      </li>
+    {/each}
+  {/if}
+</ul>

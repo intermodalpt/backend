@@ -63,7 +63,7 @@ export const schedule = derived(
     [selectedRouteId, selectedDay],
     async ([$selectedRouteId, $selectedDay], set) => {
 
-      if ($selectedDay) {
+      if ($selectedRouteId && $selectedDay) {
         await fetch(`${api_server}/api/routes/${$selectedRouteId}/schedule/${$selectedDay}`)
             .catch(() => {
             })
@@ -146,3 +146,10 @@ export const subrouteShedule = derived([selectedSubrouteId, scheduleBySubroute],
     return $scheduleBySubroute[$selectedSubrouteId];
   }
 });
+
+export function reset() {
+  selectedDay.set(new Date().toISOString().split("T")[0]);
+  selectedOperatorTag.set(undefined);
+  selectedRouteId.set(undefined);
+  selectedSubrouteId.set(undefined);
+}

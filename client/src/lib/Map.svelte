@@ -1,15 +1,19 @@
 <script>
   import L from "leaflet";
   import "leaflet.markercluster";
+  import "leaflet.locatecontrol";
+  import "leaflet-lasso";
   import RouteListing from "./components/RouteListing.svelte";
   import RouteStops from "./components/RouteStops.svelte";
   import CompactSchedule from "./components/CompactSchedule.svelte";
   import WHeader from "./components/WidgetHeader.svelte";
   import {api_server} from "../settings.js";
-  import {routes, stops} from "../cache.js";
-  import {selectedRoute, selectedRouteId, selectedSubrouteId, subrouteStops} from "../context.js";
+  import {routeDict, stops} from "../cache.js";
+  import {reset, selectedRoute, selectedRouteId, selectedSubrouteId, subrouteStops} from "../context.js";
   import {calc_route_multipoly} from "../utils.js";
   import {tick} from "svelte";
+  import {derived, writable} from "svelte/store";
+  import Instructions from "./modes/learn/Instructions.svelte";
 
   let map;
   let amlgeo;
@@ -18,16 +22,41 @@
 
   const color = (b) => `hsl(${getComputedStyle(document.body).getPropertyValue("--" + b)})`;
 
-  let selectionRadius = 750;
-
   let info = L.control();
 
   let stopMarkers = {};
-  let selectedMarkers = [];
   let selectedPolylines = [];
 
   let currentSpider;
   let selectedRoutes;
+
+  const modes = {
+    learn: 'learn',
+    routing: 'routing',
+  };
+  let mode = writable(undefined);
+  mode.subscribe(() => {
+    reset();
+    selectedRoutes = undefined;
+  })
+
+  const phases = {
+    selecting: 'selecting',
+    presenting: 'presenting',
+  };
+  let phase = writable(phases.selecting);
+  phase.subscribe((val) => {
+    if (val === phases.selecting) {
+      reset();
+      selectedRoutes = undefined;
+    }
+  })
+
+
+  const zoomLevel = writable(0);
+  const isSelectableZoomLevel = derived(zoomLevel, ($zoomLevel) => {
+    return $zoomLevel >= 14;
+  });
 
   subrouteStops.subscribe((val) => {
     if (val && map) {
@@ -163,7 +192,6 @@
       .then((x) => x.json())
       .then((obj) => {
         parishesgeo = L.geoJSON(obj, {
-          // style: (feature) => {return zone_color(feature.properties.zone)},
           onEachFeature: onParishFeature,
         }).addTo(mapLayers.parishes);
       });
@@ -174,7 +202,7 @@
         .then((spiderMap) => {
           currentSpider = spiderMap;
           selectedRoutes = Object.keys(spiderMap.routes).map((id) => {
-            return $routes[id]
+            return $routeDict[id]
           });
           drawSpiderMap(spiderMap);
         });
@@ -192,7 +220,7 @@
         .then((spiderMap) => {
           currentSpider = spiderMap;
           selectedRoutes = Object.keys(spiderMap.routes).map((id) => {
-            return $routes[id]
+            return $routeDict[id]
           });
           drawSpiderMap(spiderMap);
         });
@@ -275,7 +303,7 @@
   async function openRoute(e) {
     $selectedRouteId = e.detail.routeId;
     await tick();
-    document.getElementById("route").scrollIntoView(true);
+    document.getElementById("stops").scrollIntoView(true);
   }
 
   async function openSchedule(e) {
@@ -309,104 +337,34 @@
         .forEach((line) => line.setStyle({color: "white"}));
   }
 
-  function selectArea(center) {
-    selectedMarkers = [];
-
-    for (let marker of Object.values(stopMarkers)) {
-      let distance = marker.getLatLng().distanceTo(center);
-      if (distance <= selectionRadius) {
-        selectedMarkers.push(marker);
-      }
-    }
-    if (selectedMarkers.length === 0) {
-      alert("A area escolhida não seleccionou nada");
-    } else {
-      loadAggregateMap(
-          selectedMarkers.map((m) => {
-            return m.stopId;
-          })
-      );
-    }
-  }
-
   function createMap(container) {
     let m = L.map(container).setView([38.71856, -9.1372], 10);
 
-    let selectorCircle = L.circle([51.508, -0.11], {
-      color: color("p"),
-      fillColor: color("p"),
-      fillOpacity: 0.2,
-      radius: 500,
-    }).addTo(mapLayers.selectionArea);
-
-    if (touchOriented) {
-      selectorCircle.on("click", (e) => {
-        selectArea(selectorCircle.getLatLng());
-      })
-      m.on("move", (e) => {
-        selectorCircle.setLatLng(e.target.getCenter());
-      });
-    } else {
-      selectorCircle.on("click", (e) => {
-        selectArea(selectorCircle.getLatLng());
-      });
-      m.on("mousemove", (e) => {
-        selectorCircle.setLatLng(e.latlng);
-      });
-    }
-
-
     m.on("zoomend", (e) => {
-      let zoomLevel = m.getZoom();
-      if (zoomLevel < 14) {
-        mapLayers.selectionArea.removeFrom(map);
-      } else {
-        mapLayers.selectionArea.addTo(map);
-        selectionRadius = 750;
-        switch (zoomLevel) {
-          case 14:
-            selectionRadius = 1250;
-            break;
-          case 15:
-            selectionRadius = 750;
-            break;
-          case 16:
-            selectionRadius = 550;
-            break;
-          case 17:
-            selectionRadius = 300;
-            break;
-          case 18:
-            selectionRadius = 150;
-            break;
-          case 19:
-            selectionRadius = 75;
-            break;
-        }
-        selectorCircle.setRadius(selectionRadius);
-      }
+      let newZoomLevel = m.getZoom();
+      $zoomLevel = newZoomLevel;
 
-      if (zoomLevel >= 14) {
+      if (newZoomLevel >= 14) {
         mapLayers.stops.addTo(map);
       } else {
         mapLayers.stops.removeFrom(map);
       }
 
-      if (zoomLevel <= 11 && !selectedRoutes) {
+      if (newZoomLevel <= 11 && !selectedRoutes) {
         mapLayers.municipalities.addTo(map);
       } else {
         mapLayers.municipalities.removeFrom(map);
       }
-      if (zoomLevel > 11 && zoomLevel <= 13 && !selectedRoutes) {
+      if (newZoomLevel > 11 && newZoomLevel <= 13 && !selectedRoutes) {
         mapLayers.parishes.addTo(map);
       } else {
         mapLayers.parishes.removeFrom(map);
       }
 
-      if (zoomLevel < 12) {
-        mapLayers.legend.addTo(map);
-      } else {
+      if (newZoomLevel >= 12 || (newZoomLevel >= 10 && touchOriented)) {
         mapLayers.legend.remove();
+      } else {
+        mapLayers.legend.addTo(map);
       }
     });
 
@@ -423,7 +381,27 @@
     m.maxBoundsViscosity = 1.0;
     m.minZoom = 10;
 
-    L.control.scale().addTo(m);
+    L.control.scale({'imperial': false}).addTo(m);
+    L.control.locate({
+      'flyTo': true,
+      'strings': {
+        title: "Ir para a minha posição"
+      }
+    }).addTo(m);
+    L.control.lasso({position: "topleft"}).addTo(m);
+    m.on('lasso.finished', event => {
+      console.log(event.layers);
+      let stopIds = event.layers.map((marker) => {
+        return marker.stopId
+      }).filter((id) => {
+        return id !== undefined
+      });
+      if (stopIds.length === 0) {
+        alert("A área escolhida não seleccionou nada");
+      } else {
+        loadAggregateMap(stopIds);
+      }
+    });
 
     info.onAdd = function (map) {
       this._div = L.DomUtil.create("div", "info"); // create a div with a class "info"
@@ -446,16 +424,18 @@
       const div = L.DomUtil.create("div", "info legend");
       div.innerHTML =
           "" +
-          '<i style="background:#f59f00"></i>Area 1<br>' +
-          '<i style="background:#0ca678"></i>Area 2<br>' +
-          '<i style="background:#ff6b00"></i>Area 3<br>' +
-          '<i style="background:#228be6"></i>Area 4<br>' +
+          '<i style="background:#f59f00"></i>Área 1<br>' +
+          '<i style="background:#0ca678"></i>Área 2<br>' +
+          '<i style="background:#ff6b00"></i>Área 3<br>' +
+          '<i style="background:#228be6"></i>Área 4<br>' +
           '<i style="background:#abb3bb"></i>Independente';
 
       return div;
     };
 
-    mapLayers.legend.addTo(m);
+    if (!touchOriented) {
+      mapLayers.legend.addTo(m);
+    }
 
     return m;
   }
@@ -476,10 +456,6 @@
       },
     };
   }
-
-  function back(to) {
-    document.getElementById(to).scrollIntoView(true);
-  }
 </script>
 
 <link
@@ -490,56 +466,108 @@
 />
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.locatecontrol@0.76.1/dist/L.Control.Locate.min.css" />
 <link rel="stylesheet" href="/map.css" />
 
-<div class="inset-0 fixed">
-  <div class="w-full h-screen" use:mapAction />
-</div>
+<div class="inset-0 fixed flex flex-col">
+  {#if $mode === undefined}
+    <div style="z-index: 2000; background-color: #33336699; position: absolute" class="inset-0"></div>
+  {/if}
+  <div class="w-full grow" use:mapAction></div>
 
-<div
-    class="fixed right-0 bottom-0 h-2/5 lg:h-3/5 bg-base-100 rounded-t-2xl lg:rounded-t-none lg:rounded-tl-2xl overflow-hidden shadow-xl w-full lg:w-[28rem] flex flex-row"
->
-  <div class="carousel w-full overflow-y-hidden">
-    <div id="routes" class="carousel-item w-full flex flex-col">
-      <WHeader></WHeader>
-      <div class="overflow-y-scroll w-full">
-        <RouteListing
-            bind:selectedRoutes={selectedRoutes}
-            on:openroute={openRoute}
-            on:openschedule={openSchedule}
-            on:openinfo={openInfo}
-            on:hint={hintRoute}
-            on:drophint={dropRouteHint}
-        />
-      </div>
-    </div>
-    {#if $selectedRouteId}
-      <div id="route" class="carousel-item w-full flex flex-col gap-1">
-        <WHeader back={() => {$selectedRouteId = undefined;}}>
-          [{$selectedRoute.code}] {$selectedRoute.name}
-        </WHeader>
-
-        <select class="select select-primary select-sm w-[95%] mx-auto" bind:value={$selectedSubrouteId}>
-          {#each $selectedRoute.subroutes as subroute}
-            <option value={subroute.id}>{subroute.flag}</option>
-          {/each}
-        </select>
-        <div class="overflow-y-scroll w-full">
-          <RouteStops />
+  {#if $mode === undefined}
+    <div class="fixed inset-x-0 m-auto  w-full lg:w-[28rem]">
+      <div class="mx-3 p-4 flex flex-col gap-4 rounded-2xl shadow-xl bg-base-100">
+        <span class="text-xl">Como é que podemos ajudar?</span>
+        <div class="ml-4 flex flex-col gap-4">
+          <div class="flex flex-col">
+            <span class="text-lg">Conhecer uma zona</span>
+            <input
+                type="button"
+                value="Consultar"
+                class="btn btn-primary rounded-full"
+                on:mouseup={() => {$mode = modes.learn}} />
+          </div>
+          <div class="flex flex-col">
+            <span><span class="text-lg line-through">Alcançar um destino</span> (Futuramente)</span>
+            <input type="button" value="Rotear" disabled class="btn btn-primary rounded-full" />
+          </div>
         </div>
       </div>
-
-      <div id="schedule" class="carousel-item w-full flex flex-col">
-        <WHeader
-            back={() => {$selectedRouteId = undefined;}}
-            fg={$selectedRoute.badge_text}
-            bg={$selectedRoute.badge_bg}>
-          {$selectedRoute.code}: {$selectedRoute.name}
-        </WHeader>
-        <div class="overflow-y-scroll w-full">
+    </div>
+  {:else if $mode === modes.learn}
+    {#if $selectedRouteId}
+      <div
+          class="lg:fixed lg:right-0 lg:bottom-0 h-2/5 lg:h-3/5 bg-base-100 lg:rounded-tl-2xl z-[10000] shadow-xl w-full lg:w-[28rem] carousel">
+        <div id="stops" class="carousel-item flex flex-col gap-1 w-full">
+          <WHeader
+              backBtn=true
+              on:back={() => {$selectedRouteId = undefined;}}
+              fg={'#' + $selectedRoute.badge_text}
+              bg={'#' + $selectedRoute.badge_bg}
+          >{$selectedRoute.code}: {$selectedRoute.name}</WHeader>
+          <select class="select select-primary w-full mx-auto" bind:value={$selectedSubrouteId}>
+            {#each $selectedRoute.subroutes as subroute}
+              <option value={subroute.id}>{subroute.flag}</option>
+            {/each}
+          </select>
+          <RouteStops />
+        </div>
+        <div id="schedule" class="carousel-item flex flex-col w-full">
+          <WHeader
+              backBtn=true
+              on:back={() => {$selectedRouteId = undefined;}}
+              fg={'#' + $selectedRoute.badge_text}
+              bg={'#' + $selectedRoute.badge_bg}
+          >{$selectedRoute.code}: {$selectedRoute.name}</WHeader>
           <CompactSchedule />
         </div>
       </div>
+    {:else if selectedRoutes}
+      <div
+          class="lg:fixed lg:right-0 lg:bottom-0 h-2/5 lg:h-3/5 bg-base-100 lg:rounded-tl-2xl z-[10000] overflow-hidden shadow-xl w-full lg:w-[28rem] flex flex-col">
+        <WHeader backBtn=true on:back={() => {$phase = phases.selecting}}>
+          Rotas encontradas
+        </WHeader>
+        <div class="overflow-y-scroll w-full">
+          <RouteListing
+              bind:selectedRoutes={selectedRoutes}
+              on:openroute={openRoute}
+              on:openschedule={openSchedule}
+              on:openinfo={openInfo}
+              on:hint={hintRoute}
+              on:drophint={dropRouteHint}
+          />
+        </div>
+      </div>
+    {:else}
+      <div
+          class="lg:fixed right-0 bottom-0 bg-base-100 rounded-t-2xl lg:rounded-t-none lg:rounded-tl-2xl z-[10000] shadow-xl w-full lg:w-[28rem]">
+        <Instructions isSelectableZoomLevel={isSelectableZoomLevel} />
+      </div>
     {/if}
-  </div>
+  {/if}
 </div>
+
+
+{#if $mode === undefined}
+  <div class="fixed inset-x-0 m-auto  w-full md:w-[28rem]">
+    <div class="mx-3 p-4 flex flex-col gap-4 rounded-2xl shadow-xl bg-base-100">
+      <span class="text-xl">Como é que podemos ajudar?</span>
+      <div class="ml-4 flex flex-col gap-4">
+        <div class="flex flex-col">
+          <span class="text-lg">Conhecer uma zona</span>
+          <input
+              type="button"
+              value="Consultar"
+              class="btn btn-primary rounded-full"
+              on:mouseup={() => {$mode = modes.learn}} />
+        </div>
+        <div class="flex flex-col">
+          <span><span class="text-lg line-through">Alcançar um destino</span> (Futuramente)</span>
+          <input type="button" value="Rotear" disabled class="btn btn-primary rounded-full" />
+        </div>
+      </div>
+    </div>
+  </div>
+{/if}

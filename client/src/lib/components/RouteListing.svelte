@@ -58,7 +58,7 @@
 </script>
 
 {#if selectedRoutes}
-  <div class="flex flex-col gap-1 p-2">
+  <div class="flex flex-col sm:gap-1 sm:p-2">
     {#each selectedRoutes as route}
       <div tabindex="0" class="collapse" on:focusin={() =>  onFocus(route.id)} on:focusout={() =>  onUnfocus(route.id)}>
         <div

@@ -14,12 +14,8 @@
   background: #fafafa;
 }
 
-
-@keyframes rotation {
-  from {
-    transform: rotate(-30deg);
-  }
-  to {
-    transform: rotate(30deg);
+@media (max-width: 980px) {
+  .leaflet-top {
+    margin-top: 90px;
   }
 }
