@@ -26,14 +26,14 @@ use axum::headers::{authorization::Bearer, Authorization};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{Extension, Json, TypedHeader};
-use axum_macros::debug_handler;
 use chrono::{Local, NaiveDate};
 use itertools::Itertools;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use sqlx::sqlite::SqliteRow;
 use sqlx::Row;
 use utoipa_swagger_ui::Config;
 
+use crate::models::responses::{PublicStopPic, TaggedStopPic};
 use crate::models::{
     requests,
     // This whole ordeal instead of just writing `responses::` because of uitopa
@@ -489,6 +489,133 @@ WHERE lon >= ? AND lon <= ? AND lat <= ? AND lat >= ? AND id IN (
     .collect::<Vec<_>>();
 
     Ok((StatusCode::OK, Json(res)).into_response())
+}
+
+pub(crate) async fn get_public_stop_pictures(
+    Extension(state): Extension<Arc<State>>,
+    Path(stop_id): Path<i64>,
+) -> Result<impl IntoResponse, Error> {
+    let res = sqlx::query!(
+        r#"
+SELECT StopPics.id, StopPics.sha1, StopPics.capture_date, StopPics.lon, StopPics.lat, StopPics.tags, StopPics.quality
+FROM StopPics
+JOIN StopPicStops on StopPicStops.pic = StopPics.id
+WHERE StopPics.tagged = 0 AND StopPics.sensitive = 0
+    AND StopPics.public = 1 AND StopPicStops.stop=?
+ORDER BY StopPics.capture_date DESC
+    "#,
+        stop_id
+    )
+    .fetch_all(&state.pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    let mut pics = vec![];
+    for row in res {
+        let tags: Vec<String> =
+            if let Ok(tags) = serde_json::from_str(&row.tags) {
+                tags
+            } else {
+                // todo warn
+                vec![]
+            };
+
+        pics.push(PublicStopPic {
+            id: row.id,
+            sha1: row.sha1,
+            capture_date: row.capture_date,
+            lon: row.lon.unwrap_or(f32::NAN),
+            lat: row.lat.unwrap_or(f32::NAN),
+            quality: row.quality,
+            tags,
+        });
+    }
+    Ok((StatusCode::OK, Json(pics)).into_response())
+}
+
+pub(crate) async fn get_tagged_stop_pictures(
+    Extension(state): Extension<Arc<State>>,
+    Path(stop_id): Path<i64>,
+    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+) -> Result<impl IntoResponse, Error> {
+    let _user_id = middleware::get_user(auth.token(), &state.pool).await?;
+
+    let res = sqlx::query!(
+        r#"
+SELECT StopPics.id, StopPics.original_filename, StopPics.sha1, StopPics.public,
+    StopPics.sensitive, StopPics.tagged, StopPics.uploader,
+    StopPics.upload_date, StopPics.capture_date, StopPics.quality,
+    StopPics.width, StopPics.height, StopPics.lon, StopPics.lat,
+    StopPics.camera_ref, StopPics.tags, StopPics.notes
+FROM StopPics
+JOIN StopPicStops ON StopPicStops.pic = StopPics.id
+WHERE StopPics.tagged = 1 AND StopPicStops.stop=?
+ORDER BY quality DESC
+    "#,
+        stop_id
+    )
+    .fetch_all(&state.pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    let mut pics = vec![];
+    for row in res {
+        let tags: Vec<String> =
+            if let Ok(tags) = serde_json::from_str(&row.tags) {
+                tags
+            } else {
+                // todo warn
+                vec![]
+            };
+
+        pics.push(TaggedStopPic {
+            id: row.id,
+            original_filename: row.original_filename,
+            sha1: row.sha1,
+            public: row.public != 0,
+            sensitive: row.sensitive != 0,
+            uploader: row.uploader,
+            upload_date: row.upload_date,
+            capture_date: row.capture_date,
+            lon: row.lon.unwrap_or(f32::NAN),
+            lat: row.lat.unwrap_or(f32::NAN),
+            quality: row.quality,
+            width: row.width as u32,
+            height: row.height as u32,
+            camera_ref: row.camera_ref,
+            tags,
+            notes: row.notes,
+        });
+    }
+    Ok((StatusCode::OK, Json(pics)).into_response())
+}
+
+pub(crate) async fn get_stop_pictures_rel(
+    Extension(state): Extension<Arc<State>>,
+    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+) -> Result<impl IntoResponse, Error> {
+    let _user_id = middleware::get_user(auth.token(), &state.pool).await?;
+
+    let res = sqlx::query!(
+        r#"
+SELECT stop, pic
+FROM  StopPicStops
+ORDER BY stop ASC
+    "#
+    )
+    .fetch_all(&state.pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    let mut stops = HashMap::<i64, Vec<i64>>::new();
+    for row in res {
+        if let Some(pics) = stops.get_mut(&row.stop) {
+            pics.push(row.pic);
+        } else {
+            stops.insert(row.stop, vec![row.pic]);
+        }
+    }
+    Ok((StatusCode::OK, Json(stops)).into_response())
 }
 
 #[utoipa::path(get, path = "/api/stops/{stop_id}/spider")]
@@ -1184,18 +1311,19 @@ pub(crate) async fn get_untagged_stop_pictures(
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
     paginator: Query<Page>,
 ) -> Result<impl IntoResponse, Error> {
-    let _user_id = middleware::get_user(auth.token(), &state.pool).await?;
+    let user_id = middleware::get_user(auth.token(), &state.pool).await?;
 
-    let offset = paginator.p.saturating_sub(1) * PAGE_SIZE;
+    let offset = paginator.p * PAGE_SIZE;
     let res = sqlx::query!(
         r#"
 SELECT id, original_filename, sha1, public, sensitive, tagged, uploader,
 	upload_date, capture_date, width, height, lon, lat, camera_ref, tags, notes
 FROM StopPics
-WHERE tagged = 0
+WHERE tagged = 0 AND uploader = ?
 ORDER BY capture_date ASC
 LIMIT ? OFFSET ?
     "#,
+        user_id,
         PAGE_SIZE,
         offset
     )
@@ -1235,7 +1363,6 @@ LIMIT ? OFFSET ?
     Ok((StatusCode::OK, Json(pics)).into_response())
 }
 
-#[debug_handler]
 pub(crate) async fn upload_stop_picture(
     Extension(state): Extension<Arc<State>>,
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
@@ -1290,7 +1417,6 @@ pub(crate) async fn upload_stop_picture(
     Ok((StatusCode::OK, "").into_response())
 }
 
-#[debug_handler]
 pub(crate) async fn patch_stop_picture_meta(
     Extension(state): Extension<Arc<State>>,
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
@@ -1353,7 +1479,6 @@ VALUES (?, ?)
     Ok((StatusCode::OK, "").into_response())
 }
 
-#[debug_handler]
 pub(crate) async fn delete_stop_picture(
     Extension(state): Extension<Arc<State>>,
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>,

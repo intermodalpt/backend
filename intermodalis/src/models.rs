@@ -595,6 +595,37 @@ pub(crate) mod responses {
     }
 
     #[derive(Debug, Serialize, Component)]
+    pub struct PublicStopPic {
+        pub id: i64,
+        pub sha1: String,
+        pub capture_date: Option<String>,
+        pub lon: f32,
+        pub lat: f32,
+        pub quality: i64,
+        pub tags: Vec<String>,
+    }
+
+    #[derive(Debug, Serialize, Component)]
+    pub struct TaggedStopPic {
+        pub id: i64,
+        pub original_filename: String,
+        pub sha1: String,
+        pub public: bool,
+        pub sensitive: bool,
+        pub uploader: i64,
+        pub upload_date: String,
+        pub capture_date: Option<String>,
+        pub lon: f32,
+        pub lat: f32,
+        pub width: u32,
+        pub height: u32,
+        pub quality: i64,
+        pub camera_ref: Option<String>,
+        pub tags: Vec<String>,
+        pub notes: Option<String>,
+    }
+
+    #[derive(Debug, Serialize, Component)]
     pub struct UntaggedStopPic {
         pub id: i64,
         pub original_filename: String,
