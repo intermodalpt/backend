@@ -643,4 +643,13 @@ pub(crate) mod responses {
         pub tags: Vec<String>,
         pub notes: Option<String>,
     }
+
+    #[derive(Serialize, Clone, Component)]
+    pub struct Stats {
+        pub stop_count: i32,
+        pub route_count: i32,
+        pub subroute_count: i32,
+        pub departure_count: i32,
+        pub picture_count: i32,
+    }
 }

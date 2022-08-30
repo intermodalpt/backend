@@ -52,6 +52,7 @@ use utoipa_swagger_ui;
 pub(crate) struct State {
     pub(crate) bucket: s3::Bucket,
     pub(crate) pool: SqlitePool,
+    pub(crate) stats: Stats,
 }
 
 pub(crate) fn build_paths(state: State) -> Router {
@@ -122,6 +123,7 @@ pub(crate) fn build_paths(state: State) -> Router {
         )
         .route("/actions/import_osm", get(handlers::import_osm))
         .route("/auth/check", post(handlers::check_auth))
+        .route("/stats", get(handlers::get_stats))
         .layer(Extension(Arc::new(state)))
         .route(
             "/api-doc/openapi.json",
@@ -171,9 +173,12 @@ async fn main() {
     .unwrap()
     .with_path_style();
 
+    let db_pool = SqlitePool::connect("sqlite:db.sqlite").await.expect("");
+    let stats = get_stats(&db_pool).await.unwrap();
     let state = State {
         bucket,
-        pool: SqlitePool::connect("sqlite:db.sqlite").await.expect(""),
+        pool: db_pool,
+        stats,
     };
 
     let addr = SocketAddr::from((
@@ -187,6 +192,8 @@ async fn main() {
         .expect("Unable to start service");
 }
 
+use crate::middleware::get_stats;
+use crate::models::responses::Stats;
 use models::{
     responses::{
         DateDeparture, Departure, Parish, Route, Subroute, SubrouteStops,

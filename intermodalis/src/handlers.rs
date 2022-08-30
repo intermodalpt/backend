@@ -1458,6 +1458,12 @@ pub(crate) async fn check_auth(
     }
 }
 
+pub(crate) async fn get_stats(
+    Extension(state): Extension<Arc<State>>,
+) -> impl IntoResponse {
+    (StatusCode::OK, Json(&state.stats)).into_response()
+}
+
 pub(crate) async fn import_osm(
     Extension(state): Extension<Arc<State>>,
     // TypedHeader(auth): TypedHeader<Authorization<Bearer>>,

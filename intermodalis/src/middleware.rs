@@ -20,13 +20,13 @@ use std::io::{BufReader, Cursor};
 
 use base16ct;
 use bytes::Bytes;
-use chrono::{Local};
+use chrono::Local;
 use s3;
 use sha1::{Digest, Sha1};
 
 use crate::models::StopPic;
 use crate::utils::Exif;
-use crate::{Error, SqlitePool};
+use crate::{Error, SqlitePool, Stats, Stop};
 
 const THUMBNAIL_MAX_WIDTH: u32 = 300;
 const THUMBNAIL_MAX_HEIGHT: u32 = 200;
@@ -341,4 +341,70 @@ pub(crate) async fn get_user(
     } else {
         Err(Error::Forbidden)
     }
+}
+
+pub(crate) async fn get_stats(db_pool: &SqlitePool) -> Result<Stats, Error> {
+    let stop_count = sqlx::query!(
+        r#"
+SELECT count(*) as cnt
+FROM Stops
+WHERE Stops.source = 'osm'
+    "#
+    )
+    .fetch_one(db_pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .cnt;
+
+    let route_count = sqlx::query!(
+        r#"
+SELECT count(*) as cnt
+FROM Routes
+    "#
+    )
+    .fetch_one(db_pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .cnt;
+
+    let subroute_count = sqlx::query!(
+        r#"
+SELECT count(*) as cnt
+FROM Subroutes
+    "#
+    )
+    .fetch_one(db_pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .cnt;
+
+    let departure_count = sqlx::query!(
+        r#"
+SELECT count(*) as cnt
+FROM Departures
+    "#
+    )
+    .fetch_one(db_pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .cnt;
+
+    let picture_count = sqlx::query!(
+        r#"
+SELECT count(*) as cnt
+FROM StopPics
+    "#
+    )
+    .fetch_one(db_pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .cnt;
+
+    Ok(Stats {
+        stop_count,
+        route_count,
+        subroute_count,
+        departure_count,
+        picture_count,
+    })
 }
