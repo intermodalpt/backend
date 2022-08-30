@@ -45,7 +45,7 @@ use crate::models::{
     Calendar,
     Stop,
 };
-use crate::{middleware, Error, State};
+use crate::{middleware, osm, Error, State};
 
 #[utoipa::path(
     get,
@@ -96,63 +96,7 @@ pub(crate) async fn get_stops(
     params: Query<StopQueryParam>,
 ) -> Result<impl IntoResponse, Error> {
     let res = if params.0.all {
-        sqlx::query!(
-            r#"
-SELECT *
-FROM Stops
-    "#
-        )
-        .fetch_all(&state.pool)
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?
-        .into_iter()
-        .map(|row| {
-            let tags: Vec<String> =
-                if let Ok(tags) = serde_json::from_str(&row.tags) {
-                    tags
-                } else {
-                    // todo warn
-                    vec![]
-                };
-            Stop {
-                id: row.id,
-                source: row.source,
-                name: row.name,
-                official_name: row.official_name,
-                osm_name: row.osm_name,
-                short_name: row.short_name,
-                locality: row.locality,
-                street: row.street,
-                door: row.door,
-                parish: row.parish,
-                lat: row.lat,
-                lon: row.lon,
-                external_id: row.external_id,
-                succeeded_by: row.succeeded_by,
-                notes: row.notes,
-                has_crossing: row.has_crossing,
-                has_accessibility: row.has_accessibility,
-                has_abusive_parking: row.has_abusive_parking,
-                has_outdated_info: row.has_outdated_info,
-                is_damaged: row.is_damaged,
-                is_vandalized: row.is_vandalized,
-                has_flag: row.has_flag,
-                has_schedules: row.has_schedules,
-                has_sidewalk: row.has_sidewalk,
-                has_shelter: row.has_shelter,
-                has_bench: row.has_bench,
-                has_trash_can: row.has_trash_can,
-                is_illuminated: row.is_illuminated,
-                has_illuminated_path: row.has_illuminated_path,
-                has_visibility_from_within: row.has_visibility_from_within,
-                has_visibility_from_area: row.has_visibility_from_area,
-                is_visible_from_outside: row.is_visible_from_outside,
-                updater: row.updater,
-                update_date: row.update_date,
-                tags,
-            }
-        })
-        .collect::<Vec<_>>()
+        middleware::get_stops(&state.pool).await?
     } else {
         sqlx::query!(
             r#"
@@ -1512,6 +1456,23 @@ pub(crate) async fn check_auth(
     } else {
         Ok((StatusCode::UNAUTHORIZED, "Failure").into_response())
     }
+}
+
+pub(crate) async fn import_osm(
+    Extension(state): Extension<Arc<State>>,
+    // TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+) -> Result<impl IntoResponse, Error> {
+    // let _user_id = middleware::get_user(auth.token(), &state.pool).await?;
+
+    #[derive(Serialize)]
+    struct Diff {
+        inserted: usize,
+        updated: usize,
+    }
+
+    let (inserted, updated) = osm::import(&state.pool).await?;
+
+    Ok((StatusCode::OK, Json(Diff { inserted, updated })).into_response())
 }
 
 #[allow(clippy::unused_async)]

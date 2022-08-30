@@ -30,6 +30,7 @@ mod errors;
 mod handlers;
 mod middleware;
 mod models;
+mod osm;
 mod utils;
 
 use errors::Error;
@@ -38,7 +39,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use axum::http::Method;
-use axum::routing::{get, patch, post, delete};
+use axum::routing::{get, patch, post};
 use axum::{Extension, Json, Router};
 use config::Config;
 use s3;
@@ -119,6 +120,7 @@ pub(crate) fn build_paths(state: State) -> Router {
             "/tagging/stops/untagged",
             get(handlers::get_untagged_stop_pictures),
         )
+        .route("/actions/import_osm", get(handlers::import_osm))
         .route("/auth/check", post(handlers::check_auth))
         .layer(Extension(Arc::new(state)))
         .route(
