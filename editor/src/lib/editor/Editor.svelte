@@ -2,6 +2,7 @@
   import StopEditor from './StopEditor.svelte';
   import LineEditor from './LineEditor.svelte';
   import ImageEditor from './StopImageGallery.svelte';
+  import Actions from './Actions.svelte';
   import "leaflet.markercluster";
   import "leaflet-contextmenu";
 
@@ -19,6 +20,9 @@
     <label class={`tab tab-bordered ${mode == 3 && "tab-active"}`}>
       <input class="hidden" type="radio" bind:group={mode} name="mode" value={3} />Images
     </label>
+    <label class={`tab tab-bordered ${mode == 4 && "tab-active"}`}>
+      <input class="hidden" type="radio" bind:group={mode} name="mode" value={4} />Actions
+    </label>
   </div>
   {#if mode === 1}
     <StopEditor />
@@ -26,6 +30,8 @@
     <LineEditor />
   {:else if mode === 3}
     <ImageEditor />
+  {:else if mode === 4}
+    <Actions />
   {:else}
     <span class="justify-center text-center">Pick a pane</span>
   {/if}
