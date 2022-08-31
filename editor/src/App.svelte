@@ -7,12 +7,13 @@
   let loading = true;
 
   onMount(async () => {
-    await initCache();
-
     let ls_token = localStorage.getItem("editor-token");
     if (ls_token != null && await checkToken(ls_token)) {
       $token = ls_token;
+
+      await initCache(ls_token);
     }
+
     loading = false;
   });
 
@@ -31,6 +32,8 @@
     if (await checkToken(token_val)) {
       localStorage.setItem("editor-token", token_val);
       $token = token_val;
+
+      await initCache(token_val);
     } else {
       alert("Auth failed");
     }

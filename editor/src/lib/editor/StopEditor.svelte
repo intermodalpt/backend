@@ -83,13 +83,14 @@
 
   function loadStops() {
     mapLayers.stops = L.markerClusterGroup({
-      spiderfyOnMaxZoom: false,
+      spiderfyOnMaxZoom: true,
       showCoverageOnHover: true,
-      disableClusteringAtZoom: 15,
+      //disableClusteringAtZoom: 15,
     });
 
     let osmMarkers = [];
     let otherMarkers = [];
+    let picMarkers = [];
 
     Object.values($stops).forEach((stop) => {
       if (stop.lat != null && stop.lon != null) {
@@ -102,27 +103,19 @@
       }
     });
 
+    Object.values($pictures).forEach((pic) => {
+      if (pic.lat != null && pic.lon != null) {
+        let marker = createPicMarker(pic);
+        picMarkers.push(marker);
+      }
+    })
+
+    mapLayers.stopPics = L.featureGroup.subGroup(mapLayers.stops, picMarkers);
     mapLayers.osmStops = L.featureGroup.subGroup(mapLayers.stops, osmMarkers);
     mapLayers.otherStops = L.featureGroup.subGroup(mapLayers.stops, otherMarkers);
     control.addOverlay(mapLayers.osmStops, "OSM");
     control.addOverlay(mapLayers.otherStops, "GTFS");
-
-    // TODO figure why isn't pictures loaded by the time this editor fires up
-    pictures.subscribe((pics) => {
-      if (pics === undefined) {
-        return;
-      }
-
-      let picMarkers = [];
-      Object.values(pics).forEach((pic) => {
-        if (pic.lat != null && pic.lon != null) {
-          let marker = createPicMarker(pic);
-          picMarkers.push(marker);
-        }
-      })
-      mapLayers.stopPics = L.featureGroup.subGroup(mapLayers.stops, picMarkers);
-      control.addOverlay(mapLayers.stopPics, "Pics");
-    });
+    control.addOverlay(mapLayers.stopPics, "Pics");
 
     map.addLayer(mapLayers.stops);
     map.addLayer(mapLayers.osmStops);
