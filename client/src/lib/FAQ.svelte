@@ -6,7 +6,7 @@
         <div class="collapse-title text-xl font-medium">Representam a Carris Metropolitana?</div>
         <div class="collapse-content">
           <p>
-            Não temos qualquer afiliação à marca <b>Carris Metropolitana</b>. A nossa plafatorma é
+            Não temos qualquer afiliação à marca <b>Carris Metropolitana</b>. A nossa plataforma é
             desenvolvida por voluntários sem qualquer vínculo à TML.<br/>
             A página oficial da Carris Metropolitana encontra-se em
             <a class="link link-primary" href="https://www.carrismetropolitana.pt/">carrismetropolitana.pt</a>.
@@ -18,7 +18,7 @@
         <div class="collapse-content">
           <p>
             Porque os dados na fonte estão errados e os estamos a corrigir manualmente.
-            Infelizmente nem a ALSA nem a TML(empresa que detem a Carris Metropolitana) responderam às tentativas de contacto a fim de obtermos esclarecimentos.
+            Infelizmente nem a ALSA nem a TML(empresa que detém a Carris Metropolitana) responderam às tentativas de contacto a fim de obtermos esclarecimentos.
             Assim que nos forneçam dados fidedignos trataremos de os apresentar.
           </p>
         </div>
@@ -26,7 +26,7 @@
       <div tabindex="0" class="collapse border border-base-300 bg-base-100 rounded-box">
         <div class="collapse-title text-xl font-medium">
           O meu transporte não apareceu/atrasou-se/fez um trajeto errado/comeu-me
-          o queijo do frigorifico.</div>
+          o queijo do frigorífico.</div>
         <div class="collapse-content">
           <p>
             As novas operações vem seguidas de uma fase transitória que naturalmente
@@ -63,7 +63,7 @@
             <li>Durante o mês de <b>Agosto</b> queremos finalizar a indexação da Carris Metropolitana.</li>
             <li>Em <b>Setembro</b> queremos adicionar os TCB, a TTSL, a Fertagus, o ML, a CP e o MTS.</li>
             <li>Em <b>Outubro</b> queremos adicionar a Carris e a MobiCascais.</li>
-            <li>Em <b>Novembro</b> queremos tornar a plataforma acessivel a pessoas portadoras de deficiências físicas.</li>
+            <li>Em <b>Novembro</b> queremos tornar a plataforma acessível a pessoas portadoras de deficiências físicas.</li>
             <li>Em <b>Janeiro</b> queremos estar prontos para o lançamento da Carris Metropolitana na margem norte do Tejo.</li>
           </ul>
         </div>
@@ -72,7 +72,7 @@
         <div class="collapse-title text-xl font-medium">Posso ajudar?</div>
         <div class="collapse-content">
           <p>
-            Claro que sim! Tudo o que contribuires a projetos nos quais este se baseie, ajuda-nos indiretamente.
+            Claro que sim! Tudo o que contribuíres a projetos nos quais este se baseie, ajuda-nos indiretamente.
             Também nos podes enviar fotos de infraestruturas (como paragens) à media que passas por elas. Tudo é indexado e
             publicado.
           </p>
@@ -81,7 +81,7 @@
               são uma boa forma de melhorar o mapa com pouco esforço.</li>
             <li>Tira fotos a infraestruturas (como paragens) à medida que passares por elas. Tudo é indexado e
               publicado enquanto dados abertos.</li>
-            <li>Individuos com mais mestria dos computadores podem contribuir conteudos artisticos ou programáticos; mas entra
+            <li>Indivíduos com mais mestria dos computadores podem contribuir conteúdos artísticos ou programáticos; mas entra
               em contacto connosco antes disso.</li>
             <li>Divulga-nos. Vota. Faz a tua voz ouvida dizendo que queres boas infraestruturas públicas. Contribui para o urbanismo da tua cidade.</li>
           </ul>
@@ -102,7 +102,7 @@
         </div>
       </div>
       <div tabindex="0" class="collapse border border-base-300 bg-base-100 rounded-box">
-        <div class="collapse-title text-xl font-medium">Qual a vossa politica de privacidade?</div>
+        <div class="collapse-title text-xl font-medium">Qual a vossa política de privacidade?</div>
         <div class="collapse-content">
           <p>
             Não usamos cookies nem qualquer outro estratagema para extorquir dados dos visitantes.<br>

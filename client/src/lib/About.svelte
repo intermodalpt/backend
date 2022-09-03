@@ -45,7 +45,7 @@
           </div>
           <div>
             <span class="card-title">Cláudio Pereira</span>
-            <span class="text-sm">Canivete Suiço</span>
+            <span class="text-sm">Jovem precariamente dinâmico</span>
           </div>
           <p class="text-left">
             Iniciei este projeto e tento impedir que o Tiago o mate por
@@ -54,12 +54,33 @@
         </div>
       </div>
     </div>
+    <div class="carousel-item">
+      <div class="card w-72 bg-base-100 ">
+        <div class="absolute h-20 bg-yellow-500 w-full" />
+        <div class="card-body items-left">
+          <div class="avatar">
+            <div class="w-24 rounded-full ring ring-base-300 ring-offset-base-100 ring-offset-2">
+              <img src="/avatars/diogo.png" alt="Diogo Baptista" />
+            </div>
+          </div>
+          <div>
+            <span class="card-title">Diogo Baptista</span>
+            <span class="text-sm">Cartografo</span>
+          </div>
+          <p class="text-left">
+            Gosto de mapas. Os bonecos coloridos fazem-me feliz.
+          </p>
+        </div>
+      </div>
+    </div>
   </div>
   <div class="card bg-base-100 shadow-xl">
     <div class="card-body">
       <h2 class="card-title">Menções Honrosas</h2>
-      <h3 class="text-lg">Diogo Baptista - Cartografia</h3>
+      <h3 class="text-lg">Fábio Antunes - Dados de suporte</h3>
       <h3 class="text-lg">Nelson Vassalo - Consultância artistica</h3>
+      <h3 class="text-lg">Miguel Monteiro - Validação de dados</h3>
+      <h3 class="text-lg">Henrique Pereira - Validação de dados</h3>
     </div>
   </div>
 </div>

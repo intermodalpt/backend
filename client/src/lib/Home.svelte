@@ -24,8 +24,7 @@
     <div class="card-body">
       <h2 class="card-title">O que é?</h2>
       <p>
-        O Intermodal é um agregador de dados de mobilidade da area
-        metropolitana de Lisboa.<br>
+        O Intermodal é um agregador de dados de mobilidade da área metropolitana de Lisboa.<br>
         O projeto é desenvolvido por uma comunidade sem afiliação a empresas de transportes.
       </p>
     </div>
@@ -35,7 +34,7 @@
       {#if $mode === null }
         <h2 class="card-title">Sê bem vindo</h2>
         <p>
-          Temos na ementa uma navegação mais <b>acessivel</b> de uso simplificado.<br>
+          Temos na ementa uma navegação mais <b>acessível</b> de uso simplificado.<br>
           Alternativamente pode optar por uma navegação <b>avançada</b>.
         </p>
         <div class="card-actions justify-center items-center xs:flex xs:flex-col">
@@ -44,7 +43,7 @@
           <button class="btn btn-primary" on:mouseup={() => setMode("advanced")}>Avançada</button>
         </div>
         <div class="card-actions justify-center text-xs">
-          (Se não indicar será assumida navegação acessivel. Poderá alterar mais tarde.)
+          (Se não indicar será assumida navegação acessível. Poderá alterar mais tarde.)
         </div>
       {:else }
         <div>
