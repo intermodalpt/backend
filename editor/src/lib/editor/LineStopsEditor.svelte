@@ -122,7 +122,8 @@
       <div class="flex flex-row justify-between gap-1">
         <!--        <input type="text" on:click={() => goTo(index)} value="({stops[stop].source}{stop}) - {stops[stop].name || stops[stop].short_name}">-->
         <a class="btn btn-xs btn-ghost" on:click={() => goTo(index)}>
-          ({$stops[stop].source}{stop}) {$stops[stop].name || $stops[stop].short_name}
+          ({$stops[stop].source}{stop})
+          {$stops[stop].name || $stops[stop].short_name || $stops[stop].official_name || $stops[stop].osm_name}
         </a>
         <div class="flex flex-row gap-1">
           ∇

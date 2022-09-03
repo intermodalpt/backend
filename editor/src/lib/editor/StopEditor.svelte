@@ -54,7 +54,9 @@
   function createStopMarker(info) {
     let marker;
     let markerOptions = {rinseOnHover: true, draggable: true};
-    if (icons[info.source] === undefined) {
+    if (!(info.name || info.short_name || info.osm_name || info.official_name)) {
+      marker = L.marker([info.lat, info.lon], Object.assign({}, markerOptions, {icon: icons["geoc"]}));
+    } else if (icons[info.source] === undefined) {
       marker = L.marker([info.lat, info.lon], markerOptions);
     } else {
       marker = L.marker([info.lat, info.lon], Object.assign({}, markerOptions, {icon: icons[info.source]}));
@@ -65,7 +67,7 @@
 
     marker.on("click", (e) => selectStop(e.target.stopId));
 
-    let name = info.name || info.short_name;
+    let name = info.name || info.short_name || info.official_name || info.osm_name;
 
     marker.bindTooltip(`${info.id} - ${name}`);
 

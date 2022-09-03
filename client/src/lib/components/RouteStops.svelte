@@ -19,13 +19,7 @@
           class:selected={selectedStop === stop}
           on:click={() => onClick(stop)}
           class="step hover:bg-base-200 rounded-xl cursor-pointer">
-        <div>
-          {$stops[stop].short_name}<br>
-          sdjfoised<br>
-          sdjfoised<br>
-          sdjfoised<br>
-          sdjfoised
-        </div>
+        {$stops[stop].short_name || $stops[stop].name || $stops[stop].official_name || $stops[stop].osm_name}
       </li>
     {/each}
   {/if}
