@@ -1,7 +1,9 @@
 <script>
-  import {createEventDispatcher, tick} from "svelte";
+  import {createEventDispatcher} from "svelte";
   import StopCheckbox from "./StopCheckbox.svelte";
-  import {writable} from "svelte/store";
+  import {derived, writable} from "svelte/store";
+  import {api_server, token} from "../../settings.js";
+  import StopImageEditor from "./StopImageEditor.svelte";
 
   export let stop;
 
@@ -34,8 +36,20 @@
   let is_visible_from_outside = writable($stop.is_visible_from_outside);
 
   const dispatch = createEventDispatcher();
+  let imageModal = false;
 
-
+  const stopPictures = derived(
+      [stop],
+      ([$stop], set) => {
+        if ($stop) {
+          fetch(`${api_server}/api/stops/${$stop.id}/pictures/all`, {
+            headers: {authorization: `Bearer ${$token}`}
+          }).then(r => r.json()).then(pictureList => set(pictureList))
+        } else {
+          return [];
+        }
+      }
+  );
 
 
   stop.subscribe((selectedStop) => {
@@ -160,31 +174,51 @@
     <div class="form-control w-full max-w-xs">
       <label class="input-group">
         <span class="label-text w-24">Oficial</span>
-        <input type="text" bind:value={official_name} placeholder="Vl. Qts. R Pessoa 29" class="input input-bordered w-full h-10" />
+        <input
+            type="text"
+            bind:value={official_name}
+            placeholder="Vl. Qts. R Pessoa 29"
+            class="input input-bordered w-full h-10" />
       </label>
     </div>
     <div class="form-control w-full max-w-xs">
       <label class="input-group">
         <span class="label-text w-24">Nome</span>
-        <input type="text" bind:value={name} placeholder="Vale das Quintas, Rua Pessoa, 29" class="input input-bordered w-full h-10" />
+        <input
+            type="text"
+            bind:value={name}
+            placeholder="Vale das Quintas, Rua Pessoa, 29"
+            class="input input-bordered w-full h-10" />
       </label>
     </div>
     <div class="form-control w-full max-w-xs">
       <label class="input-group">
         <span class="label-text w-24">Abrev.</span>
-        <input type="text" bind:value={short_name} placeholder="Vl. Quintas, Pessoa" class="input input-bordered w-full h-10" />
+        <input
+            type="text"
+            bind:value={short_name}
+            placeholder="Vl. Quintas, Pessoa"
+            class="input input-bordered w-full h-10" />
       </label>
     </div>
     <div class="form-control w-full max-w-xs">
       <label class="input-group">
         <span class="label-text w-24">Loc.</span>
-        <input type="text" bind:value={locality} placeholder="Vale das Quintas" class="input input-bordered w-full h-10" />
+        <input
+            type="text"
+            bind:value={locality}
+            placeholder="Vale das Quintas"
+            class="input input-bordered w-full h-10" />
       </label>
     </div>
     <div class="form-control w-full max-w-xs">
       <label class="input-group">
         <span class="label-text w-24">Via</span>
-        <input type="text" bind:value={street} placeholder="Rua Pessoa" class="input input-bordered w-full h-10" />
+        <input
+            type="text"
+            bind:value={street}
+            placeholder="Rua Pessoa"
+            class="input input-bordered w-full h-10" />
       </label>
     </div>
     <div class="form-control w-full max-w-xs">
@@ -300,9 +334,26 @@
     <label class="label">
       <span class="label-text">Fotos</span>
     </label>
-    <span>Sem fotos</span>
+    <div class="flex gap-2">
+      {#if $stopPictures === undefined || $stopPictures.length === 0}
+        <span>Sem fotos</span>
+      {:else}
+        {#each $stopPictures as picture}
+          <a target="_blank"
+             href="https://intermodal-storage-worker.claudioap.workers.dev/ori/{picture.sha1}/{picture.original_filename}">
+            <img
+                src="https://intermodal-storage-worker.claudioap.workers.dev/medium/{picture.sha1}/preview"
+                class="rounded-box transition-all hover:scale-150 h-16"
+            />
+          </a>
+        {/each}
+      {/if}
+    </div>
   </div>
 </div>
 <div class="flex w-full justify-end">
   <button class="btn btn-primary w-20 float-right" on:click={save}>Guardar</button>
 </div>
+<!--{#if imageModal}-->
+<!--  <StopImageEditor bind:image={openedImage} on:close={close} />-->
+<!--{/if}-->
