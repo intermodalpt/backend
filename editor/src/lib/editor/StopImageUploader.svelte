@@ -6,31 +6,33 @@
 
   let files;
   let uploading = false;
+  let uploadCount = 0;
 
-  // function dropFile(i) {
-  //   files = files.splice(i, 1);
-  // }
+  async function upload() {
 
-  function upload() {
-    const formData = new FormData();
-
-    for (let x = 0; x < files.length; x++) {
-      formData.append("images[]", files[x]);
-    }
     uploading = true;
-    fetch(`${api_server}/upload/stops`, {
-      method: 'POST',
-      body: formData,
-      headers: {
-        authorization: `Bearer ${$token}`
+    for (let x = 0; x < files.length; x++) {
+      const formData = new FormData();
+      formData.append("images[]", files[x]);
+      let res = await fetch(`${api_server}/upload/stops`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          authorization: `Bearer ${$token}`
+        }
+      }).then(() => {
+        uploadCount += 1;
+        return true;
+      }).catch(() => {
+        alert("Something wrong didn't go right");
+        uploading = false;
+        return false;
+      });
+      if (!res) {
+        break;
       }
-    }).then(data => {
-      alert("Done");
-      uploading = false;
-    }).catch(() => {
-      alert("Something wrong didn't go right");
-      uploading = false;
-    });
+    }
+    uploading = false;
   }
 </script>
 
