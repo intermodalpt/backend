@@ -103,7 +103,7 @@ impl From<exif::Exif> for Exif {
         {
             if let exif::Value::Rational(val) = &field.value {
                 if let Ok(coord) = extract_f64_gps_coord(&val) {
-                    result.lon = Some(coord);
+                    result.lon = Some(-coord);
                 } else {
                     println!("Invalid value for GPS Lon");
                 }

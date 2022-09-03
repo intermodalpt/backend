@@ -1528,9 +1528,9 @@ pub(crate) async fn get_stats(
 
 pub(crate) async fn import_osm(
     Extension(state): Extension<Arc<State>>,
-    // TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
 ) -> Result<impl IntoResponse, Error> {
-    // let _user_id = middleware::get_user(auth.token(), &state.pool).await?;
+    let _user_id = middleware::get_user(auth.token(), &state.pool).await?;
 
     #[derive(Serialize)]
     struct Diff {
