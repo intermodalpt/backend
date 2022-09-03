@@ -137,23 +137,33 @@ WHERE id IN (
                 external_id: row.external_id,
                 succeeded_by: row.succeeded_by,
                 notes: row.notes,
-                has_crossing: row.has_crossing,
-                has_accessibility: row.has_accessibility,
-                has_abusive_parking: row.has_abusive_parking,
-                has_outdated_info: row.has_outdated_info,
-                is_damaged: row.is_damaged,
-                is_vandalized: row.is_vandalized,
-                has_flag: row.has_flag,
-                has_schedules: row.has_schedules,
-                has_sidewalk: row.has_sidewalk,
-                has_shelter: row.has_shelter,
-                has_bench: row.has_bench,
-                has_trash_can: row.has_trash_can,
-                is_illuminated: row.is_illuminated,
-                has_illuminated_path: row.has_illuminated_path,
-                has_visibility_from_within: row.has_visibility_from_within,
-                has_visibility_from_area: row.has_visibility_from_area,
-                is_visible_from_outside: row.is_visible_from_outside,
+                has_crossing: row.has_crossing.map(|val| val != 0),
+                has_accessibility: row.has_accessibility.map(|val| val != 0),
+                has_abusive_parking: row
+                    .has_abusive_parking
+                    .map(|val| val != 0),
+                has_outdated_info: row.has_outdated_info.map(|val| val != 0),
+                is_damaged: row.is_damaged.map(|val| val != 0),
+                is_vandalized: row.is_vandalized.map(|val| val != 0),
+                has_flag: row.has_flag.map(|val| val != 0),
+                has_schedules: row.has_schedules.map(|val| val != 0),
+                has_sidewalk: row.has_sidewalk.map(|val| val != 0),
+                has_shelter: row.has_shelter.map(|val| val != 0),
+                has_bench: row.has_bench.map(|val| val != 0),
+                has_trash_can: row.has_trash_can.map(|val| val != 0),
+                is_illuminated: row.is_illuminated.map(|val| val != 0),
+                has_illuminated_path: row
+                    .has_illuminated_path
+                    .map(|val| val != 0),
+                has_visibility_from_within: row
+                    .has_visibility_from_within
+                    .map(|val| val != 0),
+                has_visibility_from_area: row
+                    .has_visibility_from_area
+                    .map(|val| val != 0),
+                is_visible_from_outside: row
+                    .is_visible_from_outside
+                    .map(|val| val != 0),
                 updater: row.updater,
                 update_date: row.update_date,
                 tags,
@@ -408,23 +418,29 @@ WHERE lon >= ? AND lon <= ? AND lat <= ? AND lat >= ? AND id IN (
             external_id: row.external_id,
             succeeded_by: row.succeeded_by,
             notes: row.notes,
-            has_crossing: row.has_crossing,
-            has_accessibility: row.has_accessibility,
-            has_abusive_parking: row.has_abusive_parking,
-            has_outdated_info: row.has_outdated_info,
-            is_damaged: row.is_damaged,
-            is_vandalized: row.is_vandalized,
-            has_flag: row.has_flag,
-            has_schedules: row.has_schedules,
-            has_sidewalk: row.has_sidewalk,
-            has_shelter: row.has_shelter,
-            has_bench: row.has_bench,
-            has_trash_can: row.has_trash_can,
-            is_illuminated: row.is_illuminated,
-            has_illuminated_path: row.has_illuminated_path,
-            has_visibility_from_within: row.has_visibility_from_within,
-            has_visibility_from_area: row.has_visibility_from_area,
-            is_visible_from_outside: row.is_visible_from_outside,
+            has_crossing: row.has_crossing.map(|val| val != 0),
+            has_accessibility: row.has_accessibility.map(|val| val != 0),
+            has_abusive_parking: row.has_abusive_parking.map(|val| val != 0),
+            has_outdated_info: row.has_outdated_info.map(|val| val != 0),
+            is_damaged: row.is_damaged.map(|val| val != 0),
+            is_vandalized: row.is_vandalized.map(|val| val != 0),
+            has_flag: row.has_flag.map(|val| val != 0),
+            has_schedules: row.has_schedules.map(|val| val != 0),
+            has_sidewalk: row.has_sidewalk.map(|val| val != 0),
+            has_shelter: row.has_shelter.map(|val| val != 0),
+            has_bench: row.has_bench.map(|val| val != 0),
+            has_trash_can: row.has_trash_can.map(|val| val != 0),
+            is_illuminated: row.is_illuminated.map(|val| val != 0),
+            has_illuminated_path: row.has_illuminated_path.map(|val| val != 0),
+            has_visibility_from_within: row
+                .has_visibility_from_within
+                .map(|val| val != 0),
+            has_visibility_from_area: row
+                .has_visibility_from_area
+                .map(|val| val != 0),
+            is_visible_from_outside: row
+                .is_visible_from_outside
+                .map(|val| val != 0),
             updater: row.updater,
             update_date: row.update_date,
             tags,
@@ -534,7 +550,7 @@ ORDER BY quality DESC
     Ok((StatusCode::OK, Json(pics)).into_response())
 }
 
-pub(crate) async fn get_stop_pictures_rel(
+pub(crate) async fn get_picture_stop_rels(
     Extension(state): Extension<Arc<State>>,
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
 ) -> Result<impl IntoResponse, Error> {
@@ -552,6 +568,7 @@ ORDER BY stop ASC
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     let mut stops = HashMap::<i64, Vec<i64>>::new();
+
     for row in res {
         if let Some(pics) = stops.get_mut(&row.stop) {
             pics.push(row.pic);
@@ -560,6 +577,51 @@ ORDER BY stop ASC
         }
     }
     Ok((StatusCode::OK, Json(stops)).into_response())
+}
+
+pub(crate) async fn get_pictures(
+    Extension(state): Extension<Arc<State>>,
+    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+) -> Result<impl IntoResponse, Error> {
+    let _user_id = middleware::get_user(auth.token(), &state.pool).await?;
+
+    let res = sqlx::query!("SELECT * FROM StopPics")
+        .fetch_all(&state.pool)
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    let mut pics = vec![];
+
+    for row in res {
+        let tags: Vec<String> =
+            if let Ok(tags) = serde_json::from_str(&row.tags) {
+                tags
+            } else {
+                // todo warn
+                vec![]
+            };
+
+        pics.push(TaggedStopPic {
+            id: row.id,
+            original_filename: row.original_filename,
+            sha1: row.sha1,
+            public: row.public != 0,
+            sensitive: row.sensitive != 0,
+            uploader: row.uploader,
+            upload_date: row.upload_date,
+            capture_date: row.capture_date,
+            lon: row.lon.unwrap_or(f32::NAN),
+            lat: row.lat.unwrap_or(f32::NAN),
+            quality: row.quality,
+            width: row.width as u32,
+            height: row.height as u32,
+            camera_ref: row.camera_ref,
+            tags,
+            notes: row.notes,
+        });
+    }
+
+    Ok((StatusCode::OK, Json(pics)).into_response())
 }
 
 #[utoipa::path(get, path = "/api/stops/{stop_id}/spider")]

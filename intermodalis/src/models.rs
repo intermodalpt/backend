@@ -59,39 +59,39 @@ pub struct Stop {
     #[serde(default)]
     pub notes: Option<i64>,
     #[serde(default)]
-    pub has_crossing: Option<i64>,
+    pub has_crossing: Option<bool>,
     #[serde(default)]
-    pub has_accessibility: Option<i64>,
+    pub has_accessibility: Option<bool>,
     #[serde(default)]
-    pub has_abusive_parking: Option<i64>,
+    pub has_abusive_parking: Option<bool>,
     #[serde(default)]
-    pub has_outdated_info: Option<i64>,
+    pub has_outdated_info: Option<bool>,
     #[serde(default)]
-    pub is_damaged: Option<i64>,
+    pub is_damaged: Option<bool>,
     #[serde(default)]
-    pub is_vandalized: Option<i64>,
+    pub is_vandalized: Option<bool>,
     #[serde(default)]
-    pub has_flag: Option<i64>,
+    pub has_flag: Option<bool>,
     #[serde(default)]
-    pub has_schedules: Option<i64>,
+    pub has_schedules: Option<bool>,
     #[serde(default)]
-    pub has_sidewalk: Option<i64>,
+    pub has_sidewalk: Option<bool>,
     #[serde(default)]
-    pub has_shelter: Option<i64>,
+    pub has_shelter: Option<bool>,
     #[serde(default)]
-    pub has_bench: Option<i64>,
+    pub has_bench: Option<bool>,
     #[serde(default)]
-    pub has_trash_can: Option<i64>,
+    pub has_trash_can: Option<bool>,
     #[serde(default)]
-    pub is_illuminated: Option<i64>,
+    pub is_illuminated: Option<bool>,
     #[serde(default)]
-    pub has_illuminated_path: Option<i64>,
+    pub has_illuminated_path: Option<bool>,
     #[serde(default)]
-    pub has_visibility_from_within: Option<i64>,
+    pub has_visibility_from_within: Option<bool>,
     #[serde(default)]
-    pub has_visibility_from_area: Option<i64>,
+    pub has_visibility_from_area: Option<bool>,
     #[serde(default)]
-    pub is_visible_from_outside: Option<i64>,
+    pub is_visible_from_outside: Option<bool>,
     pub updater: i64,
     pub update_date: String,
     #[serde(default)]

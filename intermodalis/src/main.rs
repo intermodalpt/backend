@@ -91,7 +91,8 @@ pub(crate) fn build_paths(state: State) -> Router {
             get(handlers::get_tagged_stop_pictures),
         )
         .route("/api/stops/:stop_id/spider", get(handlers::get_stop_spider))
-        .route("/api/stops/pictures", post(handlers::get_stop_pictures_rel))
+        .route("/pictures", get(handlers::get_pictures))
+        .route("/pictures/rels", get(handlers::get_picture_stop_rels))
         .route("/api/stops/spider", post(handlers::get_stops_spider))
         .route("/api/routes", get(handlers::get_routes))
         .route("/api/routes/:route_id", get(handlers::get_route))

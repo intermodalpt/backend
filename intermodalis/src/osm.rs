@@ -112,23 +112,23 @@ impl From<XMLNode> for Stop {
             match tag.k.as_str() {
                 "name" => res.osm_name = Some(tag.v),
                 "shelter" => match tag.v.as_str() {
-                    "yes" => res.has_shelter = Some(1),
-                    "no" => res.has_shelter = Some(0),
+                    "yes" => res.has_shelter = Some(true),
+                    "no" => res.has_shelter = Some(false),
                     _ => {}
                 },
                 "bench" => match tag.v.as_str() {
-                    "yes" => res.has_bench = Some(1),
-                    "no" => res.has_bench = Some(0),
+                    "yes" => res.has_bench = Some(true),
+                    "no" => res.has_bench = Some(false),
                     _ => {}
                 },
                 "bin" => match tag.v.as_str() {
-                    "yes" => res.has_trash_can = Some(1),
-                    "no" => res.has_trash_can = Some(0),
+                    "yes" => res.has_trash_can = Some(true),
+                    "no" => res.has_trash_can = Some(false),
                     _ => {}
                 },
                 "lit" => match tag.v.as_str() {
-                    "yes" => res.is_illuminated = Some(1),
-                    "no" => res.is_illuminated = Some(0),
+                    "yes" => res.is_illuminated = Some(true),
+                    "no" => res.is_illuminated = Some(false),
                     _ => {}
                 },
                 _ => {}
@@ -183,9 +183,12 @@ pub(crate) async fn import(
                             > FLOAT_TOLERANCE
                     {
                         updated_stops.push(osm_stop);
-                    } else if stop.osm_name != osm_stop.osm_name
-                        || stop.has_shelter != osm_stop.has_shelter
-                        || stop.has_trash_can != osm_stop.has_trash_can
+                    } else if (stop.osm_name.is_none()
+                        && stop.osm_name != osm_stop.osm_name)
+                        || (stop.has_shelter.is_none()
+                            && stop.has_shelter != osm_stop.has_shelter)
+                        || (stop.has_trash_can.is_none()
+                            && stop.has_trash_can != osm_stop.has_trash_can)
                     {
                         updated_stops.push(osm_stop);
                     }
