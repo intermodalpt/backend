@@ -1,5 +1,5 @@
 <script>
-  import {stops} from "../../cache.js";
+  import {picStopRels, stopPicRels, stops} from "../../cache.js";
   import L from "leaflet";
   import {api_server, token} from "../../settings.js";
   import {icons} from "./assets.js";
@@ -13,24 +13,42 @@
   let marker = null;
   let stopInput;
   let location = {
-    lat: image.lat,
-    lon: image.lon,
+    lat: $image.lat,
+    lon: $image.lon,
   };
 
-  let tags = [...image.tags];
-  let stopIds = [...image.stops];
-  let isSensitive = image.sensitive;
+  let tags = [];
+  let stopIds = [];
+  let isSensitive = $image.sensitivity;
   let isPublic = image.public;
-  let notes = image.notes;
-  let quality = 0;
+  let notes = $image.notes;
+  let quality = $image.quality || 0;
+
+  image.subscribe((img) => {
+    if (!img) {
+      return;
+    }
+    tags = [...img.tags];
+    // stopIds = [...img.stops];
+    isSensitive = img.sensitive;
+    isPublic = img.public;
+    notes = img.notes;
+    quality = img.quality || 0;
+
+    location.lat = img.lat;
+    location.lon = img.lon;
+
+    let stopRels = $picStopRels[img.id];
+    stopIds = stopRels === undefined ? [] : stopRels;
+  });
 
   function createMap(container) {
     let m = L.map(container);
 
     const lastPos = JSON.parse(sessionStorage.getItem("lastPos"));
 
-    if (image.lat && image.lon) {
-      m.setView([image.lat, image.lon], 16);
+    if ($image.lat && $image.lon) {
+      m.setView([$image.lat, $image.lon], 16);
     } else if (lastPos) {
       m.setView([lastPos[0], lastPos[1]], lastPos[2]);
     } else {
@@ -182,9 +200,13 @@
   }
 
   function save() {
+    if (stopIds.length === 0 && !confirm("Picture with 0 stops tagged. Do you really want to save it this way?")) {
+      return;
+    }
+
     let newMeta = {
-      lat: image.lat,
-      lon: image.lon,
+      lat: $image.lat,
+      lon: $image.lon,
       tags: tags,
       stops: stopIds,
       sensitive: isSensitive,
@@ -194,18 +216,18 @@
     };
 
     if (location.lat != null) {
-      if (image.lat == null || Math.abs(image.lat - location.lat) > 0.000001) {
+      if ($image.lat == null || Math.abs($image.lat - location.lat) > 0.000001) {
         newMeta.lat = location.lat;
       }
     }
 
     if (location.lon != null) {
-      if (image.lon == null || Math.abs(image.lon - location.lon) > 0.000001) {
+      if ($image.lon == null || Math.abs($image.lon - location.lon) > 0.000001) {
         newMeta.lon = location.lon;
       }
     }
 
-    fetch(`${api_server}/upload/stops/${image.id}`, {
+    fetch(`${api_server}/upload/stops/${$image.id}`, {
       method: "PATCH",
       body: JSON.stringify(newMeta),
       headers: {
@@ -215,14 +237,34 @@
     })
         .catch((e) => alert("Failed to save the stop meta"))
         .then(() => {
-          image.tagged = true;
+          Object.assign($image, newMeta);
+          $image.tagged = true;
+
+          let oldStopIds = $picStopRels[$image.id];
+          if (oldStopIds) {
+            let removedStopIds = oldStopIds.filter(x => !stopIds.includes(x));
+            removedStopIds.forEach((stopId) => {
+              const picIds = $stopPicRels[stopId];
+              if (picIds.indexOf($image.id)) {
+                picIds.push($image.id);
+              }
+            });
+          }
+
+          stopIds.forEach((stopId) => {
+            const picIds = $stopPicRels[stopId];
+            if (picIds.indexOf($image.id)) {
+              picIds.push($image.id);
+            }
+          });
+
           dispatch("close");
         });
   }
 
   function deleteImage() {
     if (confirm("Are you really really sure?")) {
-      fetch(`${api_server}/upload/stops/${image.id}`, {
+      fetch(`${api_server}/upload/stops/${$image.id}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
@@ -231,7 +273,7 @@
       })
           .catch(() => alert("Failed to delete the image"))
           .then(() => {
-            image.tagged = true;
+            $image.tagged = true;
             dispatch("close");
           });
     }
@@ -247,11 +289,11 @@
     <div class="flex flex-col gap-1">
       <div class="flex lg:flex-row flex-col-reverse gap-1 items-center">
         <a target="_blank"
-           href="https://intermodal-storage-worker.claudioap.workers.dev/ori/{image.sha1}/{image.original_filename}"
+           href="https://intermodal-storage-worker.claudioap.workers.dev/ori/{$image.sha1}/{$image.original_filename}"
            class="block shrink-0">
           <img class="rounded-lg h-96"
                alt="Visualização paragem"
-               src="https://intermodal-storage-worker.claudioap.workers.dev/medium/{image.sha1}/stop" />
+               src="https://intermodal-storage-worker.claudioap.workers.dev/medium/{$image.sha1}/stop" />
         </a>
         <div class="rounded-lg grow-1 h-96 w-full cursor-crosshair" use:mapAction></div>
       </div>
@@ -332,7 +374,6 @@
           <label class="label">
             <span class="label-text">Tags</span>
           </label>
-          <!-- <input type="text" id="tags" placeholder="Insert previous tags here" />-->
           <div>
             {#each tags as tag}
               <div class="badge badge-outline badge-lg">

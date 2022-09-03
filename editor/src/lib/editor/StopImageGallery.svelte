@@ -1,10 +1,11 @@
 <script>
-  import ImageModal from "./StopImageEditor.svelte";
-  import ImageUpload from "./StopImageUploader.svelte";
+  import StopImageEditor from "./StopImageEditor.svelte";
+  import ImageUploader from "./StopImageUploader.svelte";
   import {api_server, token} from "../../settings.js";
+  import {writable} from "svelte/store";
 
   let uploadModal = false;
-  let openedImage = null;
+  let openedImage = writable(null);
   const pageSize = 20;
 
   let untaggedStopPictures = [];
@@ -35,7 +36,9 @@
                   image.stops = [];
                 });
                 for (let image of results) {
-                  if (untaggedStopPictures.indexOf(image) === -1) {
+                  if (untaggedStopPictures.find((pic) => {
+                    return image.sha1 === pic.sha1
+                  }) === undefined) {
                     untaggedStopPictures.push(image);
                   }
                 }
@@ -49,14 +52,14 @@
   loadMoreUntaggedStops();
 
   function openPic(id) {
-    openedImage = untaggedStopPictures.find((stop) => {
+    $openedImage = untaggedStopPictures.find((stop) => {
       return stop.id === id;
     });
   }
 
   function close() {
     uploadModal = false;
-    openedImage = null;
+    $openedImage = null;
     untaggedStopPictures = untaggedStopPictures;
   }
 </script>
@@ -84,8 +87,8 @@
   <div class="btn btn-primary" on:click={() => loadMoreUntaggedStops()}>Load more</div>
 </div>
 {#if uploadModal}
-  <ImageUpload on:close={close} />
+  <ImageUploader on:close={close} />
 {/if}
-{#if openedImage}
-  <ImageModal bind:image={openedImage} on:close={close} />
+{#if $openedImage}
+  <StopImageEditor image={openedImage} on:close={close} />
 {/if}
