@@ -1,6 +1,6 @@
 <script>
   import Operator from "./Operator.svelte";
-  import {selectedOperatorTag} from "../context.js";
+  import {selectedOperatorTag, selectedRouteId} from "../context.js";
 
   const operators = [
     "carris",
@@ -16,7 +16,13 @@
 </script>
 {#if $selectedOperatorTag}
   <div class="card bg-base-100 shadow-xl mx-2 z-[5000]">
-    <div class="card-body">
+    <div class="card-body -mt-4">
+      <div class="flex gap-2">
+        <a on:mouseup={() => $selectedOperatorTag = undefined} class="btn btn-ghost btn-xs text-primary">Outras operadoras</a>
+        {#if $selectedRouteId}
+          <a on:mouseup={() => $selectedRouteId = undefined} class="btn btn-ghost btn-xs text-primary">Outras rotas</a>
+        {/if}
+      </div>
       <div class="company compact {$selectedOperatorTag} bg-base-200"></div>
       <Operator />
     </div>

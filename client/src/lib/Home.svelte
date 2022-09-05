@@ -126,7 +126,7 @@
       <div class="card-body">
         <h2 class="card-title">Descobre mais</h2>
         <div class="flex">
-          <a href="#"><img src="/icons/mastodon.svg" class="w-24" alt="Mastodon"></a>
+          <a href="https://masto.pt/@intermodal"><img src="/icons/mastodon.svg" class="w-24" alt="Mastodon"></a>
           <a href="https://gitlab.com/lisboaparapessoas/intermodalis">
             <img src="/icons/gitlab.svg" class="w-24" alt="Repositório">
           </a>

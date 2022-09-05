@@ -9,7 +9,11 @@
 
 <div id="route-header">
   <div class="title-sr-pair text-3xl">
-    <span class="code" style="background-color: #{$selectedRoute.badge_bg}; color: #{$selectedRoute.badge_text}">{$selectedRoute.code}</span>
+    <span
+        class="code"
+        style="background-color: #{$selectedRoute.badge_bg}; color: #{$selectedRoute.badge_text}">
+      {$selectedRoute.code}
+    </span>
     <span class="title">{$selectedRoute.name}</span>
   </div>
 
@@ -33,10 +37,30 @@
         <li>{subroute.flag}</li>
       {/each}
     </ul>
+    <br>
     <h2 class="text-xl">Avisos</h2>
     <p>Sem avisos de momento</p>
   {:else if tab === 1}
-    <RouteSchedule/>
+    <div class="flex flex-col border-error border-2 p-2 rounded-xl">
+      <div class="flex flex-row font-bold items-center text-error-content">
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="stroke-current flex-shrink-0 h-6 w-6"
+            fill="none"
+            viewBox="0 0 24 24">
+          <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        Informação potêncialmente incorreta
+      </div>
+      <div>
+        Os horários podem ou não estar a funcionar. Ainda os estamos a validar (manualmente).
+      </div>
+    </div>
+    <RouteSchedule />
   {:else if tab === 2}
     <h2 class="text-xl">Variante a consultar</h2>
     <select class="select select-primary select-sm w-full" bind:value={$selectedSubrouteId}>
@@ -48,7 +72,10 @@
   {:else if tab === 3}
     <RouteStops />
   {:else if tab === 4}
-    <span></span>
+    <p class="text-lg">
+      Ainda estamos a trabalhar nestas funcionalidades.<br>
+      Esperamos tê-las prontas para si e para os seus num futuro próximo.
+    </p>
     <div class="flex justify-between">
       <img src="/icons/audio.svg" class="w-64" />
       <img src="/icons/video.svg" class="w-64" />
