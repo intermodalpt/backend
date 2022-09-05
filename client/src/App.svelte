@@ -91,7 +91,7 @@
         </ul>
       </div>
       <a class="btn btn-ghost normal-case text-xl md:text-3xl text-primary" href="/">
-        <img src="/logo-blue.o.svg" class="w-8 pr-1" alt="Início,Logo Intermodal" />
+        <img src="/logo.svg" class="w-8 pr-1" alt="Início,Logo Intermodal" />
         <span class="text-[#59befe]">inter</span>
         <span class="text-[#006d99]">modal</span>
       </a>
