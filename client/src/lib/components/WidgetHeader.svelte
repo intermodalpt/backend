@@ -1,5 +1,5 @@
 <script>
-  import {createEventDispatcher} from "svelte";
+  import { createEventDispatcher } from "svelte";
 
   export let backBtn = false;
   export let fg = "hsl(var(--pc))";
@@ -19,7 +19,8 @@
       <img src="/icons/arrow-left-solid.svg" class="w-6" alt="Voltar"/>
     </div>
   {/if}
-    <div class="text-lg font-bold whitespace-nowrap overflow-hidden flex flex-row gap-1">
-      <slot />
-    </div>
+  <div class="text-lg font-bold whitespace-nowrap overflow-hidden flex flex-row gap-1">
+    <slot />
+  </div>
 </div>
+

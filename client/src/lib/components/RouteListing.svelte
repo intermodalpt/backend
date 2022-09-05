@@ -1,5 +1,6 @@
 <script>
-  import {createEventDispatcher} from "svelte";
+  import { createEventDispatcher } from "svelte";
+  import RouteLine from "./RouteLine.svelte";
 
   export let selectedRoutes = undefined;
 
@@ -9,35 +10,33 @@
 
   function gotoRoute(routeId) {
     routeId = parseInt(routeId);
-    dispatch("openroute", {routeId: routeId});
+    dispatch("openroute", { routeId: routeId });
   }
-
 
   function gotoSchedule(routeId) {
     routeId = parseInt(routeId);
-    dispatch("openschedule", {routeId: routeId});
+    dispatch("openschedule", { routeId: routeId });
   }
-
 
   function gotoInfo(routeId) {
     routeId = parseInt(routeId);
-    dispatch("openinfo", {routeId: routeId});
+    dispatch("openinfo", { routeId: routeId });
   }
 
   function onEnter(routeId) {
     routeId = parseInt(routeId);
     if (focusedRoute) {
-      dispatch("drophint", {routeId: focusedRoute});
+      dispatch("drophint", { routeId: focusedRoute });
     }
     hintedRoute = routeId;
-    dispatch("hint", {routeId: routeId});
+    dispatch("hint", { routeId: routeId });
   }
 
   function onLeave(routeId) {
     routeId = parseInt(routeId);
     if (focusedRoute !== hintedRoute) {
-      dispatch("drophint", {routeId: routeId});
-      dispatch("hint", {routeId: focusedRoute});
+      dispatch("drophint", { routeId: routeId });
+      dispatch("hint", { routeId: focusedRoute });
     }
     hintedRoute = undefined;
   }
@@ -46,13 +45,13 @@
     routeId = parseInt(routeId);
     focusedRoute = routeId;
     if (focusedRoute !== hintedRoute) {
-      dispatch("drophint", {routeId: hintedRoute});
-      dispatch("hint", {routeId: routeId});
+      dispatch("drophint", { routeId: hintedRoute });
+      dispatch("hint", { routeId: routeId });
     }
   }
 
   function onUnfocus(routeId) {
-    dispatch("drophint", {routeId: routeId});
+    dispatch("drophint", { routeId: routeId });
     focusedRoute = undefined;
   }
 </script>
@@ -103,9 +102,7 @@
     {/each}
   </div>
 {:else}
-  <div class="p-4">
-    Selecione uma região do mapa para visualizar as rotas existentes.
-  </div>
+  <div class="p-4">Selecione uma região do mapa para visualizar as rotas existentes.</div>
 {/if}
 
 <link rel="stylesheet" href="https://unpkg.com/balloon-css/balloon.min.css" />
