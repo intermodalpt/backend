@@ -30,29 +30,6 @@
   let currentSpider;
   let selectedRoutes;
 
-  const modes = {
-    learn: 'learn',
-    routing: 'routing',
-  };
-  let mode = writable(undefined);
-  mode.subscribe(() => {
-    reset();
-    selectedRoutes = undefined;
-  })
-
-  const phases = {
-    selecting: 'selecting',
-    presenting: 'presenting',
-  };
-  let phase = writable(phases.selecting);
-  phase.subscribe((val) => {
-    if (val === phases.selecting) {
-      reset();
-      selectedRoutes = undefined;
-    }
-  })
-
-
   const zoomLevel = writable(0);
   const isSelectableZoomLevel = derived(zoomLevel, ($zoomLevel) => {
     return $zoomLevel >= 14;
@@ -85,6 +62,52 @@
     mapLayers.selectionArea.addTo(map);
   });
 
+  const modes = {
+    learn: 'learn',
+    routing: 'routing',
+  };
+
+  let mode = writable(undefined);
+
+  mode.subscribe(() => {
+    reset();
+    selectedRoutes = undefined;
+    mapLayers.spiderMap.removeFrom(map);
+  })
+
+  const phases = {
+    selecting: 'selecting',
+    presenting: 'presenting',
+    route: 'route',
+  };
+
+  let phase = writable(phases.selecting);
+
+  phase.subscribe((val) => {
+    if (!map) {
+      return;
+    }
+
+    if (val === phases.selecting) {
+      reset();
+      mapLayers.stops.addTo(map);
+      selectedRoutes = undefined;
+      matchFeaturesToZoomLevel();
+    }
+
+    if (val !== phases.selecting) {
+      mapLayers.stops.removeFrom(map);
+    }
+
+    if (val !== phases.route) {
+      mapLayers.subrouteLayer.removeFrom(map);
+    }
+
+    if (val !== phases.presenting) {
+      mapLayers.spiderMap.removeFrom(map);
+    }
+  })
+
   stops.subscribe((stops) => {
     Object.values(stops).forEach((stop) => {
       if (stop.lat && stop.lon) {
@@ -93,7 +116,7 @@
         marker.info = stop;
         marker.stopId = stop.id;
 
-        marker.on("click", (e) => loadSpiderMap(e.target.stopId));
+        marker.on("click", (e) => fetchSpiderMap(e.target.stopId));
         mapLayers.stops.addLayer(marker);
         stopMarkers[stop.id] = marker;
       }
@@ -196,42 +219,35 @@
         }).addTo(mapLayers.parishes);
       });
 
-  function loadSpiderMap(stopId) {
-    fetch(`${api_server}/api/stops/${stopId}/spider`)
-        .then((x) => x.json())
-        .then((spiderMap) => {
-          currentSpider = spiderMap;
-          selectedRoutes = Object.keys(spiderMap.routes).map((id) => {
-            return $routeDict[id]
-          });
-          drawSpiderMap(spiderMap);
-        });
+  function applySpiderMap(spiderMap) {
+    currentSpider = spiderMap;
+    selectedRoutes = Object.keys(spiderMap.routes).map((id) => {
+      return $routeDict[id]
+    });
+    $phase = phases.presenting;
+    drawSpiderMap(spiderMap);
   }
 
-  function loadAggregateMap(stop_ids) {
+  function fetchSpiderMap(stopId) {
+    fetch(`${api_server}/api/stops/${stopId}/spider`)
+        .then((x) => x.json())
+        .then(applySpiderMap);
+  }
+
+  function fetchAggregateMap(stop_ids) {
     fetch(`${api_server}/api/stops/spider`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: {"Content-Type": "application/json",},
       body: JSON.stringify(stop_ids),
     })
         .then((x) => x.json())
-        .then((spiderMap) => {
-          currentSpider = spiderMap;
-          selectedRoutes = Object.keys(spiderMap.routes).map((id) => {
-            return $routeDict[id]
-          });
-          drawSpiderMap(spiderMap);
-        });
+        .then(applySpiderMap);
   }
 
   function drawSpiderMap(spiderMap) {
     let stops = spiderMap.stops;
 
     mapLayers.spiderMap.removeFrom(map);
-    mapLayers.subrouteLayer.removeFrom(map);
-    mapLayers.stops.removeFrom(map);
     mapLayers.spiderMap = L.layerGroup();
     let bounds;
 
@@ -302,14 +318,22 @@
 
   async function openRoute(e) {
     $selectedRouteId = e.detail.routeId;
+    $phase = phases.route;
     await tick();
-    document.getElementById("stops").scrollIntoView(true);
+    let el = document.getElementById("stops");
+    if (el) {
+      el.scrollIntoView(true);
+    }
   }
 
   async function openSchedule(e) {
+    $phase = phases.route;
     $selectedRouteId = e.detail.routeId;
     await tick();
-    document.getElementById("schedule").scrollIntoView(true);
+    let el = document.getElementById("schedule");
+    if (el) {
+      el.scrollIntoView(true);
+    }
   }
 
   async function openInfo(e) {
@@ -337,36 +361,38 @@
         .forEach((line) => line.setStyle({color: "white"}));
   }
 
+  function matchFeaturesToZoomLevel() {
+    let newZoomLevel = map.getZoom();
+    $zoomLevel = newZoomLevel;
+
+    if (newZoomLevel >= 14) {
+      mapLayers.stops.addTo(map);
+    } else {
+      mapLayers.stops.removeFrom(map);
+    }
+
+    if (newZoomLevel <= 11 && !selectedRoutes) {
+      mapLayers.municipalities.addTo(map);
+    } else {
+      mapLayers.municipalities.removeFrom(map);
+    }
+    if (newZoomLevel > 11 && newZoomLevel <= 13 && !selectedRoutes) {
+      mapLayers.parishes.addTo(map);
+    } else {
+      mapLayers.parishes.removeFrom(map);
+    }
+
+    if (newZoomLevel >= 12 || (newZoomLevel >= 10 && touchOriented)) {
+      mapLayers.legend.remove();
+    } else {
+      mapLayers.legend.addTo(map);
+    }
+  }
+
   function createMap(container) {
     let m = L.map(container).setView([38.71856, -9.1372], 10);
 
-    m.on("zoomend", (e) => {
-      let newZoomLevel = m.getZoom();
-      $zoomLevel = newZoomLevel;
-
-      if (newZoomLevel >= 14) {
-        mapLayers.stops.addTo(map);
-      } else {
-        mapLayers.stops.removeFrom(map);
-      }
-
-      if (newZoomLevel <= 11 && !selectedRoutes) {
-        mapLayers.municipalities.addTo(map);
-      } else {
-        mapLayers.municipalities.removeFrom(map);
-      }
-      if (newZoomLevel > 11 && newZoomLevel <= 13 && !selectedRoutes) {
-        mapLayers.parishes.addTo(map);
-      } else {
-        mapLayers.parishes.removeFrom(map);
-      }
-
-      if (newZoomLevel >= 12 || (newZoomLevel >= 10 && touchOriented)) {
-        mapLayers.legend.remove();
-      } else {
-        mapLayers.legend.addTo(map);
-      }
-    });
+    m.on("zoomend", matchFeaturesToZoomLevel);
 
     L.tileLayer("https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png", {
       maxZoom: 19,
@@ -390,7 +416,6 @@
     }).addTo(m);
     L.control.lasso({position: "topleft"}).addTo(m);
     m.on('lasso.finished', event => {
-      console.log(event.layers);
       let stopIds = event.layers.map((marker) => {
         return marker.stopId
       }).filter((id) => {
@@ -399,7 +424,7 @@
       if (stopIds.length === 0) {
         alert("A área escolhida não seleccionou nada");
       } else {
-        loadAggregateMap(stopIds);
+        fetchAggregateMap(stopIds);
       }
     });
 
@@ -526,9 +551,7 @@
     {:else if selectedRoutes}
       <div
           class="lg:fixed lg:right-0 lg:bottom-0 h-2/5 lg:h-3/5 bg-base-100 lg:rounded-tl-2xl z-[10000] overflow-hidden shadow-xl w-full lg:w-[28rem] flex flex-col">
-        <WHeader backBtn=true on:back={() => {$phase = phases.selecting}}>
-          Rotas encontradas
-        </WHeader>
+        <WHeader backBtn=true on:back={() => $phase = phases.selecting}>Rotas encontradas</WHeader>
         <div class="overflow-y-scroll w-full">
           <RouteListing
               bind:selectedRoutes={selectedRoutes}
