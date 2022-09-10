@@ -33,6 +33,7 @@ use sqlx::sqlite::SqliteRow;
 use sqlx::Row;
 use utoipa_swagger_ui::Config;
 
+use crate::calendar::Calendar;
 use crate::models::responses::{PublicStopPic, TaggedStopPic};
 use crate::models::{
     requests,
@@ -42,7 +43,6 @@ use crate::models::{
         DateDeparture, Departure, Parish, Route, SpiderMap, SpiderRoute,
         SpiderStop, SpiderSubroute, Subroute, SubrouteStops, UntaggedStopPic,
     },
-    Calendar,
     Stop,
 };
 use crate::{middleware, osm, Error, State};

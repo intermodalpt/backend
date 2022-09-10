@@ -25,7 +25,7 @@
     clippy::pedantic
 )]
 
-mod consts;
+mod calendar;
 mod errors;
 mod handlers;
 mod middleware;
@@ -193,13 +193,14 @@ async fn main() {
         .expect("Unable to start service");
 }
 
+use crate::calendar::{Calendar, Weekday};
 use crate::middleware::get_stats;
 use crate::models::responses::Stats;
 use models::{
     responses::{
         DateDeparture, Departure, Parish, Route, Subroute, SubrouteStops,
     },
-    Calendar, Stop, Weekday,
+    Stop,
 };
 
 #[derive(OpenApi)]
