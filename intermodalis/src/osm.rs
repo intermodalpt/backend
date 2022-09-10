@@ -111,6 +111,7 @@ impl From<XMLNode> for Stop {
         for tag in node.tags {
             match tag.k.as_str() {
                 "name" => res.osm_name = Some(tag.v),
+                "official_name" => res.official_name = Some(tag.v),
                 "shelter" => match tag.v.as_str() {
                     "yes" => res.has_shelter = Some(true),
                     "no" => res.has_shelter = Some(false),
@@ -181,15 +182,38 @@ pub(crate) async fn import(
                         > FLOAT_TOLERANCE
                         || stop.lon.unwrap() - osm_stop.lon.unwrap()
                             > FLOAT_TOLERANCE
-                    {
-                        updated_stops.push(osm_stop);
-                    } else if (stop.osm_name.is_none()
-                        && stop.osm_name != osm_stop.osm_name)
+                        || stop.osm_name != osm_stop.osm_name
+                        || (stop.official_name.is_none()
+                            && stop.official_name != osm_stop.official_name)
                         || (stop.has_shelter.is_none()
                             && stop.has_shelter != osm_stop.has_shelter)
                         || (stop.has_trash_can.is_none()
                             && stop.has_trash_can != osm_stop.has_trash_can)
+                        || (stop.is_illuminated.is_none()
+                            && stop.is_illuminated != osm_stop.is_illuminated)
                     {
+                        // Prevent OSM from overriding some of the meta fields
+                        if stop.official_name.is_some()
+                            && stop.official_name != osm_stop.official_name
+                        {
+                            osm_stop.official_name = stop.official_name.clone();
+                        }
+                        if stop.has_shelter.is_some()
+                            && stop.has_shelter != osm_stop.has_shelter
+                        {
+                            osm_stop.has_shelter = stop.has_shelter.clone();
+                        }
+                        if stop.has_trash_can.is_some()
+                            && stop.has_trash_can != osm_stop.has_trash_can
+                        {
+                            osm_stop.has_trash_can = stop.has_trash_can.clone();
+                        }
+                        if stop.is_illuminated.is_some()
+                            && stop.is_illuminated != osm_stop.is_illuminated
+                        {
+                            osm_stop.is_illuminated =
+                                stop.is_illuminated.clone();
+                        }
                         updated_stops.push(osm_stop);
                     }
                 } else {
@@ -245,11 +269,13 @@ async fn insert_stops(
     for stop in stops {
         let _res = sqlx::query!(
         r#"
-INSERT INTO Stops(name, osm_name, lon, lat, has_shelter, has_bench, has_trash_can, is_illuminated, source, external_id)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO Stops(name, osm_name, official_name, lon, lat, has_shelter,
+    has_bench, has_trash_can, is_illuminated, source, external_id)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     "#,
         stop.name,
         stop.osm_name,
+        stop.official_name,
         stop.lon,
         stop.lat,
         stop.has_shelter,
@@ -274,10 +300,11 @@ async fn update_stops(
         let _res = sqlx::query!(
             r#"
 UPDATE Stops
-SET osm_name=?, lon=?, lat=?, has_shelter = ?, has_bench = ?,
+SET official_name=?, osm_name=?, lon=?, lat=?, has_shelter = ?, has_bench = ?,
     has_trash_can = ?, is_illuminated = ?
 WHERE id=? AND external_id=?
     "#,
+            stop.official_name,
             stop.osm_name,
             stop.lon,
             stop.lat,
@@ -317,6 +344,6 @@ mod test {
   </node>
 </osm>
     "#;
-        let xml_root: XMLOSM = serde_xml_rs::from_str(data).unwrap();
+        let _xml_root: XMLOSM = serde_xml_rs::from_str(data).unwrap();
     }
 }
