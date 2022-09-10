@@ -124,15 +124,20 @@ WHERE sha1=?"#,
         return Ok(res.id);
     }
 
-    let original_img = image::load_from_memory(content.as_ref())
+    let mut original_img = image::load_from_memory(content.as_ref())
         .map_err(|err| Error::ValidationFailure(err.to_string()))?;
     let original_img_mime = mime_guess::from_path(&name);
+
+    if !matches!(original_img, image::DynamicImage::ImageRgb8(_)) {
+        original_img = image::DynamicImage::ImageRgb8(original_img.into_rgb8());
+    }
 
     let medium_img = original_img.resize(
         MEDIUM_IMG_MAX_WIDTH,
         MEDIUM_IMG_MAX_HEIGHT,
         image::imageops::FilterType::CatmullRom,
     );
+
     let medium_img_webp = webp::Encoder::from_image(&medium_img)
         .map_err(|err| Error::Processing(err.to_string()))?
         .encode(MEDIUM_IMG_MAX_QUALITY)
