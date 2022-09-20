@@ -7,6 +7,8 @@
   import L from "leaflet";
   import {calc_route_multipoly} from "../../utils.js";
   import {derived, writable} from "svelte/store";
+  import RouteForm from "./RouteForm.svelte";
+  import SubrouteScheduleForm from "./SubrouteScheduleForm.svelte";
 
   let map;
 
@@ -33,6 +35,16 @@
       return route.id === $selectedRouteId
     })
   });
+  const selectedSubroute = derived(
+      [selectedRoute, selectedSubrouteId],
+      ([$selectedRoute, $selectedSubrouteId]) => {
+        if (!($selectedRoute || $selectedSubrouteId)) {
+          return undefined;
+        }
+        return $selectedRoute.subroutes.find((subroute) => {
+          return subroute.id === $selectedSubrouteId
+        })
+      });
 
   selectedRoute.subscribe((route) => {
     if (route && route.subroutes.length > 0) {
@@ -55,7 +67,17 @@
     fetch(`${api_server}/api/routes/${id}/stops?all=true`)
         .then((r) => r.json())
         .then((data) => {
-          $selectedRouteStops = Object.fromEntries(data.map((subroute) => [subroute.subroute, subroute]));
+          const stops = Object.fromEntries(data.map((subroute) => [subroute.subroute, subroute]));
+
+          for (const subroute of $selectedRoute.subroutes) {
+            if (!(subroute.id in stops)) {
+              stops[subroute.id] = {
+                'stops': [],
+                'diffs': [],
+              }
+            }
+          }
+          $selectedRouteStops = stops;
         })
         .catch((e) => alert("Failed to load the route stops"));
   })
@@ -99,7 +121,7 @@
       $selectedStop = $stops[e.target.stopId];
     });
 
-    let name = info.name || info.short_name;
+    let name = info.official_name || info.name || info.short_name || info.osm_name;
 
     marker.bindTooltip(`${info.id} - ${name}`);
 
@@ -201,29 +223,43 @@
 </script>
 
 <div class="hwrapper">
-  <div>
-    <Box>
-      <div class="map" use:mapAction />
-    </Box>
-  </div>
+  <div class="map" use:mapAction />
   <div>
     {#if loading}
       A carregar os dados
     {:else}
-      <label>
-        Selected line:
-        <select class="select select-bordered select-xs" bind:value={$selectedRouteId}>
+      <div class="flex">
+        Line:
+        <select class="select select-bordered select-xs w-72" bind:value={$selectedRouteId}>
           {#each Object.values($routes) as route}
             <option value={route.id}>
               {route.code} - {route.name.substring(0, 60)}
             </option>
           {/each}
         </select>
-      </label><br />
+        {#if $selectedRouteId}
+          <label for="route-edit-modal" class="btn btn-primary btn-xs modal-button text-primary">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="w-4">
+              <path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5
+                .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9
+                33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1
+                3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6
+                22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z" />
+            </svg>
+          </label>
+          <input type="checkbox" id="route-edit-modal" class="modal-toggle" />
+          <label for="route-edit-modal" class="modal cursor-pointer">
+            <label class="modal-box lg:w-[60rem] lg:max-w-full" for="">
+              <span class="text-lg">A editar {$selectedRoute.code}</span>
+              <RouteForm {selectedRoute} />
+            </label>
+          </label>
+        {/if}
+      </div>
       <span>
         Selected stop:
         {#if $selectedStop}
-          {$selectedStop.name} ({$selectedStop.id})
+          {$selectedStop.official_name || $selectedStop.osm_name || $selectedStop.name} ({$selectedStop.id})
         {:else}
           None
         {/if}
@@ -232,11 +268,29 @@
         <h2 class="font-bold">
           {$selectedRoute.code} - {$selectedRoute.name} ({$selectedRoute.id})
         </h2>
-        <select class="select select-bordered select-xs" bind:value={$selectedSubrouteId}>
-          {#each $selectedRoute.subroutes as subroute}
-            <option value={subroute.id}>{subroute.flag.substring(0, 60)}</option>
-          {/each}
-        </select>
+        <div class="flex">
+          <select class="select select-bordered select-xs" bind:value={$selectedSubrouteId}>
+            {#each $selectedRoute.subroutes as subroute}
+              <option value={subroute.id}>{subroute.flag.substring(0, 60)}</option>
+            {/each}
+          </select>
+          {#if $selectedSubrouteId}
+            <label for="schedule-edit-modal" class="btn btn-secondary btn-xs modal-button text-primary">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="w-4">
+                <path d="M256 512C114.6 512 0 397.4 0 256S114.6 0 256 0S512 114.6 512 256s-114.6 256-256 256zM232
+                  120V256c0 8 4 15.5 10.7 20l96 64c11 7.4 25.9 4.4 33.3-6.7s4.4-25.9-6.7-33.3L280
+                  243.2V120c0-13.3-10.7-24-24-24s-24 10.7-24 24z" />
+              </svg>
+            </label>
+            <input type="checkbox" id="schedule-edit-modal" class="modal-toggle" />
+            <label for="schedule-edit-modal" class="modal cursor-pointer">
+              <label class="modal-box lg:w-[60rem] lg:max-w-full" for="">
+                <span class="text-lg">A editar {$selectedSubrouteId.flag}</span>
+                <SubrouteScheduleForm />
+              </label>
+            </label>
+          {/if}
+        </div>
         <LineStopsEditor
             selectedStop={selectedStop}
             selectedSubrouteStops={selectedSubrouteStops}
@@ -255,14 +309,22 @@
   }
 
   .hwrapper div:first-child {
-    flex-basis: max(50vw, 600px);
-    flex-shrink: 0;
+    /*flex-basis: max(50vw, 600px);*/
+    flex-grow: 1;
   }
 
-  .hwrapper div:nth-of-type(2) {
+  .hwrapper div:last-child {
+    /*flex-basis: max(50vw, 600px);*/
+    max-width: 500px;
+    flex-shrink: 0;
+    flex-grow: 0;
+  }
+
+  .hwrapper div:nth-of-type(3) {
     margin-left: 10px;
-    flex-grow: 1;
-    overflow: auto;
+    height: calc(100vh - 80px);
+    /*flex-grow: 1;*/
+    /*overflow: auto;*/
   }
 
   .map {
