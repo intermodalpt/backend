@@ -77,7 +77,7 @@ pub(crate) fn build_paths(state: State) -> Router {
         .route("/api/parishes", get(handlers::get_parishes))
         .route("/api/stops", get(handlers::get_stops))
         .route("/api/stops/create", post(handlers::create_stop))
-        .route("/api/stops/update/:stop_id", patch(handlers::update_stop))
+        .route("/api/stops/update/:stop_id", patch(handlers::patch_stop))
         .route(
             "/api/stops/within_boundary/:x0/:y0/:x1/:y1",
             get(handlers::get_bounded_stops),
@@ -94,8 +94,24 @@ pub(crate) fn build_paths(state: State) -> Router {
         .route("/pictures", get(handlers::get_pictures))
         .route("/pictures/rels", get(handlers::get_picture_stop_rels))
         .route("/api/stops/spider", post(handlers::get_stops_spider))
-        .route("/api/routes", get(handlers::get_routes))
-        .route("/api/routes/:route_id", get(handlers::get_route))
+        .route(
+            "/api/routes",
+            get(handlers::get_routes).post(handlers::create_route),
+        )
+        .route(
+            "/api/routes/:route_id",
+            get(handlers::get_route)
+                .patch(handlers::patch_route)
+                .delete(handlers::delete_route),
+        )
+        .route(
+            "/api/routes/:route_id/create_subroute",
+            post(handlers::create_subroute),
+        )
+        .route(
+            "/api/routes/:route_id/:subroute_id",
+            patch(handlers::patch_subroute).delete(handlers::delete_subroute),
+        )
         .route(
             "/api/routes/:route_id/schedule",
             get(handlers::get_schedule),

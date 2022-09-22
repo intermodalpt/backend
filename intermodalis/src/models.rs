@@ -225,6 +225,24 @@ pub(crate) mod requests {
     }
 
     #[derive(Deserialize, Component)]
+    pub struct ChangeRoute {
+        pub code: String,
+        pub name: String,
+        pub circular: bool,
+        pub main_subroute: Option<i64>,
+        pub operator: i64,
+        pub badge_text: String,
+        pub badge_bg: String,
+        pub active: bool,
+    }
+
+    #[derive(Deserialize, Component)]
+    pub struct ChangeSubroute {
+        pub flag: String,
+        pub circular: bool,
+    }
+
+    #[derive(Deserialize, Component)]
     pub struct SubrouteStops {
         pub stops: Vec<i64>,
         pub diffs: Vec<Option<i64>>,

@@ -273,7 +273,7 @@ RETURNING id
     Ok((StatusCode::OK, Json(returned)).into_response())
 }
 
-pub(crate) async fn update_stop(
+pub(crate) async fn patch_stop(
     Extension(state): Extension<Arc<State>>,
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
     Json(stop): Json<requests::ChangeStop>,
@@ -910,6 +910,40 @@ ORDER BY Routes.id asc
     Ok((StatusCode::OK, Json(routes)).into_response())
 }
 
+pub(crate) async fn create_route(
+    Extension(state): Extension<Arc<State>>,
+    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    Json(route): Json<requests::ChangeRoute>,
+) -> Result<impl IntoResponse, Error> {
+    let _user_id = middleware::get_user(auth.token(), &state.pool).await?;
+
+    let res = sqlx::query!(
+        r#"
+INSERT INTO Routes(code, name, main_subroute, operator, badge_text, badge_bg, active)
+VALUES (?, ?, ?, ?, ?, ?, ?)
+RETURNING id
+    "#,
+        route.code,
+        route.name,
+        route.main_subroute,
+        route.operator,
+        route.badge_text,
+        route.badge_bg,
+        route.active
+    )
+        .fetch_one(&state.pool)
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    let returned: HashMap<&str, i64> = {
+        let mut map = HashMap::new();
+        map.insert("id", res.id);
+        map
+    };
+
+    Ok((StatusCode::OK, Json(returned)).into_response())
+}
+
 pub(crate) async fn get_route(
     Extension(state): Extension<Arc<State>>,
     Path(route_id): Path<i64>,
@@ -971,6 +1005,183 @@ ORDER BY Routes.id asc
     } else {
         Err(Error::NotFoundUpstream)
     }
+}
+
+pub(crate) async fn patch_route(
+    Extension(state): Extension<Arc<State>>,
+    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    Path(route_id): Path<i64>,
+    Json(route): Json<requests::ChangeRoute>,
+) -> Result<impl IntoResponse, Error> {
+    let _user_id = middleware::get_user(auth.token(), &state.pool).await?;
+
+    let _res = sqlx::query!(
+        r#"
+UPDATE Routes
+SET code=?, name=?, main_subroute=?, operator=?,
+    badge_text=?, badge_bg=?, active=?
+WHERE id=?
+    "#,
+        route.code,
+        route.name,
+        route.main_subroute,
+        route.operator,
+        route.badge_text,
+        route.badge_bg,
+        route.active,
+        route_id
+    )
+    .execute(&state.pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    Ok((StatusCode::OK, "").into_response())
+}
+
+pub(crate) async fn delete_route(
+    Extension(state): Extension<Arc<State>>,
+    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    Path(route_id): Path<i64>,
+) -> Result<impl IntoResponse, Error> {
+    let _user_id = middleware::get_user(auth.token(), &state.pool).await?;
+
+    let subroute_count: i32 = sqlx::query!(
+        r#"
+SELECT count(*) as count
+FROM Subroutes
+WHERE route=?
+"#,
+        route_id
+    )
+    .fetch_one(&state.pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .count;
+
+    if subroute_count > 0 {
+        return Err(Error::DependenciesNotMet);
+    }
+
+    let deleted_rows = sqlx::query!(
+        r#"
+DELETE FROM Routes
+WHERE id=?
+    "#,
+        route_id
+    )
+    .execute(&state.pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .rows_affected();
+
+    if deleted_rows != 1 {
+        todo!();
+    }
+
+    Ok((StatusCode::OK, "").into_response())
+}
+
+pub(crate) async fn create_subroute(
+    Extension(state): Extension<Arc<State>>,
+    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    Path(route_id): Path<i64>,
+    Json(subroute): Json<requests::ChangeSubroute>,
+) -> Result<impl IntoResponse, Error> {
+    let _user_id = middleware::get_user(auth.token(), &state.pool).await?;
+
+    let circular_pseudo_bool = if subroute.circular { 1 } else { 0 };
+    let res = sqlx::query!(
+        r#"
+INSERT INTO Subroutes(route, flag, circular)
+VALUES (?, ?, ?)
+RETURNING id
+    "#,
+        route_id,
+        subroute.flag,
+        circular_pseudo_bool,
+    )
+    .fetch_one(&state.pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    let returned: HashMap<&str, i64> = {
+        let mut map = HashMap::new();
+        map.insert("id", res.id);
+        map
+    };
+
+    Ok((StatusCode::OK, Json(returned)).into_response())
+}
+
+pub(crate) async fn patch_subroute(
+    Extension(state): Extension<Arc<State>>,
+    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    Path(route_id): Path<i64>,
+    Path(subroute_id): Path<i64>,
+    Json(route): Json<requests::ChangeSubroute>,
+) -> Result<impl IntoResponse, Error> {
+    let _user_id = middleware::get_user(auth.token(), &state.pool).await?;
+
+    let _res = sqlx::query!(
+        r#"
+UPDATE Subroutes
+SET flag=?, circular=?
+WHERE id=? AND route=?
+    "#,
+        route.flag,
+        route.circular,
+        subroute_id,
+        route_id,
+    )
+    .execute(&state.pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    Ok((StatusCode::OK, "").into_response())
+}
+
+pub(crate) async fn delete_subroute(
+    Extension(state): Extension<Arc<State>>,
+    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    Path((route_id, subroute_id)): Path<(i64, i64)>,
+) -> Result<impl IntoResponse, Error> {
+    let _user_id = middleware::get_user(auth.token(), &state.pool).await?;
+
+    let stop_count: i32 = sqlx::query!(
+        r#"
+SELECT count(*) as count
+FROM SubrouteStops
+WHERE subroute=?
+"#,
+        subroute_id
+    )
+    .fetch_one(&state.pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .count;
+
+    if stop_count > 0 {
+        return Err(Error::DependenciesNotMet);
+    }
+
+    let deleted_rows = sqlx::query!(
+        r#"
+DELETE FROM Subroutes
+WHERE id=? AND route=?
+    "#,
+        subroute_id,
+        route_id
+    )
+    .execute(&state.pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .rows_affected();
+
+    if deleted_rows != 1 {
+        todo!();
+    }
+
+    Ok((StatusCode::OK, "").into_response())
 }
 
 #[utoipa::path(
