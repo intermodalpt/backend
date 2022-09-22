@@ -26,14 +26,14 @@
   })
 
   function moveUp(i) {
-    let aux = stopList[i - 1];
+    let aux = $stopList[i - 1];
     diffList;
     let aux_diff = diffList[i - 1];
-    $stopList[i - 1] = stopList[i];
+    $stopList[i - 1] = $stopList[i];
     diffList[i - 1] = diffList[i];
     $stopList[i] = aux;
     diffList[i] = aux_diff;
-    $stopList = stopList;
+    $stopList = $stopList;
     diffList = diffList;
     changes = true;
   }
@@ -100,18 +100,18 @@
     //     }
     // }
 
-    if (confirm(`Do you want to replace ${$stops[stopList[i]].official_name || $stops[stopList[i]].name || $stops[stopList[i]].osm_name}
+    if (confirm(`Do you want to replace ${$stops[$stopList[i]].official_name || $stops[$stopList[i]].name || $stops[$stopList[i]].osm_name}
         with ${$selectedStop.official_name || $selectedStop.name || $selectedStop.osm_name}?`)) {
-      stopList[i] = $selectedStop.id;
-      stopList = stopList;
+      $stopList[i] = $selectedStop.id;
+      // $stopList = $stopList;
       changes = true;
       closeModal(i);
     }
   }
 
   function removeStop(i) {
-    if (confirm(`Do you want to remove ${$stops[stopList[i]].official_name} from this route?`)) {
-      stopList.splice(i, 1);
+    if (confirm(`Do you want to remove ${$stops[$stopList[i]].official_name} from this route?`)) {
+      $stopList.splice(i, 1);
       let removedDiff = diffList.splice(i, 1)[0];
       if (diffList.length > 0) {
         if (i === 0) {
@@ -123,7 +123,7 @@
           diffList[i - 1] += removedDiff;
         }
       }
-      stopList = stopList;
+      $stopList = $stopList;
       diffList = diffList;
       changes = true;
       closeModal(index);
@@ -175,16 +175,10 @@
           {$stops[stop].official_name || $stops[stop].name || $stops[stop].short_name || $stops[stop].osm_name}
         </a>
         <div class="flex flex-row gap-1">
-          <!--{#if index > 0}-->
-          <!--  <input class="btn btn-xs w-8 cursor-pointer" on:click={() => moveUp(index)} value="🡹" />-->
-          <!--{/if}-->
-          <!--{#if index !== stopList.length - 1}-->
-          <!--  <input class="btn btn-xs w-8 cursor-pointer" on:click={() => moveDown(index)} value="🡻" />-->
-          <!--{/if}-->
           <label for="{`index-${index}-modal`}" class="btn btn-xs modal-button">...</label>
           <input type="checkbox" id="{`index-${index}-modal`}" class="modal-toggle" />
           <label for="{`index-${index}-modal`}" class="modal cursor-pointer">
-            <label class="modal-box relative" for="">
+            <label class="modal-box relative max-w-2xl" for="">
                     <span class="text-lg">
                       O que fazer a
                       {$stops[stop].official_name || $stops[stop].name
@@ -204,6 +198,22 @@
                       depois
                     </a>
                   </li>
+
+                  {#if index > 0}
+                    <li>
+                      <a on:mouseup={() => moveUp(index)}>
+                        🡹 Mover para cima
+                      </a>
+                    </li>
+                  {/if}
+                  {#if index !== stopList.length - 1}
+                    <li>
+                      <a on:mouseup={() => moveDown(index)}>
+                        🡻 Mover para baixo
+                      </a>
+                    </li>
+                  {/if}
+
                   <li>
                     <a on:mouseup={() => replaceStop(index)}>
                       ⮰ Substituir por
