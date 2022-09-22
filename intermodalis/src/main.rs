@@ -16,7 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#![deny(
+#![warn(
     nonstandard_style,
     warnings,
     unused,
