@@ -36,6 +36,7 @@
     $stopList = $stopList;
     diffList = diffList;
     changes = true;
+    closeModal(i);
   }
 
   function moveDown(i) {
@@ -48,6 +49,7 @@
     $stopList = $stopList;
     diffList = diffList;
     changes = true;
+    closeModal(i);
   }
 
   function addStop() {
@@ -107,10 +109,11 @@
       changes = true;
       closeModal(i);
     }
+    closeModal(index);
   }
 
   function removeStop(i) {
-    if (confirm(`Do you want to remove ${$stops[$stopList[i]].official_name} from this route?`)) {
+    if (confirm(`Do you want to remove ${$stops[$stopList[i]].official_name || $stops[$stopList[i]].name || $stops[$stopList[i]].osm_name} from this route?`)) {
       $stopList.splice(i, 1);
       let removedDiff = diffList.splice(i, 1)[0];
       if (diffList.length > 0) {
@@ -126,7 +129,7 @@
       $stopList = $stopList;
       diffList = diffList;
       changes = true;
-      closeModal(index);
+      closeModal(i);
     }
   }
 
@@ -198,26 +201,24 @@
                       depois
                     </a>
                   </li>
-
-                  {#if index > 0}
-                    <li>
-                      <a on:mouseup={() => moveUp(index)}>
-                        🡹 Mover para cima
-                      </a>
-                    </li>
-                  {/if}
-                  {#if index !== stopList.length - 1}
-                    <li>
-                      <a on:mouseup={() => moveDown(index)}>
-                        🡻 Mover para baixo
-                      </a>
-                    </li>
-                  {/if}
-
                   <li>
                     <a on:mouseup={() => replaceStop(index)}>
                       ⮰ Substituir por
                       <b>{$selectedStop.official_name || $selectedStop.name || $selectedStop.osm_name}</b>
+                    </a>
+                  </li>
+                {/if}
+                {#if index > 0}
+                  <li>
+                    <a on:mouseup={() => moveUp(index)}>
+                      🡹 Mover para cima
+                    </a>
+                  </li>
+                {/if}
+                {#if index !== stopList.length - 1}
+                  <li>
+                    <a on:mouseup={() => moveDown(index)}>
+                      🡻 Mover para baixo
                     </a>
                   </li>
                 {/if}

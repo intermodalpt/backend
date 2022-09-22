@@ -35,7 +35,7 @@ pub static EVERY_DAY: [Weekday; 7] = [
     Weekday::Sunday,
 ];
 
-pub static WEEKDAYS: [Weekday; 5] = [
+pub static BUSINESS_WEEKDAYS: [Weekday; 5] = [
     Weekday::Monday,
     Weekday::Tuesday,
     Weekday::Wednesday,
@@ -188,14 +188,17 @@ impl fmt::Display for Calendar {
                 weekdays,
                 except_if,
                 ..
-            } if weekdays == &WEEKDAYS
+            } if weekdays == &BUSINESS_WEEKDAYS
                 && except_if == &[Condition::Holiday] =>
             {
                 return f.write_str("Dias úteis");
             }
             Calendar {
-                weekdays, only_if, ..
-            } if weekdays == &WEEKDAYS && only_if == &[Condition::School] => {
+                weekdays, only_if, except_if, ..
+            } if weekdays == &BUSINESS_WEEKDAYS
+                && only_if == &[Condition::School]
+                && except_if == &[Condition::Holiday] =>
+            {
                 return f.write_str("Dias úteis de período escolar");
             }
             _ => (),
@@ -203,13 +206,17 @@ impl fmt::Display for Calendar {
 
         let named_weekdays = match &self.weekdays {
             weekdays if weekdays == &EVERY_DAY => "Todos os dias".to_string(),
-            weekdays if weekdays == &WEEKDAYS => "Dias de semana".to_string(),
+            weekdays if weekdays == &BUSINESS_WEEKDAYS => {
+                "Dias de semana".to_string()
+            }
             weekdays if weekdays == &WEEKEND => "Fins de semana".to_string(),
             _ => {
                 let mut named_weekdays = vec![];
                 let mut weekdays = self.weekdays.clone();
-                if WEEKDAYS.iter().all(|item| weekdays.contains(item)) {
-                    weekdays.retain(|weekday| !WEEKDAYS.contains(weekday));
+                if BUSINESS_WEEKDAYS.iter().all(|item| weekdays.contains(item))
+                {
+                    weekdays
+                        .retain(|weekday| !BUSINESS_WEEKDAYS.contains(weekday));
                     named_weekdays.push("Dias úteis".to_string());
                 }
 
@@ -311,7 +318,9 @@ impl fmt::Display for Condition {
 
 #[cfg(test)]
 mod test {
-    use crate::calendar::{Calendar, Condition, EVERY_DAY, WEEKDAYS, WEEKEND};
+    use crate::calendar::{
+        Calendar, Condition, BUSINESS_WEEKDAYS, EVERY_DAY, WEEKEND,
+    };
     use crate::Weekday;
     use chrono::NaiveDate;
 
@@ -499,7 +508,7 @@ mod test {
     fn no_multiple_weekdays() {
         let date = NaiveDate::from_ymd(2022, 12, 15);
         let cal = Calendar {
-            weekdays: WEEKDAYS.to_vec(),
+            weekdays: BUSINESS_WEEKDAYS.to_vec(),
             only_if: vec![],
             also_if: vec![],
             except_if: vec![],
