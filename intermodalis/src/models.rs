@@ -316,6 +316,7 @@ pub(crate) mod responses {
 
     #[derive(Serialize, Component)]
     pub struct Departure {
+        pub id: i64,
         pub subroute: i64,
         // Departure time in minutes starting at midnight
         #[component(example = 480)]

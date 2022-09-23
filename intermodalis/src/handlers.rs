@@ -1212,7 +1212,8 @@ pub(crate) async fn get_schedule(
 ) -> Result<impl IntoResponse, Error> {
     let res = sqlx::query!(
         r#"
-SELECT Subroutes.id as subroute,
+SELECT Departures.id as id,
+    Subroutes.id as subroute,
     Departures.time as time,
     Departures.calendar as calendar
 FROM Subroutes
@@ -1228,6 +1229,7 @@ WHERE Subroutes.route=?
     let mut departures = vec![];
     for row in res {
         departures.push(Departure {
+            id: row.id,
             subroute: row.subroute,
             time: row.time,
             calendar: serde_json::from_str(&row.calendar)
