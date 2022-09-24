@@ -99,7 +99,8 @@ pub(crate) async fn get_stops(
     let res = if params.0.all {
         middleware::get_stops(&state.pool).await?
     } else {
-        sqlx::query!(
+        sqlx::query_as!(
+            Stop,
             r#"
 SELECT *
 FROM Stops
@@ -112,55 +113,6 @@ WHERE id IN (
         .fetch_all(&state.pool)
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?
-        .into_iter()
-        .map(|row| {
-            let tags: Vec<String> =
-                if let Ok(tags) = serde_json::from_str(&row.tags) {
-                    tags
-                } else {
-                    // todo warn
-                    vec![]
-                };
-
-            Stop {
-                id: row.id,
-                source: row.source,
-                name: row.name,
-                official_name: row.official_name,
-                osm_name: row.osm_name,
-                short_name: row.short_name,
-                locality: row.locality,
-                street: row.street,
-                door: row.door,
-                parish: row.parish,
-                lat: row.lat,
-                lon: row.lon,
-                external_id: row.external_id,
-                succeeded_by: row.succeeded_by,
-                notes: row.notes,
-                has_crossing: row.has_crossing,
-                has_accessibility: row.has_accessibility,
-                has_abusive_parking: row.has_abusive_parking,
-                has_outdated_info: row.has_outdated_info,
-                is_damaged: row.is_damaged,
-                is_vandalized: row.is_vandalized,
-                has_flag: row.has_flag,
-                has_schedules: row.has_schedules,
-                has_sidewalk: row.has_sidewalk,
-                has_shelter: row.has_shelter,
-                has_bench: row.has_bench,
-                has_trash_can: row.has_trash_can,
-                is_illuminated: row.is_illuminated,
-                has_illuminated_path: row.has_illuminated_path,
-                has_visibility_from_within: row.has_visibility_from_within,
-                has_visibility_from_area: row.has_visibility_from_area,
-                is_visible_from_outside: row.is_visible_from_outside,
-                updater: row.updater,
-                update_date: row.update_date,
-                tags,
-            }
-        })
-        .collect::<Vec<_>>()
     };
 
     Ok((StatusCode::OK, Json(res)).into_response())
@@ -177,8 +129,6 @@ pub(crate) async fn create_stop(
     if user_id != 1 {
         return Err(Error::Forbidden);
     }
-
-    let tags = serde_json::to_string(&stop.tags).unwrap_or("[]".to_string());
 
     let res = sqlx::query!(
         r#"
@@ -202,7 +152,7 @@ RETURNING id
         stop.lon,
         stop.lat,
         stop.notes,
-        tags,
+        &stop.tags,
         stop.has_crossing,
         stop.has_accessibility,
         stop.has_abusive_parking,
@@ -246,8 +196,6 @@ pub(crate) async fn patch_stop(
     let user_id = middleware::get_user(auth.token(), &state.pool).await?;
     let update_date = Local::now().to_string();
 
-    let tags = serde_json::to_string(&stop.tags).unwrap();
-
     let _res = sqlx::query!(
         r#"
 UPDATE Stops
@@ -270,7 +218,7 @@ WHERE id=$30
         stop.lon,
         stop.lat,
         stop.notes,
-        tags,
+        &stop.tags,
         stop.has_crossing,
         stop.has_accessibility,
         stop.has_abusive_parking,
@@ -313,7 +261,8 @@ pub(crate) async fn get_bounded_stops(
     Extension(state): Extension<Arc<State>>,
     Path((x0, y0, x1, y1)): Path<(f64, f64, f64, f64)>,
 ) -> Result<impl IntoResponse, Error> {
-    let res = sqlx::query!(
+    let stops = sqlx::query_as!(
+        Stop,
         r#"
 SELECT *
 FROM Stops
@@ -328,65 +277,17 @@ WHERE lon >= $1 AND lon <= $2 AND lat <= $3 AND lat >= $4 AND id IN (
     )
     .fetch_all(&state.pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
-    .into_iter()
-    .map(|row| {
-        let tags: Vec<String> =
-            if let Ok(tags) = serde_json::from_str(&row.tags) {
-                tags
-            } else {
-                // todo warn
-                vec![]
-            };
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
-        Stop {
-            id: row.id,
-            source: row.source,
-            name: row.name,
-            official_name: row.official_name,
-            osm_name: row.osm_name,
-            short_name: row.short_name,
-            locality: row.locality,
-            street: row.street,
-            door: row.door,
-            parish: row.parish,
-            lat: row.lat,
-            lon: row.lon,
-            external_id: row.external_id,
-            succeeded_by: row.succeeded_by,
-            notes: row.notes,
-            has_crossing: row.has_crossing,
-            has_accessibility: row.has_accessibility,
-            has_abusive_parking: row.has_abusive_parking,
-            has_outdated_info: row.has_outdated_info,
-            is_damaged: row.is_damaged,
-            is_vandalized: row.is_vandalized,
-            has_flag: row.has_flag,
-            has_schedules: row.has_schedules,
-            has_sidewalk: row.has_sidewalk,
-            has_shelter: row.has_shelter,
-            has_bench: row.has_bench,
-            has_trash_can: row.has_trash_can,
-            is_illuminated: row.is_illuminated,
-            has_illuminated_path: row.has_illuminated_path,
-            has_visibility_from_within: row.has_visibility_from_within,
-            has_visibility_from_area: row.has_visibility_from_area,
-            is_visible_from_outside: row.is_visible_from_outside,
-            updater: row.updater,
-            update_date: row.update_date,
-            tags,
-        }
-    })
-    .collect::<Vec<_>>();
-
-    Ok((StatusCode::OK, Json(res)).into_response())
+    Ok((StatusCode::OK, Json(stops)).into_response())
 }
 
 pub(crate) async fn get_public_stop_pictures(
     Extension(state): Extension<Arc<State>>,
     Path(stop_id): Path<i32>,
 ) -> Result<impl IntoResponse, Error> {
-    let res = sqlx::query!(
+    let pics = sqlx::query_as!(
+        PublicStopPic,
         r#"
 SELECT stop_pics.id, stop_pics.sha1, stop_pics.capture_date, stop_pics.lon, stop_pics.lat, stop_pics.tags, stop_pics.quality
 FROM stop_pics
@@ -401,26 +302,6 @@ ORDER BY stop_pics.capture_date DESC
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
-    let mut pics = vec![];
-    for row in res {
-        let tags: Vec<String> =
-            if let Ok(tags) = serde_json::from_str(&row.tags) {
-                tags
-            } else {
-                // todo warn
-                vec![]
-            };
-
-        pics.push(PublicStopPic {
-            id: row.id,
-            sha1: row.sha1,
-            capture_date: row.capture_date,
-            lon: row.lon,
-            lat: row.lat,
-            quality: row.quality,
-            tags,
-        });
-    }
     Ok((StatusCode::OK, Json(pics)).into_response())
 }
 
@@ -431,10 +312,11 @@ pub(crate) async fn get_tagged_stop_pictures(
 ) -> Result<impl IntoResponse, Error> {
     let _user_id = middleware::get_user(auth.token(), &state.pool).await?;
 
-    let res = sqlx::query!(
+    let pics = sqlx::query_as!(
+        TaggedStopPic,
         r#"
-SELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1, stop_pics.public,
-    stop_pics.sensitive, stop_pics.tagged, stop_pics.uploader,
+SELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,
+    stop_pics.public, stop_pics.sensitive, stop_pics.uploader,
     stop_pics.upload_date, stop_pics.capture_date, stop_pics.quality,
     stop_pics.width, stop_pics.height, stop_pics.lon, stop_pics.lat,
     stop_pics.camera_ref, stop_pics.tags, stop_pics.notes
@@ -449,35 +331,6 @@ ORDER BY quality DESC
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
-    let mut pics = vec![];
-    for row in res {
-        let tags: Vec<String> =
-            if let Ok(tags) = serde_json::from_str(&row.tags) {
-                tags
-            } else {
-                // todo warn
-                vec![]
-            };
-
-        pics.push(TaggedStopPic {
-            id: row.id,
-            original_filename: row.original_filename,
-            sha1: row.sha1,
-            public: row.public,
-            sensitive: row.sensitive,
-            uploader: row.uploader,
-            upload_date: row.upload_date,
-            capture_date: row.capture_date,
-            lon: row.lon,
-            lat: row.lat,
-            quality: row.quality,
-            width: row.width,
-            height: row.height,
-            camera_ref: row.camera_ref,
-            tags,
-            notes: row.notes,
-        });
-    }
     Ok((StatusCode::OK, Json(pics)).into_response())
 }
 
@@ -516,41 +369,18 @@ pub(crate) async fn get_pictures(
 ) -> Result<impl IntoResponse, Error> {
     let _user_id = middleware::get_user(auth.token(), &state.pool).await?;
 
-    let res = sqlx::query!("SELECT * FROM stop_pics")
-        .fetch_all(&state.pool)
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
-
-    let mut pics = vec![];
-
-    for row in res {
-        let tags: Vec<String> =
-            if let Ok(tags) = serde_json::from_str(&row.tags) {
-                tags
-            } else {
-                // todo warn
-                vec![]
-            };
-
-        pics.push(TaggedStopPic {
-            id: row.id,
-            original_filename: row.original_filename,
-            sha1: row.sha1,
-            public: row.public,
-            sensitive: row.sensitive,
-            uploader: row.uploader,
-            upload_date: row.upload_date,
-            capture_date: row.capture_date,
-            lon: row.lon,
-            lat: row.lat,
-            quality: row.quality,
-            width: row.width,
-            height: row.height,
-            camera_ref: row.camera_ref,
-            tags,
-            notes: row.notes,
-        });
-    }
+    let pics = sqlx::query_as!(
+        TaggedStopPic,
+        r#"
+SELECT id, original_filename, sha1, public, sensitive, uploader,
+    upload_date, capture_date, lon, lat, quality, width,
+    height, camera_ref, tags, notes
+FROM stop_pics
+"#
+    )
+    .fetch_all(&state.pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     Ok((StatusCode::OK, Json(pics)).into_response())
 }
@@ -1460,10 +1290,11 @@ pub(crate) async fn get_untagged_stop_pictures(
     let user_id = middleware::get_user(auth.token(), &state.pool).await?;
 
     let offset = (paginator.p * PAGE_SIZE) as i64;
-    let res = sqlx::query!(
+    let pics = sqlx::query_as!(
+        UntaggedStopPic,
         r#"
-SELECT id, original_filename, sha1, public, sensitive, tagged, uploader,
-	upload_date, capture_date, width, height, lon, lat, camera_ref, tags, notes
+SELECT id, original_filename, sha1, public, sensitive, uploader, upload_date,
+    capture_date, width, height, lon, lat, camera_ref, tags, notes
 FROM stop_pics
 WHERE tagged=false AND uploader=$1
 ORDER BY capture_date ASC
@@ -1476,35 +1307,6 @@ LIMIT $2 OFFSET $3
     .fetch_all(&state.pool)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
-
-    let mut pics = vec![];
-    for row in res {
-        let tags: Vec<String> =
-            if let Ok(tags) = serde_json::from_str(&row.tags) {
-                tags
-            } else {
-                // todo warn
-                vec![]
-            };
-
-        pics.push(UntaggedStopPic {
-            id: row.id,
-            original_filename: row.original_filename,
-            sha1: row.sha1,
-            public: row.public,
-            sensitive: row.sensitive,
-            uploader: row.uploader,
-            upload_date: row.upload_date,
-            capture_date: row.capture_date,
-            lon: row.lon,
-            lat: row.lat,
-            width: row.width,
-            height: row.height,
-            camera_ref: row.camera_ref,
-            tags,
-            notes: row.notes,
-        })
-    }
 
     Ok((StatusCode::OK, Json(pics)).into_response())
 }
@@ -1573,7 +1375,6 @@ pub(crate) async fn patch_stop_picture_meta(
     // TODO add updater and update date
     let stop_ids = stop_pic_meta.stops.iter().join(",");
 
-    let tags = serde_json::to_string(&stop_pic_meta.tags).unwrap();
     let _res = sqlx::query!(
         r#"
 UPDATE stop_pics
@@ -1585,7 +1386,7 @@ WHERE id=$9
         stop_pic_meta.sensitive,
         stop_pic_meta.lon,
         stop_pic_meta.lat,
-        tags,
+        &stop_pic_meta.tags,
         stop_pic_meta.quality,
         updater,
         update_date,
