@@ -29,7 +29,7 @@ use axum::{Extension, Json, TypedHeader};
 use chrono::{Local, NaiveDate};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use sqlx::sqlite::SqliteRow;
+use sqlx::postgres::PgRow;
 use sqlx::Row;
 use utoipa_swagger_ui::Config;
 
@@ -63,14 +63,15 @@ pub(crate) async fn get_parishes(
     let res = sqlx::query_as!(
         Parish,
         r#"
-SELECT Parishes.id, Parishes.name, Municipalities.name as municipality, Municipalities.zone, Parishes.polygon
-FROM Parishes
-JOIN Municipalities where Parishes.municipality = Municipalities.id
+SELECT parishes.id, parishes.name, municipalities.name as municipality,
+    municipalities.zone, parishes.polygon
+FROM parishes
+JOIN municipalities ON parishes.municipality = municipalities.id
     "#
     )
     .fetch_all(&state.pool)
     .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     Ok((StatusCode::OK, Json(res)).into_response())
 }
@@ -104,7 +105,7 @@ SELECT *
 FROM Stops
 WHERE id IN (
     SELECT DISTINCT stop
-    FROM SubrouteStops
+    FROM subroute_stops
 )
     "#
         )
@@ -137,33 +138,23 @@ WHERE id IN (
                 external_id: row.external_id,
                 succeeded_by: row.succeeded_by,
                 notes: row.notes,
-                has_crossing: row.has_crossing.map(|val| val != 0),
-                has_accessibility: row.has_accessibility.map(|val| val != 0),
-                has_abusive_parking: row
-                    .has_abusive_parking
-                    .map(|val| val != 0),
-                has_outdated_info: row.has_outdated_info.map(|val| val != 0),
-                is_damaged: row.is_damaged.map(|val| val != 0),
-                is_vandalized: row.is_vandalized.map(|val| val != 0),
-                has_flag: row.has_flag.map(|val| val != 0),
-                has_schedules: row.has_schedules.map(|val| val != 0),
-                has_sidewalk: row.has_sidewalk.map(|val| val != 0),
-                has_shelter: row.has_shelter.map(|val| val != 0),
-                has_bench: row.has_bench.map(|val| val != 0),
-                has_trash_can: row.has_trash_can.map(|val| val != 0),
-                is_illuminated: row.is_illuminated.map(|val| val != 0),
-                has_illuminated_path: row
-                    .has_illuminated_path
-                    .map(|val| val != 0),
-                has_visibility_from_within: row
-                    .has_visibility_from_within
-                    .map(|val| val != 0),
-                has_visibility_from_area: row
-                    .has_visibility_from_area
-                    .map(|val| val != 0),
-                is_visible_from_outside: row
-                    .is_visible_from_outside
-                    .map(|val| val != 0),
+                has_crossing: row.has_crossing,
+                has_accessibility: row.has_accessibility,
+                has_abusive_parking: row.has_abusive_parking,
+                has_outdated_info: row.has_outdated_info,
+                is_damaged: row.is_damaged,
+                is_vandalized: row.is_vandalized,
+                has_flag: row.has_flag,
+                has_schedules: row.has_schedules,
+                has_sidewalk: row.has_sidewalk,
+                has_shelter: row.has_shelter,
+                has_bench: row.has_bench,
+                has_trash_can: row.has_trash_can,
+                is_illuminated: row.is_illuminated,
+                has_illuminated_path: row.has_illuminated_path,
+                has_visibility_from_within: row.has_visibility_from_within,
+                has_visibility_from_area: row.has_visibility_from_area,
+                is_visible_from_outside: row.is_visible_from_outside,
                 updater: row.updater,
                 update_date: row.update_date,
                 tags,
@@ -187,33 +178,6 @@ pub(crate) async fn create_stop(
         return Err(Error::Forbidden);
     }
 
-    let has_crossing = stop.has_crossing.map(|val| if val { 1 } else { 0 });
-    let has_accessibility =
-        stop.has_accessibility.map(|val| if val { 1 } else { 0 });
-    let has_abusive_parking =
-        stop.has_abusive_parking.map(|val| if val { 1 } else { 0 });
-    let has_outdated_info =
-        stop.has_outdated_info.map(|val| if val { 1 } else { 0 });
-    let is_damaged = stop.is_damaged.map(|val| if val { 1 } else { 0 });
-    let is_vandalized = stop.is_vandalized.map(|val| if val { 1 } else { 0 });
-    let has_flag = stop.has_flag.map(|val| if val { 1 } else { 0 });
-    let has_schedules = stop.has_schedules.map(|val| if val { 1 } else { 0 });
-    let has_sidewalk = stop.has_sidewalk.map(|val| if val { 1 } else { 0 });
-    let has_shelter = stop.has_shelter.map(|val| if val { 1 } else { 0 });
-    let has_bench = stop.has_bench.map(|val| if val { 1 } else { 0 });
-    let has_trash_can = stop.has_trash_can.map(|val| if val { 1 } else { 0 });
-    let is_illuminated = stop.is_illuminated.map(|val| if val { 1 } else { 0 });
-    let has_illuminated_path =
-        stop.has_illuminated_path.map(|val| if val { 1 } else { 0 });
-    let has_visibility_from_within = stop
-        .has_visibility_from_within
-        .map(|val| if val { 1 } else { 0 });
-    let has_visibility_from_area =
-        stop.has_visibility_from_area
-            .map(|val| if val { 1 } else { 0 });
-    let is_visible_from_outside =
-        stop.is_visible_from_outside
-            .map(|val| if val { 1 } else { 0 });
     let tags = serde_json::to_string(&stop.tags).unwrap_or("[]".to_string());
 
     let res = sqlx::query!(
@@ -226,7 +190,7 @@ INSERT INTO Stops(name, short_name, official_name, locality, street, door,
     has_illuminated_path, has_visibility_from_within,
     has_visibility_from_area, is_visible_from_outside,
     updater, update_date, source)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30)
 RETURNING id
     "#,
         stop.name,
@@ -239,23 +203,23 @@ RETURNING id
         stop.lat,
         stop.notes,
         tags,
-        has_crossing,
-        has_accessibility,
-        has_abusive_parking,
-        has_outdated_info,
-        is_damaged,
-        is_vandalized,
-        has_flag,
-        has_schedules,
-        has_sidewalk,
-        has_shelter,
-        has_bench,
-        has_trash_can,
-        is_illuminated,
-        has_illuminated_path,
-        has_visibility_from_within,
-        has_visibility_from_area,
-        is_visible_from_outside,
+        stop.has_crossing,
+        stop.has_accessibility,
+        stop.has_abusive_parking,
+        stop.has_outdated_info,
+        stop.is_damaged,
+        stop.is_vandalized,
+        stop.has_flag,
+        stop.has_schedules,
+        stop.has_sidewalk,
+        stop.has_shelter,
+        stop.has_bench,
+        stop.has_trash_can,
+        stop.is_illuminated,
+        stop.has_illuminated_path,
+        stop.has_visibility_from_within,
+        stop.has_visibility_from_area,
+        stop.is_visible_from_outside,
         user_id,
         update_date,
         stop.source
@@ -264,7 +228,7 @@ RETURNING id
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
-    let returned: HashMap<&str, i64> = {
+    let returned: HashMap<&str, i32> = {
         let mut map = HashMap::new();
         map.insert("id", res.id);
         map
@@ -277,52 +241,25 @@ pub(crate) async fn patch_stop(
     Extension(state): Extension<Arc<State>>,
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
     Json(stop): Json<requests::ChangeStop>,
-    Path(stop_id): Path<i64>,
+    Path(stop_id): Path<i32>,
 ) -> Result<impl IntoResponse, Error> {
     let user_id = middleware::get_user(auth.token(), &state.pool).await?;
     let update_date = Local::now().to_string();
 
-    let has_crossing = stop.has_crossing.map(|val| if val { 1 } else { 0 });
-    let has_accessibility =
-        stop.has_accessibility.map(|val| if val { 1 } else { 0 });
-    let has_abusive_parking =
-        stop.has_abusive_parking.map(|val| if val { 1 } else { 0 });
-    let has_outdated_info =
-        stop.has_outdated_info.map(|val| if val { 1 } else { 0 });
-    let is_damaged = stop.is_damaged.map(|val| if val { 1 } else { 0 });
-    let is_vandalized = stop.is_vandalized.map(|val| if val { 1 } else { 0 });
-    let has_flag = stop.has_flag.map(|val| if val { 1 } else { 0 });
-    let has_schedules = stop.has_schedules.map(|val| if val { 1 } else { 0 });
-    let has_sidewalk = stop.has_sidewalk.map(|val| if val { 1 } else { 0 });
-    let has_shelter = stop.has_shelter.map(|val| if val { 1 } else { 0 });
-    let has_bench = stop.has_bench.map(|val| if val { 1 } else { 0 });
-    let has_trash_can = stop.has_trash_can.map(|val| if val { 1 } else { 0 });
-    let is_illuminated = stop.is_illuminated.map(|val| if val { 1 } else { 0 });
-    let has_illuminated_path =
-        stop.has_illuminated_path.map(|val| if val { 1 } else { 0 });
-    let has_visibility_from_within = stop
-        .has_visibility_from_within
-        .map(|val| if val { 1 } else { 0 });
-    let has_visibility_from_area =
-        stop.has_visibility_from_area
-            .map(|val| if val { 1 } else { 0 });
-    let is_visible_from_outside =
-        stop.is_visible_from_outside
-            .map(|val| if val { 1 } else { 0 });
     let tags = serde_json::to_string(&stop.tags).unwrap();
 
     let _res = sqlx::query!(
         r#"
 UPDATE Stops
-SET name=?, short_name=?, official_name=?, locality=?, street=?, door=?,
-    lon=?, lat=?, notes = ?, tags=?, has_crossing = ?, has_accessibility = ?,
-    has_abusive_parking = ?, has_outdated_info = ?, is_damaged = ?,
-    is_vandalized = ?, has_flag = ?, has_schedules = ?, has_sidewalk = ?,
-    has_shelter = ?, has_bench = ?, has_trash_can = ?, is_illuminated = ?,
-    has_illuminated_path = ?, has_visibility_from_within = ?,
-    has_visibility_from_area = ?, is_visible_from_outside = ?,
-    updater=?, update_date=?
-WHERE id=?
+SET name=$1, short_name=$2, official_name=$3, locality=$4, street=$5, door=$6,
+    lon=$7, lat=$8, notes=$9, tags=$10, has_crossing=$11, has_accessibility=$12,
+    has_abusive_parking=$13, has_outdated_info=$14, is_damaged=$15,
+    is_vandalized=$16, has_flag=$17, has_schedules=$18, has_sidewalk=$19,
+    has_shelter=$20, has_bench=$21, has_trash_can=$22, is_illuminated=$23,
+    has_illuminated_path=$24, has_visibility_from_within=$25,
+    has_visibility_from_area=$26, is_visible_from_outside=$27,
+    updater=$28, update_date=$29
+WHERE id=$30
     "#,
         stop.name,
         stop.short_name,
@@ -334,23 +271,23 @@ WHERE id=?
         stop.lat,
         stop.notes,
         tags,
-        has_crossing,
-        has_accessibility,
-        has_abusive_parking,
-        has_outdated_info,
-        is_damaged,
-        is_vandalized,
-        has_flag,
-        has_schedules,
-        has_sidewalk,
-        has_shelter,
-        has_bench,
-        has_trash_can,
-        is_illuminated,
-        has_illuminated_path,
-        has_visibility_from_within,
-        has_visibility_from_area,
-        is_visible_from_outside,
+        stop.has_crossing,
+        stop.has_accessibility,
+        stop.has_abusive_parking,
+        stop.has_outdated_info,
+        stop.is_damaged,
+        stop.is_vandalized,
+        stop.has_flag,
+        stop.has_schedules,
+        stop.has_sidewalk,
+        stop.has_shelter,
+        stop.has_bench,
+        stop.has_trash_can,
+        stop.is_illuminated,
+        stop.has_illuminated_path,
+        stop.has_visibility_from_within,
+        stop.has_visibility_from_area,
+        stop.is_visible_from_outside,
         user_id,
         update_date,
         stop_id
@@ -380,8 +317,8 @@ pub(crate) async fn get_bounded_stops(
         r#"
 SELECT *
 FROM Stops
-WHERE lon >= ? AND lon <= ? AND lat <= ? AND lat >= ? AND id IN (
-    SELECT DISTINCT stop FROM SubrouteStops
+WHERE lon >= $1 AND lon <= $2 AND lat <= $3 AND lat >= $4 AND id IN (
+    SELECT DISTINCT stop FROM subroute_stops
 )
     "#,
         x0,
@@ -418,29 +355,23 @@ WHERE lon >= ? AND lon <= ? AND lat <= ? AND lat >= ? AND id IN (
             external_id: row.external_id,
             succeeded_by: row.succeeded_by,
             notes: row.notes,
-            has_crossing: row.has_crossing.map(|val| val != 0),
-            has_accessibility: row.has_accessibility.map(|val| val != 0),
-            has_abusive_parking: row.has_abusive_parking.map(|val| val != 0),
-            has_outdated_info: row.has_outdated_info.map(|val| val != 0),
-            is_damaged: row.is_damaged.map(|val| val != 0),
-            is_vandalized: row.is_vandalized.map(|val| val != 0),
-            has_flag: row.has_flag.map(|val| val != 0),
-            has_schedules: row.has_schedules.map(|val| val != 0),
-            has_sidewalk: row.has_sidewalk.map(|val| val != 0),
-            has_shelter: row.has_shelter.map(|val| val != 0),
-            has_bench: row.has_bench.map(|val| val != 0),
-            has_trash_can: row.has_trash_can.map(|val| val != 0),
-            is_illuminated: row.is_illuminated.map(|val| val != 0),
-            has_illuminated_path: row.has_illuminated_path.map(|val| val != 0),
-            has_visibility_from_within: row
-                .has_visibility_from_within
-                .map(|val| val != 0),
-            has_visibility_from_area: row
-                .has_visibility_from_area
-                .map(|val| val != 0),
-            is_visible_from_outside: row
-                .is_visible_from_outside
-                .map(|val| val != 0),
+            has_crossing: row.has_crossing,
+            has_accessibility: row.has_accessibility,
+            has_abusive_parking: row.has_abusive_parking,
+            has_outdated_info: row.has_outdated_info,
+            is_damaged: row.is_damaged,
+            is_vandalized: row.is_vandalized,
+            has_flag: row.has_flag,
+            has_schedules: row.has_schedules,
+            has_sidewalk: row.has_sidewalk,
+            has_shelter: row.has_shelter,
+            has_bench: row.has_bench,
+            has_trash_can: row.has_trash_can,
+            is_illuminated: row.is_illuminated,
+            has_illuminated_path: row.has_illuminated_path,
+            has_visibility_from_within: row.has_visibility_from_within,
+            has_visibility_from_area: row.has_visibility_from_area,
+            is_visible_from_outside: row.is_visible_from_outside,
             updater: row.updater,
             update_date: row.update_date,
             tags,
@@ -453,16 +384,16 @@ WHERE lon >= ? AND lon <= ? AND lat <= ? AND lat >= ? AND id IN (
 
 pub(crate) async fn get_public_stop_pictures(
     Extension(state): Extension<Arc<State>>,
-    Path(stop_id): Path<i64>,
+    Path(stop_id): Path<i32>,
 ) -> Result<impl IntoResponse, Error> {
     let res = sqlx::query!(
         r#"
-SELECT StopPics.id, StopPics.sha1, StopPics.capture_date, StopPics.lon, StopPics.lat, StopPics.tags, StopPics.quality
-FROM StopPics
-JOIN StopPicStops on StopPicStops.pic = StopPics.id
-WHERE StopPics.tagged = 0 AND StopPics.sensitive = 0
-    AND StopPics.public = 1 AND StopPicStops.stop=?
-ORDER BY StopPics.capture_date DESC
+SELECT stop_pics.id, stop_pics.sha1, stop_pics.capture_date, stop_pics.lon, stop_pics.lat, stop_pics.tags, stop_pics.quality
+FROM stop_pics
+JOIN stop_pic_stops on stop_pic_stops.pic = stop_pics.id
+WHERE stop_pics.tagged = false AND stop_pics.sensitive = false
+    AND stop_pics.public = true AND stop_pic_stops.stop=$1
+ORDER BY stop_pics.capture_date DESC
     "#,
         stop_id
     )
@@ -484,8 +415,8 @@ ORDER BY StopPics.capture_date DESC
             id: row.id,
             sha1: row.sha1,
             capture_date: row.capture_date,
-            lon: row.lon.unwrap_or(f32::NAN),
-            lat: row.lat.unwrap_or(f32::NAN),
+            lon: row.lon,
+            lat: row.lat,
             quality: row.quality,
             tags,
         });
@@ -495,21 +426,21 @@ ORDER BY StopPics.capture_date DESC
 
 pub(crate) async fn get_tagged_stop_pictures(
     Extension(state): Extension<Arc<State>>,
-    Path(stop_id): Path<i64>,
+    Path(stop_id): Path<i32>,
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
 ) -> Result<impl IntoResponse, Error> {
     let _user_id = middleware::get_user(auth.token(), &state.pool).await?;
 
     let res = sqlx::query!(
         r#"
-SELECT StopPics.id, StopPics.original_filename, StopPics.sha1, StopPics.public,
-    StopPics.sensitive, StopPics.tagged, StopPics.uploader,
-    StopPics.upload_date, StopPics.capture_date, StopPics.quality,
-    StopPics.width, StopPics.height, StopPics.lon, StopPics.lat,
-    StopPics.camera_ref, StopPics.tags, StopPics.notes
-FROM StopPics
-JOIN StopPicStops ON StopPicStops.pic = StopPics.id
-WHERE StopPics.tagged = 1 AND StopPicStops.stop=?
+SELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1, stop_pics.public,
+    stop_pics.sensitive, stop_pics.tagged, stop_pics.uploader,
+    stop_pics.upload_date, stop_pics.capture_date, stop_pics.quality,
+    stop_pics.width, stop_pics.height, stop_pics.lon, stop_pics.lat,
+    stop_pics.camera_ref, stop_pics.tags, stop_pics.notes
+FROM stop_pics
+JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id
+WHERE stop_pics.tagged = true AND stop_pic_stops.stop=$1
 ORDER BY quality DESC
     "#,
         stop_id
@@ -532,16 +463,16 @@ ORDER BY quality DESC
             id: row.id,
             original_filename: row.original_filename,
             sha1: row.sha1,
-            public: row.public != 0,
-            sensitive: row.sensitive != 0,
+            public: row.public,
+            sensitive: row.sensitive,
             uploader: row.uploader,
             upload_date: row.upload_date,
             capture_date: row.capture_date,
-            lon: row.lon.unwrap_or(f32::NAN),
-            lat: row.lat.unwrap_or(f32::NAN),
+            lon: row.lon,
+            lat: row.lat,
             quality: row.quality,
-            width: row.width as u32,
-            height: row.height as u32,
+            width: row.width,
+            height: row.height,
             camera_ref: row.camera_ref,
             tags,
             notes: row.notes,
@@ -559,7 +490,7 @@ pub(crate) async fn get_picture_stop_rels(
     let res = sqlx::query!(
         r#"
 SELECT stop, pic
-FROM  StopPicStops
+FROM  stop_pic_stops
 ORDER BY stop ASC
     "#
     )
@@ -567,7 +498,7 @@ ORDER BY stop ASC
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
-    let mut stops = HashMap::<i64, Vec<i64>>::new();
+    let mut stops = HashMap::<i32, Vec<i32>>::new();
 
     for row in res {
         if let Some(pics) = stops.get_mut(&row.stop) {
@@ -585,7 +516,7 @@ pub(crate) async fn get_pictures(
 ) -> Result<impl IntoResponse, Error> {
     let _user_id = middleware::get_user(auth.token(), &state.pool).await?;
 
-    let res = sqlx::query!("SELECT * FROM StopPics")
+    let res = sqlx::query!("SELECT * FROM stop_pics")
         .fetch_all(&state.pool)
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
@@ -605,16 +536,16 @@ pub(crate) async fn get_pictures(
             id: row.id,
             original_filename: row.original_filename,
             sha1: row.sha1,
-            public: row.public != 0,
-            sensitive: row.sensitive != 0,
+            public: row.public,
+            sensitive: row.sensitive,
             uploader: row.uploader,
             upload_date: row.upload_date,
             capture_date: row.capture_date,
-            lon: row.lon.unwrap_or(f32::NAN),
-            lat: row.lat.unwrap_or(f32::NAN),
+            lon: row.lon,
+            lat: row.lat,
             quality: row.quality,
-            width: row.width as u32,
-            height: row.height as u32,
+            width: row.width,
+            height: row.height,
             camera_ref: row.camera_ref,
             tags,
             notes: row.notes,
@@ -627,28 +558,28 @@ pub(crate) async fn get_pictures(
 #[utoipa::path(get, path = "/api/stops/{stop_id}/spider")]
 pub(crate) async fn get_stop_spider(
     Extension(state): Extension<Arc<State>>,
-    Path(stop_id): Path<i64>,
+    Path(stop_id): Path<i32>,
 ) -> Result<impl IntoResponse, Error> {
     let res = sqlx::query!(
         r#"
 SELECT Routes.id as route_id, Routes.code as route_code,
     Routes.name as route_name, Routes.circular as route_circular,
-    Subroutes.id as subroute_id, Subroutes.flag as subroute_flag,
-    SubrouteStops.stop as stop_id,
-    Stops.name as stop_name,
-    Stops.lon as lon,
-    Stops.lat as lat
+    subroutes.id as subroute_id, subroutes.flag as subroute_flag,
+    subroute_stops.stop as stop_id,
+    stops.name as stop_name,
+    stops.lon as lon,
+    stops.lat as lat
 FROM Routes
-JOIN Subroutes ON Routes.id = Subroutes.route
-JOIN SubrouteStops ON Subroutes.id = SubrouteStops.subroute
-JOIN Stops ON Stops.id = SubrouteStops.stop
-WHERE Subroutes.id IN (
-    SELECT Subroutes.id
-    FROM Subroutes
-    JOIN SubrouteStops ON Subroutes.id = SubrouteStops.subroute
-    WHERE SubrouteStops.stop = ?
+JOIN subroutes ON Routes.id = subroutes.route
+JOIN subroute_stops ON subroutes.id = subroute_stops.subroute
+JOIN stops ON stops.id = subroute_stops.stop
+WHERE subroutes.id IN (
+    SELECT subroutes.id
+    FROM subroutes
+    JOIN subroute_stops ON subroutes.id = subroute_stops.subroute
+    WHERE subroute_stops.stop = $1
 )
-ORDER BY SubrouteStops.idx
+ORDER BY subroute_stops.idx
     "#,
         stop_id
     )
@@ -656,9 +587,9 @@ ORDER BY SubrouteStops.idx
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
-    let mut routes: HashMap<i64, SpiderRoute> = HashMap::new();
-    let mut subroutes: HashMap<i64, SpiderSubroute> = HashMap::new();
-    let mut stops: HashMap<i64, SpiderStop> = HashMap::new();
+    let mut routes: HashMap<i32, SpiderRoute> = HashMap::new();
+    let mut subroutes: HashMap<i32, SpiderSubroute> = HashMap::new();
+    let mut stops: HashMap<i32, SpiderStop> = HashMap::new();
 
     for row in res {
         if !routes.contains_key(&row.route_id) {
@@ -667,10 +598,7 @@ ORDER BY SubrouteStops.idx
                 SpiderRoute {
                     code: row.route_code,
                     name: row.route_name,
-                    circular: row
-                        .route_circular
-                        .map(|val| val != 0)
-                        .unwrap_or(false),
+                    circular: row.route_circular,
                 },
             );
         }
@@ -710,21 +638,21 @@ ORDER BY SubrouteStops.idx
 }
 
 struct SpiderRow {
-    route_id: i64,
+    route_id: i32,
     route_code: String,
     route_name: String,
-    route_circular: Option<i64>,
-    subroute_id: i64,
+    route_circular: bool,
+    subroute_id: i32,
     subroute_flag: Option<String>,
-    stop_id: i64,
+    stop_id: i32,
     stop_name: Option<String>,
-    lon: Option<f32>,
-    lat: Option<f32>,
+    lon: Option<f64>,
+    lat: Option<f64>,
 }
 
 pub(crate) async fn get_stops_spider(
     Extension(state): Extension<Arc<State>>,
-    Json(stops): Json<Vec<i64>>,
+    Json(stops): Json<Vec<i32>>,
 ) -> Result<impl IntoResponse, Error> {
     let stop_ids = stops.iter().join(",");
 
@@ -734,25 +662,25 @@ SELECT Routes.id as route_id,
     Routes.code as route_code,
     Routes.name as route_name,
     Routes.circular as route_circular,
-    Subroutes.id as subroute_id,
-    Subroutes.flag as subroute_flag,
-    SubrouteStops.stop as stop_id,
-    Stops.name as stop_name,
-    Stops.lon as lon,
-    Stops.lat as lat
+    subroutes.id as subroute_id,
+    subroutes.flag as subroute_flag,
+    subroute_stops.stop as stop_id,
+    stops.name as stop_name,
+    stops.lon as lon,
+    stops.lat as lat
 FROM Routes
-JOIN Subroutes ON Routes.id = Subroutes.route
-JOIN SubrouteStops ON Subroutes.id = SubrouteStops.subroute
-JOIN Stops ON Stops.id = SubrouteStops.stop
-WHERE Subroutes.id IN (
-    SELECT Subroutes.id
-    FROM Subroutes
-    JOIN SubrouteStops ON Subroutes.id = SubrouteStops.subroute
-    WHERE SubrouteStops.stop IN ({stop_ids})
+JOIN subroutes ON Routes.id = subroutes.route
+JOIN subroute_stops ON subroutes.id = subroute_stops.subroute
+JOIN stops ON stops.id = subroute_stops.stop
+WHERE subroutes.id IN (
+    SELECT subroutes.id
+    FROM subroutes
+    JOIN subroute_stops ON subroutes.id = subroute_stops.subroute
+    WHERE subroute_stops.stop IN ({stop_ids})
 )
-ORDER BY SubrouteStops.idx"
+ORDER BY subroute_stops.idx"
     ))
-    .map(|row: SqliteRow| SpiderRow {
+    .map(|row: PgRow| SpiderRow {
         route_id: row.get(0),
         route_code: row.get(1),
         route_name: row.get(2),
@@ -768,9 +696,9 @@ ORDER BY SubrouteStops.idx"
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
-    let mut routes: HashMap<i64, SpiderRoute> = HashMap::new();
-    let mut subroutes: HashMap<i64, SpiderSubroute> = HashMap::new();
-    let mut stops: HashMap<i64, SpiderStop> = HashMap::new();
+    let mut routes: HashMap<i32, SpiderRoute> = HashMap::new();
+    let mut subroutes: HashMap<i32, SpiderSubroute> = HashMap::new();
+    let mut stops: HashMap<i32, SpiderStop> = HashMap::new();
 
     for row in res {
         if !routes.contains_key(&row.route_id) {
@@ -779,10 +707,7 @@ ORDER BY SubrouteStops.idx"
                 SpiderRoute {
                     code: row.route_code,
                     name: row.route_name,
-                    circular: row
-                        .route_circular
-                        .map(|val| val != 0)
-                        .unwrap_or(false),
+                    circular: row.route_circular,
                 },
             );
         }
@@ -794,7 +719,8 @@ ORDER BY SubrouteStops.idx"
                 row.subroute_id,
                 SpiderSubroute {
                     route: row.route_id,
-                    flag: row.subroute_flag,
+                    // FIXME this is a bug
+                    flag: row.subroute_flag.unwrap_or("".to_string()),
                     stop_sequence: vec![],
                 },
             );
@@ -833,21 +759,19 @@ pub(crate) async fn get_routes(
 ) -> Result<impl IntoResponse, Error> {
     let res = sqlx::query!(
         r#"
-SELECT Routes.id as route,
-    Routes.code as code,
-    Routes.name as name,
-    Routes.circular as circular,
-    Routes.main_subroute as main_subroute,
-    Routes.active as active,
-    Routes.badge_bg as bg_color,
-    Routes.badge_text as text_color,
-    Subroutes.id as subroute,
-    Subroutes.flag as subroute_flag,
-    Subroutes.cached_from as from_stop,
-    Subroutes.cached_to as to_stop
-FROM Routes
-LEFT JOIN Subroutes on Routes.id = Subroutes.route
-ORDER BY Routes.id asc
+SELECT routes.id as route,
+    routes.code as code,
+    routes.name as name,
+    routes.circular as circular,
+    routes.main_subroute as main_subroute,
+    routes.active as active,
+    routes.badge_bg as bg_color,
+    routes.badge_text as text_color,
+    subroutes.id as subroute,
+    subroutes.flag as subroute_flag
+FROM routes
+LEFT JOIN subroutes ON routes.id = subroutes.route
+ORDER BY routes.id asc
 "#
     )
     .fetch_all(&state.pool)
@@ -863,17 +787,18 @@ ORDER BY Routes.id asc
             id: row.route,
             name: row.name,
             code: row.code,
-            circular: row.circular.map(|val| val != 0),
+            circular: row.circular,
             main_subroute: row.main_subroute,
             badge_text: row.text_color,
             badge_bg: row.bg_color,
             subroutes: vec![Subroute {
                 id: row.subroute,
                 flag: row.subroute_flag,
-                cached_from: row.from_stop,
-                cached_to: row.to_stop,
+                // FIXME
+                // cached_from: None,
+                // cached_to: None,
             }],
-            active: row.active != 0,
+            active: row.active,
         };
 
         for row in row_iter {
@@ -881,8 +806,8 @@ ORDER BY Routes.id asc
                 curr_route.subroutes.push(Subroute {
                     id: row.subroute,
                     flag: row.subroute_flag,
-                    cached_from: row.from_stop,
-                    cached_to: row.to_stop,
+                    // cached_from: row.from_stop,
+                    // cached_to: row.to_stop,
                 });
             } else {
                 routes.push(curr_route);
@@ -890,17 +815,17 @@ ORDER BY Routes.id asc
                     id: row.route,
                     code: row.code,
                     name: row.name,
-                    circular: row.circular.map(|val| val != 0),
+                    circular: row.circular,
                     main_subroute: row.main_subroute,
                     badge_text: row.text_color,
                     badge_bg: row.bg_color,
                     subroutes: vec![Subroute {
                         id: row.subroute,
                         flag: row.subroute_flag,
-                        cached_from: row.from_stop,
-                        cached_to: row.to_stop,
+                        // cached_from: row.from_stop,
+                        // cached_to: row.to_stop,
                     }],
-                    active: row.active != 0,
+                    active: row.active,
                 };
             }
         }
@@ -919,8 +844,8 @@ pub(crate) async fn create_route(
 
     let res = sqlx::query!(
         r#"
-INSERT INTO Routes(code, name, main_subroute, operator, badge_text, badge_bg, active)
-VALUES (?, ?, ?, ?, ?, ?, ?)
+INSERT INTO routes(code, name, main_subroute, operator, badge_text, badge_bg, active)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 RETURNING id
     "#,
         route.code,
@@ -935,7 +860,7 @@ RETURNING id
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
-    let returned: HashMap<&str, i64> = {
+    let returned: HashMap<&str, i32> = {
         let mut map = HashMap::new();
         map.insert("id", res.id);
         map
@@ -946,26 +871,26 @@ RETURNING id
 
 pub(crate) async fn get_route(
     Extension(state): Extension<Arc<State>>,
-    Path(route_id): Path<i64>,
+    Path(route_id): Path<i32>,
 ) -> Result<impl IntoResponse, Error> {
     let res = sqlx::query!(
         r#"
-SELECT Routes.id as route,
-    Routes.code as code,
-    Routes.name as name,
-    Routes.circular as circular,
-    Routes.main_subroute as main_subroute,
-    Routes.active as active,
-    Routes.badge_bg as bg_color,
-    Routes.badge_text as text_color,
-    Subroutes.id as subroute,
-    Subroutes.flag as subroute_flag,
-    Subroutes.cached_from as from_stop,
-    Subroutes.cached_to as to_stop
-FROM Routes
-LEFT JOIN Subroutes on Routes.id = Subroutes.route
-WHERE Routes.id = ?
-ORDER BY Routes.id asc
+SELECT routes.id as route,
+    routes.code as code,
+    routes.name as name,
+    routes.circular as circular,
+    routes.main_subroute as main_subroute,
+    routes.active as active,
+    routes.badge_bg as bg_color,
+    routes.badge_text as text_color,
+    subroutes.id as subroute,
+    subroutes.flag as subroute_flag
+    -- subroutes.cached_from as from_stop,
+    -- subroutes.cached_to as to_stop
+FROM routes
+LEFT JOIN subroutes on routes.id = subroutes.route
+WHERE routes.id = $1
+ORDER BY routes.id asc
 "#,
         route_id
     )
@@ -980,25 +905,25 @@ ORDER BY Routes.id asc
             id: row.route,
             name: row.name,
             code: row.code,
-            circular: row.circular.map(|val| val != 0),
+            circular: row.circular,
             main_subroute: row.main_subroute,
             badge_text: row.text_color,
             badge_bg: row.bg_color,
             subroutes: vec![Subroute {
                 id: row.subroute,
                 flag: row.subroute_flag,
-                cached_from: row.from_stop,
-                cached_to: row.to_stop,
+                // cached_from: row.from_stop,
+                // cached_to: row.to_stop,
             }],
-            active: row.active != 0,
+            active: row.active,
         };
 
         for row in row_iter {
             curr_route.subroutes.push(Subroute {
                 id: row.subroute,
                 flag: row.subroute_flag,
-                cached_from: row.from_stop,
-                cached_to: row.to_stop,
+                // cached_from: row.from_stop,
+                // cached_to: row.to_stop,
             });
         }
         Ok((StatusCode::OK, Json(curr_route)).into_response())
@@ -1010,7 +935,7 @@ ORDER BY Routes.id asc
 pub(crate) async fn patch_route(
     Extension(state): Extension<Arc<State>>,
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
-    Path(route_id): Path<i64>,
+    Path(route_id): Path<i32>,
     Json(route): Json<requests::ChangeRoute>,
 ) -> Result<impl IntoResponse, Error> {
     let _user_id = middleware::get_user(auth.token(), &state.pool).await?;
@@ -1018,9 +943,9 @@ pub(crate) async fn patch_route(
     let _res = sqlx::query!(
         r#"
 UPDATE Routes
-SET code=?, name=?, main_subroute=?, operator=?,
-    badge_text=?, badge_bg=?, active=?
-WHERE id=?
+SET code=$1, name=$2, main_subroute=$3, operator=$4,
+    badge_text=$5, badge_bg=$6, active=$7
+WHERE id=$8
     "#,
         route.code,
         route.name,
@@ -1041,22 +966,23 @@ WHERE id=?
 pub(crate) async fn delete_route(
     Extension(state): Extension<Arc<State>>,
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
-    Path(route_id): Path<i64>,
+    Path(route_id): Path<i32>,
 ) -> Result<impl IntoResponse, Error> {
     let _user_id = middleware::get_user(auth.token(), &state.pool).await?;
 
-    let subroute_count: i32 = sqlx::query!(
+    let subroute_count: i64 = sqlx::query!(
         r#"
 SELECT count(*) as count
-FROM Subroutes
-WHERE route=?
+FROM subroutes
+WHERE route=$1
 "#,
         route_id
     )
     .fetch_one(&state.pool)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?
-    .count;
+    .count
+    .unwrap_or(0);
 
     if subroute_count > 0 {
         return Err(Error::DependenciesNotMet);
@@ -1065,7 +991,7 @@ WHERE route=?
     let deleted_rows = sqlx::query!(
         r#"
 DELETE FROM Routes
-WHERE id=?
+WHERE id=$1
     "#,
         route_id
     )
@@ -1084,27 +1010,26 @@ WHERE id=?
 pub(crate) async fn create_subroute(
     Extension(state): Extension<Arc<State>>,
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
-    Path(route_id): Path<i64>,
+    Path(route_id): Path<i32>,
     Json(subroute): Json<requests::ChangeSubroute>,
 ) -> Result<impl IntoResponse, Error> {
     let _user_id = middleware::get_user(auth.token(), &state.pool).await?;
 
-    let circular_pseudo_bool = if subroute.circular { 1 } else { 0 };
     let res = sqlx::query!(
         r#"
-INSERT INTO Subroutes(route, flag, circular)
-VALUES (?, ?, ?)
+INSERT INTO subroutes(route, flag, circular)
+VALUES ($1, $2, $3)
 RETURNING id
     "#,
         route_id,
         subroute.flag,
-        circular_pseudo_bool,
+        subroute.circular,
     )
     .fetch_one(&state.pool)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
-    let returned: HashMap<&str, i64> = {
+    let returned: HashMap<&str, i32> = {
         let mut map = HashMap::new();
         map.insert("id", res.id);
         map
@@ -1116,17 +1041,17 @@ RETURNING id
 pub(crate) async fn patch_subroute(
     Extension(state): Extension<Arc<State>>,
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
-    Path(route_id): Path<i64>,
-    Path(subroute_id): Path<i64>,
+    Path(route_id): Path<i32>,
+    Path(subroute_id): Path<i32>,
     Json(route): Json<requests::ChangeSubroute>,
 ) -> Result<impl IntoResponse, Error> {
     let _user_id = middleware::get_user(auth.token(), &state.pool).await?;
 
     let _res = sqlx::query!(
         r#"
-UPDATE Subroutes
-SET flag=?, circular=?
-WHERE id=? AND route=?
+UPDATE subroutes
+SET flag=$1, circular=$2
+WHERE id=$3 AND route=$4
     "#,
         route.flag,
         route.circular,
@@ -1143,22 +1068,23 @@ WHERE id=? AND route=?
 pub(crate) async fn delete_subroute(
     Extension(state): Extension<Arc<State>>,
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
-    Path((route_id, subroute_id)): Path<(i64, i64)>,
+    Path((route_id, subroute_id)): Path<(i32, i32)>,
 ) -> Result<impl IntoResponse, Error> {
     let _user_id = middleware::get_user(auth.token(), &state.pool).await?;
 
-    let stop_count: i32 = sqlx::query!(
+    let stop_count: i64 = sqlx::query!(
         r#"
 SELECT count(*) as count
-FROM SubrouteStops
-WHERE subroute=?
+FROM subroute_stops
+WHERE subroute=$1
 "#,
         subroute_id
     )
     .fetch_one(&state.pool)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?
-    .count;
+    .count
+    .unwrap_or(0);
 
     if stop_count > 0 {
         return Err(Error::DependenciesNotMet);
@@ -1166,8 +1092,8 @@ WHERE subroute=?
 
     let deleted_rows = sqlx::query!(
         r#"
-DELETE FROM Subroutes
-WHERE id=? AND route=?
+DELETE FROM subroutes
+WHERE id=$1 AND route=$2
     "#,
         subroute_id,
         route_id
@@ -1208,17 +1134,17 @@ WHERE id=? AND route=?
 )]
 pub(crate) async fn get_schedule(
     Extension(state): Extension<Arc<State>>,
-    Path(route_id): Path<i64>,
+    Path(route_id): Path<i32>,
 ) -> Result<impl IntoResponse, Error> {
     let res = sqlx::query!(
         r#"
-SELECT Departures.id as id,
-    Subroutes.id as subroute,
-    Departures.time as time,
-    Departures.calendar as calendar
-FROM Subroutes
-JOIN Departures on Departures.subroute = Subroutes.id
-WHERE Subroutes.route=?
+SELECT departures.id as id,
+    subroutes.id as subroute,
+    departures.time as time,
+    departures.calendar as calendar
+FROM subroutes
+JOIN departures on departures.subroute = subroutes.id
+WHERE subroutes.route=$1
     "#,
         route_id
     )
@@ -1232,7 +1158,7 @@ WHERE Subroutes.route=?
             id: row.id,
             subroute: row.subroute,
             time: row.time,
-            calendar: serde_json::from_str(&row.calendar)
+            calendar: serde_json::from_value(row.calendar)
                 .map_err(|_err| Error::DatabaseDeserialization)?,
         });
     }
@@ -1275,17 +1201,17 @@ WHERE Subroutes.route=?
 )]
 pub(crate) async fn get_schedule_for_date(
     Extension(state): Extension<Arc<State>>,
-    Path((route_id, date)): Path<(i64, String)>,
+    Path((route_id, date)): Path<(i32, String)>,
 ) -> Result<impl IntoResponse, Error> {
     let date = NaiveDate::parse_from_str(&date, "%Y-%m-%d")
         .map_err(|err| Error::ValidationFailure(err.to_string()))?;
 
     let res = sqlx::query!(
         r#"
-SELECT Subroutes.id as subroute, Departures.time as time, Departures.calendar as calendar
-FROM Subroutes
-JOIN Departures on Departures.subroute = Subroutes.id
-WHERE Subroutes.route=?
+SELECT subroutes.id as subroute, departures.time as time, departures.calendar as calendar
+FROM subroutes
+JOIN departures on departures.subroute = subroutes.id
+WHERE subroutes.route=$1
 ORDER BY time asc
     "#,
         route_id
@@ -1296,7 +1222,7 @@ ORDER BY time asc
 
     let mut departures = vec![];
     for row in res {
-        let calendar: Calendar = serde_json::from_str(&row.calendar)
+        let calendar: Calendar = serde_json::from_value(row.calendar)
             .map_err(|_err| Error::DatabaseDeserialization)?;
         if calendar.includes(date) {
             departures.push(DateDeparture {
@@ -1332,15 +1258,15 @@ ORDER BY time asc
 )]
 pub(crate) async fn get_route_stops(
     Extension(state): Extension<Arc<State>>,
-    Path(route_id): Path<i64>,
+    Path(route_id): Path<i32>,
 ) -> Result<impl IntoResponse, Error> {
     let res = sqlx::query!(
         r#"
-SELECT Subroutes.id as subroute, SubrouteStops.stop as stop, SubrouteStops.time_to_next as diff
-FROM Subroutes
-JOIN SubrouteStops on SubrouteStops.subroute = Subroutes.id
-WHERE Subroutes.route=?
-ORDER BY Subroutes.id ASC, SubrouteStops.idx ASC
+SELECT subroutes.id as subroute, subroute_stops.stop as stop, subroute_stops.time_to_next as diff
+FROM subroutes
+JOIN subroute_stops ON subroute_stops.subroute = subroutes.id
+WHERE subroutes.route=$1
+ORDER BY subroutes.id ASC, subroute_stops.idx ASC
     "#,
         route_id
     )
@@ -1375,12 +1301,12 @@ ORDER BY Subroutes.id ASC, SubrouteStops.idx ASC
 pub(crate) async fn patch_subroute_stops(
     Extension(state): Extension<Arc<State>>,
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
-    Path((route_id, subroute_id)): Path<(i64, i64)>,
+    Path((route_id, subroute_id)): Path<(i32, i32)>,
     Json(request): Json<requests::ChangeSubrouteStops>,
 ) -> Result<impl IntoResponse, Error> {
     let user_id = middleware::get_user(auth.token(), &state.pool).await?;
 
-    if user_id != 1 {
+    if user_id != 1 && user_id != 2 {
         return Err(Error::Forbidden);
     }
 
@@ -1393,11 +1319,11 @@ pub(crate) async fn patch_subroute_stops(
 
     let existing_query_res = sqlx::query!(
         r#"
-SELECT SubrouteStops.stop as stop, SubrouteStops.time_to_next as diff
-FROM Subroutes
-JOIN SubrouteStops on SubrouteStops.subroute = Subroutes.id
-WHERE Subroutes.route=? AND Subroutes.id=?
-ORDER BY SubrouteStops.idx ASC
+SELECT subroute_stops.stop as stop, subroute_stops.time_to_next as diff
+FROM subroutes
+JOIN subroute_stops on subroute_stops.subroute = subroutes.id
+WHERE subroutes.route=$1 AND subroutes.id=$2
+ORDER BY subroute_stops.idx ASC
     "#,
         route_id,
         subroute_id
@@ -1409,8 +1335,8 @@ ORDER BY SubrouteStops.idx ASC
     // Check for the difference from stored to future
     let stored_len = existing_query_res.len();
     let check_len = request.from.stops.len();
-    let to_store_len = request.to.stops.len() as i64;
-    let stored_changes = to_store_len as i32 - stored_len as i32;
+    let to_store_len = request.to.stops.len() as i16;
+    let stored_changes = to_store_len - stored_len as i16;
 
     if check_len != stored_len {
         return Err(Error::ValidationFailure("Check mismatch".to_string()));
@@ -1442,8 +1368,8 @@ ORDER BY SubrouteStops.idx ASC
     if stored_changes < 0 {
         let deleted_rows = sqlx::query!(
             r#"
-DELETE FROM SubrouteStops
-WHERE Subroute=? AND idx>=?
+DELETE FROM subroute_stops
+WHERE Subroute=$1 AND idx>=$2
     "#,
             subroute_id,
             to_store_len
@@ -1467,17 +1393,18 @@ WHERE Subroute=? AND idx>=?
             .skip(stored_len)
             .enumerate();
 
-        for (index, (stop, diff)) in additional_entries {
-            let index = (stored_len + index) as i64;
+        for (index, (stop, _diff)) in additional_entries {
+            let index = (stored_len + index) as i16;
             let _res = sqlx::query!(
                 r#"
-INSERT INTO SubrouteStops(subroute, stop, time_to_next, idx)
-VALUES (?, ?, ?, ?)
+INSERT INTO subroute_stops(subroute, stop, idx, time_to_next)
+VALUES ($1, $2, $3, $4)
     "#,
                 subroute_id,
                 stop,
-                diff,
-                index
+                index,
+                // FIXME this should be the diff variable
+                0
             )
             .execute(&state.pool)
             .await
@@ -1496,12 +1423,12 @@ VALUES (?, ?, ?, ?)
             .enumerate();
 
         for (index, (stop, diff)) in overlapping_entries {
-            let index = index as i64;
+            let index = index as i16;
             let _res = sqlx::query!(
                 r#"
-UPDATE SubrouteStops
-SET stop=?, time_to_next=?
-WHERE  subroute=? AND idx=?
+UPDATE subroute_stops
+SET stop=$1, time_to_next=$2
+WHERE  subroute=$3 AND idx=$4
     "#,
                 stop,
                 diff,
@@ -1532,18 +1459,18 @@ pub(crate) async fn get_untagged_stop_pictures(
 ) -> Result<impl IntoResponse, Error> {
     let user_id = middleware::get_user(auth.token(), &state.pool).await?;
 
-    let offset = paginator.p * PAGE_SIZE;
+    let offset = (paginator.p * PAGE_SIZE) as i64;
     let res = sqlx::query!(
         r#"
 SELECT id, original_filename, sha1, public, sensitive, tagged, uploader,
 	upload_date, capture_date, width, height, lon, lat, camera_ref, tags, notes
-FROM StopPics
-WHERE tagged = 0 AND uploader = ?
+FROM stop_pics
+WHERE tagged=false AND uploader=$1
 ORDER BY capture_date ASC
-LIMIT ? OFFSET ?
+LIMIT $2 OFFSET $3
     "#,
         user_id,
-        PAGE_SIZE,
+        PAGE_SIZE as i64,
         offset
     )
     .fetch_all(&state.pool)
@@ -1564,15 +1491,15 @@ LIMIT ? OFFSET ?
             id: row.id,
             original_filename: row.original_filename,
             sha1: row.sha1,
-            public: row.public != 0,
-            sensitive: row.sensitive != 0,
+            public: row.public,
+            sensitive: row.sensitive,
             uploader: row.uploader,
             upload_date: row.upload_date,
             capture_date: row.capture_date,
             lon: row.lon,
             lat: row.lat,
-            width: row.width as u32,
-            height: row.height as u32,
+            width: row.width,
+            height: row.height,
             camera_ref: row.camera_ref,
             tags,
             notes: row.notes,
@@ -1619,18 +1546,16 @@ pub(crate) async fn upload_stop_picture(
 
         if res.is_err() {
             sleep(Duration::from_secs(1));
-        } else {
-            continue;
+            // Retry, just in case
+            middleware::upload_stop_picture(
+                user_id,
+                filename.clone(),
+                &state.bucket,
+                &state.pool,
+                &content,
+            )
+            .await?;
         }
-        // Retry, just in case
-        middleware::upload_stop_picture(
-            user_id,
-            filename.clone(),
-            &state.bucket,
-            &state.pool,
-            &content,
-        )
-        .await?;
     }
 
     Ok((StatusCode::OK, "").into_response())
@@ -1639,7 +1564,7 @@ pub(crate) async fn upload_stop_picture(
 pub(crate) async fn patch_stop_picture_meta(
     Extension(state): Extension<Arc<State>>,
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
-    Path(stop_picture_id): Path<i64>,
+    Path(stop_picture_id): Path<i32>,
     Json(stop_pic_meta): Json<requests::ChangeStopPic>,
 ) -> Result<impl IntoResponse, Error> {
     let updater = middleware::get_user(auth.token(), &state.pool).await?;
@@ -1651,10 +1576,10 @@ pub(crate) async fn patch_stop_picture_meta(
     let tags = serde_json::to_string(&stop_pic_meta.tags).unwrap();
     let _res = sqlx::query!(
         r#"
-UPDATE StopPics
-SET public=?, sensitive=?, lon=?, lat=?, tags=?, quality=?, updater=?,
-    update_date=?, tagged=1
-WHERE id=?
+UPDATE stop_pics
+SET public=$1, sensitive=$2, lon=$3, lat=$4, tags=$5, quality=$6, updater=$7,
+    update_date=$8, tagged=true
+WHERE id=$9
     "#,
         stop_pic_meta.public,
         stop_pic_meta.sensitive,
@@ -1672,7 +1597,7 @@ WHERE id=?
 
     let _res = sqlx::query(&format!(
         r#"
-DELETE FROM StopPicStops
+DELETE FROM stop_pic_stops
 WHERE pic=? AND stop NOT IN ({stop_ids})
     "#
     ))
@@ -1684,8 +1609,9 @@ WHERE pic=? AND stop NOT IN ({stop_ids})
     for stop_id in stop_pic_meta.stops {
         let _res = sqlx::query!(
             r#"
-INSERT OR IGNORE INTO StopPicStops(pic, stop)
-VALUES (?, ?)
+INSERT INTO stop_pic_stops(pic, stop)
+VALUES ($1, $2)
+ON CONFLICT DO NOTHING
     "#,
             stop_picture_id,
             stop_id
@@ -1701,11 +1627,11 @@ VALUES (?, ?)
 pub(crate) async fn delete_stop_picture(
     Extension(state): Extension<Arc<State>>,
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
-    Path(stop_picture_id): Path<i64>,
+    Path(stop_picture_id): Path<i32>,
 ) -> Result<impl IntoResponse, Error> {
     let user_id = middleware::get_user(auth.token(), &state.pool).await?;
 
-    if user_id != 1 {
+    if user_id != 1 && user_id != 2 {
         return Err(Error::Forbidden);
     }
 

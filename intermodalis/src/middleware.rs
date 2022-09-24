@@ -18,15 +18,14 @@
 
 use std::io::{BufReader, Cursor};
 
-use base16ct;
 use bytes::Bytes;
 use chrono::Local;
-use s3;
 use sha1::{Digest, Sha1};
+use sqlx::PgPool;
 
 use crate::models::StopPic;
 use crate::utils::Exif;
-use crate::{Error, SqlitePool, Stats, Stop};
+use crate::{Error, Stats, Stop};
 
 const THUMBNAIL_MAX_WIDTH: u32 = 300;
 const THUMBNAIL_MAX_HEIGHT: u32 = 200;
@@ -36,89 +35,77 @@ const MEDIUM_IMG_MAX_WIDTH: u32 = 1200;
 const MEDIUM_IMG_MAX_HEIGHT: u32 = 800;
 const MEDIUM_IMG_MAX_QUALITY: f32 = 85.0;
 
-pub(crate) async fn get_stops(
-    db_pool: &SqlitePool,
-) -> Result<Vec<Stop>, Error> {
-    Ok(sqlx::query!(
-        r#"
-SELECT *
-FROM Stops
-    "#
-    )
-    .fetch_all(db_pool)
-    .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
-    .into_iter()
-    .map(|row| {
-        let tags: Vec<String> =
-            if let Ok(tags) = serde_json::from_str(&row.tags) {
-                tags
-            } else {
-                // todo warn
-                vec![]
-            };
-        Stop {
-            id: row.id,
-            source: row.source,
-            name: row.name,
-            official_name: row.official_name,
-            osm_name: row.osm_name,
-            short_name: row.short_name,
-            locality: row.locality,
-            street: row.street,
-            door: row.door,
-            parish: row.parish,
-            lat: row.lat,
-            lon: row.lon,
-            external_id: row.external_id,
-            succeeded_by: row.succeeded_by,
-            notes: row.notes,
-            has_crossing: row.has_crossing.map(|val| val != 0),
-            has_accessibility: row.has_accessibility.map(|val| val != 0),
-            has_abusive_parking: row.has_abusive_parking.map(|val| val != 0),
-            has_outdated_info: row.has_outdated_info.map(|val| val != 0),
-            is_damaged: row.is_damaged.map(|val| val != 0),
-            is_vandalized: row.is_vandalized.map(|val| val != 0),
-            has_flag: row.has_flag.map(|val| val != 0),
-            has_schedules: row.has_schedules.map(|val| val != 0),
-            has_sidewalk: row.has_sidewalk.map(|val| val != 0),
-            has_shelter: row.has_shelter.map(|val| val != 0),
-            has_bench: row.has_bench.map(|val| val != 0),
-            has_trash_can: row.has_trash_can.map(|val| val != 0),
-            is_illuminated: row.is_illuminated.map(|val| val != 0),
-            has_illuminated_path: row.has_illuminated_path.map(|val| val != 0),
-            has_visibility_from_within: row.has_visibility_from_within.map(|val| val != 0),
-            has_visibility_from_area: row.has_visibility_from_area.map(|val| val != 0),
-            is_visible_from_outside: row.is_visible_from_outside.map(|val| val != 0),
-            updater: row.updater,
-            update_date: row.update_date,
-            tags,
-        }
-    })
-    .collect::<Vec<_>>())
+pub(crate) async fn get_stops(db_pool: &PgPool) -> Result<Vec<Stop>, Error> {
+    Ok(sqlx::query!("SELECT * FROM stops")
+        .fetch_all(db_pool)
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+        .into_iter()
+        .map(|row| {
+            let tags: Vec<String> =
+                if let Ok(tags) = serde_json::from_str(&row.tags) {
+                    tags
+                } else {
+                    // todo warn
+                    vec![]
+                };
+            Stop {
+                id: row.id,
+                source: row.source,
+                name: row.name,
+                official_name: row.official_name,
+                osm_name: row.osm_name,
+                short_name: row.short_name,
+                locality: row.locality,
+                street: row.street,
+                door: row.door,
+                parish: row.parish,
+                lat: row.lat,
+                lon: row.lon,
+                external_id: row.external_id,
+                succeeded_by: row.succeeded_by,
+                notes: row.notes,
+                has_crossing: row.has_crossing,
+                has_accessibility: row.has_accessibility,
+                has_abusive_parking: row.has_abusive_parking,
+                has_outdated_info: row.has_outdated_info,
+                is_damaged: row.is_damaged,
+                is_vandalized: row.is_vandalized,
+                has_flag: row.has_flag,
+                has_schedules: row.has_schedules,
+                has_sidewalk: row.has_sidewalk,
+                has_shelter: row.has_shelter,
+                has_bench: row.has_bench,
+                has_trash_can: row.has_trash_can,
+                is_illuminated: row.is_illuminated,
+                has_illuminated_path: row.has_illuminated_path,
+                has_visibility_from_within: row.has_visibility_from_within,
+                has_visibility_from_area: row.has_visibility_from_area,
+                is_visible_from_outside: row.is_visible_from_outside,
+                updater: row.updater,
+                update_date: row.update_date,
+                tags,
+            }
+        })
+        .collect::<Vec<_>>())
 }
 
 pub(crate) async fn upload_stop_picture(
-    user_id: i64,
+    user_id: i32,
     name: String,
     bucket: &s3::Bucket,
-    db_pool: &SqlitePool,
+    db_pool: &PgPool,
     content: &Bytes,
-) -> Result<i64, Error> {
+) -> Result<i32, Error> {
     let mut hasher = Sha1::new();
     hasher.update(&content);
     let hash = hasher.finalize();
     let hex_hash = base16ct::lower::encode_string(&hash);
 
-    let res = sqlx::query!(
-        r#"
-SELECT id FROM StopPics
-WHERE sha1=?"#,
-        hex_hash,
-    )
-    .fetch_optional(db_pool)
-    .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let res = sqlx::query!("SELECT id FROM stop_pics WHERE sha1=$1", hex_hash)
+        .fetch_optional(db_pool)
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     if let Some(res) = res {
         return Ok(res.id);
@@ -200,8 +187,8 @@ WHERE sha1=?"#,
         update_date: None,
         lon: None,
         lat: None,
-        width: original_img.width(),
-        height: original_img.height(),
+        width: original_img.width() as i32,
+        height: original_img.height() as i32,
         quality: 0,
         camera_ref: None,
         tags: vec![],
@@ -214,8 +201,8 @@ WHERE sha1=?"#,
     {
         let exif_data = Exif::from(exif);
 
-        stop_pic_entry.lon = exif_data.lon.map(|lon| lon as f32);
-        stop_pic_entry.lat = exif_data.lat.map(|lat| lat as f32);
+        stop_pic_entry.lon = exif_data.lon;
+        stop_pic_entry.lat = exif_data.lat;
         stop_pic_entry.camera_ref = exif_data.camera;
         stop_pic_entry.capture_date =
             exif_data.capture.map(|date| date.to_string());
@@ -223,11 +210,11 @@ WHERE sha1=?"#,
 
     let res = sqlx::query!(
         r#"
-INSERT INTO StopPics(
+INSERT INTO stop_pics(
     original_filename, sha1, public, sensitive, tagged, uploader,
     upload_date, capture_date, width, height, lat, lon, camera_ref
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 RETURNING id
         "#,
         stop_pic_entry.original_filename,
@@ -252,22 +239,23 @@ RETURNING id
 }
 
 pub(crate) async fn delete_stop_picture(
-    stop_picture_id: i64,
+    stop_picture_id: i32,
     bucket: &s3::Bucket,
-    db_pool: &SqlitePool,
+    db_pool: &PgPool,
 ) -> Result<(), Error> {
-    let tagged_stops: i32 = sqlx::query!(
+    let tagged_stops = sqlx::query!(
         r#"
 SELECT count(*) as count
-FROM StopPicStops
-WHERE pic=?
+FROM stop_pic_stops
+WHERE pic=$1
 "#,
         stop_picture_id
     )
     .fetch_one(db_pool)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?
-    .count;
+    .count
+    .unwrap_or(0);
 
     if tagged_stops > 0 {
         return Err(Error::DependenciesNotMet);
@@ -275,8 +263,8 @@ WHERE pic=?
 
     let stop_pic = sqlx::query!(
         r#"
-SELECT sha1 FROM StopPics
-WHERE id=?
+SELECT sha1 FROM stop_pics
+WHERE id=$1
     "#,
         stop_picture_id,
     )
@@ -303,29 +291,24 @@ WHERE id=?
         return Err(Error::NotFoundUpstream);
     }
 
-    let _res = sqlx::query(
-        r#"
-DELETE FROM StopPics
-WHERE id=?
-    "#,
-    )
-    .bind(stop_picture_id)
-    .execute(db_pool)
-    .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()));
+    let _res = sqlx::query("DELETE FROM stop_pics WHERE id=$1")
+        .bind(stop_picture_id)
+        .execute(db_pool)
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()));
 
     Ok(())
 }
 
 pub(crate) async fn try_get_user(
     token: &str,
-    db_pool: &SqlitePool,
-) -> Result<Option<i64>, Error> {
+    db_pool: &PgPool,
+) -> Result<Option<i32>, Error> {
     let res = sqlx::query!(
         r#"
 SELECT id
 FROM Users
-WHERE token=?
+WHERE token=$1
     "#,
         token
     )
@@ -333,13 +316,13 @@ WHERE token=?
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
-    Ok(if let Some(row) = res { row.id } else { None })
+    Ok(res.map(|row| row.id))
 }
 
 pub(crate) async fn get_user(
     token: &str,
-    db_pool: &SqlitePool,
-) -> Result<i64, Error> {
+    db_pool: &PgPool,
+) -> Result<i32, Error> {
     let user = try_get_user(token, db_pool).await?;
     if let Some(id) = user {
         Ok(id)
@@ -348,7 +331,7 @@ pub(crate) async fn get_user(
     }
 }
 
-pub(crate) async fn get_stats(db_pool: &SqlitePool) -> Result<Stats, Error> {
+pub(crate) async fn get_stats(db_pool: &PgPool) -> Result<Stats, Error> {
     let stop_count = sqlx::query!(
         r#"
 SELECT count(*) as cnt
@@ -359,7 +342,8 @@ WHERE Stops.source = 'osm'
     .fetch_one(db_pool)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?
-    .cnt;
+    .cnt
+    .unwrap_or(0);
 
     let route_count = sqlx::query!(
         r#"
@@ -370,7 +354,8 @@ FROM Routes
     .fetch_one(db_pool)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?
-    .cnt;
+    .cnt
+    .unwrap_or(0);
 
     let subroute_count = sqlx::query!(
         r#"
@@ -381,7 +366,8 @@ FROM Subroutes
     .fetch_one(db_pool)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?
-    .cnt;
+    .cnt
+    .unwrap_or(0);
 
     let departure_count = sqlx::query!(
         r#"
@@ -392,18 +378,20 @@ FROM Departures
     .fetch_one(db_pool)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?
-    .cnt;
+    .cnt
+    .unwrap_or(0);
 
     let picture_count = sqlx::query!(
         r#"
 SELECT count(*) as cnt
-FROM StopPics
+FROM stop_pics
     "#
     )
     .fetch_one(db_pool)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?
-    .cnt;
+    .cnt
+    .unwrap_or(0);
 
     Ok(Stats {
         stop_count,

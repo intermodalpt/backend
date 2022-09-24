@@ -23,11 +23,11 @@ use std::time::Duration;
 
 use chrono::Local;
 use serde::{Deserialize, Serialize};
-use sqlx::SqlitePool;
+use sqlx::postgres::PgPool;
 use tokio::time::sleep;
 use urlencoding::encode as urlencode;
 
-const FLOAT_TOLERANCE: f32 = 0.000001;
+const FLOAT_TOLERANCE: f64 = 0.000001;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 struct XMLOSM {
@@ -55,8 +55,8 @@ struct XMLNote {}
 #[serde(rename = "node")]
 struct XMLNode {
     id: i64,
-    lon: f32,
-    lat: f32,
+    lon: f64,
+    lat: f64,
     #[serde(rename = "$value")]
     tags: Vec<XMLTag>,
 }
@@ -140,9 +140,7 @@ impl From<XMLNode> for Stop {
     }
 }
 
-pub(crate) async fn import(
-    db_pool: &SqlitePool,
-) -> Result<(usize, usize), Error> {
+pub(crate) async fn import(db_pool: &PgPool) -> Result<(usize, usize), Error> {
     static DISTRICTS: [&str; 2] = ["Setúbal", "Lisboa"];
 
     let mut new_stops = vec![];
@@ -262,47 +260,41 @@ async fn fetch_district_stops(district: &str) -> Result<XMLOSM, Error> {
     serde_xml_rs::from_str(&xml).map_err(|e| Error::Processing(e.to_string()))
 }
 
-async fn insert_stops(
-    db_pool: &SqlitePool,
-    stops: Vec<Stop>,
-) -> Result<(), Error> {
+async fn insert_stops(db_pool: &PgPool, stops: Vec<Stop>) -> Result<(), Error> {
     for stop in stops {
         let _res = sqlx::query!(
-        r#"
+            r#"
 INSERT INTO Stops(name, osm_name, official_name, lon, lat, has_shelter,
     has_bench, has_trash_can, is_illuminated, source, external_id)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
     "#,
-        stop.name,
-        stop.osm_name,
-        stop.official_name,
-        stop.lon,
-        stop.lat,
-        stop.has_shelter,
-        stop.has_bench,
-        stop.has_trash_can,
-        stop.is_illuminated,
-        stop.source,
-        stop.external_id,
-    )
-            .execute(db_pool)
-            .await
-            .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+            stop.name,
+            stop.osm_name,
+            stop.official_name,
+            stop.lon,
+            stop.lat,
+            stop.has_shelter,
+            stop.has_bench,
+            stop.has_trash_can,
+            stop.is_illuminated,
+            stop.source,
+            stop.external_id,
+        )
+        .execute(db_pool)
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
     }
     Ok(())
 }
 
-async fn update_stops(
-    db_pool: &SqlitePool,
-    stops: Vec<Stop>,
-) -> Result<(), Error> {
+async fn update_stops(db_pool: &PgPool, stops: Vec<Stop>) -> Result<(), Error> {
     for stop in stops {
         let _res = sqlx::query!(
             r#"
 UPDATE Stops
-SET official_name=?, osm_name=?, lon=?, lat=?, has_shelter = ?, has_bench = ?,
-    has_trash_can = ?, is_illuminated = ?
-WHERE id=? AND external_id=?
+SET official_name=$1, osm_name=$2, lon=$3, lat=$4, has_shelter=$5, has_bench=$6,
+    has_trash_can=$7, is_illuminated=$8
+WHERE id=$9 AND external_id=$10
     "#,
             stop.official_name,
             stop.osm_name,

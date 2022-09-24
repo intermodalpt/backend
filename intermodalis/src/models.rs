@@ -21,7 +21,7 @@ use utoipa::Component;
 
 #[derive(Debug, Serialize, Deserialize, Component)]
 pub struct Stop {
-    pub id: i64,
+    pub id: i32,
     #[component(example = "cmet")]
     pub source: String,
     #[component(example = "Setúbal (ITS)")]
@@ -38,17 +38,17 @@ pub struct Stop {
     pub street: Option<String>,
     #[component(example = "123-A")]
     pub door: Option<String>,
-    pub parish: Option<i64>,
+    pub parish: Option<i32>,
     #[component(example = 38.123_456)]
-    pub lat: Option<f32>,
+    pub lat: Option<f64>,
     #[component(example = -9.654_321)]
-    pub lon: Option<f32>,
+    pub lon: Option<f64>,
     #[serde(default)]
     pub external_id: Option<String>,
     #[serde(default)]
-    pub succeeded_by: Option<i64>,
+    pub succeeded_by: Option<i32>,
     #[serde(default)]
-    pub notes: Option<i64>,
+    pub notes: Option<String>,
     #[serde(default)]
     pub has_crossing: Option<bool>,
     #[serde(default)]
@@ -83,7 +83,7 @@ pub struct Stop {
     pub has_visibility_from_area: Option<bool>,
     #[serde(default)]
     pub is_visible_from_outside: Option<bool>,
-    pub updater: i64,
+    pub updater: i32,
     pub update_date: String,
     #[serde(default)]
     pub tags: Vec<String>,
@@ -91,29 +91,29 @@ pub struct Stop {
 
 #[derive(Debug, Serialize, Deserialize, Component)]
 pub struct User {
-    pub id: i64,
+    pub id: i32,
     pub username: String,
     pub token: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Component)]
 pub struct StopPic {
-    pub id: i64,
+    pub id: i32,
     pub original_filename: String,
     pub sha1: String,
     pub public: bool,
     pub sensitive: bool,
     pub tagged: bool,
-    pub uploader: i64,
+    pub uploader: i32,
     pub upload_date: String,
     pub capture_date: Option<String>,
-    pub updater: Option<i64>,
+    pub updater: Option<i32>,
     pub update_date: Option<String>,
-    pub lon: Option<f32>,
-    pub lat: Option<f32>,
-    pub width: u32,
-    pub height: u32,
-    pub quality: u32,
+    pub lon: Option<f64>,
+    pub lat: Option<f64>,
+    pub width: i32,
+    pub height: i32,
+    pub quality: i16,
     pub camera_ref: Option<String>,
     pub tags: Vec<String>,
     pub notes: Option<String>,
@@ -126,8 +126,8 @@ pub(crate) mod requests {
     #[derive(Deserialize, Component)]
     pub struct NewStop {
         pub source: String,
-        pub lon: f32,
-        pub lat: f32,
+        pub lon: f64,
+        pub lat: f64,
         pub name: Option<String>,
         pub short_name: Option<String>,
         pub official_name: Option<String>,
@@ -176,8 +176,8 @@ pub(crate) mod requests {
 
     #[derive(Deserialize, Component)]
     pub struct ChangeStop {
-        pub lon: f32,
-        pub lat: f32,
+        pub lon: f64,
+        pub lat: f64,
         pub name: Option<String>,
         pub short_name: Option<String>,
         pub official_name: Option<String>,
@@ -229,8 +229,8 @@ pub(crate) mod requests {
         pub code: String,
         pub name: String,
         pub circular: bool,
-        pub main_subroute: Option<i64>,
-        pub operator: i64,
+        pub main_subroute: Option<i32>,
+        pub operator: i32,
         pub badge_text: String,
         pub badge_bg: String,
         pub active: bool,
@@ -244,8 +244,8 @@ pub(crate) mod requests {
 
     #[derive(Deserialize, Component)]
     pub struct SubrouteStops {
-        pub stops: Vec<i64>,
-        pub diffs: Vec<Option<i64>>,
+        pub stops: Vec<i32>,
+        pub diffs: Vec<Option<i32>>,
     }
 
     #[derive(Deserialize, Component)]
@@ -258,12 +258,12 @@ pub(crate) mod requests {
     pub struct ChangeStopPic {
         pub public: bool,
         pub sensitive: bool,
-        pub lon: Option<f32>,
-        pub lat: Option<f32>,
+        pub lon: Option<f64>,
+        pub lat: Option<f64>,
         pub tags: Vec<String>,
-        pub stops: Vec<i64>,
+        pub stops: Vec<i32>,
         pub notes: Option<String>,
-        pub quality: u32,
+        pub quality: i16,
     }
 }
 
@@ -277,27 +277,27 @@ pub(crate) mod responses {
 
     #[derive(Serialize, Component)]
     pub struct Parish {
-        pub id: i64,
+        pub id: i32,
         #[component(example = "Quinta do Conde")]
         pub name: String,
         #[component(example = "Sesimbra")]
         pub municipality: String,
         #[component(example = 3)]
-        pub zone: i64,
+        pub zone: i32,
         #[component(example = "GeoJSON polygon")]
         pub polygon: Option<String>,
     }
 
     #[derive(Serialize, Component)]
     pub struct Route {
-        pub(crate) id: i64,
+        pub(crate) id: i32,
         pub(crate) subroutes: Vec<Subroute>,
         #[component(example = "Azeitão (Circular)")]
         pub(crate) code: String,
         pub(crate) name: String,
         #[component(example = true)]
-        pub(crate) circular: Option<bool>,
-        pub(crate) main_subroute: Option<i64>,
+        pub(crate) circular: bool,
+        pub(crate) main_subroute: Option<i32>,
         pub(crate) badge_text: String,
         pub(crate) badge_bg: String,
         pub(crate) active: bool,
@@ -305,37 +305,37 @@ pub(crate) mod responses {
 
     #[derive(Serialize, Component)]
     pub struct Subroute {
-        pub(crate) id: i64,
+        pub(crate) id: i32,
         #[component(example = "Azeitão (Circular)")]
-        pub(crate) flag: Option<String>,
-        #[component(example = 123)]
-        pub(crate) cached_from: Option<i64>,
-        #[component(example = 123)]
-        pub(crate) cached_to: Option<i64>,
+        pub(crate) flag: String,
+        // #[component(example = 123)]
+        // pub(crate) cached_from: Option<i32>,
+        // #[component(example = 123)]
+        // pub(crate) cached_to: Option<i32>,
     }
 
     #[derive(Serialize, Component)]
     pub struct Departure {
-        pub id: i64,
-        pub subroute: i64,
+        pub id: i32,
+        pub subroute: i32,
         // Departure time in minutes starting at midnight
         #[component(example = 480)]
-        pub time: i64,
+        pub time: i16,
         pub calendar: Calendar,
     }
 
     #[derive(Serialize, Component)]
     pub struct DateDeparture {
-        pub subroute: i64,
+        pub subroute: i32,
         #[component(example = 480)]
-        pub time: i64,
+        pub time: i16,
     }
 
     #[derive(Serialize, Component)]
     pub struct SubrouteStops {
-        pub subroute: i64,
-        pub stops: Vec<i64>,
-        pub diffs: Vec<Option<i64>>,
+        pub subroute: i32,
+        pub stops: Vec<i32>,
+        pub diffs: Vec<Option<i32>>,
     }
 
     #[derive(Serialize, Component)]
@@ -347,51 +347,52 @@ pub(crate) mod responses {
 
     #[derive(Serialize, Component)]
     pub struct SpiderSubroute {
-        pub route: i64,
-        pub flag: Option<String>,
-        pub stop_sequence: Vec<i64>,
+        pub route: i32,
+        pub flag: String,
+        pub stop_sequence: Vec<i32>,
     }
 
     #[derive(Serialize, Component)]
     pub struct SpiderStop {
         pub name: Option<String>,
-        pub lat: Option<f32>,
-        pub lon: Option<f32>,
+        pub lat: Option<f64>,
+        pub lon: Option<f64>,
     }
 
     #[derive(Serialize, Component)]
     pub struct SpiderMap {
-        pub routes: HashMap<i64, SpiderRoute>,
-        pub subroutes: HashMap<i64, SpiderSubroute>,
-        pub stops: HashMap<i64, SpiderStop>,
+        pub routes: HashMap<i32, SpiderRoute>,
+        pub subroutes: HashMap<i32, SpiderSubroute>,
+        pub stops: HashMap<i32, SpiderStop>,
     }
 
     #[derive(Debug, Serialize, Component)]
     pub struct PublicStopPic {
-        pub id: i64,
+        pub id: i32,
         pub sha1: String,
         pub capture_date: Option<String>,
-        pub lon: f32,
-        pub lat: f32,
-        pub quality: i64,
+        pub lon: Option<f64>,
+        pub lat: Option<f64>,
+        pub quality: i16,
         pub tags: Vec<String>,
     }
 
     #[derive(Debug, Serialize, Component)]
     pub struct TaggedStopPic {
-        pub id: i64,
+        pub id: i32,
         pub original_filename: String,
         pub sha1: String,
         pub public: bool,
         pub sensitive: bool,
-        pub uploader: i64,
+        pub uploader: i32,
         pub upload_date: String,
         pub capture_date: Option<String>,
-        pub lon: f32,
-        pub lat: f32,
-        pub width: u32,
-        pub height: u32,
-        pub quality: i64,
+        // TODO if is tagged then this should not be optional.
+        pub lon: Option<f64>,
+        pub lat: Option<f64>,
+        pub width: i32,
+        pub height: i32,
+        pub quality: i16,
         pub camera_ref: Option<String>,
         pub tags: Vec<String>,
         pub notes: Option<String>,
@@ -399,18 +400,18 @@ pub(crate) mod responses {
 
     #[derive(Debug, Serialize, Component)]
     pub struct UntaggedStopPic {
-        pub id: i64,
+        pub id: i32,
         pub original_filename: String,
         pub sha1: String,
         pub public: bool,
         pub sensitive: bool,
-        pub uploader: i64,
+        pub uploader: i32,
         pub upload_date: String,
         pub capture_date: Option<String>,
-        pub lon: Option<f32>,
-        pub lat: Option<f32>,
-        pub width: u32,
-        pub height: u32,
+        pub lon: Option<f64>,
+        pub lat: Option<f64>,
+        pub width: i32,
+        pub height: i32,
         pub camera_ref: Option<String>,
         pub tags: Vec<String>,
         pub notes: Option<String>,
@@ -418,10 +419,10 @@ pub(crate) mod responses {
 
     #[derive(Serialize, Clone, Component)]
     pub struct Stats {
-        pub stop_count: i32,
-        pub route_count: i32,
-        pub subroute_count: i32,
-        pub departure_count: i32,
-        pub picture_count: i32,
+        pub stop_count: i64,
+        pub route_count: i64,
+        pub subroute_count: i64,
+        pub departure_count: i64,
+        pub picture_count: i64,
     }
 }

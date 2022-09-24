@@ -42,16 +42,14 @@ use axum::http::Method;
 use axum::routing::{get, patch, post};
 use axum::{Extension, Json, Router};
 use config::Config;
-use s3;
-use sqlx::sqlite::SqlitePool;
+use sqlx::postgres::PgPool;
 use tower_http::cors::{Any, CorsLayer};
 use utoipa::OpenApi;
-use utoipa_swagger_ui;
 
 #[derive(Clone)]
 pub(crate) struct State {
     pub(crate) bucket: s3::Bucket,
-    pub(crate) pool: SqlitePool,
+    pub(crate) pool: PgPool,
     pub(crate) stats: Stats,
 }
 
@@ -190,11 +188,13 @@ async fn main() {
     .unwrap()
     .with_path_style();
 
-    let db_pool = SqlitePool::connect("sqlite:db.sqlite").await.expect("");
-    let stats = get_stats(&db_pool).await.unwrap();
+    let pool = PgPool::connect("postgres://username:password@host/db")
+        .await
+        .expect("");
+    let stats = get_stats(&pool).await.unwrap();
     let state = State {
         bucket,
-        pool: db_pool,
+        pool,
         stats,
     };
 
