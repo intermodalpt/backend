@@ -18,6 +18,7 @@
     "lz-string": "^1.4.4",
     "postcss": "^8.4.14",
     "svelte": "^3.49.0",
+    "svelte-select": "4.4.7",
     "tailwindcss": "^3.1.7",
     "vite": "^2.9.9"
   },

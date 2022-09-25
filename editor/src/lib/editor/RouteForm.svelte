@@ -58,7 +58,7 @@
           },
           body: JSON.stringify({
             flag: subroute.flag,
-            circular: subroute.circular,
+            circular: subroute.circular || false,
           })
         })
             .catch((e) => {

@@ -157,7 +157,7 @@
 </script>
 
 {#if $stopList}
-  <div class="max-h-[80vh] min-h-[1px] h-fit overflow-y-scroll">
+  <div class="max-h-[85vh] min-h-[1px] h-fit overflow-y-scroll">
     {#if $stopList.length === 0}
       <div class="flex flex-col items-center">
         <h2>This subroute has no stops.</h2>
