@@ -15,15 +15,17 @@
   });
 
   function matchState() {
-    if ($state === null) {
-      box.indeterminate = true;
-      box.checked = false;
-    } else if ($state) {
-      box.indeterminate = false;
-      box.checked = true;
-    } else {
-      box.indeterminate = false;
-      box.checked = false;
+    if (box) {
+      if ($state === null) {
+        box.indeterminate = true;
+        box.checked = false;
+      } else if ($state) {
+        box.indeterminate = false;
+        box.checked = true;
+      } else {
+        box.indeterminate = false;
+        box.checked = false;
+      }
     }
   }
 
