@@ -13,14 +13,23 @@
   let selectedStop = writable(undefined);
   let previewedPic = undefined;
 
+  let pickingFilers = false;
+  let filterOnlyNoName = false;
+  let filterOnlyNoOfficialName = false;
+  let filterOnlyNoOSM = false;
+  let filterOnlyNoAttrs = false;
+  let filterOnlyNoPics = false;
+
   export function selectStop(stopId) {
     $selectedStop = $stops[stopId];
   }
 
   function saveStopMeta(e) {
-    let newMeta = Object.assign(Object.assign({}, $selectedStop), e.detail);
+    let newMeta = Object.assign($selectedStop, e.detail);
 
     updateStop(newMeta);
+    // saveCache();
+
     $selectedStop = null;
   }
 
@@ -46,6 +55,7 @@
     stops: L.layerGroup(),
     osmStops: L.layerGroup(),
     otherStops: L.layerGroup(),
+    stopPics: L.layerGroup(),
   };
 
   let info = L.control();
@@ -84,10 +94,14 @@
   }
 
   function loadStops() {
+    mapLayers.stops.removeFrom(map);
     mapLayers.stops = L.markerClusterGroup({
       spiderfyOnMaxZoom: true,
       showCoverageOnHover: true,
-      //disableClusteringAtZoom: 15,
+      disableClusteringAtZoom: 14,
+      // iconCreateFunction: function(cluster) {
+      //   return L.divIcon({ html: '<b>' + cluster.getChildCount() + console.log(cluster) + '</b>' });
+      // }
     });
 
     let osmMarkers = [];
@@ -98,6 +112,25 @@
       if (stop.lat != null && stop.lon != null) {
         let marker = createStopMarker(stop);
         if (stop.source === "osm") {
+          if (filterOnlyNoName && stop.name) {
+            return;
+          }
+
+          if (filterOnlyNoOfficialName && stop.official_name) {
+            return;
+          }
+
+          if (filterOnlyNoOSM && stop.osm_name) {
+            return;
+          }
+
+          if (filterOnlyNoAttrs && stop.locality && stop.street) {
+            return;
+          }
+
+          if (filterOnlyNoPics && stop.locality && stop.street) {
+            return;
+          }
           osmMarkers.push(marker);
         } else {
           otherMarkers.push(marker);
@@ -111,6 +144,11 @@
         picMarkers.push(marker);
       }
     })
+
+
+    control.removeLayer(mapLayers.stopPics);
+    control.removeLayer(mapLayers.osmStops);
+    control.removeLayer(mapLayers.otherStops);
 
     mapLayers.stopPics = L.featureGroup.subGroup(mapLayers.stops, picMarkers);
     mapLayers.osmStops = L.featureGroup.subGroup(mapLayers.stops, osmMarkers);
@@ -179,7 +217,16 @@
       },
     };
   }
+
   let massEditing = false;
+
+  function openFilterPicker() {
+    pickingFilers = true;
+  }
+
+  function applyFilters() {
+    loadStops();
+  }
 </script>
 
 <div class="absolute right-8 top-8">
@@ -204,6 +251,7 @@
     </div>
   </div>
 
+  <input type="button" class="input input-info" value="Filtros" on:click={openFilterPicker}/>
   {#if previewedPic}
     <input type="checkbox" id="pic-preview" class="modal-toggle" checked />
     <div class="modal">
@@ -223,4 +271,23 @@
       </div>
     </div>
   {/if}
+{/if}
+
+{#if pickingFilers}
+  <input type="checkbox" id="filter-picker" class="modal-toggle" checked />
+  <div class="modal">
+    <div class="modal-box">
+      <h3 class="font-bold text-lg">Filtros</h3>
+      <p class="py-4 flex flex-col">
+        <label><input type="checkbox" class="mr-2" bind:value={filterOnlyNoName}>Só sem nome (nosso)</label>
+        <label><input type="checkbox" class="mr-2" bind:value={filterOnlyNoOfficialName}>Só sem nome oficial</label>
+        <label><input type="checkbox" class="mr-2" bind:value={filterOnlyNoOSM}>Só sem nome osm</label>
+        <label><input type="checkbox" class="mr-2" bind:value={filterOnlyNoAttrs}>Só com atributos em falta</label>
+        <label><input type="checkbox" class="mr-2" bind:value={filterOnlyNoPics}>Só sem fotos</label>
+      </p>
+      <div class="modal-action">
+        <label for="filter-picker" class="btn" on:mouseup={applyFilters}>Aplicar</label>
+      </div>
+    </div>
+  </div>
 {/if}
