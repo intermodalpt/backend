@@ -46,3 +46,109 @@ export function randomHexColor() {
 
   return "#" + hr + hg + hb;
 }
+
+
+export function weekdayName(weekday) {
+  switch (weekday) {
+    case 0:
+      return "Mon";
+    case 1:
+      return "Tue";
+    case 2:
+      return "Wed";
+    case 3:
+      return "Thu";
+    case 4:
+      return "Fri";
+    case 5:
+      return "Sat";
+    case 6:
+      return "Sun";
+    default:
+      return "???";
+  }
+}
+
+
+function conditionName(condition) {
+  switch (condition.condition) {
+    case "Holiday":
+      return "holidays";
+    case "Summer":
+      return "summer";
+    case "School":
+      return "school";
+    case "Nth":
+      switch (condition.nth) {
+        case 1:
+          return "(month's) 1st";
+        case 2:
+          return "(month's) 2nd";
+        case 3:
+          return "(month's) 3rd";
+        case 4:
+          return "(month's) 4th";
+        case 5:
+          return "(month's) 5th";
+        default:
+          return "???";
+      }
+    case "Range":
+      return `between ${condition.start} and ${condition.end}`;
+    default:
+      return "???";
+  }
+}
+
+const EVERY_DAY = [0, 1, 2, 3, 4, 5, 6];
+const WEEKDAYS = [0, 1, 2, 3, 4];
+const WEEKEND = [5, 6];
+
+export function calendarStr(calendar) {
+  if (calendar === {weekdays: WEEKDAYS, except_if: [{condition: "Holiday"}]}) {
+    return "Workdays"
+  }
+  if (calendar === {
+    weekdays: WEEKDAYS,
+    except_if: [{condition: "Holiday"}],
+    only_if: [{condition: "School"}]
+  }) {
+    return "School workdays"
+  }
+
+  let namedWeekdays;
+  if (calendar.weekdays === EVERY_DAY) {
+    namedWeekdays = "Everyday";
+  } else if (calendar.weekdays === WEEKDAYS) {
+    namedWeekdays = "Business weekdays";
+  } else if (calendar.weekdays === WEEKEND) {
+    namedWeekdays = "Weekend";
+  } else {
+    namedWeekdays = calendar.weekdays.map((day) => weekdayName(day)).join(", ");
+  }
+
+  let conditions = [];
+  if (calendar.only_if.length > 0) {
+    conditions.push(
+        "that are " + calendar.only_if.map((condition) => {
+          return conditionName(condition)
+        }).join(", ")
+    );
+  }
+  if (calendar.also_if.length > 0) {
+    conditions.push(
+        "plus " + calendar.also_if.map((condition) => {
+          return conditionName(condition)
+        }).join(", ")
+    );
+  }
+  if (calendar.except_if.length > 0) {
+    conditions.push(
+        "except " + calendar.except_if.map((condition) => {
+          return conditionName(condition)
+        }).join(", ")
+    );
+  }
+
+  return `${namedWeekdays} ${conditions.join(", ")}`
+}
