@@ -38,11 +38,11 @@
         let schId = JSON.stringify(e.calendar);
         if (!schMatrix[h]) schMatrix[h] = [];
         if (!schTypes.includes(schId)) schTypes.push(schId);
-        schMatrix[h].push({ minute: m, conditions: schId });
+        schMatrix[h].push({minute: m, conditions: schId});
       }
       let schArray = [];
       for (let k of Object.keys(schMatrix).sort()) {
-        schArray.push({ k: k, minutes: schMatrix[k] });
+        schArray.push({k: k, minutes: schMatrix[k]});
       }
       return [schArray, schTypes];
     }
@@ -96,15 +96,18 @@
 {#if $subrouteSchedule}
   <div class="flex flex-row gap-1 bg-base-200 p-1 rounded-xl w-min mx-auto">
     {#each $subrouteSchedule[0] as scheduleEntry}
-      <div class="bg-base-100 rounded-lg flex flex-col min-w-[1.0rem] items-start p-1">
+      <div class="bg-base-100 rounded-lg flex flex-col min-w-[1.0rem] items-start p-1  group">
         <div class="font-bold">{scheduleEntry.k}</div>
         {#each scheduleEntry.minutes as min}
           <div class="whitespace-nowrap">
             {min.minute}<sup>{String.fromCharCode($subrouteSchedule[1].indexOf(min.conditions) + 96 + 1)}</sup>
-            <class
-              on:click={() =>
+            <div
+                on:click={() =>
                 alert("Olha aqui dei delete da coisa, se ainda está é impressão tua isto está totalmente implementado")}
-              class="btn btn-circle btn-xs btn-ghost hover:bg-error">✕</class>
+                class="btn btn-circle btn-xs btn-ghost hover:bg-error opacity-0 group-hover:opacity-100 -ml-7
+                group-hover:-ml-1 transition-all -z-40">
+              ✕
+            </div>
           </div>
         {/each}
       </div>
@@ -119,14 +122,6 @@
     {/each}
   </div>
 {/if}
-
-<!-- <ul class="flex flex-col gap-2"> -->
-<!--   {#if $subrouteShedule} -->
-<!--     {#each $subrouteShedule as scheduleEntry} -->
-<!--       <li class="bg-base-200 rounded-lg">{JSON.stringify(scheduleEntry)}</li> -->
-<!--     {/each} -->
-<!--   {/if} -->
-<!-- </ul> -->
 
 <hr />
 <hr />
@@ -152,35 +147,35 @@
   <div class="border-2 rounded-lg p-2">
     <div class="flex gap-8">
       <span class="text-md">That applies</span>
-      <label>
+      <label class="flex gap-1 items-center">
         <input class="radio" name="exception-type" type="radio" value="only_if" bind:group={newConditionType} />
         Only if
       </label>
-      <label>
+      <label class="flex gap-1 items-center">
         <input class="radio" name="exception-type" type="radio" value="except_if" bind:group={newConditionType} />
         Except if
       </label>
-      <label>
+      <label class="flex gap-1 items-center">
         <input class="radio" name="exception-type" type="radio" value="also_if" bind:group={newConditionType} />
         Also if
       </label>
     </div>
     <div class="flex gap-12">
       <span class="text-md">By</span>
-      <label>
+      <label class="flex gap-1 items-center">
         <input class="radio" name="period" type="radio" value="Summer" bind:group={newConditionPeriod} />
         Summer
       </label>
-      <label>
+      <label class="flex gap-1 items-center">
         <input class="radio" name="period" type="radio" value="School" bind:group={newConditionPeriod} />
         School
       </label>
-      <label>
+      <label class="flex gap-1 items-center">
         <input class="radio" name="period" type="radio" value="Holiday" bind:group={newConditionPeriod} />
         Holiday
       </label>
       <div class="flex flex-col gap-2">
-        <label>
+        <label class="flex gap-1 items-center">
           <input
               class="radio"
               name="period"
@@ -203,7 +198,7 @@
         </div>
       </div>
       <div class="flex flex-col gap-2">
-        <label>
+        <label class="flex gap-1 items-center">
           <input class="radio" name="period" type="radio" value="Range" bind:group={newConditionPeriod} />
           Range
         </label>
