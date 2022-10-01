@@ -24,28 +24,27 @@
     }
   });
 
-  export const subrouteShedule = derived([selectedSubrouteId, schedule], ([$selectedSubrouteId, $schedule]) => {
+  export const subrouteSchedule = derived([selectedSubrouteId, schedule], ([$selectedSubrouteId, $schedule]) => {
     if ($schedule) {
-      return $schedule
-          .filter((entry) => {
-            return entry.subroute === $selectedSubrouteId;
-          })
-          .map((entry) => {
-            let tidyEntry = {
-              t: `${Math.floor(entry.time / 60)}:${String(entry.time % 60).padStart(2, "0")}`,
-              w: entry.calendar.weekdays.map((day) => weekdayName(day)).join(", "),
-            };
-            if (entry.calendar.only_if && entry.calendar.only_if.length > 0) {
-              tidyEntry.only_if = entry.calendar.only_if;
-            }
-            if (entry.calendar.also_if && entry.calendar.also_if.length > 0) {
-              tidyEntry.also_if = entry.calendar.also_if;
-            }
-            if (entry.calendar.except_if && entry.calendar.except_if.length > 0) {
-              tidyEntry.except_if = entry.calendar.except_if;
-            }
-            return tidyEntry;
-          });
+      let currentSchedule = $schedule.filter((entry) => {
+        return entry.subroute === $selectedSubrouteId;
+      });
+
+      let schMatrix = {};
+      let schTypes = [];
+      for (let e of currentSchedule) {
+        let h = Math.floor(e.time / 60);
+        let m = String(Math.floor(e.time % 60)).padStart(2, "0");
+        let schId = JSON.stringify(e.calendar);
+        if (!schMatrix[h]) schMatrix[h] = [];
+        if (!schTypes.includes(schId)) schTypes.push(schId);
+        schMatrix[h].push({ minute: m, conditions: schId });
+      }
+      let schArray = [];
+      for (let k of Object.keys(schMatrix).sort()) {
+        schArray.push({ k: k, minutes: schMatrix[k] });
+      }
+      return [schArray, schTypes];
     }
   });
 
@@ -93,13 +92,41 @@
 </script>
 
 <span class="text-lg">Current departures</span><br />
-<ul class="flex flex-col gap-2">
-  {#if $subrouteShedule}
-    {#each $subrouteShedule as scheduleEntry}
-      <li class="bg-base-200 rounded-lg">{JSON.stringify(scheduleEntry)}</li>
+
+{#if $subrouteSchedule}
+  <div class="flex flex-row gap-1 bg-base-200 p-1 rounded-xl w-min mx-auto">
+    {#each $subrouteSchedule[0] as scheduleEntry}
+      <div class="bg-base-100 rounded-lg flex flex-col min-w-[1.0rem] items-start p-1">
+        <div class="font-bold">{scheduleEntry.k}</div>
+        {#each scheduleEntry.minutes as min}
+          <div class="whitespace-nowrap">
+            {min.minute}<sup>{String.fromCharCode($subrouteSchedule[1].indexOf(min.conditions) + 96 + 1)}</sup>
+            <class
+              on:click={() =>
+                alert("Olha aqui dei delete da coisa, se ainda está é impressão tua isto está totalmente implementado")}
+              class="btn btn-circle btn-xs btn-ghost hover:bg-error">✕</class>
+          </div>
+        {/each}
+      </div>
     {/each}
-  {/if}
-</ul>
+  </div>
+  <div class="flex flex-col">
+    {#each $subrouteSchedule[1] as schType, i}
+      <div>
+        {String.fromCharCode(i + 96 + 1)}
+        {calendarStr(JSON.parse(schType))}
+      </div>
+    {/each}
+  </div>
+{/if}
+
+<!-- <ul class="flex flex-col gap-2"> -->
+<!--   {#if $subrouteShedule} -->
+<!--     {#each $subrouteShedule as scheduleEntry} -->
+<!--       <li class="bg-base-200 rounded-lg">{JSON.stringify(scheduleEntry)}</li> -->
+<!--     {/each} -->
+<!--   {/if} -->
+<!-- </ul> -->
 
 <hr />
 <hr />
