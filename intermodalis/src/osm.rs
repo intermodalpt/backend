@@ -19,41 +19,39 @@
 use crate::{middleware, Error, Stop};
 
 use std::collections::HashMap;
-use std::time::Duration;
 
 use chrono::Local;
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgPool;
-use tokio::time::sleep;
 use urlencoding::encode as urlencode;
 
-const FLOAT_TOLERANCE: f64 = 0.000001;
+const FLOAT_TOLERANCE: f64 = 0.000_001;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
-struct XMLOSM {
+struct XmlOsm {
     #[serde(rename = "$value")]
-    nodes: Vec<XMLNodeTypes>,
+    nodes: Vec<XmlNodeTypes>,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "kebab-case")]
-enum XMLNodeTypes {
-    Meta(XMLMeta),
-    Note(XMLNote),
-    Node(XMLNode),
+enum XmlNodeTypes {
+    Meta(XmlMeta),
+    Note(XmlNote),
+    Node(XmlNode),
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename = "meta")]
-struct XMLMeta {}
+struct XmlMeta {}
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename = "note")]
-struct XMLNote {}
+struct XmlNote {}
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename = "node")]
-struct XMLNode {
+struct XmlNode {
     id: i64,
     lon: f64,
     lat: f64,
@@ -68,8 +66,8 @@ struct XMLTag {
     v: String,
 }
 
-impl From<XMLNode> for Stop {
-    fn from(node: XMLNode) -> Self {
+impl From<XmlNode> for Stop {
+    fn from(node: XmlNode) -> Self {
         let mut res = Self {
             id: -1,
             source: "osm".to_string(),
@@ -141,8 +139,6 @@ impl From<XMLNode> for Stop {
 }
 
 pub(crate) async fn import(db_pool: &PgPool) -> Result<(usize, usize), Error> {
-    static DISTRICTS: [&str; 2] = ["Setúbal", "Lisboa"];
-
     let mut new_stops = vec![];
     let mut updated_stops = vec![];
 
@@ -151,76 +147,67 @@ pub(crate) async fn import(db_pool: &PgPool) -> Result<(usize, usize), Error> {
     let stop_index = stops
         .into_iter()
         .filter_map(|stop| {
-            if let Some(external_id) = stop.external_id.clone() {
-                Some((external_id, stop))
+            stop.external_id.clone().map(|external_id| (external_id, stop))
+        })
+        .collect::<HashMap<String, Stop>>();
+
+    fetch_osm_stops()
+        .await?
+        .nodes
+        .into_iter()
+        .filter_map(|node| {
+            if let XmlNodeTypes::Node(node) = node {
+                Some(Stop::from(node))
             } else {
                 None
             }
         })
-        .collect::<HashMap<String, Stop>>();
-
-    for district in DISTRICTS {
-        fetch_district_stops(district)
-            .await?
-            .nodes
-            .into_iter()
-            .filter_map(|node| {
-                if let XMLNodeTypes::Node(node) = node {
-                    Some(Stop::from(node))
-                } else {
-                    None
-                }
-            })
-            .for_each(|mut osm_stop| {
-                if let Some(stop) =
-                    stop_index.get(osm_stop.external_id.as_ref().unwrap())
-                {
-                    osm_stop.id = stop.id;
-                    if stop.lat.unwrap() - osm_stop.lat.unwrap()
+        .for_each(|mut osm_stop| {
+            if let Some(stop) =
+                stop_index.get(osm_stop.external_id.as_ref().unwrap())
+            {
+                osm_stop.id = stop.id;
+                if (stop.lat.unwrap() - osm_stop.lat.unwrap()).abs()
+                    > FLOAT_TOLERANCE
+                    || (stop.lon.unwrap() - osm_stop.lon.unwrap()).abs()
                         > FLOAT_TOLERANCE
-                        || stop.lon.unwrap() - osm_stop.lon.unwrap()
-                            > FLOAT_TOLERANCE
-                        || stop.osm_name != osm_stop.osm_name
-                        || (stop.official_name.is_none()
-                            && stop.official_name != osm_stop.official_name)
-                        || (stop.has_shelter.is_none()
-                            && stop.has_shelter != osm_stop.has_shelter)
-                        || (stop.has_trash_can.is_none()
-                            && stop.has_trash_can != osm_stop.has_trash_can)
-                        || (stop.is_illuminated.is_none()
-                            && stop.is_illuminated != osm_stop.is_illuminated)
+                    || stop.osm_name != osm_stop.osm_name
+                    || (stop.official_name.is_none()
+                        && stop.official_name != osm_stop.official_name)
+                    || (stop.has_shelter.is_none()
+                        && stop.has_shelter != osm_stop.has_shelter)
+                    || (stop.has_trash_can.is_none()
+                        && stop.has_trash_can != osm_stop.has_trash_can)
+                    || (stop.is_illuminated.is_none()
+                        && stop.is_illuminated != osm_stop.is_illuminated)
+                {
+                    // Prevent OSM from overriding some of the meta fields
+                    if stop.official_name.is_some()
+                        && stop.official_name != osm_stop.official_name
                     {
-                        // Prevent OSM from overriding some of the meta fields
-                        if stop.official_name.is_some()
-                            && stop.official_name != osm_stop.official_name
-                        {
-                            osm_stop.official_name = stop.official_name.clone();
-                        }
-                        if stop.has_shelter.is_some()
-                            && stop.has_shelter != osm_stop.has_shelter
-                        {
-                            osm_stop.has_shelter = stop.has_shelter.clone();
-                        }
-                        if stop.has_trash_can.is_some()
-                            && stop.has_trash_can != osm_stop.has_trash_can
-                        {
-                            osm_stop.has_trash_can = stop.has_trash_can.clone();
-                        }
-                        if stop.is_illuminated.is_some()
-                            && stop.is_illuminated != osm_stop.is_illuminated
-                        {
-                            osm_stop.is_illuminated =
-                                stop.is_illuminated.clone();
-                        }
-                        updated_stops.push(osm_stop);
+                        osm_stop.official_name = stop.official_name.clone();
                     }
-                } else {
-                    new_stops.push(osm_stop);
+                    if stop.has_shelter.is_some()
+                        && stop.has_shelter != osm_stop.has_shelter
+                    {
+                        osm_stop.has_shelter = stop.has_shelter;
+                    }
+                    if stop.has_trash_can.is_some()
+                        && stop.has_trash_can != osm_stop.has_trash_can
+                    {
+                        osm_stop.has_trash_can = stop.has_trash_can;
+                    }
+                    if stop.is_illuminated.is_some()
+                        && stop.is_illuminated != osm_stop.is_illuminated
+                    {
+                        osm_stop.is_illuminated = stop.is_illuminated;
+                    }
+                    updated_stops.push(osm_stop);
                 }
-            });
-
-        sleep(Duration::from_secs(5)).await;
-    }
+            } else {
+                new_stops.push(osm_stop);
+            }
+        });
 
     let counts = (new_stops.len(), updated_stops.len());
 
@@ -229,25 +216,20 @@ pub(crate) async fn import(db_pool: &PgPool) -> Result<(usize, usize), Error> {
     Ok(counts)
 }
 
-async fn fetch_district_stops(district: &str) -> Result<XMLOSM, Error> {
-    let query = format!(
-        r#"
-        area
-          ["name"="{}"]
-          ["boundary"="administrative"];
-        (
-          node
-            ["highway"="bus_stop"]
-            (area);
-        );
-        out body;
-    "#,
-        district
-    );
+async fn fetch_osm_stops() -> Result<XmlOsm, Error> {
+    let query = r#"
+    area[name="Lisboa"][admin_level=6];
+        node["highway"="bus_stop"](area)->.a;
+    area[name="Vendas Novas"][admin_level=7];
+        node["highway"="bus_stop"](area)->.b;
+    area[name="Setúbal"][admin_level=6];
+        node["highway"="bus_stop"](area)->.c;
+    (.a;.b;.c;);
+    out;"#;
 
     let osm_query_url = format!(
         "https://overpass-api.de/api/interpreter?data={}",
-        urlencode(&query)
+        urlencode(query)
     );
 
     // TODO wrong errors
@@ -316,7 +298,7 @@ WHERE id=$9 AND external_id=$10
 
 #[cfg(test)]
 mod test {
-    use crate::osm::XMLOSM;
+    use crate::osm::XmlOsm;
 
     #[test]
     fn test_deserialization() {
@@ -336,6 +318,6 @@ mod test {
   </node>
 </osm>
     "#;
-        let _xml_root: XMLOSM = serde_xml_rs::from_str(data).unwrap();
+        let _xml_root: XmlOsm = serde_xml_rs::from_str(data).unwrap();
     }
 }
