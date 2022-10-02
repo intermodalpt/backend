@@ -483,15 +483,18 @@ pub(crate) async fn get_routes(
 SELECT routes.id as route,
     routes.code as code,
     routes.name as name,
+    routes.operator as operator,
+    routes.type as service_type,
     routes.circular as circular,
     routes.main_subroute as main_subroute,
     routes.active as active,
-    routes.badge_bg as bg_color,
-    routes.badge_text as text_color,
+    route_types.badge_text_color as text_color,
+    route_types.badge_bg_color as bg_color,
     subroutes.id as "subroute!: Option<i32>",
     subroutes.flag as "subroute_flag!: Option<String>",
     subroutes.circular as "subroute_circular!: Option<bool>"
 FROM routes
+JOIN route_types on routes.type = route_types.id
 LEFT JOIN subroutes ON routes.id = subroutes.route
 ORDER BY routes.id asc
 "#
@@ -530,14 +533,13 @@ ORDER BY routes.id asc
                     vec![]
                 },
                 active: row.active,
+                operator: row.operator,
+                service_type: row.service_type,
             });
     }
 
-    Ok((
-        StatusCode::OK,
-        Json(routes.into_values().collect::<Vec<_>>()),
-    )
-        .into_response())
+    let routes = routes.into_values().collect::<Vec<_>>();
+    Ok((StatusCode::OK, Json(routes)).into_response())
 
     // let mut row_iter = res.into_iter();
     //
@@ -604,17 +606,16 @@ pub(crate) async fn create_route(
 
     let res = sqlx::query!(
         r#"
-INSERT INTO routes(code, name, main_subroute, operator, badge_text, badge_bg, active)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
+INSERT INTO routes(code, name, main_subroute, operator, active, type)
+VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING id
     "#,
         route.code,
         route.name,
         route.main_subroute,
         route.operator,
-        route.badge_text,
-        route.badge_bg,
-        route.active
+        route.active,
+        route.service_type,
     )
         .fetch_one(&state.pool)
         .await
@@ -636,17 +637,20 @@ pub(crate) async fn get_route(
     let res = sqlx::query!(
         r#"
 SELECT routes.id as route,
+    routes.operator as operator,
     routes.code as code,
     routes.name as name,
     routes.circular as circular,
     routes.main_subroute as main_subroute,
     routes.active as active,
-    routes.badge_bg as bg_color,
-    routes.badge_text as text_color,
+    routes.type as service_type,
+    route_types.badge_text_color as text_color,
+    route_types.badge_bg_color as bg_color,
     subroutes.id as subroute,
     subroutes.flag as subroute_flag,
     subroutes.circular as subroute_circular
 FROM routes
+JOIN route_types on routes.type = route_types.id
 LEFT JOIN subroutes on routes.id = subroutes.route
 WHERE routes.id = $1
 ORDER BY routes.id asc
@@ -662,6 +666,7 @@ ORDER BY routes.id asc
     if let Some(row) = row_iter.next() {
         let mut curr_route = Route {
             id: row.route,
+            service_type: row.service_type,
             name: row.name,
             code: row.code,
             circular: row.circular,
@@ -674,6 +679,7 @@ ORDER BY routes.id asc
                 circular: row.subroute_circular,
             }],
             active: row.active,
+            operator: row.operator,
         };
 
         for row in row_iter {
@@ -700,17 +706,15 @@ pub(crate) async fn patch_route(
     let _res = sqlx::query!(
         r#"
 UPDATE Routes
-SET code=$1, name=$2, main_subroute=$3, operator=$4,
-    badge_text=$5, badge_bg=$6, active=$7
-WHERE id=$8
+SET code=$1, name=$2, main_subroute=$3, operator=$4, active=$5, type=$6
+WHERE id=$7
     "#,
         route.code,
         route.name,
         route.main_subroute,
         route.operator,
-        route.badge_text,
-        route.badge_bg,
         route.active,
+        route.service_type,
         route_id
     )
     .execute(&state.pool)
