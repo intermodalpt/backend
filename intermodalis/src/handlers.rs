@@ -807,8 +807,7 @@ RETURNING id
 pub(crate) async fn patch_subroute(
     Extension(state): Extension<Arc<State>>,
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
-    Path(route_id): Path<i32>,
-    Path(subroute_id): Path<i32>,
+    Path((route_id, subroute_id)): Path<(i32, i32)>,
     Json(route): Json<requests::ChangeSubroute>,
 ) -> Result<impl IntoResponse, Error> {
     let _user_id = middleware::get_user(auth.token(), &state.pool).await?;
