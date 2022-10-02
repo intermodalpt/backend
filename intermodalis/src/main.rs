@@ -188,9 +188,9 @@ async fn main() {
     .unwrap()
     .with_path_style();
 
-    let pool = PgPool::connect("postgres://username:password@host/db")
+    let pool = PgPool::connect(&settings.get_string("db").expect("db not set"))
         .await
-        .expect("");
+        .expect("Unable to connect to the database");
     let stats = get_stats(&pool).await.unwrap();
     let state = State {
         bucket,
