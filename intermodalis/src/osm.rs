@@ -1,5 +1,5 @@
 /*
-    Intermodalis, transportation information aggregator
+    Intermodal, transportation information aggregator
     Copyright (C) 2022  Cláudio Pereira
 
     This program is free software: you can redistribute it and/or modify
