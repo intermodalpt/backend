@@ -29,8 +29,6 @@ use axum::{Extension, Json, TypedHeader};
 use chrono::{Local, NaiveDate};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use sqlx::postgres::PgRow;
-use sqlx::Row;
 use utoipa_swagger_ui::Config;
 
 use crate::calendar::Calendar;
@@ -390,138 +388,38 @@ pub(crate) async fn get_stop_spider(
     Extension(state): Extension<Arc<State>>,
     Path(stop_id): Path<i32>,
 ) -> Result<impl IntoResponse, Error> {
-    let res = sqlx::query!(
-        r#"
-SELECT Routes.id as route_id, Routes.code as route_code,
-    Routes.name as route_name, Routes.circular as route_circular,
-    subroutes.id as subroute_id, subroutes.flag as subroute_flag,
-    subroute_stops.stop as stop_id,
-    stops.name as stop_name,
-    stops.lon as lon,
-    stops.lat as lat
-FROM Routes
-JOIN subroutes ON Routes.id = subroutes.route
-JOIN subroute_stops ON subroutes.id = subroute_stops.subroute
-JOIN stops ON stops.id = subroute_stops.stop
-WHERE subroutes.id IN (
-    SELECT subroutes.id
-    FROM subroutes
-    JOIN subroute_stops ON subroutes.id = subroute_stops.subroute
-    WHERE subroute_stops.stop = $1
-)
-ORDER BY subroute_stops.idx
-    "#,
-        stop_id
-    )
-    .fetch_all(&state.pool)
-    .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
-
-    let mut routes: HashMap<i32, SpiderRoute> = HashMap::new();
-    let mut subroutes: HashMap<i32, SpiderSubroute> = HashMap::new();
-    let mut stops: HashMap<i32, SpiderStop> = HashMap::new();
-
-    for row in res {
-        if !routes.contains_key(&row.route_id) {
-            routes.insert(
-                row.route_id,
-                SpiderRoute {
-                    code: row.route_code,
-                    name: row.route_name,
-                    circular: row.route_circular,
-                },
-            );
-        }
-
-        if let Some(subroute) = subroutes.get_mut(&row.subroute_id) {
-            subroute.stop_sequence.push(row.stop_id);
-        } else {
-            subroutes.insert(
-                row.subroute_id,
-                SpiderSubroute {
-                    route: row.route_id,
-                    flag: row.subroute_flag,
-                    stop_sequence: vec![],
-                },
-            );
-        }
-
-        if !stops.contains_key(&row.stop_id) {
-            stops.insert(
-                row.stop_id,
-                SpiderStop {
-                    name: row.stop_name,
-                    lat: row.lat,
-                    lon: row.lon,
-                },
-            );
-        }
-    }
-
-    let map = SpiderMap {
-        routes,
-        subroutes,
-        stops,
-    };
-
-    Ok((StatusCode::OK, Json(map)).into_response())
-}
-
-struct SpiderRow {
-    route_id: i32,
-    route_code: String,
-    route_name: String,
-    route_circular: bool,
-    subroute_id: i32,
-    subroute_flag: Option<String>,
-    stop_id: i32,
-    stop_name: Option<String>,
-    lon: Option<f64>,
-    lat: Option<f64>,
+    get_stops_spider(Extension(state), Json(vec![stop_id])).await
 }
 
 pub(crate) async fn get_stops_spider(
     Extension(state): Extension<Arc<State>>,
     Json(stops): Json<Vec<i32>>,
 ) -> Result<impl IntoResponse, Error> {
-    let stop_ids = stops.iter().join(",");
-
-    let res = sqlx::query(&format!(
-        "\
+    let res = sqlx::query!(
+        r#"
 SELECT Routes.id as route_id,
-    Routes.code as route_code,
-    Routes.name as route_name,
-    Routes.circular as route_circular,
+    routes.code as "route_code!: Option<String>",
+    routes.name as route_name,
+    routes.circular as route_circular,
     subroutes.id as subroute_id,
     subroutes.flag as subroute_flag,
     subroute_stops.stop as stop_id,
     stops.name as stop_name,
     stops.lon as lon,
     stops.lat as lat
-FROM Routes
-JOIN subroutes ON Routes.id = subroutes.route
+FROM routes
+JOIN subroutes ON routes.id = subroutes.route
 JOIN subroute_stops ON subroutes.id = subroute_stops.subroute
 JOIN stops ON stops.id = subroute_stops.stop
 WHERE subroutes.id IN (
     SELECT subroutes.id
     FROM subroutes
     JOIN subroute_stops ON subroutes.id = subroute_stops.subroute
-    WHERE subroute_stops.stop IN ({stop_ids})
+    WHERE subroute_stops.stop = ANY($1)
 )
-ORDER BY subroute_stops.idx"
-    ))
-    .map(|row: PgRow| SpiderRow {
-        route_id: row.get(0),
-        route_code: row.get(1),
-        route_name: row.get(2),
-        route_circular: row.get(3),
-        subroute_id: row.get(4),
-        subroute_flag: row.get(5),
-        stop_id: row.get(6),
-        stop_name: row.get(7),
-        lon: row.get(8),
-        lat: row.get(9),
-    })
+ORDER BY subroute_stops.idx"#,
+        &stops[..]
+    )
     .fetch_all(&state.pool)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
