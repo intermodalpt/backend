@@ -506,61 +506,99 @@ ORDER BY routes.id asc
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
-    let mut row_iter = res.into_iter();
+    let mut routes: HashMap<i32, Route> = HashMap::new();
 
-    let mut routes = vec![];
-
-    if let Some(row) = row_iter.next() {
-        let mut curr_route = Route {
-            id: row.route,
-            name: row.name,
-            code: row.code,
-            circular: row.circular,
-            main_subroute: row.main_subroute,
-            badge_text: row.text_color,
-            badge_bg: row.bg_color,
-            subroutes: vec![Subroute {
-                id: row.subroute,
-                flag: row.subroute_flag,
-                // FIXME
-                // cached_from: None,
-                // cached_to: None,
-            }],
-            active: row.active,
-        };
-
-        for row in row_iter {
-            if row.route == curr_route.id {
-                curr_route.subroutes.push(Subroute {
-                    id: row.subroute,
-                    flag: row.subroute_flag,
-                    // cached_from: row.from_stop,
-                    // cached_to: row.to_stop,
-                });
-            } else {
-                routes.push(curr_route);
-                curr_route = Route {
-                    id: row.route,
-                    code: row.code,
-                    name: row.name,
-                    circular: row.circular,
-                    main_subroute: row.main_subroute,
-                    badge_text: row.text_color,
-                    badge_bg: row.bg_color,
-                    subroutes: vec![Subroute {
-                        id: row.subroute,
-                        flag: row.subroute_flag,
-                        // cached_from: row.from_stop,
-                        // cached_to: row.to_stop,
-                    }],
-                    active: row.active,
-                };
-            }
-        }
-        routes.push(curr_route);
+    for row in res {
+        routes
+            .entry(row.route)
+            .and_modify(|route| {
+                if let (Some(id), Some(flag), Some(circular)) = (
+                    row.subroute,
+                    row.subroute_flag.clone(),
+                    row.subroute_circular,
+                ) {
+                    route.subroutes.push(Subroute { id, flag, circular });
+                }
+            })
+            .or_insert(Route {
+                id: row.route,
+                code: row.code,
+                name: row.name,
+                circular: row.circular,
+                main_subroute: row.main_subroute,
+                badge_text: row.text_color,
+                badge_bg: row.bg_color,
+                subroutes: if let (Some(id), Some(flag), Some(circular)) =
+                    (row.subroute, row.subroute_flag, row.subroute_circular)
+                {
+                    vec![Subroute { id, flag, circular }]
+                } else {
+                    vec![]
+                },
+                active: row.active,
+            });
     }
 
-    Ok((StatusCode::OK, Json(routes)).into_response())
+    Ok((
+        StatusCode::OK,
+        Json(routes.into_values().collect::<Vec<_>>()),
+    )
+        .into_response())
+
+    // let mut row_iter = res.into_iter();
+    //
+    // let mut routes = vec![];
+    //
+    // if let Some(row) = row_iter.next() {
+    //     let mut curr_route = Route {
+    //         id: row.route,
+    //         name: row.name,
+    //         code: row.code,
+    //         circular: row.circular,
+    //         main_subroute: row.main_subroute,
+    //         badge_text: row.text_color,
+    //         badge_bg: row.bg_color,
+    //         subroutes: if let (Some(id), Some(flag), Some(circular)) =
+    //             (row.subroute, row.subroute_flag, row.subroute_circular)
+    //         {
+    //             vec![Subroute { id, flag, circular }]
+    //         } else {
+    //             vec![]
+    //         },
+    //         active: row.active,
+    //     };
+    //
+    //     for row in row_iter {
+    //         if row.route == curr_route.id {
+    //             if let (Some(id), Some(flag), Some(circular)) =
+    //                 (row.subroute, row.subroute_flag, row.subroute_circular)
+    //             {
+    //                 curr_route.subroutes.push(Subroute { id, flag, circular })
+    //             }
+    //         } else {
+    //             routes.push(curr_route);
+    //             curr_route = Route {
+    //                 id: row.route,
+    //                 code: row.code,
+    //                 name: row.name,
+    //                 circular: row.circular,
+    //                 main_subroute: row.main_subroute,
+    //                 badge_text: row.text_color,
+    //                 badge_bg: row.bg_color,
+    //                 subroutes: if let (Some(id), Some(flag), Some(circular)) =
+    //                     (row.subroute, row.subroute_flag, row.subroute_circular)
+    //                 {
+    //                     vec![Subroute { id, flag, circular }]
+    //                 } else {
+    //                     vec![]
+    //                 },
+    //                 active: row.active,
+    //             };
+    //         }
+    //     }
+    // }
+    //
+    // Ok((StatusCode::OK, Json(routes)).into_response())
 }
 
 pub(crate) async fn create_route(
