@@ -16,7 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use crate::{middleware, Error, Stop};
+use crate::{Error, Stop, sql};
 
 use std::collections::HashMap;
 
@@ -142,7 +142,7 @@ pub(crate) async fn import(db_pool: &PgPool) -> Result<(usize, usize), Error> {
     let mut new_stops = vec![];
     let mut updated_stops = vec![];
 
-    let stops = middleware::get_stops(db_pool).await?;
+    let stops = sql::fetch_stops(db_pool, false).await?;
 
     let stop_index = stops
         .into_iter()

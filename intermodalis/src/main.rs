@@ -32,6 +32,7 @@ mod middleware;
 mod models;
 mod osm;
 mod utils;
+mod sql;
 
 use errors::Error;
 
