@@ -16,7 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use std::collections::HashMap;
+use std::collections::{hash_map, HashMap};
 use std::sync::Arc;
 use std::thread::sleep;
 use std::time::Duration;
@@ -429,15 +429,12 @@ ORDER BY subroute_stops.idx"#,
     let mut stops: HashMap<i32, SpiderStop> = HashMap::new();
 
     for row in res {
-        if !routes.contains_key(&row.route_id) {
-            routes.insert(
-                row.route_id,
-                SpiderRoute {
-                    code: row.route_code,
-                    name: row.route_name,
-                    circular: row.route_circular,
-                },
-            );
+        if let hash_map::Entry::Vacant(e) = routes.entry(row.route_id) {
+            e.insert(SpiderRoute {
+                code: row.route_code,
+                name: row.route_name,
+                circular: row.route_circular,
+            });
         }
 
         if let Some(subroute) = subroutes.get_mut(&row.subroute_id) {
@@ -447,22 +444,18 @@ ORDER BY subroute_stops.idx"#,
                 row.subroute_id,
                 SpiderSubroute {
                     route: row.route_id,
-                    // FIXME this is a bug
-                    flag: row.subroute_flag.unwrap_or("".to_string()),
+                    flag: row.subroute_flag,
                     stop_sequence: vec![],
                 },
             );
         }
 
-        if !stops.contains_key(&row.stop_id) {
-            stops.insert(
-                row.stop_id,
-                SpiderStop {
-                    name: row.stop_name,
-                    lat: row.lat,
-                    lon: row.lon,
-                },
-            );
+        if let hash_map::Entry::Vacant(e) = stops.entry(row.stop_id) {
+            e.insert(SpiderStop {
+                name: row.stop_name,
+                lat: row.lat,
+                lon: row.lon,
+            });
         }
     }
 
@@ -495,8 +488,9 @@ SELECT routes.id as route,
     routes.active as active,
     routes.badge_bg as bg_color,
     routes.badge_text as text_color,
-    subroutes.id as subroute,
-    subroutes.flag as subroute_flag
+    subroutes.id as "subroute!: Option<i32>",
+    subroutes.flag as "subroute_flag!: Option<String>",
+    subroutes.circular as "subroute_circular!: Option<bool>"
 FROM routes
 LEFT JOIN subroutes ON routes.id = subroutes.route
 ORDER BY routes.id asc
@@ -650,9 +644,8 @@ SELECT routes.id as route,
     routes.badge_bg as bg_color,
     routes.badge_text as text_color,
     subroutes.id as subroute,
-    subroutes.flag as subroute_flag
-    -- subroutes.cached_from as from_stop,
-    -- subroutes.cached_to as to_stop
+    subroutes.flag as subroute_flag,
+    subroutes.circular as subroute_circular
 FROM routes
 LEFT JOIN subroutes on routes.id = subroutes.route
 WHERE routes.id = $1
@@ -678,8 +671,7 @@ ORDER BY routes.id asc
             subroutes: vec![Subroute {
                 id: row.subroute,
                 flag: row.subroute_flag,
-                // cached_from: row.from_stop,
-                // cached_to: row.to_stop,
+                circular: row.subroute_circular,
             }],
             active: row.active,
         };
@@ -688,8 +680,7 @@ ORDER BY routes.id asc
             curr_route.subroutes.push(Subroute {
                 id: row.subroute,
                 flag: row.subroute_flag,
-                // cached_from: row.from_stop,
-                // cached_to: row.to_stop,
+                circular: row.subroute_circular,
             });
         }
         Ok((StatusCode::OK, Json(curr_route)).into_response())
@@ -1063,6 +1054,7 @@ ORDER BY subroutes.id ASC, subroute_stops.idx ASC
     Ok((StatusCode::OK, Json(subroute_stops)).into_response())
 }
 
+#[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
 pub(crate) async fn patch_subroute_stops(
     Extension(state): Extension<Arc<State>>,
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
@@ -1144,7 +1136,7 @@ WHERE Subroute=$1 AND idx>=$2
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?
         .rows_affected();
 
-        if deleted_rows != stored_changes.abs() as u64 {
+        if deleted_rows != stored_changes.unsigned_abs() as u64 {
             return Err(Error::Processing(
                 "Detected an unexpected amount of rows".to_string(),
             ));
@@ -1224,7 +1216,7 @@ pub(crate) async fn get_untagged_stop_pictures(
 ) -> Result<impl IntoResponse, Error> {
     let user_id = middleware::get_user(auth.token(), &state.pool).await?;
 
-    let offset = (paginator.p * PAGE_SIZE) as i64;
+    let offset = i64::from(paginator.p * PAGE_SIZE);
     let pics = sqlx::query_as!(
         UntaggedStopPic,
         r#"
@@ -1236,7 +1228,7 @@ ORDER BY capture_date ASC
 LIMIT $2 OFFSET $3
     "#,
         user_id,
-        PAGE_SIZE as i64,
+        i64::from(PAGE_SIZE),
         offset
     )
     .fetch_all(&state.pool)
@@ -1263,9 +1255,9 @@ pub(crate) async fn upload_stop_picture(
     {
         let filename = field
             .file_name()
-            .ok_or(Error::ValidationFailure(
-                "File without a filename".to_string(),
-            ))?
+            .ok_or_else(|| {
+                Error::ValidationFailure("File without a filename".to_string())
+            })?
             .to_string();
         let content = field
             .bytes()

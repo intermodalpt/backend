@@ -293,7 +293,7 @@ pub(crate) mod responses {
         pub(crate) id: i32,
         pub(crate) subroutes: Vec<Subroute>,
         #[component(example = "Azeitão (Circular)")]
-        pub(crate) code: String,
+        pub(crate) code: Option<String>,
         pub(crate) name: String,
         #[component(example = true)]
         pub(crate) circular: bool,
@@ -303,11 +303,12 @@ pub(crate) mod responses {
         pub(crate) active: bool,
     }
 
-    #[derive(Serialize, Component)]
+    #[derive(Debug, Serialize, Component, sqlx::Type)]
     pub struct Subroute {
         pub(crate) id: i32,
         #[component(example = "Azeitão (Circular)")]
         pub(crate) flag: String,
+        pub(crate) circular: bool,
         // #[component(example = 123)]
         // pub(crate) cached_from: Option<i32>,
         // #[component(example = 123)]
@@ -340,7 +341,7 @@ pub(crate) mod responses {
 
     #[derive(Serialize, Component)]
     pub struct SpiderRoute {
-        pub code: String,
+        pub code: Option<String>,
         pub name: String,
         pub circular: bool,
     }
