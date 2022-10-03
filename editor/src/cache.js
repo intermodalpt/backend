@@ -6,6 +6,17 @@ const ONE_HOUR = 1000 * 3600;
 
 export const stops = writable([]);
 export const routes = writable([]);
+export const operators = writable({
+  1: {name: "Carris Metropolitana", tag: "cmet"},
+  2: {name: "Transportes Colectivos do Barreiro", tag: "tcb"},
+  3: {name: "Carris", tag: "carris"},
+  4: {name: "MobiCascais", tag: "mobic"},
+  5: {name: "Comboios de Portugal", tag: "cp"},
+  6: {name: "Fertagus", tag: "fert"},
+  7: {name: "Metro Transportes do Sul", tag: "mts"},
+  8: {name: "Metro de Lisboa", tag: "ml"},
+  9: {name: "Transtejo e Soflusa", tag: "ttsl"}
+});
 export const pictures = writable([]);
 export const stopPicRels = writable([]);
 

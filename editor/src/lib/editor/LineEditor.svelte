@@ -2,7 +2,7 @@
   import LineStopsEditor from "./LineStopsEditor.svelte";
   import {api_server, token} from "../../settings.js";
   import {icons} from "./assets.js";
-  import {stops, routes} from "../../cache.js";
+  import {stops, routes, operators} from "../../cache.js";
   import L from "leaflet";
   import {calc_route_multipoly} from "../../utils.js";
   import {derived, writable} from "svelte/store";
@@ -48,13 +48,26 @@
   const routeSelectorOptions = derived(
       routes,
       ($routes) => {
-        return $routes.map((route) => {
-          return {
-            value: route.id,
-            label: `${route.code}: ${route.name}`,
-            group: 'Carris Metropolitana',
-          }
-        });
+        return $routes.sort(
+            (ra, rb) => {
+              if (ra.operator !== rb.operator) {
+                return ra.operator - rb.operator;
+              }
+              if (!ra.code) {
+                return -1;
+              } else if (!rb.code) {
+                return 1;
+              } else {
+                return (parseInt(ra.code) || 10000) - (parseInt(rb.code) || 10000);
+              }
+            })
+            .map((route) => {
+              return {
+                value: route.id,
+                label: route.code ? `${route.code} : ${route.name}` : route.name,
+                group: $operators[route.operator]?.name,
+              }
+            });
       }
   );
 
