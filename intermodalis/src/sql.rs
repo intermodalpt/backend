@@ -56,11 +56,6 @@ pub(crate) async fn fetch_stops(
     filter_used: bool,
 ) -> Result<Vec<Stop>> {
     Ok(if filter_used {
-        sqlx::query_as!(Stop, "SELECT * FROM stops")
-            .fetch_all(pool)
-            .await
-            .map_err(|err| Error::DatabaseExecution(err.to_string()))?
-    } else {
         sqlx::query_as!(
             Stop,
             r#"
@@ -75,6 +70,11 @@ WHERE id IN (
         .fetch_all(pool)
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    } else {
+        sqlx::query_as!(Stop, "SELECT * FROM stops")
+            .fetch_all(pool)
+            .await
+            .map_err(|err| Error::DatabaseExecution(err.to_string()))?
     })
 }
 
