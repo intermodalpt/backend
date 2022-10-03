@@ -1,5 +1,5 @@
 /*
-    Intermodalis, transportation information aggregator
+    Intermodal, transportation information aggregator
     Copyright (C) 2022  Cláudio Pereira
 
     This program is free software: you can redistribute it and/or modify
@@ -226,14 +226,13 @@ pub(crate) mod requests {
 
     #[derive(Deserialize, Component)]
     pub struct ChangeRoute {
-        pub code: String,
+        pub code: Option<String>,
         pub name: String,
         pub circular: bool,
         pub main_subroute: Option<i32>,
         pub operator: i32,
-        pub badge_text: String,
-        pub badge_bg: String,
         pub active: bool,
+        pub service_type: i32,
     }
 
     #[derive(Deserialize, Component)]
@@ -291,9 +290,11 @@ pub(crate) mod responses {
     #[derive(Serialize, Component)]
     pub struct Route {
         pub(crate) id: i32,
+        pub(crate) service_type: i32,
+        pub(crate) operator: i32,
         pub(crate) subroutes: Vec<Subroute>,
         #[component(example = "Azeitão (Circular)")]
-        pub(crate) code: String,
+        pub(crate) code: Option<String>,
         pub(crate) name: String,
         #[component(example = true)]
         pub(crate) circular: bool,
@@ -303,11 +304,12 @@ pub(crate) mod responses {
         pub(crate) active: bool,
     }
 
-    #[derive(Serialize, Component)]
+    #[derive(Debug, Serialize, Component, sqlx::Type)]
     pub struct Subroute {
         pub(crate) id: i32,
         #[component(example = "Azeitão (Circular)")]
         pub(crate) flag: String,
+        pub(crate) circular: bool,
         // #[component(example = 123)]
         // pub(crate) cached_from: Option<i32>,
         // #[component(example = 123)]
@@ -340,7 +342,7 @@ pub(crate) mod responses {
 
     #[derive(Serialize, Component)]
     pub struct SpiderRoute {
-        pub code: String,
+        pub code: Option<String>,
         pub name: String,
         pub circular: bool,
     }

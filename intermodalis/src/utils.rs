@@ -1,5 +1,5 @@
 /*
-    Intermodalis, transportation information aggregator
+    Intermodal, transportation information aggregator
     Copyright (C) 2022  Cláudio Pereira
 
     This program is free software: you can redistribute it and/or modify
@@ -88,7 +88,7 @@ impl From<exif::Exif> for Exif {
             data.get_field(exif::Tag::GPSLatitude, exif::In::PRIMARY)
         {
             if let exif::Value::Rational(val) = &field.value {
-                if let Ok(coord) = extract_f64_gps_coord(&val) {
+                if let Ok(coord) = extract_f64_gps_coord(val) {
                     result.lat = Some(coord);
                 } else {
                     println!("Invalid value for GPS Lat");
@@ -102,7 +102,7 @@ impl From<exif::Exif> for Exif {
             data.get_field(exif::Tag::GPSLongitude, exif::In::PRIMARY)
         {
             if let exif::Value::Rational(val) = &field.value {
-                if let Ok(coord) = extract_f64_gps_coord(&val) {
+                if let Ok(coord) = extract_f64_gps_coord(val) {
                     result.lon = Some(-coord);
                 } else {
                     println!("Invalid value for GPS Lon");

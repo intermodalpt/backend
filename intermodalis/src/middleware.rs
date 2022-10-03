@@ -1,5 +1,5 @@
 /*
-    Intermodalis, transportation information aggregator
+    Intermodal, transportation information aggregator
     Copyright (C) 2022  Cláudio Pereira
 
     This program is free software: you can redistribute it and/or modify
@@ -25,7 +25,7 @@ use sqlx::PgPool;
 
 use crate::models::StopPic;
 use crate::utils::Exif;
-use crate::{Error, Stats, Stop};
+use crate::{Error, Stats};
 
 const THUMBNAIL_MAX_WIDTH: u32 = 300;
 const THUMBNAIL_MAX_HEIGHT: u32 = 200;
@@ -35,12 +35,6 @@ const MEDIUM_IMG_MAX_WIDTH: u32 = 1200;
 const MEDIUM_IMG_MAX_HEIGHT: u32 = 800;
 const MEDIUM_IMG_MAX_QUALITY: f32 = 85.0;
 
-pub(crate) async fn get_stops(db_pool: &PgPool) -> Result<Vec<Stop>, Error> {
-    Ok(sqlx::query_as!(Stop, "SELECT * FROM stops")
-        .fetch_all(db_pool)
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?)
-}
 
 pub(crate) async fn upload_stop_picture(
     user_id: i32,
