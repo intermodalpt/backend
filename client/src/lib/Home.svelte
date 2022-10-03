@@ -1,5 +1,6 @@
 <script>
   import {mode} from "../context.js";
+  import {stats} from "../cache.js";
 
   function setMode(newMode) {
     $mode = newMode;
@@ -60,21 +61,21 @@
       <div class="stats">
         <div class="stat">
           <div class="stat-desc">Temos um total de</div>
-          <div class="stat-value">255</div>
+          <div class="stat-value">{$stats?.route_count}</div>
           <div class="stat-title">Rotas</div>
         </div>
       </div>
       <div class="stats">
         <div class="stat">
           <div class="stat-desc">E as suas</div>
-          <div class="stat-value">593</div>
+          <div class="stat-value">{$stats?.subroute_count}</div>
           <div class="stat-title">Variantes</div>
         </div>
       </div>
       <div class="stats">
         <div class="stat">
           <div class="stat-desc">Totalizando</div>
-          <div class="stat-value">10.863</div>
+          <div class="stat-value">{$stats?.departure_count}</div>
           <div class="stat-title">Partidas</div>
         </div>
       </div>
@@ -96,12 +97,12 @@
             <div class="stats">
               <div class="stat">
                 <div class="stat-desc">Mantemos registo de</div>
-                <div class="stat-value">7444</div>
+                <div class="stat-value">{$stats?.stop_count}</div>
                 <div class="stat-title">Paragens</div>
               </div>
               <div class="stat">
                 <div class="stat-desc">E um catalogo de</div>
-                <div class="stat-value">1511</div>
+                <div class="stat-value">{$stats?.picture_count}</div>
                 <div class="stat-title">Imagens</div>
               </div>
             </div>

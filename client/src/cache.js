@@ -1,4 +1,4 @@
-import {derived, writable} from 'svelte/store';
+import { derived, writable } from 'svelte/store';
 import { api_server } from "./settings.js";
 
 export const stops = writable([]);
@@ -18,6 +18,14 @@ export const operators = writable({
   8: {id: 8, name: "Metro de Lisboa", tag: "ml"},
   9: {id: 9, name: "Transtejo e Soflusa", tag: "ttsl"}
 });
+// Cached values
+export const stats = writable({
+  "stop_count": 9060,
+  "route_count": 301,
+  "subroute_count": 673,
+  "departure_count": 10683,
+  "picture_count": 1765
+});
 
 export async function initCache() {
   routes.set(await fetch(`${api_server}/api/routes`).then(r => r.json()));
@@ -25,4 +33,5 @@ export async function initCache() {
   stops.set(await fetch(`${api_server}/api/stops`).then(r => r.json()).then(stopList => {
     return Object.fromEntries(stopList.map(stop => [stop.id, stop]));
   }));
+  stats.set(await fetch(`${api_server}/stats`).then(r => r.json()));
 }
