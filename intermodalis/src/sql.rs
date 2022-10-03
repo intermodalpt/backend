@@ -989,9 +989,6 @@ pub(crate) async fn update_stop_picture_meta(
 ) -> Result<()> {
     let update_date = Local::now().to_string();
 
-    // TODO add updater and update date
-    let stop_ids = stop_pic_meta.stops.iter().join(",");
-
     let _res = sqlx::query!(
         r#"
 UPDATE stop_pics
@@ -1013,30 +1010,35 @@ WHERE id=$9
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
-    let _res = sqlx::query(&format!(
-        r#"
-DELETE FROM stop_pic_stops
-WHERE pic=? AND stop NOT IN ({stop_ids})
-    "#
-    ))
-    .bind(stop_picture_id)
-    .execute(pool)
-    .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    if !stop_pic_meta.stops.is_empty() {
+        // TODO add updater and update date
+        let stop_ids = stop_pic_meta.stops.iter().join(",");
 
-    for stop_id in stop_pic_meta.stops {
-        let _res = sqlx::query!(
+        let _res = sqlx::query(&format!(
             r#"
+    DELETE FROM stop_pic_stops
+    WHERE pic=$1 AND stop NOT IN ({stop_ids})
+        "#
+        ))
+        .bind(stop_picture_id)
+        .execute(pool)
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+        for stop_id in stop_pic_meta.stops {
+            let _res = sqlx::query!(
+                r#"
 INSERT INTO stop_pic_stops(pic, stop)
 VALUES ($1, $2)
 ON CONFLICT DO NOTHING
     "#,
-            stop_picture_id,
-            stop_id
-        )
-        .execute(pool)
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+                stop_picture_id,
+                stop_id
+            )
+            .execute(pool)
+            .await
+            .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+        }
     }
 
     Ok(())
