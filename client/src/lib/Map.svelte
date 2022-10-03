@@ -528,8 +528,8 @@
           <WHeader
               backBtn=true
               on:back={() => {$selectedRouteId = undefined;}}
-              fg={'#' + $selectedRoute.badge_text}
-              bg={'#' + $selectedRoute.badge_bg}
+              fg={$selectedRoute.badge_text}
+              bg={$selectedRoute.badge_bg}
           >{$selectedRoute.code}: {$selectedRoute.name}</WHeader>
           <select class="select select-primary w-full mx-auto" bind:value={$selectedSubrouteId}>
             {#each $selectedRoute.subroutes as subroute}
@@ -542,8 +542,8 @@
           <WHeader
               backBtn=true
               on:back={() => {$selectedRouteId = undefined;}}
-              fg={'#' + $selectedRoute.badge_text}
-              bg={'#' + $selectedRoute.badge_bg}
+              fg={$selectedRoute.badge_text}
+              bg={$selectedRoute.badge_bg}
           >{$selectedRoute.code}: {$selectedRoute.name}</WHeader>
           <CompactSchedule />
         </div>

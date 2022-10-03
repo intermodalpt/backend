@@ -11,7 +11,10 @@
   <div class="title-sr-pair text-3xl">
     <span
         class="code"
-        style="background-color: #{$selectedRoute.badge_bg}; color: #{$selectedRoute.badge_text}">
+        style="
+            background-color: {$selectedRoute.badge_bg};
+            color: {$selectedRoute.badge_text};
+            border: 2px solid {$selectedRoute.badge_text};">
       {$selectedRoute.code}
     </span>
     <span class="title">{$selectedRoute.name}</span>
