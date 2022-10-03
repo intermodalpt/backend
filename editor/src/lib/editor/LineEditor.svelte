@@ -328,6 +328,8 @@
         <LineStopsEditor
             selectedStop={selectedStop}
             selectedSubrouteStops={selectedSubrouteStops}
+            selectedRoute={selectedRoute}
+            selectedRouteStops={selectedRouteStops}
             on:goto={goTo}
             on:redraw={redraw}
             on:savesubroutestops={saveSubrouteStops}

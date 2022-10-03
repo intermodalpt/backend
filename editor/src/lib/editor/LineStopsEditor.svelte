@@ -1,18 +1,33 @@
 <script>
   import {createEventDispatcher} from "svelte";
   import {stops, routes} from "../../cache.js";
-  import {writable} from "svelte/store";
+  import {derived, writable} from "svelte/store";
 
+  export let selectedRoute;
   export let selectedStop;
+  export let selectedRouteStops;
   export let selectedSubrouteStops;
-  let addAfterIndex = 0;
 
   let changes = false;
   const dispatch = createEventDispatcher();
 
+  const importableSubroutes = derived(selectedRouteStops, ($selectedRouteStops) => {
+    if ($selectedRouteStops) {
+      return Object.entries($selectedRouteStops).filter(([_, val]) => {
+        return val.stops.length > 0
+      }).map(([key, _]) => {
+        return parseInt(key)
+      });
+    } else {
+      return [];
+    }
+  })
+
   // Deep-ish data copies to leave the original intact. (Sorry for the shitty code)
   let stopList = writable([]);
   let diffList;
+
+  let importFromSubrouteId = null;
 
   selectedSubrouteStops.subscribe((value) => {
     if (value) {
@@ -76,6 +91,14 @@
     closeModal(index);
   }
 
+  function importStops() {
+    let origin = $selectedRouteStops[importFromSubrouteId];
+    $stopList = [...origin.stops];
+    diffList = [...origin.diffs];
+    console.log($stopList);
+    changes = true;
+  }
+
   function addAfter(index) {
     if ($selectedStop === undefined) {
       alert("Select a stop first...");
@@ -109,7 +132,7 @@
       changes = true;
       closeModal(i);
     }
-    closeModal(index);
+    closeModal(i);
   }
 
   function removeStop(i) {
@@ -168,6 +191,23 @@
             disabled={!$selectedStop}
             on:mouseup={addStop}
         >
+        <br>
+        <div>
+          {#if $importableSubroutes?.length > 0}
+            Import from:<br />
+            <select class="select select-bordered select-sm" bind:value={importFromSubrouteId}>
+              {#each $importableSubroutes as subrouteId}
+                <option value={subrouteId}>
+                  {$selectedRoute.subroutes?.find((subroute) => {
+                    return subroute.id === subrouteId;
+                  }).flag}
+                </option>
+              {/each}
+            </select>
+            <input class="btn btn-primary" type="button" value="Import" on:mouseup={importStops}
+                   disabled={!importFromSubrouteId} />
+          {/if}
+        </div>
       </div>
     {/if}
 
