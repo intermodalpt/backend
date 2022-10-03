@@ -301,15 +301,16 @@
             </label>
           </label>
         {/if}
-
-        <span>
+        <span class="badge badge-primary">
             Selected stop:
           {#if $selectedStop}
               {$selectedStop.official_name || $selectedStop.osm_name || $selectedStop.name} ({$selectedStop.id})
-            {:else}
+          {:else}
               None
-            {/if}
-          </span>
+          {/if}
+        </span>
+        <span class="badge">R: {$selectedRouteId}</span>
+        <span class="badge">V: {$selectedSubrouteId}</span>
       </div>
     {/if}
   </div>
