@@ -16,7 +16,7 @@
   export const selectedSubrouteId = writable(513);
   export const schedule = derived([selectedRouteId], async ([$selectedRouteId, $selectedDay], set) => {
     if ($selectedRouteId) {
-      await fetch(`${api_server}/api/routes/${$selectedRouteId}/schedule`)
+      await fetch(`${api_server}/v1/routes/${$selectedRouteId}/schedule`)
           .catch(() => {
           })
           .then((r) => r.json())

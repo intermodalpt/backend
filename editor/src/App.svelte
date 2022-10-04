@@ -18,7 +18,7 @@
   });
 
   async function checkToken(token) {
-    let res = await fetch(`${api_server}/auth/check`, {
+    let res = await fetch(`${api_server}/v1/auth/check`, {
       method: 'POST',
       headers: {
         authorization: `Bearer ${token}`

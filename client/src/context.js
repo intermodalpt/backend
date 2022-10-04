@@ -47,7 +47,7 @@ export const selectedRouteStops = derived(
     [selectedRouteId, stops],
     ([$selectedRouteId, $stops], set) => {
       if ($selectedRouteId) {
-        fetch(`${api_server}/api/routes/${$selectedRouteId}/stops`)
+        fetch(`${api_server}/v1/routes/${$selectedRouteId}/stops`)
             .then((r) => r.json())
             .then((data) => {
               data.forEach((sr) => sr.stops.map((stopId) => $stops[stopId]));
@@ -85,7 +85,7 @@ export const schedule = derived(
     [selectedRouteId, selectedDay],
     async ([$selectedRouteId, $selectedDay], set) => {
       if ($selectedRouteId && $selectedDay) {
-        await fetch(`${api_server}/api/routes/${$selectedRouteId}/schedule/${$selectedDay}`)
+        await fetch(`${api_server}/v1/routes/${$selectedRouteId}/schedule/${$selectedDay}`)
             .catch(() => {
             })
             .then((r) => r.json())

@@ -28,10 +28,10 @@ export const stats = writable({
 });
 
 export async function initCache() {
-  routes.set(await fetch(`${api_server}/api/routes`).then(r => r.json()));
+  routes.set(await fetch(`${api_server}/v1/routes`).then(r => r.json()));
 
-  stops.set(await fetch(`${api_server}/api/stops`).then(r => r.json()).then(stopList => {
+  stops.set(await fetch(`${api_server}/v1/stops`).then(r => r.json()).then(stopList => {
     return Object.fromEntries(stopList.map(stop => [stop.id, stop]));
   }));
-  stats.set(await fetch(`${api_server}/stats`).then(r => r.json()));
+  stats.set(await fetch(`${api_server}/v1/stats`).then(r => r.json()));
 }

@@ -34,7 +34,7 @@
   }
 
   function updateStop(stop) {
-    fetch(`${api_server}/api/stops/update/${stop.id}`, {
+    fetch(`${api_server}/v1/stops/update/${stop.id}`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",

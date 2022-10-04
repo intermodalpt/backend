@@ -73,80 +73,80 @@ pub(crate) fn build_paths(state: State) -> Router {
 
     Router::new()
         // Basic roots
-        .route("/api/parishes", get(handlers::get_parishes))
-        .route("/api/stops", get(handlers::get_stops))
-        .route("/api/stops/create", post(handlers::create_stop))
-        .route("/api/stops/update/:stop_id", patch(handlers::patch_stop))
+        .route("/v1/parishes", get(handlers::get_parishes))
+        .route("/v1/stops", get(handlers::get_stops))
+        .route("/v1/stops/create", post(handlers::create_stop))
+        .route("/v1/stops/update/:stop_id", patch(handlers::patch_stop))
         .route(
-            "/api/stops/within_boundary/:x0/:y0/:x1/:y1",
+            "/v1/stops/within_boundary/:x0/:y0/:x1/:y1",
             get(handlers::get_bounded_stops),
         )
         .route(
-            "/api/stops/:stop_id/pictures",
+            "/v1/stops/:stop_id/pictures",
             get(handlers::get_public_stop_pictures),
         )
         .route(
-            "/api/stops/:stop_id/pictures/all",
+            "/v1/stops/:stop_id/pictures/all",
             get(handlers::get_tagged_stop_pictures),
         )
-        .route("/api/stops/:stop_id/spider", get(handlers::get_stop_spider))
-        .route("/pictures", get(handlers::get_pictures))
-        .route("/pictures/rels", get(handlers::get_picture_stop_rels))
-        .route("/api/stops/spider", post(handlers::get_stops_spider))
+        .route("/v1/stops/:stop_id/spider", get(handlers::get_stop_spider))
+        .route("/v1/pictures", get(handlers::get_pictures))
+        .route("/v1/pictures/rels", get(handlers::get_picture_stop_rels))
+        .route("/v1/stops/spider", post(handlers::get_stops_spider))
         .route(
-            "/api/routes",
+            "/v1/routes",
             get(handlers::get_routes).post(handlers::create_route),
         )
         .route(
-            "/api/routes/:route_id",
+            "/v1/routes/:route_id",
             get(handlers::get_route)
                 .patch(handlers::patch_route)
                 .delete(handlers::delete_route),
         )
         .route(
-            "/api/routes/:route_id/create_subroute",
+            "/v1/routes/:route_id/create_subroute",
             post(handlers::create_subroute),
         )
         .route(
-            "/api/routes/:route_id/:subroute_id",
+            "/v1/routes/:route_id/:subroute_id",
             patch(handlers::patch_subroute).delete(handlers::delete_subroute),
         )
         .route(
-            "/api/routes/:route_id/schedule",
+            "/v1/routes/:route_id/schedule",
             get(handlers::get_schedule),
         )
         .route(
-            "/api/routes/:route_id/schedule/:date",
+            "/v1/routes/:route_id/schedule/:date",
             get(handlers::get_schedule_for_date),
         )
         .route(
-            "/api/routes/:route_id/stops",
+            "/v1/routes/:route_id/stops",
             get(handlers::get_route_stops),
         )
         .route(
-            "/api/routes/:route_id/stops/subroutes/:subroute_id",
+            "/v1/routes/:route_id/stops/subroutes/:subroute_id",
             patch(handlers::patch_subroute_stops),
         )
-        .route("/upload/stops", post(handlers::upload_stop_picture))
+        .route("/v1/upload/stops", post(handlers::upload_stop_picture))
         .route(
-            "/upload/stops/:picture_id",
+            "/v1/upload/stops/:picture_id",
             patch(handlers::patch_stop_picture_meta)
                 .delete(handlers::delete_stop_picture),
         )
         .route(
-            "/tagging/stops/untagged",
+            "/v1/tagging/stops/untagged",
             get(handlers::get_untagged_stop_pictures),
         )
-        .route("/actions/import_osm", get(handlers::import_osm))
-        .route("/auth/check", post(handlers::check_auth))
-        .route("/stats", get(handlers::get_stats))
+        .route("/v1/actions/import_osm", get(handlers::import_osm))
+        .route("/v1/auth/check", post(handlers::check_auth))
+        .route("/v1/stats", get(handlers::get_stats))
         .layer(Extension(Arc::new(state)))
         .route(
             "/api-doc/openapi.json",
             get(move || async { Json(api_doc) }),
         )
         .route(
-            "/api/docs/*tail",
+            "/docs/*tail",
             get(handlers::serve_swagger_ui).layer(Extension(config)),
         )
         .layer(cors)

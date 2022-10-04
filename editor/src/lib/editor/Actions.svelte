@@ -8,7 +8,7 @@
 
   function osmSync() {
     osmSyncing = true;
-    fetch(`${api_server}/actions/import_osm`, {
+    fetch(`${api_server}/v1/actions/import_osm`, {
       headers: {
         authorization: `Bearer ${$token}`
       }

@@ -45,7 +45,7 @@ use crate::{middleware, osm, sql, Error, State};
 
 #[utoipa::path(
     get,
-    path = "/api/parishes",
+    path = "/v1/parishes",
     responses(
         (
             status = 200,
@@ -67,7 +67,7 @@ pub(crate) struct StopQueryParam {
 
 #[utoipa::path(
     get,
-    path = "/api/stops",
+    path = "/v1/stops",
     responses(
         (
             status = 200,
@@ -117,7 +117,7 @@ pub(crate) async fn patch_stop(
 
 #[utoipa::path(
     get,
-    path = "/api/stops/{x0}/{y0}/{x1}/{y1}",
+    path = "/v1/stops/{x0}/{y0}/{x1}/{y1}",
     responses(
         (
             status = 200,
@@ -171,7 +171,7 @@ pub(crate) async fn get_pictures(
     Ok(Json(sql::fetch_stop_pictures(&state.pool).await?))
 }
 
-#[utoipa::path(get, path = "/api/stops/{stop_id}/spider")]
+#[utoipa::path(get, path = "/v1/stops/{stop_id}/spider")]
 pub(crate) async fn get_stop_spider(
     Extension(state): Extension<Arc<State>>,
     Path(stop_id): Path<i32>,
@@ -188,7 +188,7 @@ pub(crate) async fn get_stops_spider(
 
 #[utoipa::path(
     get,
-    path = "/api/routes",
+    path = "/v1/routes",
     responses(
         (status = 200, description = "List of routes", body = [Route]),
     )
@@ -297,7 +297,7 @@ pub(crate) async fn delete_subroute(
 
 #[utoipa::path(
     get,
-    path = "/api/routes/{route_id}/schedule",
+    path = "/v1/routes/{route_id}/schedule",
     params(
         (
             "route_id",
@@ -326,7 +326,7 @@ pub(crate) async fn get_schedule(
 
 #[utoipa::path(
     get,
-    path = "/api/routes/{route_id}/schedule/{date}",
+    path = "/v1/routes/{route_id}/schedule/{date}",
     params(
         (
             "route_id",
@@ -371,7 +371,7 @@ pub(crate) async fn get_schedule_for_date(
 
 #[utoipa::path(
     get,
-    path = "/api/routes/{route_id}/stops",
+    path = "/v1/routes/{route_id}/stops",
     params(
         (
             "route_id",
