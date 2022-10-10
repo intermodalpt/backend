@@ -1,5 +1,5 @@
 <script>
-  import { calendarStr, randomHexColor, weekdayName } from "../../utils.js";
+  import { calendarStr, isDeepEqual, randomHexColor, weekdayName } from "../../utils.js";
   import { derived, writable } from "svelte/store";
   import { api_server } from "../../settings.js";
 
@@ -16,9 +16,11 @@
     if ($selectedRouteId) {
       await fetch(`${api_server}/v1/routes/${$selectedRouteId}/schedule`)
           .catch(() => {
+            alert("Failed to load the schedule")
           })
           .then((r) => r.json())
           .catch(() => {
+            alert("Failed to parse the schedule")
           })
           .then((data) => set(data));
     }
@@ -29,22 +31,29 @@
       let currentSchedule = $schedule.filter((entry) => {
         return entry.subroute === $selectedSubrouteId;
       });
+      console.log(currentSchedule);
 
-      let schMatrix = {};
-      let schTypes = [];
+      let scheduleMat = {};
+      let calendars = [];
       for (let e of currentSchedule) {
-        let h = Math.floor(e.time / 60);
-        let m = String(Math.floor(e.time % 60)).padStart(2, "0");
-        let schId = JSON.stringify(e.calendar);
-        if (!schMatrix[h]) schMatrix[h] = [];
-        if (!schTypes.includes(schId)) schTypes.push(schId);
-        schMatrix[h].push({minute: m, conditions: schId});
+        let hour = Math.floor(e.time / 60);
+        let minute = String(Math.floor(e.time % 60)).padStart(2, "0");
+        if (!scheduleMat[hour]) scheduleMat[hour] = [];
+
+        let calendarIndex = calendars.findIndex((calendar) => isDeepEqual(calendar, e.calendar))
+
+        if (calendarIndex === -1) {
+          calendarIndex = calendars.length;
+          calendars.push(e.calendar);
+        }
+
+        scheduleMat[hour].push({id: e.id, minute: minute, calendarIndex: calendarIndex});
       }
-      let schArray = [];
-      for (let k of Object.keys(schMatrix).sort()) {
-        schArray.push({k: k, minutes: schMatrix[k]});
+      let departures = {};
+      for (let hour of Object.keys(scheduleMat).sort()) {
+        departures[hour] = scheduleMat[hour];
       }
-      return [schArray, schTypes];
+      return {departures: departures, calendars: calendars};
     }
   });
 
@@ -89,18 +98,24 @@
     newCalendar[newConditionType].push(modifier);
     newCalendar = newCalendar;
   }
+
+  function indexToChar(index) {
+    const firstLetterOffset = 96;
+    return String.fromCharCode(index + firstLetterOffset + 1)
+  }
 </script>
 
 <span class="text-lg">Current departures</span><br />
 
 {#if $subrouteSchedule}
   <div class="flex flex-row gap-1 bg-base-200 p-1 rounded-xl w-min mx-auto">
-    {#each $subrouteSchedule[0] as scheduleEntry}
+    {#each Object.entries($subrouteSchedule.departures) as [hour, departures]}
       <div class="bg-base-100 rounded-lg flex flex-col min-w-[1.0rem] items-start p-1  group">
-        <div class="font-bold">{scheduleEntry.k}</div>
-        {#each scheduleEntry.minutes as min}
+        <div class="font-bold">{hour}</div>
+        {#each departures as departure}
           <div class="whitespace-nowrap">
-            {min.minute}<sup>{String.fromCharCode($subrouteSchedule[1].indexOf(min.conditions) + 96 + 1)}</sup>
+            <a class="cursor-pointer hover:bg-base-300" on:mouseup={() => {}}>{departure.minute}</a>
+            <sup>{indexToChar(departure.calendarIndex)}</sup>
             <div
                 on:click={() =>
                 alert("Olha aqui dei delete da coisa, se ainda está é impressão tua isto está totalmente implementado")}
@@ -114,10 +129,9 @@
     {/each}
   </div>
   <div class="flex flex-col">
-    {#each $subrouteSchedule[1] as schType, i}
+    {#each $subrouteSchedule.calendars as calendar, i}
       <div>
-        {String.fromCharCode(i + 96 + 1)}
-        {calendarStr(JSON.parse(schType))}
+        {String.fromCharCode(i + 96 + 1)} - {calendarStr(calendar)}
       </div>
     {/each}
   </div>
