@@ -39,7 +39,7 @@
       </div>
     </div>
 
-    {#if $schedule === undefined || $schedule.length === 0 || $subrouteShedule.length === 0 }
+    {#if $schedule?.length === 0 || $subrouteShedule?.length === 0 }
       <span class="text-lg">Sem partidas no dia selecionado</span>
     {/if}
     {#if $subrouteShedule !== undefined}

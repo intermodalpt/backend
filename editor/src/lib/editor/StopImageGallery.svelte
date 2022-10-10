@@ -21,7 +21,7 @@
     }
 
     Promise.all(pages.map((page) => {
-      return fetch(`${api_server}/tagging/stops/untagged?p=${page}`, {
+      return fetch(`${api_server}/v1/tagging/stops/untagged?p=${page}`, {
         headers: {
           authorization: `Bearer ${$token}`
         }

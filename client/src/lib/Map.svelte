@@ -229,13 +229,13 @@
   }
 
   function fetchSpiderMap(stopId) {
-    fetch(`${api_server}/api/stops/${stopId}/spider`)
+    fetch(`${api_server}/v1/stops/${stopId}/spider`)
         .then((x) => x.json())
         .then(applySpiderMap);
   }
 
   function fetchAggregateMap(stop_ids) {
-    fetch(`${api_server}/api/stops/spider`, {
+    fetch(`${api_server}/v1/stops/spider`, {
       method: "POST",
       headers: {"Content-Type": "application/json",},
       body: JSON.stringify(stop_ids),
@@ -528,8 +528,8 @@
           <WHeader
               backBtn=true
               on:back={() => {$selectedRouteId = undefined;}}
-              fg={'#' + $selectedRoute.badge_text}
-              bg={'#' + $selectedRoute.badge_bg}
+              fg={$selectedRoute.badge_text}
+              bg={$selectedRoute.badge_bg}
           >{$selectedRoute.code}: {$selectedRoute.name}</WHeader>
           <select class="select select-primary w-full mx-auto" bind:value={$selectedSubrouteId}>
             {#each $selectedRoute.subroutes as subroute}
@@ -542,8 +542,8 @@
           <WHeader
               backBtn=true
               on:back={() => {$selectedRouteId = undefined;}}
-              fg={'#' + $selectedRoute.badge_text}
-              bg={'#' + $selectedRoute.badge_bg}
+              fg={$selectedRoute.badge_text}
+              bg={$selectedRoute.badge_bg}
           >{$selectedRoute.code}: {$selectedRoute.name}</WHeader>
           <CompactSchedule />
         </div>

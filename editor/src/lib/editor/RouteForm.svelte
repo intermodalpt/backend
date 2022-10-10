@@ -50,7 +50,7 @@
         continue;
       }
       if (subroute.id) {
-        fetch(`${api_server}/api/routes/${routeId}/${subroute.id}`, {
+        fetch(`${api_server}/v1/routes/${routeId}/${subroute.id}`, {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
@@ -75,7 +75,7 @@
               }
             });
       } else {
-        fetch(`${api_server}/api/routes/${$selectedRoute.id}/create_subroute`, {
+        fetch(`${api_server}/v1/routes/${$selectedRoute.id}/create_subroute`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -111,7 +111,7 @@
 
     if (routeChanged) {
       let mainSubrouteId = subroutes[mainSubrouteIndex] ? subroutes[mainSubrouteIndex].id : null;
-      fetch(`${api_server}/api/routes/${routeId}`, {
+      fetch(`${api_server}/v1/routes/${routeId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -150,7 +150,7 @@
     if (subroutes[index].id === undefined) {
       subroutes.splice(index, 1);
     } else if (confirm(`Do you really really want to delete ${subroutes[index].flag}? This will fail if it has stops or departures.`)) {
-      fetch(`${api_server}/api/routes/${$selectedRoute.id}/${subroutes[index].id}`, {
+      fetch(`${api_server}/v1/routes/${$selectedRoute.id}/${subroutes[index].id}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
@@ -187,7 +187,7 @@
     }
 
     if (confirm(`Do you really really want to delete ${$selectedRoute.code}? This will fail if it has subroutes.`)) {
-      fetch(`${api_server}/api/routes/${$selectedRoute.id}`, {
+      fetch(`${api_server}/v1/routes/${$selectedRoute.id}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",

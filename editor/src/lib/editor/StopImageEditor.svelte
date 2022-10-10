@@ -1,9 +1,9 @@
 <script>
-  import {picStopRels, stopPicRels, stops} from "../../cache.js";
+  import { picStopRels, stopPicRels, stops } from "../../cache.js";
   import L from "leaflet";
-  import {api_server, token} from "../../settings.js";
-  import {icons} from "./assets.js";
-  import {createEventDispatcher} from "svelte";
+  import { api_server, token } from "../../settings.js";
+  import { icons } from "./assets.js";
+  import { createEventDispatcher } from "svelte";
 
   export let image;
 
@@ -227,7 +227,7 @@
       }
     }
 
-    fetch(`${api_server}/upload/stops/${$image.id}`, {
+    fetch(`${api_server}/v1/upload/stops/${$image.id}`, {
       method: "PATCH",
       body: JSON.stringify(newMeta),
       headers: {
@@ -264,7 +264,7 @@
 
   function deleteImage() {
     if (confirm("Are you really really sure?")) {
-      fetch(`${api_server}/upload/stops/${$image.id}`, {
+      fetch(`${api_server}/v1/upload/stops/${$image.id}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",

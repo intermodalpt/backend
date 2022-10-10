@@ -89,7 +89,7 @@
     if (id === undefined) {
       return;
     }
-    fetch(`${api_server}/api/routes/${id}/stops?all=true`)
+    fetch(`${api_server}/v1/routes/${id}/stops?all=true`)
         .then((r) => r.json())
         .then((data) => {
           const stops = Object.fromEntries(data.map((subroute) => [subroute.subroute, subroute]));
@@ -215,7 +215,7 @@
 
   function saveSubrouteStops(e) {
     let routeStops = $selectedRouteStops[$selectedSubrouteId];
-    fetch(`${api_server}/api/routes/${$selectedRouteId}/stops/subroutes/${$selectedSubrouteId}`, {
+    fetch(`${api_server}/v1/routes/${$selectedRouteId}/stops/subroutes/${$selectedSubrouteId}`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",

@@ -1,37 +1,39 @@
 <script>
   import Operator from "./Operator.svelte";
-  import {selectedOperatorTag, selectedRouteId} from "../context.js";
+  import {selectedOperatorId, selectedRouteId} from "../context.js";
 
-  const operators = [
-    "carris",
-    "cmet",
-    "tcb",
-    "mobicascais",
-    "ttsl",
-    "cp",
-    "fertagus",
-    "ml",
-    "mts",
+  const operatorIdTagPairs = [
+    {id: 1, name: "Carris Metropolitana", tag: "cmet"},
+    {id: 3, name: "Carris", tag: "carris"},
+    {id: 2, name: "Transportes Colectivos do Barreiro", tag: "tcb"},
+    {id: 4, name: "MobiCascais", tag: "mobic"},
+    {id: 5, name: "Comboios de Portugal", tag: "cp"},
+    {id: 6, name: "Fertagus", tag: "fert"},
+    {id: 7, name: "Metro Transportes do Sul", tag: "mts"},
+    {id: 8, name: "Metro de Lisboa", tag: "ml"},
+    {id: 9, name: "Transtejo e Soflusa", tag: "ttsl"}
   ];
+
 </script>
-{#if $selectedOperatorTag}
+
+{#if $selectedOperatorId}
   <div class="card bg-base-100 shadow-xl mx-2 z-[5000]">
     <div class="card-body -mt-4">
       <div class="flex gap-2">
-        <a on:mouseup={() => $selectedOperatorTag = undefined} class="btn btn-ghost btn-xs text-primary">Outras operadoras</a>
+        <a on:mouseup={() => $selectedOperatorId = undefined} class="btn btn-ghost btn-xs text-primary">Outras operadoras</a>
         {#if $selectedRouteId}
           <a on:mouseup={() => $selectedRouteId = undefined} class="btn btn-ghost btn-xs text-primary">Outras rotas</a>
         {/if}
       </div>
-      <div class="company compact {$selectedOperatorTag} bg-base-200"></div>
+      <div class="company compact {operatorIdTagPairs.find((op) => {return op.id === $selectedOperatorId})?.tag} bg-base-200"></div>
       <Operator />
     </div>
   </div>
 {:else}
   <div class="grid gap-3 grid-cols-[repeat(auto-fit,minmax(20rem,1fr))] mx-2">
-    {#each operators as op}
-      <div class="card bg-base-100 shadow-xl cursor-pointer" on:mouseup={() => {$selectedOperatorTag = op}}>
-        <div class="rounded-xl aspect-[3.6] {op !== 'cmet' && 'blur-sm'} {op}"></div>
+    {#each operatorIdTagPairs as op}
+      <div class="card bg-base-100 shadow-xl cursor-pointer z-[5000]" on:mouseup={() => {$selectedOperatorId = op.id}}>
+        <div class="rounded-xl aspect-[3.6] {op.tag}"></div>
       </div>
     {/each}
   </div>
@@ -54,7 +56,7 @@
     background-size: 40%, 50%;
   }
 
-  .mobicascais {
+  .mobic {
     background: top 0.7em left 0.7em no-repeat url("/src/assets/logos/mobic.svg"),
     bottom 0.7em right 0.7em no-repeat url("/src/assets/veiculos/mobic.svg");
     background-size: 35%, 60%;
@@ -98,13 +100,13 @@
     background-size: 75%, 40%;
   }
 
-  .fertagus {
+  .fert {
     background: top 0.7em left 0.7em no-repeat url("/src/assets/logos/fertagus.svg"),
     bottom 0 right 0.7em no-repeat url("/src/assets/veiculos/fertagus.svg");
     background-size: 40%, 55%;
   }
 
-  .fertagus.compact {
+  .fert.compact {
     background-size: 40%, 50%;
   }
 

@@ -4,28 +4,50 @@ import {routes, stops} from "./cache.js";
 
 export const mode = writable(localStorage.getItem("mode"));
 
-export const selectedOperatorTag = writable(undefined);
+export const selectedOperatorId = writable(undefined);
+
+export const selectedOperatorRoutes = derived(
+    [routes, selectedOperatorId],
+    ([$routes, $selectedOperatorId]) => {
+      if ($selectedOperatorId === undefined) {
+        return;
+      }
+      return $routes.filter((r) => {
+        return r.operator === $selectedOperatorId;
+      }).sort(
+          (ra, rb) => {
+            if (ra.operator !== rb.operator) {
+              return ra.operator - rb.operator;
+            }
+            if (!ra.code) {
+              return -1;
+            } else if (!rb.code) {
+              return 1;
+            } else {
+              return (parseInt(ra.code) || 10000) - (parseInt(rb.code) || 10000);
+            }
+          });
+    }
+);
 
 export const selectedRouteId = writable(undefined);
 
 export const selectedRoute = derived(
     [routes, selectedRouteId],
     ([$routes, $selectedRouteId]) => {
-
       if ($selectedRouteId === undefined) {
         return;
       }
       return $routes.find((r) => {
         return r.id === $selectedRouteId;
       });
-    }
-);
+    });
 
 export const selectedRouteStops = derived(
     [selectedRouteId, stops],
     ([$selectedRouteId, $stops], set) => {
       if ($selectedRouteId) {
-        fetch(`${api_server}/api/routes/${$selectedRouteId}/stops`)
+        fetch(`${api_server}/v1/routes/${$selectedRouteId}/stops`)
             .then((r) => r.json())
             .then((data) => {
               data.forEach((sr) => sr.stops.map((stopId) => $stops[stopId]));
@@ -62,9 +84,8 @@ export const selectedDay = writable(new Date().toISOString().split("T")[0]);
 export const schedule = derived(
     [selectedRouteId, selectedDay],
     async ([$selectedRouteId, $selectedDay], set) => {
-
       if ($selectedRouteId && $selectedDay) {
-        await fetch(`${api_server}/api/routes/${$selectedRouteId}/schedule/${$selectedDay}`)
+        await fetch(`${api_server}/v1/routes/${$selectedRouteId}/schedule/${$selectedDay}`)
             .catch(() => {
             })
             .then((r) => r.json())
@@ -115,13 +136,11 @@ export const scheduleBySubroute = derived(schedule, $schedule => {
     subroute.max_hour = max_hour;
 
     // Shift hours so that the day starts at 4AM
-    subroute.schedule_hours = [
-      ...Array(max_hour - min_hour + 1).keys()
-    ].map((offset) => {
+    subroute.schedule_hours = [...Array(max_hour - min_hour + 1).keys()].map((offset) => {
       return (min_hour + offset) % 24
     });
-    subroute.schedule = (max_hour < 24) ?
-        subroute.schedule.slice(min_hour, max_hour + 1)
+    subroute.schedule = (max_hour < 24)
+        ? subroute.schedule.slice(min_hour, max_hour + 1)
         : subroute.schedule.slice(min_hour, 24).concat(subroute.schedule.slice(0, max_hour % 24 + 1));
 
 
@@ -149,7 +168,7 @@ export const subrouteShedule = derived([selectedSubrouteId, scheduleBySubroute],
 
 export function reset() {
   selectedDay.set(new Date().toISOString().split("T")[0]);
-  selectedOperatorTag.set(undefined);
+  selectedOperatorId.set(undefined);
   selectedRouteId.set(undefined);
   selectedSubrouteId.set(undefined);
 }

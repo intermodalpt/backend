@@ -73,18 +73,18 @@ function loadCache() {
 
 async function fetchData(token, callback) {
   await Promise.all([
-    fetch(`${api_server}/api/routes`).then(r => r.json()),
-    fetch(`${api_server}/api/stops?all=true`).then(r => r.json()).then(stopList => {
+    fetch(`${api_server}/v1/routes`).then(r => r.json()),
+    fetch(`${api_server}/v1/stops?all=true`).then(r => r.json()).then(stopList => {
       return Object.fromEntries(stopList.map(stop => [stop.id, stop]));
     }),
-    fetch(`${api_server}/pictures`, {
+    fetch(`${api_server}/v1/pictures`, {
       headers: {
         authorization: `Bearer ${token}`
       }
     }).then(r => r.json()).then((pics) => {
       return Object.fromEntries(pics.map(pic => [pic.id, pic]))
     }),
-    fetch(`${api_server}/pictures/rels`, {
+    fetch(`${api_server}/v1/pictures/rels`, {
       headers: {
         authorization: `Bearer ${token}`
       }

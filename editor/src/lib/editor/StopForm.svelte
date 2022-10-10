@@ -42,7 +42,7 @@
       [stop],
       ([$stop], set) => {
         if ($stop) {
-          fetch(`${api_server}/api/stops/${$stop.id}/pictures/all`, {
+          fetch(`${api_server}/v1/stops/${$stop.id}/pictures/all`, {
             headers: {authorization: `Bearer ${$token}`}
           }).then(r => r.json()).then(pictureList => set(pictureList))
         } else {
