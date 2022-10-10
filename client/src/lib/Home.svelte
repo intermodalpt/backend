@@ -1,10 +1,10 @@
 <script>
-  import {mode} from "../context.js";
-  import {stats} from "../cache.js";
+  import { mode } from "../context.js";
+  import { stats } from "../cache.js";
 
   function setMode(newMode) {
     $mode = newMode;
-    if (newMode === null){
+    if (newMode === null) {
       localStorage.removeItem("mode");
     } else {
       localStorage.setItem("mode", newMode);

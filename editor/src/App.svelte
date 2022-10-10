@@ -71,7 +71,5 @@
     flex-direction: row;
     justify-content: center;
     justify-items: center;
-    margin-top: 20px;
-    margin-bottom: 40px;
   }
 </style>

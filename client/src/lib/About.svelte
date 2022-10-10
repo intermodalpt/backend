@@ -48,8 +48,7 @@
             <span class="text-sm">Jovem precariamente dinâmico</span>
           </div>
           <p class="text-left">
-            Iniciei este projeto e tento impedir que o Tiago o mate por
-            acidente.
+            Iniciei este projeto e tento impedir que o Tiago o mate por acidente.
           </p>
         </div>
       </div>

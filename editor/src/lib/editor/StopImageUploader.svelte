@@ -44,6 +44,7 @@
       <div class="radial-progress" style="--value:90; --size:12rem; --thickness: 2rem;">99%</div>
     {:else}
       <div class="flex flex-col gap-1 ">
+        <span>{uploadCount}</span>
         {#if files && files[0]}
           {#each files as file, i}
             <div class="flex flex-row justify-between items-center">

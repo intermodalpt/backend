@@ -2,10 +2,10 @@
   import StopForm from "./StopForm.svelte";
   import L from "leaflet";
   import "leaflet.featuregroup.subgroup";
-  import {api_server, token} from "../../settings.js";
-  import {icons, picIcon} from "./assets.js";
-  import {writable} from "svelte/store";
-  import {pictures, stops} from "../../cache.js";
+  import { api_server, token } from "../../settings.js";
+  import { icons, picIcon } from "./assets.js";
+  import { writable } from "svelte/store";
+  import { pictures, stops } from "../../cache.js";
   import StopMassEditor from "./StopMassEditor.svelte";
 
   let map;
@@ -229,7 +229,7 @@
   }
 </script>
 
-<div class="absolute right-8 top-8">
+<div class="absolute right-8 top-2">
   <div class="form-control">
     <label class="label cursor-pointer">
       <span class="label-text mr-2">Mass Edit</span>
@@ -251,7 +251,7 @@
     </div>
   </div>
 
-  <input type="button" class="input input-info" value="Filtros" on:click={openFilterPicker}/>
+  <input type="button" class="input input-info" value="Filtros" on:click={openFilterPicker} />
   {#if previewedPic}
     <input type="checkbox" id="pic-preview" class="modal-toggle" checked />
     <div class="modal">
