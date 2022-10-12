@@ -31,8 +31,8 @@ mod handlers;
 mod middleware;
 mod models;
 mod osm;
-mod utils;
 mod sql;
+mod utils;
 
 use errors::Error;
 
@@ -111,18 +111,21 @@ pub(crate) fn build_paths(state: State) -> Router {
             "/v1/routes/:route_id/:subroute_id",
             patch(handlers::patch_subroute).delete(handlers::delete_subroute),
         )
-        .route(
-            "/v1/routes/:route_id/schedule",
-            get(handlers::get_schedule),
-        )
+        .route("/v1/routes/:route_id/schedule", get(handlers::get_schedule))
         .route(
             "/v1/routes/:route_id/schedule/:date",
             get(handlers::get_schedule_for_date),
         )
         .route(
-            "/v1/routes/:route_id/stops",
-            get(handlers::get_route_stops),
+            "/v1/schedules/:subroute_id",
+            post(handlers::create_subroute_departure),
         )
+        .route(
+            "/v1/schedules/:subroute_id/:departure_id",
+            patch(handlers::patch_subroute_departure)
+                .delete(handlers::delete_subroute_departure),
+        )
+        .route("/v1/routes/:route_id/stops", get(handlers::get_route_stops))
         .route(
             "/v1/routes/:route_id/stops/subroutes/:subroute_id",
             patch(handlers::patch_subroute_stops),

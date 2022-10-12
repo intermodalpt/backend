@@ -120,6 +120,7 @@ pub struct StopPic {
 }
 
 pub(crate) mod requests {
+    use crate::Calendar;
     use serde::Deserialize;
     use utoipa::Component;
 
@@ -263,6 +264,12 @@ pub(crate) mod requests {
         pub stops: Vec<i32>,
         pub notes: Option<String>,
         pub quality: i16,
+    }
+
+    #[derive(Debug, Deserialize, Component)]
+    pub struct ChangeDeparture {
+        pub time: i16,
+        pub calendar: Calendar,
     }
 }
 

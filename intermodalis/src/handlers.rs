@@ -369,6 +369,46 @@ pub(crate) async fn get_schedule_for_date(
     ))
 }
 
+pub(crate) async fn create_subroute_departure(
+    Extension(state): Extension<Arc<State>>,
+    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    Json(departure): Json<requests::ChangeDeparture>,
+    Path(subroute_id): Path<i32>,
+) -> Result<Json<HashMap<String, i32>>, Error> {
+    let _user_id = middleware::get_user(auth.token(), &state.pool).await?;
+
+    let id = sql::insert_departure(&state.pool, subroute_id, departure).await?;
+    Ok(Json({
+        let mut map = HashMap::new();
+        map.insert("id".to_string(), id);
+        map
+    }))
+}
+
+pub(crate) async fn patch_subroute_departure(
+    Extension(state): Extension<Arc<State>>,
+    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    Json(departure): Json<requests::ChangeDeparture>,
+    Path((subroute_id, departure_id)): Path<(i32, i32)>,
+) -> Result<(), Error> {
+    let _user_id = middleware::get_user(auth.token(), &state.pool).await?;
+
+    sql::update_departure(&state.pool, subroute_id, departure_id, departure)
+        .await?;
+    Ok(())
+}
+
+pub(crate) async fn delete_subroute_departure(
+    Extension(state): Extension<Arc<State>>,
+    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    Path((subroute_id, departure_id)): Path<(i32, i32)>,
+) -> Result<(), Error> {
+    let _user_id = middleware::get_user(auth.token(), &state.pool).await?;
+
+    sql::delete_departure(&state.pool, subroute_id, departure_id).await?;
+    Ok(())
+}
+
 #[utoipa::path(
     get,
     path = "/v1/routes/{route_id}/stops",

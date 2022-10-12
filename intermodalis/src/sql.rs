@@ -18,12 +18,13 @@
 
 use chrono::{Local, NaiveDate};
 use itertools::Itertools;
+use serde_json::json;
 use sqlx::PgPool;
 use std::collections::{hash_map, HashMap};
 
 use crate::calendar::Calendar;
 use crate::models::requests::{
-    ChangeRoute, ChangeStop, ChangeStopPic, ChangeSubroute,
+    ChangeDeparture, ChangeRoute, ChangeStop, ChangeStopPic, ChangeSubroute,
     ChangeSubrouteStops, NewStop,
 };
 use crate::models::responses::{
@@ -813,6 +814,7 @@ SELECT departures.id as id,
 FROM subroutes
 JOIN departures on departures.subroute = subroutes.id
 WHERE subroutes.route=$1
+ORDER BY time ASC
     "#,
         route_id
     )
@@ -866,6 +868,69 @@ ORDER BY time asc
     }
 
     Ok(departures)
+}
+
+pub(crate) async fn insert_departure(
+    pool: &PgPool,
+    subroute_id: i32,
+    departure: ChangeDeparture,
+) -> Result<i32> {
+    let res = sqlx::query!(
+        r#"
+INSERT INTO departures(subroute, time, calendar)
+VALUES($1, $2, $3)
+RETURNING id
+    "#,
+        subroute_id,
+        departure.time,
+        json!(departure.calendar),
+    )
+    .fetch_one(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    Ok(res.id)
+}
+
+pub(crate) async fn update_departure(
+    pool: &PgPool,
+    subroute_id: i32,
+    departure_id: i32,
+    departure: ChangeDeparture,
+) -> Result<()> {
+    let _res = sqlx::query!(
+        r#"
+UPDATE departures
+SET time=$1, calendar=$2
+WHERE id=$3 AND subroute=$4
+    "#,
+        departure.time,
+        json!(departure.calendar),
+        departure_id,
+        subroute_id,
+    )
+    .execute(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    Ok(())
+}
+
+pub(crate) async fn delete_departure(
+    pool: &PgPool,
+    subroute_id: i32,
+    departure_id: i32,
+) -> Result<()> {
+    let _res = sqlx::query!(
+        r#"
+DELETE FROM departures
+WHERE id=$1 AND subroute=$2
+    "#,
+        departure_id,
+        subroute_id,
+    )
+    .execute(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    Ok(())
 }
 
 pub(crate) async fn fetch_stop_pictures(
