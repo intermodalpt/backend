@@ -6,7 +6,7 @@
   let creatingDeparture = false;
 
   export let selectedRouteId;
-  export let selectedSubrouteId ;
+  export let selectedSubrouteId;
 
   const newDepartures = writable([]);
   const patchedDepartures = writable({});
@@ -16,7 +16,6 @@
 
 
   export const schedule = derived([selectedRouteId], async ([$selectedRouteId, $selectedDay], set) => {
-    console.log($selectedRouteId);
     if ($selectedRouteId) {
       await fetch(`${api_server}/v1/routes/${$selectedRouteId}/schedule`)
           .catch(() => {
@@ -55,10 +54,11 @@
   const editingDeparture = derived([subrouteSchedule, editingId], ([$subrouteSchedule, $editingId]) => {
     if ($editingId) {
       let departure = $subrouteSchedule?.find((e) => e.id === $editingId);
-      console.log(departure);
       formTime = timestampToTime(departure.time);
-      formWeekdays = departure.calendar.weekdays;
-      formCalendar = departure.calendar;
+      // formWeekdays = departure.calendar.weekdays;
+      // formCalendar = departure.calendar;
+      formWeekdays = JSON.parse(JSON.stringify(departure.calendar.weekdays));
+      formCalendar = JSON.parse(JSON.stringify(departure.calendar));
 
       return departure;
     }
@@ -91,6 +91,7 @@
   });
 
   let formTime = null;
+  let formTimeQueue = [];
   let formNewConditionType = null;
   let formNewConditionPeriod = null;
   $: newConditionPeriodReady =
@@ -116,6 +117,7 @@
 
   function clearForm() {
     formTime = null;
+    formTimeQueue = [];
     // formNewConditionType = null;
     // formNewConditionPeriod = null;
     // formNewCondition = null;
@@ -130,10 +132,18 @@
     // rangeEnd = null;
   }
 
+  function resetFormCalendar() {
+    formCalendar = {
+      only_if: [],
+      also_if: [],
+      except_if: [],
+    };
+    formWeekdays = [0, 1, 2, 3, 4];
+  }
+
   function addModifier() {
     let modifier;
     if (formNewConditionPeriod === "Range") {
-      console.log(rangeStart);
       const startParts = rangeStart.split("-");
       const endParts = rangeEnd.split("-");
       const start = [parseInt(startParts[1]), parseInt(startParts[2])];
@@ -144,8 +154,11 @@
     } else {
       modifier = {condition: formNewConditionPeriod};
     }
-    formCalendar[formNewConditionType].push(modifier);
-    formCalendar = formCalendar;
+
+    if (formCalendar[formNewConditionType].findIndex((existingModifier) => isDeepEqual(existingModifier, modifier)) === -1) {
+      formCalendar[formNewConditionType].push(modifier);
+      formCalendar = formCalendar;
+    }
   }
 
   function indexToChar(index) {
@@ -153,19 +166,39 @@
     return String.fromCharCode(index + firstLetterOffset + 1)
   }
 
+
+  function queueTimeAddition() {
+    if (formTime) {
+      formTimeQueue.push(formTime);
+      formTime = null;
+      formTimeQueue = formTimeQueue;
+    }
+  }
+
   function editEntry(id) {
-    console.log(id);
     creatingDeparture = false;
     $editingId = id;
   }
 
   async function deleteEntry(id) {
-    await fetch(`${api_server}/v1/schedules/${$selectedSubrouteId}/${id}`, {
-      method: "DELETE",
-      headers: {authorization: `Bearer ${$token}`},
-    });
-    $deletedDepartures.add(id);
-    $deletedDepartures = $deletedDepartures;
+    if (confirm("Do you really want to delete this departure?")) {
+      await fetch(`${api_server}/v1/schedules/${$selectedSubrouteId}/${id}`, {
+        method: "DELETE",
+        headers: {authorization: `Bearer ${$token}`},
+      });
+      $deletedDepartures.add(id);
+      $deletedDepartures = $deletedDepartures;
+    }
+  }
+
+  function timeToTimestamp(time) {
+    let hour = parseInt(time.split(':')[0]);
+    if (hour < 4) {
+      hour += 24;
+    }
+    let minute = parseInt(time.split(':')[1]);
+
+    return hour * 60 + minute;
   }
 
   async function saveDeparture() {
@@ -175,40 +208,37 @@
       return;
     }
 
-    let hour = parseInt(formTime.split(':')[0]);
-    if (hour < 4) {
-      hour += 24;
-    }
-    let minute = parseInt(formTime.split(':')[1]);
-
-    let timestamp = hour * 60 + minute;
-    console.log(timestamp);
-
-
-    let departure = {
-      time: timestamp,
-      calendar: calendar,
-    };
-
     if (creatingDeparture) {
-      await fetch(`${api_server}/v1/schedules/${$selectedSubrouteId}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          authorization: `Bearer ${$token}`
-        },
-        body: JSON.stringify(departure),
-      })
-          .then((x) => x.json())
-          .then((resp) => {
-            departure.id = resp.id;
-            departure.subroute = $selectedSubrouteId;
-            $newDepartures.push(departure);
-            $newDepartures = $newDepartures;
-            clearForm();
-            creatingDeparture = false;
-          });
+      formTimeQueue.push(formTime);
+      for (let time of formTimeQueue) {
+        let departure = {
+          time: timeToTimestamp(time),
+          calendar: calendar,
+        };
+
+        await fetch(`${api_server}/v1/schedules/${$selectedSubrouteId}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            authorization: `Bearer ${$token}`
+          },
+          body: JSON.stringify(departure),
+        })
+            .then((x) => x.json())
+            .then((resp) => {
+              departure.id = resp.id;
+              departure.subroute = $selectedSubrouteId;
+              $newDepartures.push(departure);
+              $newDepartures = $newDepartures;
+            });
+      }
+      // creatingDeparture = false;
+      clearForm();
     } else {
+      let departure = {
+        time: timeToTimestamp(formTime),
+        calendar: calendar,
+      };
       await fetch(`${api_server}/v1/schedules/${$selectedSubrouteId}/${$editingId}`, {
         method: "PATCH",
         headers: {
@@ -285,7 +315,21 @@
         <label class="input-group">
           <span class="label-text w-24">Time</span>
           <input type="time" class="input input-bordered input-sm w-fit" bind:value={formTime} />
+          {#if creatingDeparture}
+            <input
+                type="button"
+                value="+"
+                class="input input-bordered input-sm w-fit"
+                on:mouseup={queueTimeAddition}
+                disabled="{!formTime}" />
+          {/if}
         </label>
+        {#if creatingDeparture && formTimeQueue?.length > 0 }
+          <span class="flex">
+            {JSON.stringify(formTimeQueue)}
+            <span on:mouseup={() => {formTimeQueue.splice(-1); formTimeQueue = formTimeQueue;}}>(x)</span>
+          </span>
+        {/if}
       </div>
       <span class="text-md">In the weekdays</span>
       <div class="flex gap-4">
@@ -315,7 +359,8 @@
             Also if
           </label>
         </div>
-        <div class="flex gap-12">
+        <hr class="mt-2 mb-2">
+        <div class="flex gap-12 items-start">
           <span class="text-md">By</span>
           <label class="flex gap-1 items-center">
             <input class="radio" name="period" type="radio" value="Summer" bind:group={formNewConditionPeriod} />
@@ -388,7 +433,10 @@
           </button>
         </div>
       </div>
-      <span>Current calendar: {calendarStr(formCalendar)}</span>
+      <span>
+        Current calendar: {calendarStr(formCalendar)}
+        <span on:mouseup={resetFormCalendar}>(x)</span>
+      </span>
       <div class="flex justify-end">
         <button class="btn btn-success btn-sm" disabled={!formTime} on:mouseup={saveDeparture}>
           {#if creatingDeparture}Create{:else }Change{/if}
