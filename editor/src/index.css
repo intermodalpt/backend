@@ -88,3 +88,34 @@
 sub, sup { font-size: 75%; line-height: 0; position: relative; vertical-align: baseline; }
 sup { top: -0.3em; vertical-align: super;}
 sub { bottom: -0.25em; vertical-align: sub;}
+
+.leaflet-div-icon {
+  background: none !important;
+  border-radius: 5px !important;
+  border: 1px solid blue !important;
+}
+
+.score-bubble {
+  border-radius: 100px;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border: 1px solid black !important;
+  font-weight: bold;
+}
+
+.score-bubble-perfect {
+  background: green;
+}
+.score-bubble-green {
+  background: greenyellow;
+}
+.score-bubble-yellow {
+  background: yellow;
+}
+.score-bubble-orange {
+  background: orange;
+}
+.score-bubble-red {
+  background: red;
+}

@@ -61,11 +61,82 @@
   let info = L.control();
   let zoom = 0;
 
+  function stopScore(stop) {
+    let score = 10.0;
+
+    // 2 points here
+    score -= stop.has_flag === true || stop.has_flag === false ? 0.0 : 0.5;
+    score -= stop.has_schedules === true || stop.has_schedules === false ? 0.0 : 0.2;
+    score -= stop.has_sidewalk === true || stop.has_sidewalk === false ? 0.0 : 0.2;
+    score -= stop.has_shelter === true || stop.has_shelter === false ? 0.0 : 0.5;
+    score -= stop.has_bench === true || stop.has_bench === false ? 0.0 : 0.3;
+    score -= stop.has_trash_can === true || stop.has_trash_can === false ? 0.0 : 0.3;
+
+    // 0.9 point
+    score -= stop.has_abusive_parking === true || stop.has_abusive_parking === false ? 0.0 : 0.2;
+    score -= stop.has_outdated_info === true || stop.has_outdated_info === false ? 0.0 : 0.2;
+    score -= stop.is_damaged === true || stop.is_damaged === false ? 0.0 : 0.3;
+    score -= stop.is_vandalized === true || stop.is_vandalized === false ? 0.0 : 0.2;
+
+    // 0.8 point
+    score -= stop.has_crossing === true || stop.has_crossing === false ? 0.0 : 0.2;
+    score -= stop.has_accessibility === true || stop.has_accessibility === false ? 0.0 : 0.2;
+    score -= stop.is_illuminated === true || stop.is_illuminated === false ? 0.0 : 0.2;
+    score -= stop.has_illuminated_path === true || stop.has_illuminated_path === false ? 0.0 : 0.2;
+
+    // 0.8 point here
+    score -= stop.has_visibility_from_area === true || stop.has_visibility_from_area === false ? 0.0 : 0.3;
+    score -= stop.has_visibility_from_within === true || stop.has_visibility_from_within === false ? 0.0 : 0.2;
+    score -= stop.is_visible_from_outside === true || stop.is_visible_from_outside === false ? 0.0 : 0.3;
+
+    // 3 points here
+    score -= stop.name != null ? 0.0 : 1.5;
+    score -= stop.official_name != null ? 0.0 : 0.7;
+    // score -= stop.code  != null ? 0.0 : 0.1;
+    score -= stop.abbr != null ? 0.0 : 0.3;
+    score -= stop.locality != null ? 0.0 : 0.2;
+    score -= stop.street != null ? 0.0 : 0.2;
+    // score -= stop.door  != null ? 0.0 : 0.0;
+
+    return score;
+  }
+
   function createStopMarker(info) {
     let marker;
     let markerOptions = {rinseOnHover: true, draggable: true};
     if (!(info.name || info.short_name || info.osm_name || info.official_name)) {
       marker = L.marker([info.lat, info.lon], Object.assign({}, markerOptions, {icon: icons["geoc"]}));
+    } else if (info.source === 'osm') {
+      const score = Math.round(stopScore(info));
+      let color;
+      switch (score) {
+        case 3:
+        case 4:
+          color = 'orange';
+          break;
+        case 5:
+        case 6:
+          color = 'yellow';
+          break;
+        case 7:
+        case 8:
+        case 9:
+          color = 'green';
+          break;
+        case 10:
+          color = 'perfect';
+          break;
+        default:
+          color = 'red';
+      }
+      let icon = L.divIcon({
+        html: `${score}`,
+        // iconUrl: `/markers/${source}.svg`,
+        className: `score-bubble score-bubble-${color}`,
+        iconSize: [16, 16],
+        tooltipAnchor: [16, 0],
+      });
+      marker = L.marker([info.lat, info.lon], Object.assign({}, markerOptions, {icon: icon}));
     } else if (icons[info.source] === undefined) {
       marker = L.marker([info.lat, info.lon], markerOptions);
     } else {
@@ -190,7 +261,7 @@
       contextmenuWidth: 140,
     }).setView([38.71856, -9.1372], 10);
 
-    let osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      let osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
       attribution: "© OpenStreetMap",
     }).addTo(m);
