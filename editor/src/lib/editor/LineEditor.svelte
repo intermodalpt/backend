@@ -1,11 +1,11 @@
 <script>
   import LineStopsEditor from "./LineStopsEditor.svelte";
-  import {api_server, token} from "../../settings.js";
-  import {icons} from "./assets.js";
-  import {stops, routes, operators} from "../../cache.js";
+  import { api_server, token } from "../../settings.js";
+  import { icons } from "./assets.js";
+  import { stops, routes, operators } from "../../cache.js";
   import L from "leaflet";
-  import {calc_route_multipoly} from "../../utils.js";
-  import {derived, writable} from "svelte/store";
+  import { calc_route_multipoly } from "../../utils.js";
+  import { derived, writable } from "svelte/store";
   import RouteForm from "./RouteForm.svelte";
   import SubrouteScheduleForm from "./SubrouteScheduleForm.svelte";
   import Select from 'svelte-select';
@@ -296,8 +296,8 @@
           <input type="checkbox" id="schedule-edit-modal" class="modal-toggle" />
           <label for="schedule-edit-modal" class="modal cursor-pointer z-[2000]">
             <label class="modal-box lg:w-[60rem] lg:max-w-full" for="">
-              <span class="text-lg">A editar {$selectedSubrouteId.flag}</span>
-              <SubrouteScheduleForm />
+              <span class="text-lg">Editing {$selectedSubroute.flag}</span><br>
+              <SubrouteScheduleForm selectedRouteId={selectedRouteId} selectedSubrouteId={selectedSubrouteId} />
             </label>
           </label>
         {/if}
