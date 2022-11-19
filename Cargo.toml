@@ -1,6 +1,6 @@
 [workspace]
 
-members = ["intermodalis"]
+members = ["intermodal"]
 
 [profile.dev.package.sqlx-macros]
 opt-level = 3
