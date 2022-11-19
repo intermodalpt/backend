@@ -194,7 +194,10 @@ impl fmt::Display for Calendar {
                 return f.write_str("Dias úteis");
             }
             Calendar {
-                weekdays, only_if, except_if, ..
+                weekdays,
+                only_if,
+                except_if,
+                ..
             } if weekdays == &BUSINESS_WEEKDAYS
                 && only_if == &[Condition::School]
                 && except_if == &[Condition::Holiday] =>
@@ -318,10 +321,9 @@ impl fmt::Display for Condition {
 
 #[cfg(test)]
 mod test {
-    use crate::calendar::{
-        Calendar, Condition, BUSINESS_WEEKDAYS, EVERY_DAY, WEEKEND,
+    use super::{
+        Calendar, Condition, Weekday, BUSINESS_WEEKDAYS, EVERY_DAY, WEEKEND,
     };
-    use crate::Weekday;
     use chrono::NaiveDate;
 
     #[test]

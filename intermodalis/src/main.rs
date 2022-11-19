@@ -25,13 +25,14 @@
     clippy::pedantic
 )]
 
+mod auth;
 mod calendar;
 mod errors;
-mod handlers;
-mod middleware;
-mod models;
-mod osm;
-mod sql;
+mod geo;
+mod misc;
+mod pics;
+mod routes;
+mod stops;
 mod utils;
 
 use errors::Error;
@@ -72,77 +73,96 @@ pub(crate) fn build_paths(state: State) -> Router {
         .allow_origin(Any);
 
     Router::new()
-        // Basic roots
-        .route("/v1/parishes", get(handlers::get_parishes))
-        .route("/v1/stops", get(handlers::get_stops))
-        .route("/v1/stops/create", post(handlers::create_stop))
-        .route("/v1/stops/update/:stop_id", patch(handlers::patch_stop))
+        .route("/v1/parishes", get(geo::handlers::get_parishes))
+        .route("/v1/stops", get(stops::handlers::get_stops))
+        .route("/v1/stops/create", post(stops::handlers::create_stop))
+        .route(
+            "/v1/stops/update/:stop_id",
+            patch(stops::handlers::patch_stop),
+        )
         .route(
             "/v1/stops/within_boundary/:x0/:y0/:x1/:y1",
-            get(handlers::get_bounded_stops),
+            get(stops::handlers::get_bounded_stops),
         )
         .route(
             "/v1/stops/:stop_id/pictures",
-            get(handlers::get_public_stop_pictures),
+            get(pics::handlers::get_public_stop_pictures),
         )
         .route(
             "/v1/stops/:stop_id/pictures/all",
-            get(handlers::get_tagged_stop_pictures),
+            get(pics::handlers::get_tagged_stop_pictures),
         )
-        .route("/v1/stops/:stop_id/spider", get(handlers::get_stop_spider))
-        .route("/v1/pictures", get(handlers::get_pictures))
-        .route("/v1/pictures/rels", get(handlers::get_picture_stop_rels))
-        .route("/v1/stops/spider", post(handlers::get_stops_spider))
+        .route(
+            "/v1/stops/:stop_id/spider",
+            get(stops::handlers::get_stop_spider),
+        )
+        .route("/v1/pictures", get(pics::handlers::get_pictures))
+        .route(
+            "/v1/pictures/rels",
+            get(pics::handlers::get_picture_stop_rels),
+        )
+        .route("/v1/stops/spider", post(stops::handlers::get_stops_spider))
         .route(
             "/v1/routes",
-            get(handlers::get_routes).post(handlers::create_route),
+            get(routes::handlers::get_routes)
+                .post(routes::handlers::create_route),
         )
         .route(
             "/v1/routes/:route_id",
-            get(handlers::get_route)
-                .patch(handlers::patch_route)
-                .delete(handlers::delete_route),
+            get(routes::handlers::get_route)
+                .patch(routes::handlers::patch_route)
+                .delete(routes::handlers::delete_route),
         )
         .route(
             "/v1/routes/:route_id/create_subroute",
-            post(handlers::create_subroute),
+            post(routes::handlers::create_subroute),
         )
         .route(
             "/v1/routes/:route_id/:subroute_id",
-            patch(handlers::patch_subroute).delete(handlers::delete_subroute),
+            patch(routes::handlers::patch_subroute)
+                .delete(routes::handlers::delete_subroute),
         )
-        .route("/v1/routes/:route_id/schedule", get(handlers::get_schedule))
+        .route(
+            "/v1/routes/:route_id/schedule",
+            get(routes::handlers::get_schedule),
+        )
         .route(
             "/v1/routes/:route_id/schedule/:date",
-            get(handlers::get_schedule_for_date),
+            get(routes::handlers::get_schedule_for_date),
         )
         .route(
             "/v1/schedules/:subroute_id",
-            post(handlers::create_subroute_departure),
+            post(routes::handlers::create_subroute_departure),
         )
         .route(
             "/v1/schedules/:subroute_id/:departure_id",
-            patch(handlers::patch_subroute_departure)
-                .delete(handlers::delete_subroute_departure),
+            patch(routes::handlers::patch_subroute_departure)
+                .delete(routes::handlers::delete_subroute_departure),
         )
-        .route("/v1/routes/:route_id/stops", get(handlers::get_route_stops))
+        .route(
+            "/v1/routes/:route_id/stops",
+            get(routes::handlers::get_route_stops),
+        )
         .route(
             "/v1/routes/:route_id/stops/subroutes/:subroute_id",
-            patch(handlers::patch_subroute_stops),
+            patch(routes::handlers::patch_subroute_stops),
         )
-        .route("/v1/upload/stops", post(handlers::upload_stop_picture))
+        .route(
+            "/v1/upload/stops",
+            post(pics::handlers::upload_stop_picture),
+        )
         .route(
             "/v1/upload/stops/:picture_id",
-            patch(handlers::patch_stop_picture_meta)
-                .delete(handlers::delete_stop_picture),
+            patch(pics::handlers::patch_stop_picture_meta)
+                .delete(pics::handlers::delete_stop_picture),
         )
         .route(
             "/v1/tagging/stops/untagged",
-            get(handlers::get_untagged_stop_pictures),
+            get(pics::handlers::get_untagged_stop_pictures),
         )
-        .route("/v1/actions/import_osm", get(handlers::import_osm))
-        .route("/v1/auth/check", post(handlers::check_auth))
-        .route("/v1/stats", get(handlers::get_stats))
+        .route("/v1/actions/import_osm", get(geo::handlers::import_osm))
+        .route("/v1/auth/check", post(auth::handlers::check_auth))
+        .route("/v1/stats", get(misc::handlers::get_stats))
         .layer(Extension(Arc::new(state)))
         .route(
             "/api-doc/openapi.json",
@@ -150,7 +170,7 @@ pub(crate) fn build_paths(state: State) -> Router {
         )
         .route(
             "/docs/*tail",
-            get(handlers::serve_swagger_ui).layer(Extension(config)),
+            get(misc::handlers::serve_swagger_ui).layer(Extension(config)),
         )
         .layer(cors)
 }
@@ -195,7 +215,7 @@ async fn main() {
     let pool = PgPool::connect(&settings.get_string("db").expect("db not set"))
         .await
         .expect("Unable to connect to the database");
-    let stats = get_stats(&pool).await.unwrap();
+    let stats = misc::sql::get_stats(&pool).await.unwrap();
     let state = State {
         bucket,
         pool,
@@ -213,25 +233,23 @@ async fn main() {
         .expect("Unable to start service");
 }
 
-use crate::calendar::{Calendar, Weekday};
-use crate::middleware::get_stats;
-use crate::models::responses::Stats;
-use models::{
-    responses::{
-        DateDeparture, Departure, Parish, Route, Subroute, SubrouteStops,
-    },
-    Stop,
+use calendar::models::{Calendar, Weekday};
+use geo::models::Parish;
+use misc::models::responses::Stats;
+use routes::models::responses::{
+    DateDeparture, Departure, Route, Subroute, SubrouteStops,
 };
+use stops::models::Stop;
 
 #[derive(OpenApi)]
 #[openapi(
     handlers(
-        handlers::get_parishes,
-        handlers::get_stops,
-        handlers::get_routes,
-        handlers::get_schedule,
-        handlers::get_schedule_for_date,
-        handlers::get_route_stops,
+        geo::handlers::get_parishes,
+        stops::handlers::get_stops,
+        routes::handlers::get_routes,
+        routes::handlers::get_schedule,
+        routes::handlers::get_schedule_for_date,
+        routes::handlers::get_route_stops,
     ),
     components(
         Stop,

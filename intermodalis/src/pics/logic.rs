@@ -23,9 +23,9 @@ use chrono::Local;
 use sha1::{Digest, Sha1};
 use sqlx::PgPool;
 
-use crate::models::StopPic;
+use super::models::StopPic;
 use crate::utils::Exif;
-use crate::{Error, Stats};
+use crate::Error;
 
 const THUMBNAIL_MAX_WIDTH: u32 = 300;
 const THUMBNAIL_MAX_HEIGHT: u32 = 200;
@@ -34,7 +34,6 @@ const THUMBNAIL_MAX_QUALITY: f32 = 90.0;
 const MEDIUM_IMG_MAX_WIDTH: u32 = 1200;
 const MEDIUM_IMG_MAX_HEIGHT: u32 = 800;
 const MEDIUM_IMG_MAX_QUALITY: f32 = 85.0;
-
 
 pub(crate) async fn upload_stop_picture(
     user_id: i32,
@@ -244,106 +243,4 @@ WHERE id=$1
         .map_err(|err| Error::DatabaseExecution(err.to_string()));
 
     Ok(())
-}
-
-pub(crate) async fn try_get_user(
-    token: &str,
-    db_pool: &PgPool,
-) -> Result<Option<i32>, Error> {
-    let res = sqlx::query!(
-        r#"
-SELECT id
-FROM Users
-WHERE token=$1
-    "#,
-        token
-    )
-    .fetch_optional(db_pool)
-    .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
-
-    Ok(res.map(|row| row.id))
-}
-
-pub(crate) async fn get_user(
-    token: &str,
-    db_pool: &PgPool,
-) -> Result<i32, Error> {
-    let user = try_get_user(token, db_pool).await?;
-    if let Some(id) = user {
-        Ok(id)
-    } else {
-        Err(Error::Forbidden)
-    }
-}
-
-pub(crate) async fn get_stats(db_pool: &PgPool) -> Result<Stats, Error> {
-    let stop_count = sqlx::query!(
-        r#"
-SELECT count(*) as cnt
-FROM Stops
-WHERE Stops.source = 'osm'
-    "#
-    )
-    .fetch_one(db_pool)
-    .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
-    .cnt
-    .unwrap_or(0);
-
-    let route_count = sqlx::query!(
-        r#"
-SELECT count(*) as cnt
-FROM Routes
-    "#
-    )
-    .fetch_one(db_pool)
-    .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
-    .cnt
-    .unwrap_or(0);
-
-    let subroute_count = sqlx::query!(
-        r#"
-SELECT count(*) as cnt
-FROM Subroutes
-    "#
-    )
-    .fetch_one(db_pool)
-    .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
-    .cnt
-    .unwrap_or(0);
-
-    let departure_count = sqlx::query!(
-        r#"
-SELECT count(*) as cnt
-FROM Departures
-    "#
-    )
-    .fetch_one(db_pool)
-    .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
-    .cnt
-    .unwrap_or(0);
-
-    let picture_count = sqlx::query!(
-        r#"
-SELECT count(*) as cnt
-FROM stop_pics
-    "#
-    )
-    .fetch_one(db_pool)
-    .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
-    .cnt
-    .unwrap_or(0);
-
-    Ok(Stats {
-        stop_count,
-        route_count,
-        subroute_count,
-        departure_count,
-        picture_count,
-    })
 }

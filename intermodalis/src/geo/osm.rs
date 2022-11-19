@@ -16,7 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use crate::{Error, Stop, sql};
+use crate::{stops, Error, Stop};
 
 use std::collections::HashMap;
 
@@ -142,12 +142,14 @@ pub(crate) async fn import(db_pool: &PgPool) -> Result<(usize, usize), Error> {
     let mut new_stops = vec![];
     let mut updated_stops = vec![];
 
-    let stops = sql::fetch_stops(db_pool, false).await?;
+    let stops = stops::sql::fetch_stops(db_pool, false).await?;
 
     let stop_index = stops
         .into_iter()
         .filter_map(|stop| {
-            stop.external_id.clone().map(|external_id| (external_id, stop))
+            stop.external_id
+                .clone()
+                .map(|external_id| (external_id, stop))
         })
         .collect::<HashMap<String, Stop>>();
 
@@ -298,7 +300,7 @@ WHERE id=$9 AND external_id=$10
 
 #[cfg(test)]
 mod test {
-    use crate::osm::XmlOsm;
+    use super::XmlOsm;
 
     #[test]
     fn test_deserialization() {
