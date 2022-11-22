@@ -28,7 +28,7 @@ use super::models::requests::{
 use super::models::responses::{
     DateDeparture, Departure, Route, Subroute, SubrouteStops,
 };
-use crate::calendar::models::Calendar;
+use crate::calendar::Calendar;
 use crate::Error;
 
 type Result<T> = std::result::Result<T, Error>;
@@ -51,7 +51,8 @@ SELECT routes.id as route,
     route_types.badge_bg_color as bg_color,
     subroutes.id as subroute,
     subroutes.flag as subroute_flag,
-    subroutes.circular as subroute_circular
+    subroutes.circular as subroute_circular,
+    subroutes.polyline as subroute_polyline
 FROM routes
 JOIN route_types on routes.type = route_types.id
 LEFT JOIN subroutes on routes.id = subroutes.route
@@ -80,6 +81,7 @@ ORDER BY routes.id asc
                 id: row.subroute,
                 flag: row.subroute_flag,
                 circular: row.subroute_circular,
+                polyline: row.subroute_polyline,
             }],
             active: row.active,
             operator: row.operator,
@@ -90,6 +92,7 @@ ORDER BY routes.id asc
                 id: row.subroute,
                 flag: row.subroute_flag,
                 circular: row.subroute_circular,
+                polyline: row.subroute_polyline,
             });
         }
         Ok(Some(route))
@@ -113,7 +116,8 @@ SELECT routes.id as route,
     route_types.badge_bg_color as bg_color,
     subroutes.id as "subroute!: Option<i32>",
     subroutes.flag as "subroute_flag!: Option<String>",
-    subroutes.circular as "subroute_circular!: Option<bool>"
+    subroutes.circular as "subroute_circular!: Option<bool>",
+    subroutes.polyline as "subroute_polyline!: Option<String>"
 FROM routes
 JOIN route_types on routes.type = route_types.id
 LEFT JOIN subroutes ON routes.id = subroutes.route
@@ -135,7 +139,12 @@ ORDER BY routes.id asc
                     row.subroute_flag.clone(),
                     row.subroute_circular,
                 ) {
-                    route.subroutes.push(Subroute { id, flag, circular });
+                    route.subroutes.push(Subroute {
+                        id,
+                        flag,
+                        circular,
+                        polyline: row.subroute_polyline.clone(),
+                    });
                 }
             })
             .or_insert(Route {
@@ -149,7 +158,12 @@ ORDER BY routes.id asc
                 subroutes: if let (Some(id), Some(flag), Some(circular)) =
                     (row.subroute, row.subroute_flag, row.subroute_circular)
                 {
-                    vec![Subroute { id, flag, circular }]
+                    vec![Subroute {
+                        id,
+                        flag,
+                        circular,
+                        polyline: row.subroute_polyline,
+                    }]
                 } else {
                     vec![]
                 },
@@ -257,13 +271,14 @@ pub(crate) async fn insert_subroute(
 ) -> Result<i32> {
     let res = sqlx::query!(
         r#"
-INSERT INTO subroutes(route, flag, circular)
-VALUES ($1, $2, $3)
+INSERT INTO subroutes(route, flag, circular, polyline)
+VALUES ($1, $2, $3, $4)
 RETURNING id
     "#,
         route_id,
         subroute.flag,
         subroute.circular,
+        subroute.polyline,
     )
     .fetch_one(pool)
     .await
@@ -549,6 +564,7 @@ pub(crate) async fn fetch_schedule(
 SELECT departures.id as id,
     subroutes.id as subroute,
     departures.time as time,
+    departures.calendar_id as calendar_id,
     departures.calendar as calendar
 FROM subroutes
 JOIN departures on departures.subroute = subroutes.id
@@ -567,8 +583,15 @@ ORDER BY time ASC
             id: row.id,
             subroute: row.subroute,
             time: row.time,
-            calendar: serde_json::from_value(row.calendar)
-                .map_err(|_err| Error::DatabaseDeserialization)?,
+            calendar_id: row.calendar_id,
+            calendar: if let Some(calendar) = row.calendar {
+                Some(
+                    serde_json::from_value(calendar)
+                        .map_err(|_err| Error::DatabaseDeserialization)?,
+                )
+            } else {
+                None
+            },
         });
     }
 
@@ -596,14 +619,19 @@ ORDER BY time asc
 
     let mut departures = vec![];
     for row in res {
-        let calendar: Calendar = serde_json::from_value(row.calendar)
-            .map_err(|_err| Error::DatabaseDeserialization)?;
-        if calendar.includes(date) {
-            departures.push(DateDeparture {
-                subroute: row.subroute,
-                time: row.time,
-            });
-        }
+        if let Some(calendar) = row.calendar {
+            let calendar: Calendar = serde_json::from_value(calendar)
+                .map_err(|_err| Error::DatabaseDeserialization)?;
+            if calendar.includes(date) {
+                departures.push(DateDeparture {
+                    subroute: row.subroute,
+                    time: row.time,
+                });
+            }
+        } else {
+            // TODO
+            continue;
+        };
     }
 
     Ok(departures)
@@ -616,13 +644,14 @@ pub(crate) async fn insert_departure(
 ) -> Result<i32> {
     let res = sqlx::query!(
         r#"
-INSERT INTO departures(subroute, time, calendar)
-VALUES($1, $2, $3)
+INSERT INTO departures(subroute, time, calendar, calendar_id)
+VALUES($1, $2, $3, $4)
 RETURNING id
     "#,
         subroute_id,
         departure.time,
         json!(departure.calendar),
+        departure.calendar_id
     )
     .fetch_one(pool)
     .await

@@ -18,3 +18,5 @@
 
 pub(crate) mod handlers;
 pub(crate) mod models;
+
+pub(crate) use models::Calendar;

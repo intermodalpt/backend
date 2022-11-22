@@ -16,8 +16,30 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+use serde::Serialize;
+use serde_repr::Serialize_repr;
+use utoipa::Component;
+
+use crate::calendar::Calendar;
+
+#[repr(u8)]
+#[derive(Debug, Serialize_repr)]
+pub enum DepartureChangeType {
+    New = 0,
+    Change = 1,
+    Cancel = 2,
+}
+
+#[derive(Debug, Serialize, Component)]
+pub struct DepartureChange {
+    pub id: i32,
+    pub name: String,
+    pub calendar: Calendar,
+    pub departure_change_type: DepartureChangeType,
+}
+
 pub(crate) mod requests {
-    use crate::calendar::models::Calendar;
+    use crate::calendar::Calendar;
     use serde::Deserialize;
     use utoipa::Component;
 
@@ -36,6 +58,7 @@ pub(crate) mod requests {
     pub struct ChangeSubroute {
         pub flag: String,
         pub circular: bool,
+        pub polyline: Option<String>,
     }
 
     #[derive(Deserialize, Component)]
@@ -53,12 +76,13 @@ pub(crate) mod requests {
     #[derive(Debug, Deserialize, Component)]
     pub struct ChangeDeparture {
         pub time: i16,
-        pub calendar: Calendar,
+        pub calendar: Option<Calendar>,
+        pub calendar_id: Option<i32>,
     }
 }
 
 pub(crate) mod responses {
-    use crate::calendar::models::Calendar;
+    use crate::calendar::Calendar;
     use serde::Serialize;
     use utoipa::Component;
 
@@ -79,16 +103,13 @@ pub(crate) mod responses {
         pub(crate) active: bool,
     }
 
-    #[derive(Debug, Serialize, Component, sqlx::Type)]
+    #[derive(Debug, Serialize, Component)]
     pub struct Subroute {
         pub(crate) id: i32,
         #[component(example = "Azeitão (Circular)")]
         pub(crate) flag: String,
         pub(crate) circular: bool,
-        // #[component(example = 123)]
-        // pub(crate) cached_from: Option<i32>,
-        // #[component(example = 123)]
-        // pub(crate) cached_to: Option<i32>,
+        pub(crate) polyline: Option<String>,
     }
 
     #[derive(Serialize, Component)]
@@ -98,7 +119,10 @@ pub(crate) mod responses {
         // Departure time in minutes starting at midnight
         #[component(example = 480)]
         pub time: i16,
-        pub calendar: Calendar,
+        // TODO replace this
+        pub calendar: Option<Calendar>,
+        // With this
+        pub calendar_id: Option<i32>,
     }
 
     #[derive(Serialize, Component)]

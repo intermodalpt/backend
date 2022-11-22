@@ -47,7 +47,7 @@ pub(crate) async fn get_routes(
 pub(crate) async fn create_route(
     Extension(state): Extension<Arc<State>>,
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
-    Json(route): Json<models::requests::ChangeRoute>,
+    Json(route): Json<requests::ChangeRoute>,
 ) -> Result<Json<HashMap<String, i32>>, Error> {
     let _user_id = auth::get_user(auth.token(), &state.pool).await?;
 
@@ -75,7 +75,7 @@ pub(crate) async fn patch_route(
     Extension(state): Extension<Arc<State>>,
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
     Path(route_id): Path<i32>,
-    Json(changes): Json<models::requests::ChangeRoute>,
+    Json(changes): Json<requests::ChangeRoute>,
 ) -> Result<(), Error> {
     let _user_id = auth::get_user(auth.token(), &state.pool).await?;
 
@@ -96,7 +96,7 @@ pub(crate) async fn create_subroute(
     Extension(state): Extension<Arc<State>>,
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
     Path(route_id): Path<i32>,
-    Json(subroute): Json<models::requests::ChangeSubroute>,
+    Json(subroute): Json<requests::ChangeSubroute>,
 ) -> Result<Json<HashMap<String, i32>>, Error> {
     let _user_id = auth::get_user(auth.token(), &state.pool).await?;
 
@@ -113,7 +113,7 @@ pub(crate) async fn patch_subroute(
     Extension(state): Extension<Arc<State>>,
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
     Path((route_id, subroute_id)): Path<(i32, i32)>,
-    Json(changes): Json<models::requests::ChangeSubroute>,
+    Json(changes): Json<requests::ChangeSubroute>,
 ) -> Result<(), Error> {
     let _user_id = auth::get_user(auth.token(), &state.pool).await?;
 
