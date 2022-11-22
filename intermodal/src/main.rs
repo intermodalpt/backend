@@ -27,6 +27,7 @@
 
 mod auth;
 mod calendar;
+mod contrib;
 mod errors;
 mod geo;
 mod misc;
@@ -159,6 +160,22 @@ pub(crate) fn build_paths(state: State) -> Router {
         .route(
             "/v1/tagging/stops/untagged",
             get(pics::handlers::get_untagged_stop_pictures),
+        )
+        .route(
+            "/v1/contrib/upload/stops",
+            post(pics::handlers::upload_stop_picture),
+        )
+        .route(
+            "/v1/contrib/stops/update/:stop_id",
+            post(contrib::handlers::post_stop_contrib_data),
+        )
+        .route(
+            "/v1/contrib/:contribution_id/accept",
+            post(contrib::handlers::post_accept_contrib_data),
+        )
+        .route(
+            "/v1/contrib/:contribution_id/decline",
+            post(contrib::handlers::post_decline_contrib_data),
         )
         .route("/v1/actions/import_osm", get(geo::handlers::import_osm))
         .route("/v1/auth/check", post(auth::handlers::check_auth))
