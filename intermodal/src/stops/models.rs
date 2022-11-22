@@ -17,9 +17,31 @@
 */
 
 use serde::{Deserialize, Serialize};
+use serde_repr::{Deserialize_repr, Serialize_repr};
 use utoipa::Component;
 
-#[derive(Debug, Serialize, Deserialize, Component)]
+#[repr(u8)]
+#[derive(
+    Serialize_repr, Deserialize_repr, PartialEq, Debug, Clone, Copy, sqlx::Type,
+)]
+pub enum IlluminationPos {
+    Indirect = 0,
+    Direct = 10,
+    Own = 20,
+}
+
+#[repr(u8)]
+#[derive(
+    Serialize_repr, Deserialize_repr, PartialEq, Debug, Clone, Copy, sqlx::Type,
+)]
+pub enum IlluminationStrength {
+    None = 0,
+    Low = 1,
+    Medium = 3,
+    High = 5,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Component, sqlx::FromRow)]
 pub struct Stop {
     pub id: i32,
     #[component(example = "cmet")]
@@ -49,6 +71,16 @@ pub struct Stop {
     pub succeeded_by: Option<i32>,
     #[serde(default)]
     pub notes: Option<String>,
+    pub updater: i32,
+    pub update_date: String,
+    #[serde(default)]
+    pub tags: Vec<String>,
+    #[serde(flatten)]
+    pub accessibility_meta: StopMeta,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Component, Default)]
+pub struct StopMeta {
     #[serde(default)]
     pub has_crossing: Option<bool>,
     #[serde(default)]
@@ -74,7 +106,11 @@ pub struct Stop {
     #[serde(default)]
     pub has_trash_can: Option<bool>,
     #[serde(default)]
-    pub is_illuminated: Option<bool>,
+    pub illumination_strength: Option<IlluminationStrength>,
+    #[serde(default)]
+    pub illumination_position: Option<IlluminationPos>,
+    #[serde(default)]
+    pub is_illumination_working: Option<bool>,
     #[serde(default)]
     pub has_illuminated_path: Option<bool>,
     #[serde(default)]
@@ -83,15 +119,14 @@ pub struct Stop {
     pub has_visibility_from_area: Option<bool>,
     #[serde(default)]
     pub is_visible_from_outside: Option<bool>,
-    pub updater: i32,
-    pub update_date: String,
-    #[serde(default)]
-    pub tags: Vec<String>,
 }
 
 pub(crate) mod requests {
+    use crate::stops::models::StopMeta;
     use serde::Deserialize;
     use utoipa::Component;
+
+    use super::Stop;
 
     #[derive(Deserialize, Component)]
     pub struct NewStop {
@@ -107,47 +142,15 @@ pub(crate) mod requests {
         #[serde(default)]
         pub notes: Option<String>,
         #[serde(default)]
-        pub has_crossing: Option<bool>,
-        #[serde(default)]
-        pub has_accessibility: Option<bool>,
-        #[serde(default)]
-        pub has_abusive_parking: Option<bool>,
-        #[serde(default)]
-        pub has_outdated_info: Option<bool>,
-        #[serde(default)]
-        pub is_damaged: Option<bool>,
-        #[serde(default)]
-        pub is_vandalized: Option<bool>,
-        #[serde(default)]
-        pub has_flag: Option<bool>,
-        #[serde(default)]
-        pub has_schedules: Option<bool>,
-        #[serde(default)]
-        pub has_sidewalk: Option<bool>,
-        #[serde(default)]
-        pub has_shelter: Option<bool>,
-        #[serde(default)]
-        pub has_bench: Option<bool>,
-        #[serde(default)]
-        pub has_trash_can: Option<bool>,
-        #[serde(default)]
-        pub is_illuminated: Option<bool>,
-        #[serde(default)]
-        pub has_illuminated_path: Option<bool>,
-        #[serde(default)]
-        pub has_visibility_from_within: Option<bool>,
-        #[serde(default)]
-        pub has_visibility_from_area: Option<bool>,
-        #[serde(default)]
-        pub is_visible_from_outside: Option<bool>,
-        #[serde(default)]
         pub tags: Vec<String>,
+        #[serde(default)]
+        pub accessibility_meta: StopMeta,
     }
 
     #[derive(Deserialize, Component)]
     pub struct ChangeStop {
-        pub lon: f64,
-        pub lat: f64,
+        pub lon: Option<f64>,
+        pub lat: Option<f64>,
         pub name: Option<String>,
         pub short_name: Option<String>,
         pub official_name: Option<String>,
@@ -157,41 +160,27 @@ pub(crate) mod requests {
         #[serde(default)]
         pub notes: Option<String>,
         #[serde(default)]
-        pub has_crossing: Option<bool>,
-        #[serde(default)]
-        pub has_accessibility: Option<bool>,
-        #[serde(default)]
-        pub has_abusive_parking: Option<bool>,
-        #[serde(default)]
-        pub has_outdated_info: Option<bool>,
-        #[serde(default)]
-        pub is_damaged: Option<bool>,
-        #[serde(default)]
-        pub is_vandalized: Option<bool>,
-        #[serde(default)]
-        pub has_flag: Option<bool>,
-        #[serde(default)]
-        pub has_schedules: Option<bool>,
-        #[serde(default)]
-        pub has_sidewalk: Option<bool>,
-        #[serde(default)]
-        pub has_shelter: Option<bool>,
-        #[serde(default)]
-        pub has_bench: Option<bool>,
-        #[serde(default)]
-        pub has_trash_can: Option<bool>,
-        #[serde(default)]
-        pub is_illuminated: Option<bool>,
-        #[serde(default)]
-        pub has_illuminated_path: Option<bool>,
-        #[serde(default)]
-        pub has_visibility_from_within: Option<bool>,
-        #[serde(default)]
-        pub has_visibility_from_area: Option<bool>,
-        #[serde(default)]
-        pub is_visible_from_outside: Option<bool>,
-        #[serde(default)]
         pub tags: Vec<String>,
+        #[serde(default)]
+        pub accessibility_meta: StopMeta,
+    }
+
+    impl From<Stop> for ChangeStop {
+        fn from(stop: Stop) -> Self {
+            ChangeStop {
+                lon: stop.lon,
+                lat: stop.lat,
+                name: stop.name,
+                short_name: stop.short_name,
+                official_name: stop.official_name,
+                locality: stop.locality,
+                street: stop.street,
+                door: stop.door,
+                notes: stop.notes,
+                tags: stop.tags,
+                accessibility_meta: stop.accessibility_meta,
+            }
+        }
     }
 }
 

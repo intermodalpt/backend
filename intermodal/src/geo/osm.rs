@@ -84,23 +84,7 @@ impl From<XmlNode> for Stop {
             external_id: Some(node.id.to_string()),
             succeeded_by: None,
             notes: None,
-            has_crossing: None,
-            has_accessibility: None,
-            has_abusive_parking: None,
-            has_outdated_info: None,
-            is_damaged: None,
-            is_vandalized: None,
-            has_flag: None,
-            has_schedules: None,
-            has_sidewalk: None,
-            has_shelter: None,
-            has_bench: None,
-            has_trash_can: None,
-            is_illuminated: None,
-            has_illuminated_path: None,
-            has_visibility_from_within: None,
-            has_visibility_from_area: None,
-            is_visible_from_outside: None,
+            accessibility_meta: stops::models::StopMeta::default(),
             updater: -1,
             update_date: Local::now().to_string(),
             tags: vec![],
@@ -111,23 +95,18 @@ impl From<XmlNode> for Stop {
                 "name" => res.osm_name = Some(tag.v),
                 "official_name" => res.official_name = Some(tag.v),
                 "shelter" => match tag.v.as_str() {
-                    "yes" => res.has_shelter = Some(true),
-                    "no" => res.has_shelter = Some(false),
+                    "yes" => res.accessibility_meta.has_shelter = Some(true),
+                    "no" => res.accessibility_meta.has_shelter = Some(false),
                     _ => {}
                 },
                 "bench" => match tag.v.as_str() {
-                    "yes" => res.has_bench = Some(true),
-                    "no" => res.has_bench = Some(false),
+                    "yes" => res.accessibility_meta.has_bench = Some(true),
+                    "no" => res.accessibility_meta.has_bench = Some(false),
                     _ => {}
                 },
                 "bin" => match tag.v.as_str() {
-                    "yes" => res.has_trash_can = Some(true),
-                    "no" => res.has_trash_can = Some(false),
-                    _ => {}
-                },
-                "lit" => match tag.v.as_str() {
-                    "yes" => res.is_illuminated = Some(true),
-                    "no" => res.is_illuminated = Some(false),
+                    "yes" => res.accessibility_meta.has_trash_can = Some(true),
+                    "no" => res.accessibility_meta.has_trash_can = Some(false),
                     _ => {}
                 },
                 _ => {}
@@ -176,12 +155,12 @@ pub(crate) async fn import(db_pool: &PgPool) -> Result<(usize, usize), Error> {
                     || stop.osm_name != osm_stop.osm_name
                     || (stop.official_name.is_none()
                         && stop.official_name != osm_stop.official_name)
-                    || (stop.has_shelter.is_none()
-                        && stop.has_shelter != osm_stop.has_shelter)
-                    || (stop.has_trash_can.is_none()
-                        && stop.has_trash_can != osm_stop.has_trash_can)
-                    || (stop.is_illuminated.is_none()
-                        && stop.is_illuminated != osm_stop.is_illuminated)
+                    // || (stop.has_shelter.is_none()
+                    // && stop.has_shelter != osm_stop.has_shelter)
+                    // || (stop.has_trash_can.is_none()
+                    // && stop.has_trash_can != osm_stop.has_trash_can)
+                    // || (stop.is_illuminated.is_none()
+                    // && stop.is_illuminated != osm_stop.is_illuminated)
                 {
                     // Prevent OSM from overriding some of the meta fields
                     if stop.official_name.is_some()
@@ -189,21 +168,21 @@ pub(crate) async fn import(db_pool: &PgPool) -> Result<(usize, usize), Error> {
                     {
                         osm_stop.official_name = stop.official_name.clone();
                     }
-                    if stop.has_shelter.is_some()
-                        && stop.has_shelter != osm_stop.has_shelter
-                    {
-                        osm_stop.has_shelter = stop.has_shelter;
-                    }
-                    if stop.has_trash_can.is_some()
-                        && stop.has_trash_can != osm_stop.has_trash_can
-                    {
-                        osm_stop.has_trash_can = stop.has_trash_can;
-                    }
-                    if stop.is_illuminated.is_some()
-                        && stop.is_illuminated != osm_stop.is_illuminated
-                    {
-                        osm_stop.is_illuminated = stop.is_illuminated;
-                    }
+                    // if stop.has_shelter.is_some()
+                    //     && stop.has_shelter != osm_stop.has_shelter
+                    // {
+                    //     osm_stop.has_shelter = stop.has_shelter;
+                    // }
+                    // if stop.has_trash_can.is_some()
+                    //     && stop.has_trash_can != osm_stop.has_trash_can
+                    // {
+                    //     osm_stop.has_trash_can = stop.has_trash_can;
+                    // }
+                    // if stop.is_illuminated.is_some()
+                    //     && stop.is_illuminated != osm_stop.is_illuminated
+                    // {
+                    //     osm_stop.is_illuminated = stop.is_illuminated;
+                    // }
                     updated_stops.push(osm_stop);
                 }
             } else {
@@ -248,19 +227,14 @@ async fn insert_stops(db_pool: &PgPool, stops: Vec<Stop>) -> Result<(), Error> {
     for stop in stops {
         let _res = sqlx::query!(
             r#"
-INSERT INTO Stops(name, osm_name, official_name, lon, lat, has_shelter,
-    has_bench, has_trash_can, is_illuminated, source, external_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+INSERT INTO Stops(name, osm_name, official_name, lon, lat, source, external_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
     "#,
             stop.name,
             stop.osm_name,
             stop.official_name,
             stop.lon,
             stop.lat,
-            stop.has_shelter,
-            stop.has_bench,
-            stop.has_trash_can,
-            stop.is_illuminated,
             stop.source,
             stop.external_id,
         )
@@ -276,18 +250,13 @@ async fn update_stops(db_pool: &PgPool, stops: Vec<Stop>) -> Result<(), Error> {
         let _res = sqlx::query!(
             r#"
 UPDATE Stops
-SET official_name=$1, osm_name=$2, lon=$3, lat=$4, has_shelter=$5, has_bench=$6,
-    has_trash_can=$7, is_illuminated=$8
-WHERE id=$9 AND external_id=$10
+SET official_name=$1, osm_name=$2, lon=$3, lat=$4
+WHERE id=$5 AND external_id=$6
     "#,
             stop.official_name,
             stop.osm_name,
             stop.lon,
             stop.lat,
-            stop.has_shelter,
-            stop.has_bench,
-            stop.has_trash_can,
-            stop.is_illuminated,
             stop.id,
             stop.external_id,
         )

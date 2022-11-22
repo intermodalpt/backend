@@ -25,30 +25,126 @@ use crate::Error;
 
 type Result<T> = std::result::Result<T, Error>;
 
+pub(crate) async fn fetch_stop(
+    pool: &PgPool,
+    stop_id: i32,
+) -> Result<Option<models::Stop>> {
+    let res = sqlx::query!(
+        r#"
+SELECT id, source, name, official_name, osm_name, short_name, locality, street,
+    door, lat, lon, external_id, succeeded_by, notes, updater, update_date,
+    parish, tags, accessibility_meta
+FROM Stops
+WHERE id = $1
+    "#,
+        stop_id
+    )
+    .fetch_optional(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map(|r| models::Stop {
+        id: r.id,
+        source: r.source,
+        name: r.name,
+        official_name: r.official_name,
+        osm_name: r.osm_name,
+        short_name: r.short_name,
+        locality: r.locality,
+        street: r.street,
+        door: r.door,
+        lat: r.lat,
+        lon: r.lon,
+        external_id: r.external_id,
+        succeeded_by: r.succeeded_by,
+        notes: r.notes,
+        updater: r.updater,
+        update_date: r.update_date,
+        parish: r.parish,
+        tags: r.tags,
+        accessibility_meta: serde_json::from_value(r.accessibility_meta)
+            .unwrap(),
+    });
+
+    Ok(res)
+}
+
 pub(crate) async fn fetch_stops(
     pool: &PgPool,
     filter_used: bool,
 ) -> Result<Vec<models::Stop>> {
     Ok(if filter_used {
-        sqlx::query_as!(
-            models::Stop,
+        sqlx::query!(
             r#"
-SELECT *
+SELECT id, source, name, official_name, osm_name, short_name, locality, street,
+door, lat, lon, external_id, succeeded_by, notes, updater, update_date,
+parish, tags, accessibility_meta
 FROM Stops
 WHERE id IN (
     SELECT DISTINCT stop
     FROM subroute_stops
 )
-    "#
+        "#
         )
         .fetch_all(pool)
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+        .into_iter()
+        .map(|r| models::Stop {
+            id: r.id,
+            source: r.source,
+            name: r.name,
+            official_name: r.official_name,
+            osm_name: r.osm_name,
+            short_name: r.short_name,
+            locality: r.locality,
+            street: r.street,
+            door: r.door,
+            lat: r.lat,
+            lon: r.lon,
+            external_id: r.external_id,
+            succeeded_by: r.succeeded_by,
+            notes: r.notes,
+            updater: r.updater,
+            update_date: r.update_date,
+            parish: r.parish,
+            tags: r.tags,
+            accessibility_meta: serde_json::from_value(r.accessibility_meta)
+                .unwrap(),
+        })
+        .collect()
     } else {
-        sqlx::query_as!(models::Stop, "SELECT * FROM stops")
-            .fetch_all(pool)
-            .await
-            .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+        sqlx::query!(
+"SELECT id, source, name, official_name, osm_name, short_name, locality, street,
+    door, lat, lon, external_id, succeeded_by, notes, updater, update_date,
+    parish, tags, accessibility_meta
+FROM stops")
+        .fetch_all(pool)
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+        .into_iter()
+        .map(|r| models::Stop {
+            id: r.id,
+            source: r.source,
+            name: r.name,
+            official_name: r.official_name,
+            osm_name: r.osm_name,
+            short_name: r.short_name,
+            locality: r.locality,
+            street: r.street,
+            door: r.door,
+            lat: r.lat,
+            lon: r.lon,
+            external_id: r.external_id,
+            succeeded_by: r.succeeded_by,
+            notes: r.notes,
+            updater: r.updater,
+            update_date: r.update_date,
+            parish: r.parish,
+            tags: r.tags,
+            accessibility_meta: serde_json::from_value(r.accessibility_meta)
+                .unwrap(),
+        })
+        .collect()
     })
 }
 
@@ -56,15 +152,16 @@ pub(crate) async fn fetch_bounded_stops(
     pool: &PgPool,
     (x0, y0, x1, y1): (f64, f64, f64, f64),
 ) -> Result<Vec<models::Stop>> {
-    sqlx::query_as!(
-        models::Stop,
+    let res = sqlx::query!(
         r#"
-SELECT *
+SELECT id, source, name, official_name, osm_name, short_name, locality, street,
+    door, lat, lon, external_id, succeeded_by, notes, updater, update_date,
+    parish, tags, accessibility_meta
 FROM Stops
 WHERE lon >= $1 AND lon <= $2 AND lat <= $3 AND lat >= $4 AND id IN (
     SELECT DISTINCT stop FROM subroute_stops
 )
-    "#,
+        "#,
         x0,
         x1,
         y0,
@@ -72,7 +169,33 @@ WHERE lon >= $1 AND lon <= $2 AND lat <= $3 AND lat >= $4 AND id IN (
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .into_iter()
+    .map(|r| models::Stop {
+        id: r.id,
+        source: r.source,
+        name: r.name,
+        official_name: r.official_name,
+        osm_name: r.osm_name,
+        short_name: r.short_name,
+        locality: r.locality,
+        street: r.street,
+        door: r.door,
+        lat: r.lat,
+        lon: r.lon,
+        external_id: r.external_id,
+        succeeded_by: r.succeeded_by,
+        notes: r.notes,
+        updater: r.updater,
+        update_date: r.update_date,
+        parish: r.parish,
+        tags: r.tags,
+        accessibility_meta: serde_json::from_value(r.accessibility_meta)
+            .unwrap(),
+    })
+    .collect();
+
+    Ok(res)
 }
 
 pub(crate) async fn insert_stop(
@@ -85,14 +208,8 @@ pub(crate) async fn insert_stop(
     let res = sqlx::query!(
         r#"
 INSERT INTO Stops(name, short_name, official_name, locality, street, door,
-    lon, lat, notes, tags, has_crossing, has_accessibility,
-    has_abusive_parking, has_outdated_info, is_damaged,
-    is_vandalized, has_flag, has_schedules, has_sidewalk,
-    has_shelter, has_bench, has_trash_can, is_illuminated,
-    has_illuminated_path, has_visibility_from_within,
-    has_visibility_from_area, is_visible_from_outside,
-    updater, update_date, source)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30)
+    lon, lat, notes, tags, accessibility_meta, updater, update_date, source)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 RETURNING id
     "#,
         stop.name,
@@ -105,54 +222,35 @@ RETURNING id
         stop.lat,
         stop.notes,
         &stop.tags,
-        stop.has_crossing,
-        stop.has_accessibility,
-        stop.has_abusive_parking,
-        stop.has_outdated_info,
-        stop.is_damaged,
-        stop.is_vandalized,
-        stop.has_flag,
-        stop.has_schedules,
-        stop.has_sidewalk,
-        stop.has_shelter,
-        stop.has_bench,
-        stop.has_trash_can,
-        stop.is_illuminated,
-        stop.has_illuminated_path,
-        stop.has_visibility_from_within,
-        stop.has_visibility_from_area,
-        stop.is_visible_from_outside,
+        &serde_json::to_value(&stop.accessibility_meta).unwrap(),
         user_id,
         update_date,
         stop.source
     )
-        .fetch_one(pool)
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .fetch_one(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     Ok(res.id)
 }
 
-pub(crate) async fn update_stop(
-    pool: &PgPool,
+pub(crate) async fn update_stop<'c, E>(
+    executor: E,
     stop_id: i32,
     changes: models::requests::ChangeStop,
     user_id: i32,
-) -> Result<()> {
+) -> Result<()>
+where
+    E: sqlx::Executor<'c, Database = sqlx::Postgres>,
+{
     let update_date = Local::now().to_string();
 
     let _res = sqlx::query!(
         r#"
 UPDATE Stops
 SET name=$1, short_name=$2, official_name=$3, locality=$4, street=$5, door=$6,
-    lon=$7, lat=$8, notes=$9, tags=$10, has_crossing=$11, has_accessibility=$12,
-    has_abusive_parking=$13, has_outdated_info=$14, is_damaged=$15,
-    is_vandalized=$16, has_flag=$17, has_schedules=$18, has_sidewalk=$19,
-    has_shelter=$20, has_bench=$21, has_trash_can=$22, is_illuminated=$23,
-    has_illuminated_path=$24, has_visibility_from_within=$25,
-    has_visibility_from_area=$26, is_visible_from_outside=$27,
-    updater=$28, update_date=$29
-WHERE id=$30
+    lon=$7, lat=$8, notes=$9, accessibility_meta=$10 , updater=$11, update_date=$12
+WHERE id=$13
     "#,
         changes.name,
         changes.short_name,
@@ -163,29 +261,12 @@ WHERE id=$30
         changes.lon,
         changes.lat,
         changes.notes,
-        &changes.tags,
-        changes.has_crossing,
-        changes.has_accessibility,
-        changes.has_abusive_parking,
-        changes.has_outdated_info,
-        changes.is_damaged,
-        changes.is_vandalized,
-        changes.has_flag,
-        changes.has_schedules,
-        changes.has_sidewalk,
-        changes.has_shelter,
-        changes.has_bench,
-        changes.has_trash_can,
-        changes.is_illuminated,
-        changes.has_illuminated_path,
-        changes.has_visibility_from_within,
-        changes.has_visibility_from_area,
-        changes.is_visible_from_outside,
+        serde_json::to_value(&changes.accessibility_meta).unwrap(),
         user_id,
         update_date,
         stop_id
     )
-    .execute(pool)
+    .execute(executor)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 

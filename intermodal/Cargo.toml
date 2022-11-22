@@ -10,7 +10,7 @@ authors = ["Cláudio Pereira"]
 [dependencies]
 tokio = { version = "1", features = ["full"] }
 
-sqlx = { version = "0.6.2", features = ["runtime-tokio-native-tls", "postgres", "json", "macros"] }
+sqlx = { version = "0.6.2", features = ["runtime-tokio-native-tls", "postgres", "json", "macros", "chrono"] }
 
 axum = { version = "0.5.13", features = ["multipart", "headers"] }
 axum-macros = "0.2.3"

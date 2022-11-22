@@ -81,14 +81,14 @@ pub(crate) async fn patch_stop(
 }
 
 #[utoipa::path(
-get,
-path = "/v1/stops/{x0}/{y0}/{x1}/{y1}",
-responses(
-(
-status = 200,
-description = "List of stops that fit within a boundary",
-body = [Stop])
-)
+    get,
+    path = "/v1/stops/{x0}/{y0}/{x1}/{y1}",
+    responses(
+    (
+        status = 200,
+        description = "List of stops that fit within a boundary",
+        body = [Stop])
+    )
 )]
 pub(crate) async fn get_bounded_stops(
     Extension(state): Extension<Arc<State>>,
