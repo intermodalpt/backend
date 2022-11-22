@@ -31,6 +31,7 @@ mod contrib;
 mod errors;
 mod geo;
 mod misc;
+mod operators;
 mod pics;
 mod routes;
 mod stops;
@@ -176,6 +177,16 @@ pub(crate) fn build_paths(state: State) -> Router {
         .route(
             "/v1/contrib/:contribution_id/decline",
             post(contrib::handlers::post_decline_contrib_data),
+        )
+        .route("/v1/news", get(operators::handlers::get_news))
+        .route("/v1/operators", get(operators::handlers::get_operators))
+        .route(
+            "/v1/operators/:operator_id/calendar",
+            get(operators::handlers::get_operators),
+        )
+        .route(
+            "/v1/operators/:operator_id/news",
+            get(operators::handlers::get_operator_news),
         )
         .route("/v1/actions/import_osm", get(geo::handlers::import_osm))
         .route("/v1/auth/check", post(auth::handlers::check_auth))
