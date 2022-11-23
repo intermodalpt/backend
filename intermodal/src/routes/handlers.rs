@@ -40,7 +40,7 @@ use crate::{auth, Error, State};
 pub(crate) async fn get_routes(
     Extension(state): Extension<Arc<State>>,
 ) -> Result<Json<Vec<responses::Route>>, Error> {
-    let routes = sql::fetch_routes(&state.pool).await?;
+    let routes = sql::fetch_routes_with_subroutes(&state.pool).await?;
     Ok(Json(routes))
 }
 
@@ -64,7 +64,7 @@ pub(crate) async fn get_route(
     Extension(state): Extension<Arc<State>>,
     Path(route_id): Path<i32>,
 ) -> Result<Json<responses::Route>, Error> {
-    if let Some(route) = sql::fetch_route(&state.pool, route_id).await? {
+    if let Some(route) = sql::fetch_route_with_subroutes(&state.pool, route_id).await? {
         Ok(Json(route))
     } else {
         Err(Error::NotFoundUpstream)

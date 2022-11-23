@@ -16,7 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_repr::Serialize_repr;
 use utoipa::Component;
 
@@ -38,6 +38,27 @@ pub struct DepartureChange {
     pub departure_change_type: DepartureChangeType,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Route {
+    pub(crate) id: i32,
+    pub(crate) type_id: i32,
+    pub(crate) operator: i32,
+    pub(crate) code: Option<String>,
+    pub(crate) name: String,
+    pub(crate) circular: bool,
+    pub(crate) main_subroute: Option<i32>,
+    pub(crate) active: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Subroute {
+    pub(crate) id: i32,
+    pub(crate) route_id: i32,
+    pub(crate) flag: String,
+    pub(crate) circular: bool,
+    pub(crate) polyline: Option<String>,
+}
+
 pub(crate) mod requests {
     use crate::calendar::Calendar;
     use serde::Deserialize;
@@ -51,7 +72,21 @@ pub(crate) mod requests {
         pub main_subroute: Option<i32>,
         pub operator: i32,
         pub active: bool,
-        pub service_type: i32,
+        pub type_id: i32,
+    }
+
+    impl From<super::Route> for ChangeRoute {
+        fn from(route: super::Route) -> Self {
+            Self {
+                code: route.code,
+                name: route.name,
+                circular: route.circular,
+                main_subroute: route.main_subroute,
+                operator: route.operator,
+                active: route.active,
+                type_id: route.type_id,
+            }
+        }
     }
 
     #[derive(Deserialize, Component)]
@@ -59,6 +94,16 @@ pub(crate) mod requests {
         pub flag: String,
         pub circular: bool,
         pub polyline: Option<String>,
+    }
+
+    impl From<super::Subroute> for ChangeSubroute {
+        fn from(subroute: super::Subroute) -> Self {
+            Self {
+                flag: subroute.flag,
+                circular: subroute.circular,
+                polyline: subroute.polyline,
+            }
+        }
     }
 
     #[derive(Deserialize, Component)]
@@ -89,7 +134,7 @@ pub(crate) mod responses {
     #[derive(Serialize, Component)]
     pub struct Route {
         pub(crate) id: i32,
-        pub(crate) service_type: i32,
+        pub(crate) type_id: i32,
         pub(crate) operator: i32,
         pub(crate) subroutes: Vec<Subroute>,
         #[component(example = "Azeitão (Circular)")]

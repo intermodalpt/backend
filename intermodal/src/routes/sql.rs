@@ -22,12 +22,7 @@ use serde_json::json;
 use sqlx::PgPool;
 use std::collections::HashMap;
 
-use super::models::requests::{
-    ChangeDeparture, ChangeRoute, ChangeSubroute, ChangeSubrouteStops,
-};
-use super::models::responses::{
-    DateDeparture, Departure, Route, Subroute, SubrouteStops,
-};
+use super::models::{self, requests, responses};
 use crate::calendar::Calendar;
 use crate::Error;
 
@@ -36,7 +31,54 @@ type Result<T> = std::result::Result<T, Error>;
 pub(crate) async fn fetch_route(
     pool: &PgPool,
     route_id: i32,
-) -> Result<Option<Route>> {
+) -> Result<Option<models::Route>> {
+    sqlx::query_as!(
+        models::Route,
+        r#"
+SELECT routes.id as id,
+    routes.type as type_id,
+    routes.operator as operator,
+    routes.code as code,
+    routes.name as name,
+    routes.circular as circular,
+    routes.main_subroute as main_subroute,
+    routes.active as active
+FROM routes
+WHERE routes.id = $1
+"#,
+        route_id
+    )
+    .fetch_optional(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+}
+
+pub(crate) async fn fetch_subroute(
+    pool: &PgPool,
+    subroute_id: i32,
+) -> Result<Option<models::Subroute>> {
+    sqlx::query_as!(
+        models::Subroute,
+        r#"
+SELECT subroutes.id,
+    subroutes.route as route_id,
+    subroutes.flag,
+    subroutes.circular,
+    subroutes.polyline
+FROM Subroutes
+WHERE subroutes.id = $1
+"#,
+        subroute_id
+    )
+    .fetch_optional(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+}
+
+pub(crate) async fn fetch_route_with_subroutes(
+    pool: &PgPool,
+    route_id: i32,
+) -> Result<Option<responses::Route>> {
     let res = sqlx::query!(
         r#"
 SELECT routes.id as route,
@@ -68,16 +110,16 @@ ORDER BY routes.id asc
     let mut row_iter = res.into_iter();
 
     if let Some(row) = row_iter.next() {
-        let mut route = Route {
+        let mut route = responses::Route {
             id: row.route,
-            service_type: row.service_type,
+            type_id: row.service_type,
             name: row.name,
             code: row.code,
             circular: row.circular,
             main_subroute: row.main_subroute,
             badge_text: row.text_color,
             badge_bg: row.bg_color,
-            subroutes: vec![Subroute {
+            subroutes: vec![responses::Subroute {
                 id: row.subroute,
                 flag: row.subroute_flag,
                 circular: row.subroute_circular,
@@ -88,7 +130,7 @@ ORDER BY routes.id asc
         };
 
         for row in row_iter {
-            route.subroutes.push(Subroute {
+            route.subroutes.push(responses::Subroute {
                 id: row.subroute,
                 flag: row.subroute_flag,
                 circular: row.subroute_circular,
@@ -101,7 +143,9 @@ ORDER BY routes.id asc
     }
 }
 
-pub(crate) async fn fetch_routes(pool: &PgPool) -> Result<Vec<Route>> {
+pub(crate) async fn fetch_routes_with_subroutes(
+    pool: &PgPool,
+) -> Result<Vec<responses::Route>> {
     let res = sqlx::query!(
         r#"
 SELECT routes.id as route,
@@ -128,7 +172,7 @@ ORDER BY routes.id asc
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
-    let mut routes: HashMap<i32, Route> = HashMap::new();
+    let mut routes: HashMap<i32, responses::Route> = HashMap::new();
 
     for row in res {
         routes
@@ -139,7 +183,7 @@ ORDER BY routes.id asc
                     row.subroute_flag.clone(),
                     row.subroute_circular,
                 ) {
-                    route.subroutes.push(Subroute {
+                    route.subroutes.push(responses::Subroute {
                         id,
                         flag,
                         circular,
@@ -147,7 +191,7 @@ ORDER BY routes.id asc
                     });
                 }
             })
-            .or_insert(Route {
+            .or_insert(responses::Route {
                 id: row.route,
                 code: row.code,
                 name: row.name,
@@ -158,7 +202,7 @@ ORDER BY routes.id asc
                 subroutes: if let (Some(id), Some(flag), Some(circular)) =
                     (row.subroute, row.subroute_flag, row.subroute_circular)
                 {
-                    vec![Subroute {
+                    vec![responses::Subroute {
                         id,
                         flag,
                         circular,
@@ -169,17 +213,20 @@ ORDER BY routes.id asc
                 },
                 active: row.active,
                 operator: row.operator,
-                service_type: row.service_type,
+                type_id: row.service_type,
             });
     }
 
     Ok(routes.into_values().collect::<Vec<_>>())
 }
 
-pub(crate) async fn insert_route(
-    pool: &PgPool,
-    route: ChangeRoute,
-) -> Result<i32> {
+pub(crate) async fn insert_route<'c, E>(
+    executor: E,
+    route: requests::ChangeRoute,
+) -> Result<i32>
+where
+    E: sqlx::Executor<'c, Database = sqlx::Postgres>,
+{
     let res = sqlx::query!(
         r#"
 INSERT INTO routes(code, name, main_subroute, operator, active, type)
@@ -191,20 +238,23 @@ RETURNING id
         route.main_subroute,
         route.operator,
         route.active,
-        route.service_type,
+        route.type_id,
     )
-    .fetch_one(pool)
+    .fetch_one(executor)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     Ok(res.id)
 }
 
-pub(crate) async fn update_route(
-    pool: &PgPool,
+pub(crate) async fn update_route<'c, E>(
+    executor: E,
     route_id: i32,
-    changes: ChangeRoute,
-) -> Result<()> {
+    changes: requests::ChangeRoute,
+) -> Result<()>
+where
+    E: sqlx::Executor<'c, Database = sqlx::Postgres>,
+{
     let _res = sqlx::query!(
         r#"
 UPDATE Routes
@@ -216,10 +266,10 @@ WHERE id=$7
         changes.main_subroute,
         changes.operator,
         changes.active,
-        changes.service_type,
+        changes.type_id,
         route_id
     )
-    .execute(pool)
+    .execute(executor)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
@@ -227,6 +277,8 @@ WHERE id=$7
 }
 
 pub(crate) async fn delete_route(pool: &PgPool, route_id: i32) -> Result<()> {
+    // TODO Break this up
+    // Make it a transaction
     let subroute_count: i64 = sqlx::query!(
         r#"
 SELECT count(*) as count
@@ -267,7 +319,7 @@ WHERE id=$1
 pub(crate) async fn insert_subroute(
     pool: &PgPool,
     route_id: i32,
-    subroute: ChangeSubroute,
+    subroute: requests::ChangeSubroute,
 ) -> Result<i32> {
     let res = sqlx::query!(
         r#"
@@ -287,12 +339,15 @@ RETURNING id
     Ok(res.id)
 }
 
-pub(crate) async fn update_subroute(
-    pool: &PgPool,
+pub(crate) async fn update_subroute<'c, E>(
+    executor: E,
     route_id: i32,
     subroute_id: i32,
-    changes: ChangeSubroute,
-) -> Result<()> {
+    changes: requests::ChangeSubroute,
+) -> Result<()>
+where
+    E: sqlx::Executor<'c, Database = sqlx::Postgres>,
+{
     let _res = sqlx::query!(
         r#"
 UPDATE subroutes
@@ -304,18 +359,21 @@ WHERE id=$3 AND route=$4
         subroute_id,
         route_id,
     )
-    .execute(pool)
+    .execute(executor)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     Ok(())
 }
 
-pub(crate) async fn delete_subroute(
-    pool: &PgPool,
+pub(crate) async fn delete_subroute<'c, E>(
+    executor: E,
     route_id: i32,
     subroute_id: i32,
-) -> Result<()> {
+) -> Result<()>
+where
+    E: sqlx::Executor<'c, Database = sqlx::Postgres>,
+{
     let deleted_rows = sqlx::query!(
         r#"
 DELETE FROM subroutes
@@ -324,7 +382,7 @@ WHERE id=$1 AND route=$2
         subroute_id,
         route_id
     )
-    .execute(pool)
+    .execute(executor)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?
     .rows_affected();
@@ -339,7 +397,7 @@ WHERE id=$1 AND route=$2
 pub(crate) async fn fetch_route_stops(
     pool: &PgPool,
     route_id: i32,
-) -> Result<Vec<SubrouteStops>> {
+) -> Result<Vec<responses::SubrouteStops>> {
     let res = sqlx::query!(
         r#"
 SELECT subroutes.id as subroute, subroute_stops.stop as stop, subroute_stops.time_to_next as diff
@@ -368,7 +426,7 @@ ORDER BY subroutes.id ASC, subroute_stops.idx ASC
                     .unzip(),
             )
         })
-        .map(|(key, (stops, diffs))| SubrouteStops {
+        .map(|(key, (stops, diffs))| responses::SubrouteStops {
             subroute: key,
             stops,
             diffs,
@@ -379,10 +437,11 @@ ORDER BY subroutes.id ASC, subroute_stops.idx ASC
 }
 
 pub(crate) async fn update_subroute_stops(
+    // TODO change to transaction-able
     pool: &PgPool,
     route_id: i32,
     subroute_id: i32,
-    request: ChangeSubrouteStops,
+    request: requests::ChangeSubrouteStops,
 ) -> Result<()> {
     // Check if the current stops match the requests's check
     if request.from.stops.len() != request.from.diffs.len()
@@ -558,7 +617,7 @@ WHERE subroute=$1
 pub(crate) async fn fetch_schedule(
     pool: &PgPool,
     route_id: i32,
-) -> Result<Vec<Departure>> {
+) -> Result<Vec<responses::Departure>> {
     let res = sqlx::query!(
         r#"
 SELECT departures.id as id,
@@ -579,7 +638,7 @@ ORDER BY time ASC
 
     let mut departures = vec![];
     for row in res {
-        departures.push(Departure {
+        departures.push(responses::Departure {
             id: row.id,
             subroute: row.subroute,
             time: row.time,
@@ -602,7 +661,7 @@ pub(crate) async fn fetch_schedule_for_date(
     pool: &PgPool,
     route_id: i32,
     date: NaiveDate,
-) -> Result<Vec<DateDeparture>> {
+) -> Result<Vec<responses::DateDeparture>> {
     let res = sqlx::query!(
         r#"
 SELECT subroutes.id as subroute, departures.time as time, departures.calendar as calendar
@@ -623,7 +682,7 @@ ORDER BY time asc
             let calendar: Calendar = serde_json::from_value(calendar)
                 .map_err(|_err| Error::DatabaseDeserialization)?;
             if calendar.includes(date) {
-                departures.push(DateDeparture {
+                departures.push(responses::DateDeparture {
                     subroute: row.subroute,
                     time: row.time,
                 });
@@ -637,11 +696,14 @@ ORDER BY time asc
     Ok(departures)
 }
 
-pub(crate) async fn insert_departure(
-    pool: &PgPool,
+pub(crate) async fn insert_departure<'c, E>(
+    executor: E,
     subroute_id: i32,
-    departure: ChangeDeparture,
-) -> Result<i32> {
+    departure: requests::ChangeDeparture,
+) -> Result<i32>
+where
+    E: sqlx::Executor<'c, Database = sqlx::Postgres>,
+{
     let res = sqlx::query!(
         r#"
 INSERT INTO departures(subroute, time, calendar, calendar_id)
@@ -653,18 +715,21 @@ RETURNING id
         json!(departure.calendar),
         departure.calendar_id
     )
-    .fetch_one(pool)
+    .fetch_one(executor)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
     Ok(res.id)
 }
 
-pub(crate) async fn update_departure(
-    pool: &PgPool,
+pub(crate) async fn update_departure<'c, E>(
+    executor: E,
     subroute_id: i32,
     departure_id: i32,
-    departure: ChangeDeparture,
-) -> Result<()> {
+    departure: requests::ChangeDeparture,
+) -> Result<()>
+where
+    E: sqlx::Executor<'c, Database = sqlx::Postgres>,
+{
     let _res = sqlx::query!(
         r#"
 UPDATE departures
@@ -676,17 +741,20 @@ WHERE id=$3 AND subroute=$4
         departure_id,
         subroute_id,
     )
-    .execute(pool)
+    .execute(executor)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
     Ok(())
 }
 
-pub(crate) async fn delete_departure(
-    pool: &PgPool,
+pub(crate) async fn delete_departure<'c, E>(
+    executor: E,
     subroute_id: i32,
     departure_id: i32,
-) -> Result<()> {
+) -> Result<()>
+where
+    E: sqlx::Executor<'c, Database = sqlx::Postgres>,
+{
     let _res = sqlx::query!(
         r#"
 DELETE FROM departures
@@ -695,7 +763,7 @@ WHERE id=$1 AND subroute=$2
         departure_id,
         subroute_id,
     )
-    .execute(pool)
+    .execute(executor)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
     Ok(())
