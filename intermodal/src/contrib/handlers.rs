@@ -17,12 +17,13 @@
 */
 
 use std::collections::HashMap;
+use std::sync::Arc;
+
 use axum::extract::Path;
 use axum::headers::authorization::Bearer;
 use axum::headers::Authorization;
 use axum::{Extension, Json, TypedHeader};
 use chrono::Local;
-use std::sync::Arc;
 
 use super::{models, models::requests, sql};
 use crate::errors::Error;
@@ -43,10 +44,16 @@ pub(crate) async fn post_stop_contrib_data(
     let stop = stop.unwrap();
     let patch = contribution.contribution.derive_patch(&stop);
 
+    if patch.is_empty() {
+        return Err(Error::ValidationFailure(
+            "No changes were made".to_string(),
+        ));
+    }
+
     let contribution = models::Contribution {
         id: 0,
         author_id: user_id,
-        changeset: models::Changeset::StopDataChange {
+        change: models::Change::Stop {
             original: stop,
             patch,
         },
@@ -80,16 +87,19 @@ pub(crate) async fn post_accept_contrib_data(
     }
     let contribution = contribution.unwrap();
 
+    if contribution.accepted.is_some() {
+        return Err(Error::DependenciesNotMet);
+    }
+
     let mut transaction = state
         .pool
         .begin()
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
-    match contribution.changeset {
-        models::Changeset::StopDataChange { original, patch } => {
-            let stop =
-                stops::sql::fetch_stop(&state.pool, original.id).await?;
+    match &contribution.change {
+        models::Change::Stop { original, patch } => {
+            let stop = stops::sql::fetch_stop(&state.pool, original.id).await?;
             if stop.is_none() {
                 return Err(Error::NotFoundUpstream);
             }
@@ -104,10 +114,21 @@ pub(crate) async fn post_accept_contrib_data(
             )
             .await?;
         }
-        models::Changeset::StopPics(pic_contribution) => {
+        models::Change::StopPicContribution(pic_contribution) => {
             todo!()
         }
+        _ => {
+            unreachable!()
+        }
     }
+
+    sql::insert_changeset_log(
+        &mut transaction,
+        user_id,
+        &vec![contribution.change],
+        Some(contribution_id),
+    )
+    .await?;
 
     sql::update_guest_contribution_to_accept(
         &mut transaction,
@@ -134,6 +155,11 @@ pub(crate) async fn post_decline_contrib_data(
     if contribution.is_none() {
         return Err(Error::NotFoundUpstream);
     }
+    let contribution = contribution.unwrap();
+
+    if contribution.accepted.is_some() {
+        return Err(Error::DependenciesNotMet);
+    }
 
     let mut transaction = state
         .pool
@@ -149,7 +175,6 @@ pub(crate) async fn post_decline_contrib_data(
     .await?;
 
     // TODO, file deletions
-
 
     transaction
         .commit()

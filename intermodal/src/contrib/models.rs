@@ -19,13 +19,14 @@
 use chrono::{DateTime, Local};
 use serde::{Deserialize, Serialize};
 
-use crate::stops::models::{IlluminationPos, IlluminationStrength, Stop};
+use crate::routes::models as routes;
+use crate::stops::models as stops;
 
 #[derive(Serialize, Deserialize)]
 pub struct Contribution {
     pub id: i64,
     pub author_id: i32,
-    pub changeset: Changeset,
+    pub change: Change,
     pub submission_date: DateTime<Local>,
     pub accepted: Option<bool>,
     pub evaluator_id: Option<i32>,
@@ -33,10 +34,31 @@ pub struct Contribution {
     pub comment: Option<String>,
 }
 
+pub struct Changeset {
+    pub id: i64,
+    pub author_id: i32,
+    pub changes: Vec<Change>,
+    pub datetime: DateTime<Local>,
+    pub contribution_id: Option<i64>,
+}
+
 #[derive(Serialize, Deserialize)]
-pub enum Changeset {
-    StopDataChange { original: Stop, patch: StopPatch },
-    StopPics(StopPictureContribution),
+pub enum Change {
+    // Hint: Do not to change these names without a corresponding migration
+    // as they'll be stored as strings in the database
+    Stop {
+        original: stops::Stop,
+        patch: StopPatch,
+    },
+    Route {
+        original: routes::Route,
+        patch: RoutePatch,
+    },
+    Subroute {
+        original: routes::Subroute,
+        patch: SubroutePatch,
+    },
+    StopPicContribution(StopPictureContribution),
 }
 
 #[derive(Serialize, Deserialize, Default)]
@@ -56,8 +78,8 @@ pub struct StopPatch {
     pub has_shelter: Option<Option<bool>>,
     pub has_bench: Option<Option<bool>>,
     pub has_trash_can: Option<Option<bool>>,
-    pub illumination_strength: Option<Option<IlluminationStrength>>,
-    pub illumination_position: Option<Option<IlluminationPos>>,
+    pub illumination_strength: Option<Option<stops::IlluminationStrength>>,
+    pub illumination_position: Option<Option<stops::IlluminationPos>>,
     pub is_illumination_working: Option<Option<bool>>,
     pub has_illuminated_path: Option<Option<bool>>,
     pub has_visibility_from_within: Option<Option<bool>>,
@@ -95,14 +117,14 @@ impl StopPatch {
             && self.notes.is_none()
     }
 
-    pub(crate) fn apply(self, stop: &mut Stop) {
-        if let Some(locality) = self.locality {
+    pub(crate) fn apply(&self, stop: &mut stops::Stop) {
+        if let Some(locality) = self.locality.clone() {
             stop.locality = locality
         }
-        if let Some(street) = self.street {
+        if let Some(street) = self.street.clone() {
             stop.street = street
         }
-        if let Some(door) = self.door {
+        if let Some(door) = self.door.clone() {
             stop.door = door
         }
         if let Some(has_crossing) = self.has_crossing {
@@ -170,11 +192,85 @@ impl StopPatch {
             stop.accessibility_meta.is_visible_from_outside =
                 is_visible_from_outside
         }
-        if let Some(tags) = self.tags {
+        if let Some(tags) = self.tags.clone() {
             stop.tags = tags
         }
-        if let Some(notes) = self.notes {
+        if let Some(notes) = self.notes.clone() {
             stop.notes = notes
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct RoutePatch {
+    type_id: Option<i32>,
+    operator: Option<i32>,
+    code: Option<Option<String>>,
+    name: Option<String>,
+    circular: Option<bool>,
+    main_subroute: Option<Option<i32>>,
+    active: Option<bool>,
+}
+
+impl RoutePatch {
+    pub(crate) fn is_empty(&self) -> bool {
+        self.type_id.is_none()
+            && self.operator.is_none()
+            && self.code.is_none()
+            && self.name.is_none()
+            && self.circular.is_none()
+            && self.main_subroute.is_none()
+            && self.active.is_none()
+    }
+
+    pub(crate) fn apply(self, route: &mut routes::Route) {
+        if let Some(service_type) = self.type_id {
+            route.type_id = service_type
+        }
+        if let Some(operator) = self.operator {
+            route.operator = operator
+        }
+        if let Some(code) = self.code {
+            route.code = code
+        }
+        if let Some(name) = self.name {
+            route.name = name
+        }
+        if let Some(circular) = self.circular {
+            route.circular = circular
+        }
+        if let Some(main_subroute) = self.main_subroute {
+            route.main_subroute = main_subroute
+        }
+        if let Some(active) = self.active {
+            route.active = active
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct SubroutePatch {
+    flag: Option<String>,
+    circular: Option<bool>,
+    polyline: Option<Option<String>>,
+}
+
+impl SubroutePatch {
+    pub(crate) fn is_empty(&self) -> bool {
+        self.flag.is_none()
+            && self.circular.is_none()
+            && self.polyline.is_none()
+    }
+
+    pub(crate) fn apply(self, subroute: &mut routes::Subroute) {
+        if let Some(flag) = self.flag {
+            subroute.flag = flag
+        }
+        if let Some(circular) = self.circular {
+            subroute.circular = circular
+        }
+        if let Some(polyline) = self.polyline {
+            subroute.polyline = polyline
         }
     }
 }
@@ -186,16 +282,17 @@ pub struct StopPictureContribution {
 }
 
 pub(crate) mod requests {
-    use super::{IlluminationPos, IlluminationStrength, Stop, StopPatch};
-    use serde::{Deserialize, Serialize};
+    use super::stops;
+    use crate::contrib::models::StopPatch;
+    use serde::Deserialize;
 
-    #[derive(Serialize, Deserialize)]
+    #[derive(Deserialize)]
     pub struct NewStopMetaContribution {
         pub contribution: StopMetaContribution,
         pub comment: Option<String>,
     }
 
-    #[derive(Serialize, Deserialize)]
+    #[derive(Deserialize)]
     pub struct StopMetaContribution {
         pub locality: Option<String>,
         pub street: Option<String>,
@@ -212,8 +309,8 @@ pub(crate) mod requests {
         pub has_shelter: Option<bool>,
         pub has_bench: Option<bool>,
         pub has_trash_can: Option<bool>,
-        pub illumination_strength: Option<IlluminationStrength>,
-        pub illumination_position: Option<IlluminationPos>,
+        pub illumination_strength: Option<stops::IlluminationStrength>,
+        pub illumination_position: Option<stops::IlluminationPos>,
         pub is_illumination_working: Option<bool>,
         pub has_illuminated_path: Option<bool>,
         pub has_visibility_from_within: Option<bool>,
@@ -225,7 +322,7 @@ pub(crate) mod requests {
     }
 
     impl StopMetaContribution {
-        pub(crate) fn derive_patch(self, stop: &Stop) -> StopPatch {
+        pub(crate) fn derive_patch(self, stop: &stops::Stop) -> StopPatch {
             let mut patch = StopPatch::default();
 
             if self.locality != stop.locality {

@@ -45,7 +45,7 @@ WHERE id=$1
         Ok(Some(models::Contribution {
             id: contribution.id,
             author_id: contribution.author_id,
-            changeset: serde_json::from_value(contribution.changeset).unwrap(),
+            change: serde_json::from_value(contribution.changeset).unwrap(),
             submission_date: contribution.submission_date.with_timezone(&Local),
             accepted: contribution.accepted,
             evaluator_id: contribution.evaluator_id,
@@ -77,7 +77,7 @@ FROM Contributions
     .map(|r| models::Contribution {
         id: r.id,
         author_id: r.author_id,
-        changeset: serde_json::from_value(r.changeset).unwrap(),
+        change: serde_json::from_value(r.changeset).unwrap(),
         submission_date: r.submission_date.with_timezone(&Local),
         accepted: r.accepted,
         evaluator_id: r.evaluator_id,
@@ -92,8 +92,6 @@ pub(crate) async fn insert_new_contribution(
     pool: &PgPool,
     contribution: models::Contribution,
 ) -> Result<i64> {
-    let update_date = Local::now();
-
     let res = sqlx::query!(
         r#"
 INSERT INTO Contributions(author_id, changeset, submission_date, comment)
@@ -101,7 +99,7 @@ VALUES ($1, $2, $3, $4)
 RETURNING id
     "#,
         contribution.author_id,
-        serde_json::to_value(&contribution.changeset).unwrap(),
+        serde_json::to_value(&contribution.change).unwrap(),
         contribution.submission_date,
         contribution.comment
     )
@@ -164,4 +162,58 @@ WHERE id=$3
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     Ok(())
+}
+
+pub(crate) async fn fetch_changeset_logs<'c, E>(
+    executor: E,
+    author_id: i32,
+    changes: &[models::Change],
+    contribution_id: Option<i64>,
+) -> Result<Vec<models::Changeset>>
+where
+    E: sqlx::Executor<'c, Database = sqlx::Postgres>,
+{
+    Ok(sqlx::query!(
+        r#"
+SELECT id, author_id, changes, datetime, contribution_id
+FROM Changelog
+ORDER BY datetime DESC
+    "#,
+    )
+    .fetch_all(executor)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?.into_iter()
+    .map(|r| models::Changeset {
+        id: r.id,
+        author_id: r.author_id,
+        changes: serde_json::from_value(r.changes).unwrap(),
+        datetime: r.datetime.with_timezone(&Local),
+        contribution_id: r.contribution_id,
+    }).collect())
+}
+
+pub(crate) async fn insert_changeset_log<'c, E>(
+    executor: E,
+    author_id: i32,
+    changes: &[models::Change],
+    contribution_id: Option<i64>,
+) -> Result<i64>
+where
+    E: sqlx::Executor<'c, Database = sqlx::Postgres>,
+{
+    let res = sqlx::query!(
+        r#"
+INSERT INTO Changelog(author_id, changes, contribution_id)
+VALUES ($1, $2, $3)
+RETURNING id
+    "#,
+        author_id,
+        serde_json::to_value(changes).unwrap(),
+        contribution_id
+    )
+    .fetch_one(executor)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    Ok(res.id)
 }
