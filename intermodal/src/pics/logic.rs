@@ -23,7 +23,8 @@ use chrono::Local;
 use sha1::{Digest, Sha1};
 use sqlx::PgPool;
 
-use super::models::StopPic;
+use super::models;
+use super::sql;
 use crate::utils::Exif;
 use crate::Error;
 
@@ -64,6 +65,88 @@ pub(crate) async fn upload_stop_picture(
         original_img = image::DynamicImage::ImageRgb8(original_img.into_rgb8());
     }
 
+    let mut stop_pic_entry = models::StopPic {
+        id: 0,
+        original_filename: name,
+        sha1: hex_hash.clone(),
+        tagged: false,
+        uploader: user_id,
+        upload_date: Local::now().to_string(),
+        capture_date: None,
+        updater: None,
+        update_date: None,
+        width: original_img.width() as i32,
+        height: original_img.height() as i32,
+        camera_ref: None,
+        dyn_meta: models::StopPicDynMeta {
+            public: false,
+            sensitive: false,
+            lon: None,
+            lat: None,
+            quality: 0,
+            tags: vec![],
+            notes: None,
+        },
+    };
+
+    let mut source_buffer = BufReader::new(Cursor::new(content.as_ref()));
+    if let Ok(exif) =
+        exif::Reader::new().read_from_container(&mut source_buffer)
+    {
+        let exif_data = Exif::from(exif);
+
+        stop_pic_entry.dyn_meta.lon = exif_data.lon;
+        stop_pic_entry.dyn_meta.lat = exif_data.lat;
+        stop_pic_entry.camera_ref = exif_data.camera;
+        stop_pic_entry.capture_date =
+            exif_data.capture.map(|date| date.to_string());
+    };
+
+    upload_picture_to_storage(
+        bucket,
+        content,
+        &original_img,
+        original_img_mime,
+        &hex_hash,
+    ).await?;
+
+    // TODO Delete if insertion fails
+    sql::insert_stop_picture(db_pool, stop_pic_entry).await
+}
+
+pub(crate) async fn delete_stop_picture(
+    stop_picture_id: i32,
+    bucket: &s3::Bucket,
+    db_pool: &PgPool,
+) -> Result<(), Error> {
+    let tagged_stops =
+        sql::fetch_stop_pic_stop_count(db_pool, stop_picture_id).await?;
+
+    if tagged_stops > 0 {
+        return Err(Error::DependenciesNotMet);
+    }
+
+    let stop_pic = sql::fetch_stop_picture(db_pool, stop_picture_id)
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    if let Some(stop_pic) = stop_pic {
+        let hex_hash = stop_pic.sha1;
+        delete_picture_from_storage(&hex_hash, bucket).await?;
+    } else {
+        return Err(Error::NotFoundUpstream);
+    }
+
+    sql::delete_stop_picture(db_pool, stop_picture_id).await
+}
+
+async fn upload_picture_to_storage(
+    bucket: &s3::Bucket,
+    content: &Bytes,
+    original_img: &image::DynamicImage,
+    original_img_mime: mime_guess::MimeGuess,
+    hex_hash: &str
+) -> Result<(), Error>{
     let medium_img = original_img.resize(
         MEDIUM_IMG_MAX_WIDTH,
         MEDIUM_IMG_MAX_HEIGHT,
@@ -118,129 +201,25 @@ pub(crate) async fn upload_stop_picture(
             .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?
     };
 
-    let mut stop_pic_entry = StopPic {
-        id: 0,
-        original_filename: name,
-        sha1: hex_hash,
-        public: false,
-        sensitive: false,
-        tagged: false,
-        uploader: user_id,
-        upload_date: Local::now().to_string(),
-        capture_date: None,
-        updater: None,
-        update_date: None,
-        lon: None,
-        lat: None,
-        width: original_img.width() as i32,
-        height: original_img.height() as i32,
-        quality: 0,
-        camera_ref: None,
-        tags: vec![],
-        notes: None,
-    };
-
-    let mut source_buffer = BufReader::new(Cursor::new(content.as_ref()));
-    if let Ok(exif) =
-        exif::Reader::new().read_from_container(&mut source_buffer)
-    {
-        let exif_data = Exif::from(exif);
-
-        stop_pic_entry.lon = exif_data.lon;
-        stop_pic_entry.lat = exif_data.lat;
-        stop_pic_entry.camera_ref = exif_data.camera;
-        stop_pic_entry.capture_date =
-            exif_data.capture.map(|date| date.to_string());
-    };
-
-    let res = sqlx::query!(
-        r#"
-INSERT INTO stop_pics(
-    original_filename, sha1, public, sensitive, tagged, uploader,
-    upload_date, capture_date, width, height, lat, lon, camera_ref
-)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-RETURNING id
-        "#,
-        stop_pic_entry.original_filename,
-        stop_pic_entry.sha1,
-        stop_pic_entry.public,
-        stop_pic_entry.sensitive,
-        stop_pic_entry.tagged,
-        stop_pic_entry.uploader,
-        stop_pic_entry.upload_date,
-        stop_pic_entry.capture_date,
-        stop_pic_entry.width,
-        stop_pic_entry.height,
-        stop_pic_entry.lat,
-        stop_pic_entry.lon,
-        stop_pic_entry.camera_ref
-    )
-    .fetch_one(db_pool)
-    .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
-
-    Ok(res.id)
+    Ok(())
 }
 
-pub(crate) async fn delete_stop_picture(
-    stop_picture_id: i32,
+async fn delete_picture_from_storage(
+    hex_hash: &str,
     bucket: &s3::Bucket,
-    db_pool: &PgPool,
 ) -> Result<(), Error> {
-    let tagged_stops = sqlx::query!(
-        r#"
-SELECT count(*) as count
-FROM stop_pic_stops
-WHERE pic=$1
-"#,
-        stop_picture_id
-    )
-    .fetch_one(db_pool)
-    .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
-    .count
-    .unwrap_or(0);
-
-    if tagged_stops > 0 {
-        return Err(Error::DependenciesNotMet);
-    }
-
-    let stop_pic = sqlx::query!(
-        r#"
-SELECT sha1 FROM stop_pics
-WHERE id=$1
-    "#,
-        stop_picture_id,
-    )
-    .fetch_optional(db_pool)
-    .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
-
-    if let Some(stop_pic) = stop_pic {
-        let hex_hash = stop_pic.sha1;
-
-        bucket
-            .delete_object(format!("/thumb/{}", hex_hash))
-            .await
-            .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?;
-        bucket
-            .delete_object(format!("/medium/{}", hex_hash))
-            .await
-            .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?;
-        bucket
-            .delete_object(format!("/ori/{}", hex_hash))
-            .await
-            .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?;
-    } else {
-        return Err(Error::NotFoundUpstream);
-    }
-
-    let _res = sqlx::query("DELETE FROM stop_pics WHERE id=$1")
-        .bind(stop_picture_id)
-        .execute(db_pool)
+    bucket
+        .delete_object(format!("/thumb/{}", hex_hash))
         .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()));
+        .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?;
+    bucket
+        .delete_object(format!("/medium/{}", hex_hash))
+        .await
+        .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?;
+    bucket
+        .delete_object(format!("/ori/{}", hex_hash))
+        .await
+        .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?;
 
     Ok(())
 }

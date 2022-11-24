@@ -21,17 +21,60 @@ use itertools::Itertools;
 use sqlx::PgPool;
 use std::collections::HashMap;
 
-use super::models::requests::ChangeStopPic;
-use super::models::responses::{PublicStopPic, TaggedStopPic, UntaggedStopPic};
+use super::{models, models::requests, models::responses};
 use crate::Error;
 
 type Result<T> = std::result::Result<T, Error>;
 
+pub(crate) async fn fetch_stop_picture(
+    pool: &PgPool,
+    picture_id: i32,
+) -> Result<Option<models::StopPic>> {
+    sqlx::query!(
+        r#"
+SELECT id, original_filename, sha1, tagged, public, sensitive, uploader,
+    upload_date, capture_date, lon, lat, quality, width,
+    height, camera_ref, tags, notes
+FROM stop_pics
+WHERE id = $1
+"#,
+        picture_id
+    )
+    .fetch_optional(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    .map(|row| {
+        row.map(|row| models::StopPic {
+            id: row.id,
+            original_filename: row.original_filename,
+            sha1: row.sha1,
+            tagged: row.tagged,
+            uploader: row.uploader,
+            upload_date: row.upload_date,
+            capture_date: row.capture_date,
+            updater: None,
+            update_date: None,
+            width: row.width,
+            height: row.height,
+            camera_ref: row.camera_ref,
+            dyn_meta: models::StopPicDynMeta {
+                public: row.public,
+                sensitive: row.sensitive,
+                lon: row.lon,
+                lat: row.lat,
+                quality: row.quality,
+                tags: row.tags,
+                notes: row.notes,
+            },
+        })
+    })
+}
+
 pub(crate) async fn fetch_stop_pictures(
     pool: &PgPool,
-) -> Result<Vec<TaggedStopPic>> {
+) -> Result<Vec<responses::TaggedStopPic>> {
     sqlx::query_as!(
-        TaggedStopPic,
+        responses::TaggedStopPic,
         r#"
 SELECT id, original_filename, sha1, public, sensitive, uploader,
     upload_date, capture_date, lon, lat, quality, width,
@@ -47,9 +90,9 @@ FROM stop_pics
 pub(crate) async fn fetch_public_stop_pictures(
     pool: &PgPool,
     stop_id: i32,
-) -> Result<Vec<PublicStopPic>> {
+) -> Result<Vec<responses::PublicStopPic>> {
     sqlx::query_as!(
-        PublicStopPic,
+        responses::PublicStopPic,
         r#"
 SELECT stop_pics.id, stop_pics.sha1, stop_pics.capture_date, stop_pics.lon, stop_pics.lat, stop_pics.tags, stop_pics.quality
 FROM stop_pics
@@ -68,9 +111,9 @@ ORDER BY stop_pics.capture_date DESC
 pub(crate) async fn fetch_tagged_stop_pictures(
     pool: &PgPool,
     stop_id: i32,
-) -> Result<Vec<TaggedStopPic>> {
+) -> Result<Vec<responses::TaggedStopPic>> {
     sqlx::query_as!(
-        TaggedStopPic,
+        responses::TaggedStopPic,
         r#"
 SELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,
     stop_pics.public, stop_pics.sensitive, stop_pics.uploader,
@@ -94,9 +137,9 @@ pub(crate) async fn fetch_untagged_stop_pictures(
     user_id: i32,
     skip: i64,
     take: i64,
-) -> Result<Vec<UntaggedStopPic>> {
+) -> Result<Vec<responses::UntaggedStopPic>> {
     sqlx::query_as!(
-        UntaggedStopPic,
+        responses::UntaggedStopPic,
         r#"
 SELECT id, original_filename, sha1, public, sensitive, uploader, upload_date,
     capture_date, width, height, lon, lat, camera_ref, tags, notes
@@ -140,10 +183,44 @@ ORDER BY stop ASC
     Ok(stops)
 }
 
+pub(crate) async fn insert_stop_picture(
+    pool: &PgPool,
+    pic: models::StopPic,
+) -> Result<i32> {
+    let res = sqlx::query!(
+        r#"
+INSERT INTO stop_pics(
+    original_filename, sha1, public, sensitive, tagged, uploader,
+    upload_date, capture_date, width, height, lat, lon, camera_ref
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+RETURNING id
+        "#,
+        pic.original_filename,
+        pic.sha1,
+        pic.dyn_meta.public,
+        pic.dyn_meta.sensitive,
+        pic.tagged,
+        pic.uploader,
+        pic.upload_date,
+        pic.capture_date,
+        pic.width,
+        pic.height,
+        pic.dyn_meta.lat,
+        pic.dyn_meta.lon,
+        pic.camera_ref
+    )
+    .fetch_one(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    Ok(res.id)
+}
+
 pub(crate) async fn update_stop_picture_meta(
     pool: &PgPool,
     stop_picture_id: i32,
-    stop_pic_meta: ChangeStopPic,
+    stop_pic_meta: requests::ChangeStopPic,
     user_id: i32,
 ) -> Result<()> {
     let update_date = Local::now().to_string();
@@ -201,4 +278,40 @@ ON CONFLICT DO NOTHING
     }
 
     Ok(())
+}
+
+pub(crate) async fn delete_stop_picture(
+    pool: &PgPool,
+    pic_id: i32,
+) -> Result<()> {
+    sqlx::query!(
+        r#"
+DELETE FROM stop_pics
+WHERE id=$1
+        "#,
+        pic_id
+    )
+    .execute(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    Ok(())
+}
+
+pub(crate) async fn fetch_stop_pic_stop_count(
+    pool: &PgPool,
+    pic_id: i32,
+) -> Result<i64> {
+    Ok(sqlx::query!(
+        r#"
+SELECT count(*) as count
+FROM stop_pic_stops
+WHERE pic=$1"#,
+        pic_id
+    )
+    .fetch_one(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .count
+    .unwrap_or(0))
 }

@@ -28,6 +28,7 @@ use serde::Deserialize;
 
 use super::{logic, models, sql};
 use crate::auth;
+use crate::utils::get_exactly_one_field;
 use crate::{Error, State};
 
 pub(crate) async fn get_public_stop_pictures(
@@ -98,48 +99,44 @@ pub(crate) async fn upload_stop_picture(
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
     ContentLengthLimit(mut multipart): ContentLengthLimit<
         Multipart,
-        { 500 * 1024 * 1024 },
+        { 30 * 1024 * 1024 },
     >,
 ) -> Result<(), Error> {
     let user_id = auth::get_user(auth.token(), &state.pool).await?;
 
-    while let Some(field) = multipart
-        .next_field()
-        .await
-        .map_err(|err| Error::ValidationFailure(err.to_string()))?
-    {
-        let filename = field
-            .file_name()
-            .ok_or_else(|| {
-                Error::ValidationFailure("File without a filename".to_string())
-            })?
-            .to_string();
-        let content = field
-            .bytes()
-            .await
-            .map_err(|err| Error::ValidationFailure(err.to_string()))?;
+    let field = get_exactly_one_field(&mut multipart).await?;
 
-        let res = logic::upload_stop_picture(
+    let filename = field
+        .file_name()
+        .ok_or_else(|| {
+            Error::ValidationFailure("File without a filename".to_string())
+        })?
+        .to_string();
+    let content = field
+        .bytes()
+        .await
+        .map_err(|err| Error::ValidationFailure(err.to_string()))?;
+
+    let res = logic::upload_stop_picture(
+        user_id,
+        filename.clone(),
+        &state.bucket,
+        &state.pool,
+        &content,
+    )
+    .await;
+
+    if res.is_err() {
+        sleep(Duration::from_secs(1));
+        // Retry, just in case
+        logic::upload_stop_picture(
             user_id,
             filename.clone(),
             &state.bucket,
             &state.pool,
             &content,
         )
-        .await;
-
-        if res.is_err() {
-            sleep(Duration::from_secs(1));
-            // Retry, just in case
-            logic::upload_stop_picture(
-                user_id,
-                filename.clone(),
-                &state.bucket,
-                &state.pool,
-                &content,
-            )
-            .await?;
-        }
+        .await?;
     }
 
     Ok(())

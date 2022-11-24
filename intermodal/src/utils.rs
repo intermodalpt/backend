@@ -16,8 +16,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use crate::Error;
+use axum::extract::multipart::{Field, Multipart};
 use chrono::NaiveDateTime;
+
+use crate::Error;
 
 pub fn within_dates(date: (u8, u8), start: (u8, u8), end: (u8, u8)) -> bool {
     let (from_month, from_day) = start;
@@ -151,4 +153,32 @@ impl From<exif::Exif> for Exif {
 
         result
     }
+}
+
+pub(crate) async fn get_exactly_one_field<'d>(
+    multipart: &'d mut Multipart,
+) -> Result<Field<'d>, Error> {
+    let field = multipart
+        .next_field()
+        .await
+        .map_err(|err| Error::ValidationFailure(err.to_string()))?;
+    if field.is_none() {
+        return Err(Error::ValidationFailure(
+            "No file was provided".to_string(),
+        ));
+    }
+    // The compiler cries if one does this
+    // if multipart
+    //     .next_field()
+    //     .await
+    //     .map_err(|err| Error::ValidationFailure(err.to_string()))?
+    //     .is_some()
+    // {
+    //     return Err(Error::ValidationFailure(
+    //         "Too many files were provided".to_string(),
+    //     ));
+    // }
+    let field = field.unwrap();
+
+    Ok(field)
 }

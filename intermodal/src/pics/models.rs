@@ -24,20 +24,26 @@ pub struct StopPic {
     pub id: i32,
     pub original_filename: String,
     pub sha1: String,
-    pub public: bool,
-    pub sensitive: bool,
     pub tagged: bool,
     pub uploader: i32,
     pub upload_date: String,
     pub capture_date: Option<String>,
     pub updater: Option<i32>,
     pub update_date: Option<String>,
-    pub lon: Option<f64>,
-    pub lat: Option<f64>,
     pub width: i32,
     pub height: i32,
-    pub quality: i16,
     pub camera_ref: Option<String>,
+    #[serde(flatten)]
+    pub dyn_meta: StopPicDynMeta,
+}
+
+#[derive(Debug, Serialize, Deserialize, Component)]
+pub struct StopPicDynMeta {
+    pub public: bool,
+    pub sensitive: bool,
+    pub lon: Option<f64>,
+    pub lat: Option<f64>,
+    pub quality: i16,
     pub tags: Vec<String>,
     pub notes: Option<String>,
 }
