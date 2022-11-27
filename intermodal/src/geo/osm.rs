@@ -84,7 +84,7 @@ impl From<XmlNode> for Stop {
             external_id: Some(node.id.to_string()),
             succeeded_by: None,
             notes: None,
-            accessibility_meta: stops::models::StopMeta::default(),
+            a11y: stops::models::A11yMeta::default(),
             updater: -1,
             update_date: Local::now().to_string(),
             tags: vec![],
@@ -95,18 +95,18 @@ impl From<XmlNode> for Stop {
                 "name" => res.osm_name = Some(tag.v),
                 "official_name" => res.official_name = Some(tag.v),
                 "shelter" => match tag.v.as_str() {
-                    "yes" => res.accessibility_meta.has_shelter = Some(true),
-                    "no" => res.accessibility_meta.has_shelter = Some(false),
+                    "yes" => res.a11y.has_shelter = Some(true),
+                    "no" => res.a11y.has_shelter = Some(false),
                     _ => {}
                 },
                 "bench" => match tag.v.as_str() {
-                    "yes" => res.accessibility_meta.has_bench = Some(true),
-                    "no" => res.accessibility_meta.has_bench = Some(false),
+                    "yes" => res.a11y.has_bench = Some(true),
+                    "no" => res.a11y.has_bench = Some(false),
                     _ => {}
                 },
                 "bin" => match tag.v.as_str() {
-                    "yes" => res.accessibility_meta.has_trash_can = Some(true),
-                    "no" => res.accessibility_meta.has_trash_can = Some(false),
+                    "yes" => res.a11y.has_trash_can = Some(true),
+                    "no" => res.a11y.has_trash_can = Some(false),
                     _ => {}
                 },
                 _ => {}

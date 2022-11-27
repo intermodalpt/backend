@@ -42,7 +42,7 @@ pub struct DepartureChange {
 pub struct Route {
     pub(crate) id: i32,
     pub(crate) type_id: i32,
-    pub(crate) operator: i32,
+    pub(crate) operator_id: i32,
     pub(crate) code: Option<String>,
     pub(crate) name: String,
     pub(crate) circular: bool,
@@ -61,6 +61,7 @@ pub struct Subroute {
 
 pub(crate) mod requests {
     use crate::calendar::Calendar;
+    use crate::contrib::models::{RoutePatch, SubroutePatch};
     use serde::Deserialize;
     use utoipa::Component;
 
@@ -70,7 +71,7 @@ pub(crate) mod requests {
         pub name: String,
         pub circular: bool,
         pub main_subroute: Option<i32>,
-        pub operator: i32,
+        pub operator_id: i32,
         pub active: bool,
         pub type_id: i32,
     }
@@ -82,10 +83,38 @@ pub(crate) mod requests {
                 name: route.name,
                 circular: route.circular,
                 main_subroute: route.main_subroute,
-                operator: route.operator,
+                operator_id: route.operator_id,
                 active: route.active,
                 type_id: route.type_id,
             }
+        }
+    }
+
+    impl ChangeRoute {
+        pub fn derive_patch(&self, route: &super::Route) -> RoutePatch {
+            let mut patch = RoutePatch::default();
+            if self.type_id != route.type_id {
+                patch.type_id = Some(self.type_id);
+            }
+            if self.code != route.code {
+                patch.code = Some(self.code.clone());
+            }
+            if self.name != route.name {
+                patch.name = Some(self.name.clone());
+            }
+            if self.circular != route.circular {
+                patch.circular = Some(self.circular);
+            }
+            if self.main_subroute != route.main_subroute {
+                patch.main_subroute = Some(self.main_subroute);
+            }
+            if self.operator_id != route.operator_id {
+                patch.operator_id = Some(self.operator_id);
+            }
+            if self.active != route.active {
+                patch.active = Some(self.active);
+            }
+            patch
         }
     }
 
@@ -103,6 +132,26 @@ pub(crate) mod requests {
                 circular: subroute.circular,
                 polyline: subroute.polyline,
             }
+        }
+    }
+
+    impl ChangeSubroute {
+        pub fn derive_patch(
+            &self,
+            subroute: &super::Subroute,
+        ) -> SubroutePatch {
+            let mut patch = SubroutePatch::default();
+            if self.flag != subroute.flag {
+                patch.flag = Some(self.flag.clone());
+            }
+            if self.circular != subroute.circular {
+                patch.circular = Some(self.circular);
+            }
+            if self.polyline != subroute.polyline {
+                patch.polyline = self.polyline.clone();
+            }
+
+            patch
         }
     }
 

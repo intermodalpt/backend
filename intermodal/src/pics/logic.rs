@@ -42,19 +42,16 @@ pub(crate) async fn upload_stop_picture(
     bucket: &s3::Bucket,
     db_pool: &PgPool,
     content: &Bytes,
-) -> Result<i32, Error> {
+) -> Result<models::StopPic, Error> {
     let mut hasher = Sha1::new();
     hasher.update(&content);
     let hash = hasher.finalize();
     let hex_hash = base16ct::lower::encode_string(&hash);
 
-    let res = sqlx::query!("SELECT id FROM stop_pics WHERE sha1=$1", hex_hash)
-        .fetch_optional(db_pool)
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let res = sql::fetch_stop_picture_by_hash(db_pool, &hex_hash).await?;
 
-    if let Some(res) = res {
-        return Ok(res.id);
+    if let Some(pic) = res {
+        return Ok(pic);
     }
 
     let mut original_img = image::load_from_memory(content.as_ref())
@@ -108,7 +105,8 @@ pub(crate) async fn upload_stop_picture(
         &original_img,
         original_img_mime,
         &hex_hash,
-    ).await?;
+    )
+    .await?;
 
     // TODO Delete if insertion fails
     sql::insert_stop_picture(db_pool, stop_pic_entry).await
@@ -145,8 +143,8 @@ async fn upload_picture_to_storage(
     content: &Bytes,
     original_img: &image::DynamicImage,
     original_img_mime: mime_guess::MimeGuess,
-    hex_hash: &str
-) -> Result<(), Error>{
+    hex_hash: &str,
+) -> Result<(), Error> {
     let medium_img = original_img.resize(
         MEDIUM_IMG_MAX_WIDTH,
         MEDIUM_IMG_MAX_HEIGHT,

@@ -61,8 +61,7 @@ WHERE id = $1
         update_date: r.update_date,
         parish: r.parish,
         tags: r.tags,
-        accessibility_meta: serde_json::from_value(r.accessibility_meta)
-            .unwrap(),
+        a11y: serde_json::from_value(r.accessibility_meta).unwrap(),
     });
 
     Ok(res)
@@ -108,8 +107,7 @@ WHERE id IN (
             update_date: r.update_date,
             parish: r.parish,
             tags: r.tags,
-            accessibility_meta: serde_json::from_value(r.accessibility_meta)
-                .unwrap(),
+            a11y: serde_json::from_value(r.accessibility_meta).unwrap(),
         })
         .collect()
     } else {
@@ -141,8 +139,7 @@ FROM stops")
             update_date: r.update_date,
             parish: r.parish,
             tags: r.tags,
-            accessibility_meta: serde_json::from_value(r.accessibility_meta)
-                .unwrap(),
+            a11y: serde_json::from_value(r.accessibility_meta).unwrap(),
         })
         .collect()
     })
@@ -190,8 +187,7 @@ WHERE lon >= $1 AND lon <= $2 AND lat <= $3 AND lat >= $4 AND id IN (
         update_date: r.update_date,
         parish: r.parish,
         tags: r.tags,
-        accessibility_meta: serde_json::from_value(r.accessibility_meta)
-            .unwrap(),
+        a11y: serde_json::from_value(r.accessibility_meta).unwrap(),
     })
     .collect();
 
@@ -202,7 +198,7 @@ pub(crate) async fn insert_stop(
     pool: &PgPool,
     stop: models::requests::NewStop,
     user_id: i32,
-) -> Result<i32> {
+) -> Result<models::Stop> {
     let update_date = Local::now().to_string();
 
     let res = sqlx::query!(
@@ -231,7 +227,27 @@ RETURNING id
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
-    Ok(res.id)
+    Ok(models::Stop {
+        id: res.id,
+        source: stop.source,
+        name: stop.name,
+        official_name: stop.official_name,
+        osm_name: None,
+        short_name: stop.short_name,
+        locality: stop.locality,
+        street: stop.street,
+        door: stop.door,
+        lat: Some(stop.lat),
+        lon: Some(stop.lon),
+        external_id: None,
+        succeeded_by: None,
+        notes: stop.notes,
+        updater: user_id,
+        update_date,
+        parish: None,
+        tags: stop.tags,
+        a11y: stop.accessibility_meta,
+    })
 }
 
 pub(crate) async fn update_stop<'c, E>(
@@ -261,7 +277,7 @@ WHERE id=$13
         changes.lon,
         changes.lat,
         changes.notes,
-        serde_json::to_value(&changes.accessibility_meta).unwrap(),
+        serde_json::to_value(&changes.a11y).unwrap(),
         user_id,
         update_date,
         stop_id

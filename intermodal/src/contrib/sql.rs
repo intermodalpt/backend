@@ -17,6 +17,7 @@
 */
 
 use chrono::Local;
+use serde_json::json;
 use sqlx::PgPool;
 
 use super::models;
@@ -30,7 +31,7 @@ pub(crate) async fn fetch_contribution(
 ) -> Result<Option<models::Contribution>> {
     let res = sqlx::query!(
         r#"
-SELECT id, author_id, changeset, submission_date, accepted,
+SELECT id, author_id, change, submission_date, accepted,
     evaluator_id, evaluation_date, comment
 FROM Contributions
 WHERE id=$1
@@ -45,7 +46,7 @@ WHERE id=$1
         Ok(Some(models::Contribution {
             id: contribution.id,
             author_id: contribution.author_id,
-            change: serde_json::from_value(contribution.changeset).unwrap(),
+            change: serde_json::from_value(contribution.change).unwrap(),
             submission_date: contribution.submission_date.with_timezone(&Local),
             accepted: contribution.accepted,
             evaluator_id: contribution.evaluator_id,
@@ -59,16 +60,18 @@ WHERE id=$1
     }
 }
 
-pub(crate) async fn fetch_guest_contributions(
+pub(crate) async fn fetch_user_contributions(
     pool: &PgPool,
-    contribution: models::Contribution,
+    user_id: i32,
 ) -> Result<Vec<models::Contribution>> {
     let res = sqlx::query!(
         r#"
-SELECT id, author_id, changeset, submission_date, accepted,
+SELECT id, author_id, change, submission_date, accepted,
     evaluator_id, evaluation_date, comment
 FROM Contributions
-    "#
+WHERE author_id=$1
+    "#,
+        user_id
     )
     .fetch_all(pool)
     .await
@@ -77,7 +80,7 @@ FROM Contributions
     .map(|r| models::Contribution {
         id: r.id,
         author_id: r.author_id,
-        change: serde_json::from_value(r.changeset).unwrap(),
+        change: serde_json::from_value(r.change).unwrap(),
         submission_date: r.submission_date.with_timezone(&Local),
         accepted: r.accepted,
         evaluator_id: r.evaluator_id,
@@ -94,7 +97,7 @@ pub(crate) async fn insert_new_contribution(
 ) -> Result<i64> {
     let res = sqlx::query!(
         r#"
-INSERT INTO Contributions(author_id, changeset, submission_date, comment)
+INSERT INTO Contributions(author_id, change, submission_date, comment)
 VALUES ($1, $2, $3, $4)
 RETURNING id
     "#,
@@ -110,6 +113,24 @@ RETURNING id
     Ok(res.id)
 }
 
+pub(crate) async fn update_contribution(
+    pool: &PgPool,
+    contribution: &models::Contribution,
+) -> Result<()> {
+    sqlx::query!(
+        r#"
+UPDATE Contributions
+SET change=$1, comment=$2
+    "#,
+        json!(contribution.change),
+        contribution.comment
+    )
+    .execute(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    Ok(())
+}
+
 pub(crate) async fn update_guest_contribution_to_accept<'c, E>(
     executor: E,
     contribution_id: i64,
@@ -120,7 +141,7 @@ where
 {
     let date = Local::now();
 
-    let res = sqlx::query!(
+    sqlx::query!(
         r#"
 UPDATE Contributions
 SET accepted=true, evaluator_id=$1, evaluation_date=$2
@@ -147,7 +168,7 @@ where
 {
     let date = Local::now();
 
-    let res = sqlx::query!(
+    sqlx::query!(
         r#"
 UPDATE Contributions
 SET accepted=false, evaluator_id=$1, evaluation_date=$2
@@ -166,9 +187,6 @@ WHERE id=$3
 
 pub(crate) async fn fetch_changeset_logs<'c, E>(
     executor: E,
-    author_id: i32,
-    changes: &[models::Change],
-    contribution_id: Option<i64>,
 ) -> Result<Vec<models::Changeset>>
 where
     E: sqlx::Executor<'c, Database = sqlx::Postgres>,
@@ -182,14 +200,16 @@ ORDER BY datetime DESC
     )
     .fetch_all(executor)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?.into_iter()
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .into_iter()
     .map(|r| models::Changeset {
         id: r.id,
         author_id: r.author_id,
         changes: serde_json::from_value(r.changes).unwrap(),
         datetime: r.datetime.with_timezone(&Local),
         contribution_id: r.contribution_id,
-    }).collect())
+    })
+    .collect())
 }
 
 pub(crate) async fn insert_changeset_log<'c, E>(

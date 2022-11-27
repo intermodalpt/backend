@@ -70,6 +70,50 @@ WHERE id = $1
     })
 }
 
+pub(crate) async fn fetch_stop_picture_by_hash(
+    pool: &PgPool,
+    picture_id: &str,
+) -> Result<Option<models::StopPic>> {
+    sqlx::query!(
+        r#"
+SELECT id, original_filename, sha1, tagged, public, sensitive, uploader,
+    upload_date, capture_date, lon, lat, quality, width,
+    height, camera_ref, tags, notes
+FROM stop_pics
+WHERE sha1 = $1
+"#,
+        picture_id
+    )
+    .fetch_optional(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    .map(|row| {
+        row.map(|row| models::StopPic {
+            id: row.id,
+            original_filename: row.original_filename,
+            sha1: row.sha1,
+            tagged: row.tagged,
+            uploader: row.uploader,
+            upload_date: row.upload_date,
+            capture_date: row.capture_date,
+            updater: None,
+            update_date: None,
+            width: row.width,
+            height: row.height,
+            camera_ref: row.camera_ref,
+            dyn_meta: models::StopPicDynMeta {
+                public: row.public,
+                sensitive: row.sensitive,
+                lon: row.lon,
+                lat: row.lat,
+                quality: row.quality,
+                tags: row.tags,
+                notes: row.notes,
+            },
+        })
+    })
+}
+
 pub(crate) async fn fetch_stop_pictures(
     pool: &PgPool,
 ) -> Result<Vec<responses::TaggedStopPic>> {
@@ -85,6 +129,26 @@ FROM stop_pics
     .fetch_all(pool)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))
+}
+
+pub(crate) async fn fetch_picture_stops(
+    pool: &PgPool,
+    picture_id: i32,
+) -> Result<Vec<i32>> {
+    Ok(sqlx::query!(
+        r#"
+SELECT stop
+FROM stop_pic_stops
+WHERE pic = $1
+"#,
+        picture_id
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .into_iter()
+    .map(|r| r.stop)
+    .collect())
 }
 
 pub(crate) async fn fetch_public_stop_pictures(
@@ -185,8 +249,8 @@ ORDER BY stop ASC
 
 pub(crate) async fn insert_stop_picture(
     pool: &PgPool,
-    pic: models::StopPic,
-) -> Result<i32> {
+    mut pic: models::StopPic,
+) -> Result<models::StopPic> {
     let res = sqlx::query!(
         r#"
 INSERT INTO stop_pics(
@@ -214,7 +278,9 @@ RETURNING id
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
-    Ok(res.id)
+    pic.id = res.id;
+
+    Ok(pic)
 }
 
 pub(crate) async fn update_stop_picture_meta(

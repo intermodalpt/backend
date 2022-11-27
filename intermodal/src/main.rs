@@ -167,8 +167,24 @@ pub(crate) fn build_paths(state: State) -> Router {
             post(pics::handlers::upload_stop_picture),
         )
         .route(
+            "/v1/contrib/changelog/contributions",
+            post(contrib::handlers::get_contributions),
+        )
+        .route(
+            "/v1/contrib/changelog",
+            post(contrib::handlers::get_changelog),
+        )
+        .route(
+            "/v1/contrib/pics",
+            post(contrib::handlers::post_contrib_stop_picture),
+        )
+        .route(
+            "/v1/contrib/pics/:contribution_id",
+            patch(contrib::handlers::patch_contrib_stop_picture_meta),
+        )
+        .route(
             "/v1/contrib/stops/update/:stop_id",
-            post(contrib::handlers::post_stop_contrib_data),
+            post(contrib::handlers::post_contrib_stop_data),
         )
         .route(
             "/v1/contrib/:contribution_id/accept",
@@ -182,7 +198,7 @@ pub(crate) fn build_paths(state: State) -> Router {
         .route("/v1/operators", get(operators::handlers::get_operators))
         .route(
             "/v1/operators/:operator_id/calendar",
-            get(operators::handlers::get_operators),
+            get(operators::handlers::get_operator_calendars),
         )
         .route(
             "/v1/operators/:operator_id/news",

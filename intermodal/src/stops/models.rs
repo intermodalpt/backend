@@ -76,11 +76,11 @@ pub struct Stop {
     #[serde(default)]
     pub tags: Vec<String>,
     #[serde(flatten)]
-    pub accessibility_meta: StopMeta,
+    pub a11y: A11yMeta,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Component, Default)]
-pub struct StopMeta {
+pub struct A11yMeta {
     #[serde(default)]
     pub has_crossing: Option<bool>,
     #[serde(default)]
@@ -122,7 +122,8 @@ pub struct StopMeta {
 }
 
 pub(crate) mod requests {
-    use crate::stops::models::StopMeta;
+    use crate::contrib::models::StopPatch;
+    use crate::stops::models::A11yMeta;
     use serde::Deserialize;
     use utoipa::Component;
 
@@ -144,7 +145,7 @@ pub(crate) mod requests {
         #[serde(default)]
         pub tags: Vec<String>,
         #[serde(default)]
-        pub accessibility_meta: StopMeta,
+        pub accessibility_meta: A11yMeta,
     }
 
     #[derive(Deserialize, Component)]
@@ -162,7 +163,7 @@ pub(crate) mod requests {
         #[serde(default)]
         pub tags: Vec<String>,
         #[serde(default)]
-        pub accessibility_meta: StopMeta,
+        pub a11y: A11yMeta,
     }
 
     impl From<Stop> for ChangeStop {
@@ -178,8 +179,109 @@ pub(crate) mod requests {
                 door: stop.door,
                 notes: stop.notes,
                 tags: stop.tags,
-                accessibility_meta: stop.accessibility_meta,
+                a11y: stop.a11y,
             }
+        }
+    }
+
+    impl ChangeStop {
+        pub fn derive_patch(&self, stop: &Stop) -> StopPatch {
+            let mut patch = StopPatch::default();
+
+            if self.locality != stop.locality {
+                patch.locality = Some(self.locality.clone());
+            }
+            if self.street != stop.street {
+                patch.street = Some(self.street.clone());
+            }
+            if self.door != stop.door {
+                patch.door = Some(self.door.clone());
+            }
+            if self.a11y.has_crossing != stop.a11y.has_crossing {
+                patch.has_crossing = Some(self.a11y.has_crossing);
+            }
+            if self.a11y.has_accessibility != stop.a11y.has_accessibility {
+                patch.has_accessibility = Some(self.a11y.has_accessibility);
+            }
+            if self.a11y.has_abusive_parking != stop.a11y.has_abusive_parking {
+                patch.has_abusive_parking = Some(self.a11y.has_abusive_parking);
+            }
+            if self.a11y.has_outdated_info != stop.a11y.has_outdated_info {
+                patch.has_outdated_info = Some(self.a11y.has_outdated_info);
+            }
+            if self.a11y.is_damaged != stop.a11y.is_damaged {
+                patch.is_damaged = Some(self.a11y.is_damaged);
+            }
+            if self.a11y.is_vandalized != stop.a11y.is_vandalized {
+                patch.is_vandalized = Some(self.a11y.is_vandalized);
+            }
+            if self.a11y.has_flag != stop.a11y.has_flag {
+                patch.has_flag = Some(self.a11y.has_flag);
+            }
+            if self.a11y.has_schedules != stop.a11y.has_schedules {
+                patch.has_schedules = Some(self.a11y.has_schedules);
+            }
+            if self.a11y.has_sidewalk != stop.a11y.has_sidewalk {
+                patch.has_sidewalk = Some(self.a11y.has_sidewalk);
+            }
+            if self.a11y.has_shelter != stop.a11y.has_shelter {
+                patch.has_shelter = Some(self.a11y.has_shelter);
+            }
+            if self.a11y.has_bench != stop.a11y.has_bench {
+                patch.has_bench = Some(self.a11y.has_bench);
+            }
+            if self.a11y.has_trash_can != stop.a11y.has_trash_can {
+                patch.has_trash_can = Some(self.a11y.has_trash_can);
+            }
+            if self.a11y.illumination_strength
+                != stop.a11y.illumination_strength
+            {
+                patch.illumination_strength =
+                    Some(self.a11y.illumination_strength);
+            }
+            if self.a11y.illumination_position
+                != stop.a11y.illumination_position
+            {
+                patch.illumination_position =
+                    Some(self.a11y.illumination_position);
+            }
+            if self.a11y.is_illumination_working
+                != stop.a11y.is_illumination_working
+            {
+                patch.is_illumination_working =
+                    Some(self.a11y.is_illumination_working);
+            }
+            if self.a11y.has_illuminated_path != stop.a11y.has_illuminated_path
+            {
+                patch.has_illuminated_path =
+                    Some(self.a11y.has_illuminated_path);
+            }
+            if self.a11y.has_visibility_from_within
+                != stop.a11y.has_visibility_from_within
+            {
+                patch.has_visibility_from_within =
+                    Some(self.a11y.has_visibility_from_within);
+            }
+            if self.a11y.has_visibility_from_area
+                != stop.a11y.has_visibility_from_area
+            {
+                patch.has_visibility_from_area =
+                    Some(self.a11y.has_visibility_from_area);
+            }
+            if self.a11y.is_visible_from_outside
+                != stop.a11y.is_visible_from_outside
+            {
+                patch.is_visible_from_outside =
+                    Some(self.a11y.is_visible_from_outside);
+            }
+            if self.tags != stop.tags {
+                patch.tags = Some(self.tags.clone());
+            }
+            if self.notes != stop.notes {
+                patch.notes = Some(self.notes.clone());
+            }
+
+            patch
         }
     }
 }

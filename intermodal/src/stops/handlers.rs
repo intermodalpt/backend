@@ -25,7 +25,7 @@ use axum::{Extension, Json, TypedHeader};
 use serde::Deserialize;
 
 use super::{models, sql};
-use crate::{auth, Error, State};
+use crate::{auth, contrib, Error, State};
 
 #[derive(Deserialize)]
 pub(crate) struct StopQueryParam {
@@ -59,12 +59,21 @@ pub(crate) async fn create_stop(
         return Err(Error::Forbidden);
     }
 
+    //TODO as a transaction
+    let stop = sql::insert_stop(&state.pool, stop, user_id).await?;
+    let id = stop.id;
+
+    contrib::sql::insert_changeset_log(
+        &state.pool,
+        user_id,
+        &[contrib::models::Change::StopCreation { data: stop }],
+        None,
+    )
+    .await?;
+
     Ok(Json({
         let mut map = HashMap::new();
-        map.insert(
-            "id".to_string(),
-            sql::insert_stop(&state.pool, stop, user_id).await?,
-        );
+        map.insert("id".to_string(), id);
         map
     }))
 }
@@ -72,12 +81,31 @@ pub(crate) async fn create_stop(
 pub(crate) async fn patch_stop(
     Extension(state): Extension<Arc<State>>,
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
-    Json(stop): Json<models::requests::ChangeStop>,
+    Json(changes): Json<models::requests::ChangeStop>,
     Path(stop_id): Path<i32>,
 ) -> Result<(), Error> {
     let user_id = auth::get_user(auth.token(), &state.pool).await?;
 
-    sql::update_stop(&state.pool, stop_id, stop, user_id).await
+    let stop = sql::fetch_stop(&state.pool, stop_id).await?;
+    if stop.is_none() {
+        return Err(Error::NotFoundUpstream);
+    }
+    let stop = stop.unwrap();
+
+    let patch = changes.derive_patch(&stop);
+
+    contrib::sql::insert_changeset_log(
+        &state.pool,
+        user_id,
+        &[contrib::models::Change::StopUpdate {
+            original: stop,
+            patch,
+        }],
+        None,
+    )
+    .await?;
+
+    sql::update_stop(&state.pool, stop_id, changes, user_id).await
 }
 
 #[utoipa::path(

@@ -28,7 +28,7 @@ use super::models;
 use super::models::requests;
 use super::models::responses;
 use super::sql;
-use crate::{auth, Error, State};
+use crate::{auth, contrib, Error, State};
 
 #[utoipa::path(
     get,
@@ -49,9 +49,19 @@ pub(crate) async fn create_route(
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
     Json(route): Json<requests::ChangeRoute>,
 ) -> Result<Json<HashMap<String, i32>>, Error> {
-    let _user_id = auth::get_user(auth.token(), &state.pool).await?;
+    let user_id = auth::get_user(auth.token(), &state.pool).await?;
 
-    let id = sql::insert_route(&state.pool, route).await?;
+    //TODO as a transaction
+    let route = sql::insert_route(&state.pool, route).await?;
+    let id = route.id;
+
+    contrib::sql::insert_changeset_log(
+        &state.pool,
+        user_id,
+        &[contrib::models::Change::RouteCreation { data: route }],
+        None,
+    )
+    .await?;
 
     Ok(Json({
         let mut map = HashMap::new();
@@ -64,7 +74,9 @@ pub(crate) async fn get_route(
     Extension(state): Extension<Arc<State>>,
     Path(route_id): Path<i32>,
 ) -> Result<Json<responses::Route>, Error> {
-    if let Some(route) = sql::fetch_route_with_subroutes(&state.pool, route_id).await? {
+    if let Some(route) =
+        sql::fetch_route_with_subroutes(&state.pool, route_id).await?
+    {
         Ok(Json(route))
     } else {
         Err(Error::NotFoundUpstream)
@@ -77,7 +89,33 @@ pub(crate) async fn patch_route(
     Path(route_id): Path<i32>,
     Json(changes): Json<requests::ChangeRoute>,
 ) -> Result<(), Error> {
-    let _user_id = auth::get_user(auth.token(), &state.pool).await?;
+    let user_id = auth::get_user(auth.token(), &state.pool).await?;
+
+    //TODO as a transaction
+    let route = sql::fetch_route(&state.pool, route_id).await?;
+    if route.is_none() {
+        return Err(Error::NotFoundUpstream);
+    }
+    let route = route.unwrap();
+
+    let patch = changes.derive_patch(&route);
+
+    if patch.is_empty() {
+        return Err(Error::ValidationFailure(
+            "No changes were made".to_string(),
+        ));
+    }
+
+    contrib::sql::insert_changeset_log(
+        &state.pool,
+        user_id,
+        &[contrib::models::Change::RouteUpdate {
+            original: route,
+            patch,
+        }],
+        None,
+    )
+    .await?;
 
     sql::update_route(&state.pool, route_id, changes).await
 }
@@ -87,8 +125,21 @@ pub(crate) async fn delete_route(
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
     Path(route_id): Path<i32>,
 ) -> Result<(), Error> {
-    let _user_id = auth::get_user(auth.token(), &state.pool).await?;
+    let user_id = auth::get_user(auth.token(), &state.pool).await?;
 
+    let route = sql::fetch_route(&state.pool, route_id).await?;
+    if route.is_none() {
+        return Err(Error::NotFoundUpstream);
+    }
+    let route = route.unwrap();
+
+    contrib::sql::insert_changeset_log(
+        &state.pool,
+        user_id,
+        &[contrib::models::Change::RouteDeletion { data: route }],
+        None,
+    )
+    .await?;
     sql::delete_route(&state.pool, route_id).await
 }
 
@@ -98,9 +149,20 @@ pub(crate) async fn create_subroute(
     Path(route_id): Path<i32>,
     Json(subroute): Json<requests::ChangeSubroute>,
 ) -> Result<Json<HashMap<String, i32>>, Error> {
-    let _user_id = auth::get_user(auth.token(), &state.pool).await?;
+    let user_id = auth::get_user(auth.token(), &state.pool).await?;
 
-    let id = sql::insert_subroute(&state.pool, route_id, subroute).await?;
+    //TODO as a transaction
+    let subroute =
+        sql::insert_subroute(&state.pool, route_id, subroute).await?;
+    let id = subroute.id;
+
+    contrib::sql::insert_changeset_log(
+        &state.pool,
+        user_id,
+        &[contrib::models::Change::SubrouteCreation { data: subroute }],
+        None,
+    )
+    .await?;
 
     Ok(Json({
         let mut map = HashMap::new();
@@ -115,7 +177,33 @@ pub(crate) async fn patch_subroute(
     Path((route_id, subroute_id)): Path<(i32, i32)>,
     Json(changes): Json<requests::ChangeSubroute>,
 ) -> Result<(), Error> {
-    let _user_id = auth::get_user(auth.token(), &state.pool).await?;
+    let user_id = auth::get_user(auth.token(), &state.pool).await?;
+
+    //TODO as a transaction
+    let subroute = sql::fetch_subroute(&state.pool, subroute_id).await?;
+    if subroute.is_none() {
+        return Err(Error::NotFoundUpstream);
+    }
+    let subroute = subroute.unwrap();
+
+    let patch = changes.derive_patch(&subroute);
+
+    if patch.is_empty() {
+        return Err(Error::ValidationFailure(
+            "No changes were made".to_string(),
+        ));
+    }
+
+    contrib::sql::insert_changeset_log(
+        &state.pool,
+        user_id,
+        &[contrib::models::Change::SubrouteUpdate {
+            original: subroute,
+            patch,
+        }],
+        None,
+    )
+    .await?;
 
     sql::update_subroute(&state.pool, route_id, subroute_id, changes).await
 }
@@ -125,7 +213,14 @@ pub(crate) async fn delete_subroute(
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
     Path((route_id, subroute_id)): Path<(i32, i32)>,
 ) -> Result<(), Error> {
-    let _user_id = auth::get_user(auth.token(), &state.pool).await?;
+    let user_id = auth::get_user(auth.token(), &state.pool).await?;
+
+    //TODO as a transaction
+    let subroute = sql::fetch_subroute(&state.pool, subroute_id).await?;
+    if subroute.is_none() {
+        return Err(Error::NotFoundUpstream);
+    }
+    let subroute = subroute.unwrap();
 
     let stop_count =
         sql::fetch_subroute_stop_count(&state.pool, subroute_id).await?;
@@ -135,6 +230,14 @@ pub(crate) async fn delete_subroute(
     if stop_count > 0 || departure_count > 0 {
         return Err(Error::DependenciesNotMet);
     }
+
+    contrib::sql::insert_changeset_log(
+        &state.pool,
+        user_id,
+        &[contrib::models::Change::SubrouteDeletion { data: subroute }],
+        None,
+    )
+    .await?;
 
     sql::delete_subroute(&state.pool, route_id, subroute_id).await
 }

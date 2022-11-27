@@ -37,7 +37,7 @@ pub(crate) async fn fetch_route(
         r#"
 SELECT routes.id as id,
     routes.type as type_id,
-    routes.operator as operator,
+    routes.operator as operator_id,
     routes.code as code,
     routes.name as name,
     routes.circular as circular,
@@ -223,28 +223,38 @@ ORDER BY routes.id asc
 pub(crate) async fn insert_route<'c, E>(
     executor: E,
     route: requests::ChangeRoute,
-) -> Result<i32>
+) -> Result<models::Route>
 where
     E: sqlx::Executor<'c, Database = sqlx::Postgres>,
 {
     let res = sqlx::query!(
         r#"
-INSERT INTO routes(code, name, main_subroute, operator, active, type)
-VALUES ($1, $2, $3, $4, $5, $6)
+INSERT INTO routes(code, name, main_subroute, operator, active, type, circular)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 RETURNING id
     "#,
         route.code,
         route.name,
         route.main_subroute,
-        route.operator,
+        route.operator_id,
         route.active,
         route.type_id,
+        route.circular
     )
     .fetch_one(executor)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
-    Ok(res.id)
+    Ok(models::Route {
+        id: res.id,
+        code: route.code,
+        name: route.name,
+        circular: route.circular,
+        main_subroute: route.main_subroute,
+        operator_id: route.operator_id,
+        active: route.active,
+        type_id: route.type_id,
+    })
 }
 
 pub(crate) async fn update_route<'c, E>(
@@ -264,7 +274,7 @@ WHERE id=$7
         changes.code,
         changes.name,
         changes.main_subroute,
-        changes.operator,
+        changes.operator_id,
         changes.active,
         changes.type_id,
         route_id
@@ -320,7 +330,7 @@ pub(crate) async fn insert_subroute(
     pool: &PgPool,
     route_id: i32,
     subroute: requests::ChangeSubroute,
-) -> Result<i32> {
+) -> Result<models::Subroute> {
     let res = sqlx::query!(
         r#"
 INSERT INTO subroutes(route, flag, circular, polyline)
@@ -336,7 +346,13 @@ RETURNING id
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
-    Ok(res.id)
+    Ok(models::Subroute {
+        id: res.id,
+        route_id,
+        flag: subroute.flag,
+        circular: subroute.circular,
+        polyline: subroute.polyline,
+    })
 }
 
 pub(crate) async fn update_subroute<'c, E>(

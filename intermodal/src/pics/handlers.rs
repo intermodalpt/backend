@@ -18,8 +18,6 @@
 
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::thread::sleep;
-use std::time::Duration;
 
 use axum::extract::{ContentLengthLimit, Multipart, Path, Query};
 use axum::headers::{authorization::Bearer, Authorization};
@@ -27,8 +25,8 @@ use axum::{Extension, Json, TypedHeader};
 use serde::Deserialize;
 
 use super::{logic, models, sql};
-use crate::auth;
 use crate::utils::get_exactly_one_field;
+use crate::{auth, contrib};
 use crate::{Error, State};
 
 pub(crate) async fn get_public_stop_pictures(
@@ -101,7 +99,7 @@ pub(crate) async fn upload_stop_picture(
         Multipart,
         { 30 * 1024 * 1024 },
     >,
-) -> Result<(), Error> {
+) -> Result<Json<i32>, Error> {
     let user_id = auth::get_user(auth.token(), &state.pool).await?;
 
     let field = get_exactly_one_field(&mut multipart).await?;
@@ -117,29 +115,25 @@ pub(crate) async fn upload_stop_picture(
         .await
         .map_err(|err| Error::ValidationFailure(err.to_string()))?;
 
-    let res = logic::upload_stop_picture(
+    let pic = logic::upload_stop_picture(
         user_id,
         filename.clone(),
         &state.bucket,
         &state.pool,
         &content,
     )
-    .await;
+    .await?;
+    let id = pic.id;
 
-    if res.is_err() {
-        sleep(Duration::from_secs(1));
-        // Retry, just in case
-        logic::upload_stop_picture(
-            user_id,
-            filename.clone(),
-            &state.bucket,
-            &state.pool,
-            &content,
-        )
-        .await?;
-    }
+    contrib::sql::insert_changeset_log(
+        &state.pool,
+        user_id,
+        &[contrib::models::Change::StopPicUpload { pic, stops: vec![] }],
+        None,
+    )
+    .await?;
 
-    Ok(())
+    Ok(Json(id))
 }
 
 pub(crate) async fn patch_stop_picture_meta(
@@ -149,6 +143,55 @@ pub(crate) async fn patch_stop_picture_meta(
     Json(stop_pic_meta): Json<models::requests::ChangeStopPic>,
 ) -> Result<(), Error> {
     let user_id = auth::get_user(auth.token(), &state.pool).await?;
+
+    //TODO as a transaction
+    let pic = sql::fetch_stop_picture(&state.pool, stop_picture_id).await?;
+    if pic.is_none() {
+        return Err(Error::NotFoundUpstream);
+    }
+    let pic = pic.unwrap();
+
+    let stops = sql::fetch_picture_stops(&state.pool, pic.id).await?;
+
+    let patch = stop_pic_meta.derive_patch(&pic);
+
+    if patch.is_empty() {
+        return Err(Error::ValidationFailure(
+            "No changes were made".to_string(),
+        ));
+    }
+
+    if pic.tagged {
+        contrib::sql::insert_changeset_log(
+            &state.pool,
+            user_id,
+            &[contrib::models::Change::StopPicMetaUpdate {
+                original_meta: pic.dyn_meta,
+                original_stops: stops,
+                meta_patch: patch,
+                stops: stop_pic_meta.stops.clone(),
+            }],
+            None,
+        )
+        .await?;
+    } else {
+        contrib::sql::insert_changeset_log(
+            &state.pool,
+            user_id,
+            &[contrib::models::Change::StopPicUpload {
+                pic,
+                stops: stop_pic_meta.stops.clone(),
+            }],
+            None,
+        )
+        .await?;
+        // pic.tagged = true;
+    }
+
+    // TODO Do this
+    // patch.apply(&mut pic);
+    // and change the function bellow to take a pic instead of a change request
+    // + uncomment above pic.tagged
 
     sql::update_stop_picture_meta(
         &state.pool,
