@@ -23,5 +23,61 @@ use utoipa::Component;
 pub struct User {
     pub id: i32,
     pub username: String,
+    pub password: Option<String>,
+    pub email: Option<String>,
     pub token: String,
+    pub is_admin: bool,
+    pub is_trusted: bool,
+    pub works_for: Option<i32>,
+}
+
+#[derive(Debug)]
+pub struct HashedRegistration {
+    pub username: String,
+    pub password: String,
+    pub email: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Claims {
+    // Issued at
+    pub iat: i64,
+    // Expiration
+    pub exp: i64,
+    // User id
+    pub uid: i64,
+    // Username
+    pub uname: String,
+    // Perms
+    pub permissions: Permissions,
+}
+
+// TODO complete this later
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Permissions {
+    pub is_admin: bool,
+}
+
+pub(crate) mod requests {
+    use serde::Deserialize;
+
+    #[derive(Debug, Deserialize)]
+    pub struct Login {
+        pub username: String,
+        pub password: String,
+    }
+
+    #[derive(Debug, Deserialize)]
+    pub struct Register {
+        pub username: String,
+        pub password: String,
+        pub email: String,
+    }
+
+    #[derive(Debug, Deserialize)]
+    pub struct ChangePassword {
+        pub username: String,
+        pub old_password: String,
+        pub new_password: String,
+    }
 }

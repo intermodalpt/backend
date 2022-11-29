@@ -205,6 +205,8 @@ pub(crate) fn build_paths(state: State) -> Router {
             get(operators::handlers::get_operator_news),
         )
         .route("/v1/actions/import_osm", get(geo::handlers::import_osm))
+        .route("/v1/auth/login", post(auth::handlers::post_login))
+        .route("/v1/auth/register", post(auth::handlers::post_register))
         .route("/v1/auth/check", post(auth::handlers::check_auth))
         .route("/v1/stats", get(misc::handlers::get_stats))
         .layer(Extension(Arc::new(state)))
@@ -226,6 +228,12 @@ async fn main() {
         .add_source(config::Environment::with_prefix("SETTINGS"))
         .build()
         .unwrap();
+
+    let _ = auth::SECRET_KEY.set(Box::leak(Box::new(
+        settings
+            .get_string("jwt_secret")
+            .expect("jwt_secret not set"),
+    )));
 
     let credentials = s3::creds::Credentials::new(
         Some(

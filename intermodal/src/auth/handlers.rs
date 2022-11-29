@@ -21,9 +21,9 @@ use std::sync::Arc;
 use axum::headers::{authorization::Bearer, Authorization};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::{Extension, TypedHeader};
+use axum::{Extension, Json, TypedHeader};
 
-use super::logic;
+use super::{logic, models};
 use crate::errors::Error;
 use crate::State;
 
@@ -39,4 +39,19 @@ pub(crate) async fn check_auth(
     } else {
         Ok((StatusCode::UNAUTHORIZED, "Failure").into_response())
     }
+}
+
+pub(crate) async fn post_register(
+    Extension(state): Extension<Arc<State>>,
+    Json(registration): Json<models::requests::Register>,
+) -> Result<(), Error> {
+    logic::register(registration, &state.pool).await
+}
+
+pub(crate) async fn post_login(
+    Extension(state): Extension<Arc<State>>,
+    Json(request): Json<models::requests::Login>,
+) -> Result<String, Error> {
+    let user = logic::login(request, &state.pool).await?;
+    Ok(user)
 }

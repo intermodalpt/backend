@@ -18,6 +18,7 @@
 
 use sqlx::PgPool;
 
+use super::models;
 use crate::Error;
 
 type Result<T> = std::result::Result<T, Error>;
@@ -39,4 +40,40 @@ WHERE token=$1
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     Ok(res.map(|r| r.id))
+}
+
+pub(crate) async fn fetch_user(
+    pool: &PgPool,
+    username: &str,
+) -> Result<Option<models::User>> {
+    sqlx::query_as!(
+        models::User,
+        r#"
+SELECT id, username, password, email, token, is_admin, is_trusted, works_for
+FROM Users
+WHERE username=$1
+    "#,
+        username
+    )
+    .fetch_optional(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+}
+
+pub(crate) async fn register_user(
+    pool: &PgPool,
+    request: models::HashedRegistration,
+) -> Result<i32> {
+    let res = sqlx::query!(
+        r#"INSERT INTO Users (username, password, email)
+VALUES ($1, $2, $3)
+RETURNING id"#,
+        request.username,
+        request.password,
+        request.email
+    )
+    .fetch_one(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    Ok(res.id)
 }
