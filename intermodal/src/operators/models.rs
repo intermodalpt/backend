@@ -20,6 +20,7 @@ use chrono::{DateTime, Local};
 use std::fmt;
 
 use serde::Serialize;
+use serde_repr::Serialize_repr;
 use utoipa::Component;
 
 use crate::calendar::Calendar;
@@ -68,7 +69,7 @@ pub struct Reseller {
     // TODO complete
 }
 
-pub struct Anormally {
+pub struct Anormaly {
     pub id: i32,
     pub summary: String,
     pub message: String,
@@ -78,13 +79,13 @@ pub struct Anormally {
     pub mark_resolved: bool,
 }
 
-pub struct AnormallyOperator {
-    pub anormally_id: i32,
+pub struct AnormalyOperator {
+    pub anormaly_id: i32,
     pub operator_id: i32,
 }
 
-pub struct AnormallyRoute {
-    pub anormally_id: i32,
+pub struct AnormalyRoute {
+    pub anormaly_id: i32,
     pub route_id: i32,
 }
 
@@ -117,6 +118,39 @@ pub struct NewsItem {
     pub datetime: DateTime<Local>,
     pub geojson: Option<String>,
     pub visible: bool,
+}
+
+#[repr(u8)]
+#[derive(Serialize_repr)]
+pub enum TicketReason {
+    Suggestion = 0,
+    Complaint = 1,
+    Other = 10,
+}
+
+pub struct Ticket {
+    pub id: i32,
+    pub title: String,
+    pub message: String,
+    pub datetime: DateTime<Local>,
+    pub operator: Option<i32>,
+    pub user: Option<i32>,
+    pub status: TicketStatus,
+}
+
+pub struct TicketComment {
+    pub id: i32,
+    pub ticket_id: i32,
+    pub message: String,
+    pub datetime: DateTime<Local>,
+    pub user_id: i32,
+}
+
+#[repr(u8)]
+pub enum TicketStatus {
+    New = 0,
+    Unanswered = 1,
+    Answered = 2,
 }
 
 pub(crate) mod responses {

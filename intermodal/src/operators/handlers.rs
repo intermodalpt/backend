@@ -19,15 +19,12 @@
 use std::sync::Arc;
 
 use axum::extract::{Path, Query};
-use axum::headers::{authorization::Bearer, Authorization};
-use axum::{Extension, Json, TypedHeader};
-use chrono::NaiveDate;
+use axum::{Extension, Json};
 use serde::Deserialize;
 
-use super::models;
-use super::models::responses;
+use super::models::{self, responses};
 use super::sql;
-use crate::{auth, Error, State};
+use crate::{Error, State};
 
 pub(crate) async fn get_operators(
     Extension(state): Extension<Arc<State>>,
