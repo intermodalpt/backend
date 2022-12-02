@@ -77,11 +77,11 @@ pub(crate) async fn login(
         .map_err(|_| Error::Forbidden)?;
 
     let issue_time = Utc::now();
-    let expiration_time = issue_time.add(chrono::Duration::days(1));
+    let expiration_time = issue_time.add(chrono::Duration::days(90));
     let claims = models::Claims {
         iat: issue_time.timestamp(),
         exp: expiration_time.timestamp(),
-        uid: user.id as i64,
+        uid: user.id,
         uname: user.username,
         permissions: models::Permissions {
             is_admin: user.is_admin,
@@ -122,8 +122,8 @@ pub(crate) fn encode_claims(claims: models::Claims) -> Result<String, Error> {
     .map_err(|_err| Error::Processing("Failed to encode JWT".to_string()))
 }
 
-pub(crate) async fn decode_claims(
-    jwt: String,
+pub(crate) fn decode_claims(
+    jwt: &str,
 ) -> Result<models::Claims, Error> {
     let decoded_token = jsonwebtoken::decode::<models::Claims>(
         &jwt,
@@ -149,7 +149,7 @@ mod tests {
             permissions: models::Permissions { is_admin: false },
         };
         let encoded = encode_claims(claims.clone()).unwrap();
-        let decoded = decode_claims(encoded).unwrap();
+        let decoded = decode_claims(&encoded).unwrap();
         assert_eq!(claims, decoded);
     }
 }

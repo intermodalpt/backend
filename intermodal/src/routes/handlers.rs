@@ -20,11 +20,9 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use axum::extract::Path;
-use axum::headers::{authorization::Bearer, Authorization};
-use axum::{Extension, Json, TypedHeader};
+use axum::{Extension, Json};
 use chrono::NaiveDate;
 
-use super::models;
 use super::models::requests;
 use super::models::responses;
 use super::sql;
@@ -46,10 +44,18 @@ pub(crate) async fn get_routes(
 
 pub(crate) async fn create_route(
     Extension(state): Extension<Arc<State>>,
-    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    claims: Option<auth::Claims>,
     Json(route): Json<requests::ChangeRoute>,
 ) -> Result<Json<HashMap<String, i32>>, Error> {
-    let user_id = auth::get_user(auth.token(), &state.pool).await?;
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
+    let user_id = claims.uid;
 
     //TODO as a transaction
     let route = sql::insert_route(&state.pool, route).await?;
@@ -85,11 +91,19 @@ pub(crate) async fn get_route(
 
 pub(crate) async fn patch_route(
     Extension(state): Extension<Arc<State>>,
-    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    claims: Option<auth::Claims>,
     Path(route_id): Path<i32>,
     Json(changes): Json<requests::ChangeRoute>,
 ) -> Result<(), Error> {
-    let user_id = auth::get_user(auth.token(), &state.pool).await?;
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
+    let user_id = claims.uid;
 
     //TODO as a transaction
     let route = sql::fetch_route(&state.pool, route_id).await?;
@@ -122,10 +136,18 @@ pub(crate) async fn patch_route(
 
 pub(crate) async fn delete_route(
     Extension(state): Extension<Arc<State>>,
-    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    claims: Option<auth::Claims>,
     Path(route_id): Path<i32>,
 ) -> Result<(), Error> {
-    let user_id = auth::get_user(auth.token(), &state.pool).await?;
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
+    let user_id = claims.uid;
 
     let route = sql::fetch_route(&state.pool, route_id).await?;
     if route.is_none() {
@@ -145,11 +167,19 @@ pub(crate) async fn delete_route(
 
 pub(crate) async fn create_subroute(
     Extension(state): Extension<Arc<State>>,
-    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    claims: Option<auth::Claims>,
     Path(route_id): Path<i32>,
     Json(subroute): Json<requests::ChangeSubroute>,
 ) -> Result<Json<HashMap<String, i32>>, Error> {
-    let user_id = auth::get_user(auth.token(), &state.pool).await?;
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
+    let user_id = claims.uid;
 
     //TODO as a transaction
     let subroute =
@@ -173,11 +203,19 @@ pub(crate) async fn create_subroute(
 
 pub(crate) async fn patch_subroute(
     Extension(state): Extension<Arc<State>>,
-    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    claims: Option<auth::Claims>,
     Path((route_id, subroute_id)): Path<(i32, i32)>,
     Json(changes): Json<requests::ChangeSubroute>,
 ) -> Result<(), Error> {
-    let user_id = auth::get_user(auth.token(), &state.pool).await?;
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
+    let user_id = claims.uid;
 
     //TODO as a transaction
     let subroute = sql::fetch_subroute(&state.pool, subroute_id).await?;
@@ -210,10 +248,18 @@ pub(crate) async fn patch_subroute(
 
 pub(crate) async fn delete_subroute(
     Extension(state): Extension<Arc<State>>,
-    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    claims: Option<auth::Claims>,
     Path((route_id, subroute_id)): Path<(i32, i32)>,
 ) -> Result<(), Error> {
-    let user_id = auth::get_user(auth.token(), &state.pool).await?;
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
+    let user_id = claims.uid;
 
     //TODO as a transaction
     let subroute = sql::fetch_subroute(&state.pool, subroute_id).await?;
@@ -244,11 +290,17 @@ pub(crate) async fn delete_subroute(
 
 pub(crate) async fn create_subroute_departure(
     Extension(state): Extension<Arc<State>>,
-    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    claims: Option<auth::Claims>,
     Json(departure): Json<requests::ChangeDeparture>,
     Path(subroute_id): Path<i32>,
 ) -> Result<Json<HashMap<String, i32>>, Error> {
-    let _user_id = auth::get_user(auth.token(), &state.pool).await?;
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
 
     let id = sql::insert_departure(&state.pool, subroute_id, departure).await?;
     Ok(Json({
@@ -260,11 +312,17 @@ pub(crate) async fn create_subroute_departure(
 
 pub(crate) async fn patch_subroute_departure(
     Extension(state): Extension<Arc<State>>,
-    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    claims: Option<auth::Claims>,
     Json(departure): Json<requests::ChangeDeparture>,
     Path((subroute_id, departure_id)): Path<(i32, i32)>,
 ) -> Result<(), Error> {
-    let _user_id = auth::get_user(auth.token(), &state.pool).await?;
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
 
     sql::update_departure(&state.pool, subroute_id, departure_id, departure)
         .await?;
@@ -273,10 +331,16 @@ pub(crate) async fn patch_subroute_departure(
 
 pub(crate) async fn delete_subroute_departure(
     Extension(state): Extension<Arc<State>>,
-    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    claims: Option<auth::Claims>,
     Path((subroute_id, departure_id)): Path<(i32, i32)>,
 ) -> Result<(), Error> {
-    let _user_id = auth::get_user(auth.token(), &state.pool).await?;
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
 
     sql::delete_departure(&state.pool, subroute_id, departure_id).await?;
     Ok(())
@@ -313,13 +377,15 @@ pub(crate) async fn get_route_stops(
 #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
 pub(crate) async fn patch_subroute_stops(
     Extension(state): Extension<Arc<State>>,
-    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    claims: Option<auth::Claims>,
     Path((route_id, subroute_id)): Path<(i32, i32)>,
-    Json(request): Json<models::requests::ChangeSubrouteStops>,
+    Json(request): Json<requests::ChangeSubrouteStops>,
 ) -> Result<(), Error> {
-    let user_id = auth::get_user(auth.token(), &state.pool).await?;
-
-    if user_id != 1 && user_id != 2 {
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }
 

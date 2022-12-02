@@ -20,9 +20,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use axum::extract::{ContentLengthLimit, Multipart, Path};
-use axum::headers::authorization::Bearer;
-use axum::headers::Authorization;
-use axum::{Extension, Json, TypedHeader};
+use axum::{Extension, Json};
 use chrono::Local;
 
 use super::{models, models::requests, sql};
@@ -32,9 +30,12 @@ use crate::{auth, pics, stops, State};
 
 pub(crate) async fn get_contributions(
     Extension(state): Extension<Arc<State>>,
-    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    claims: Option<auth::Claims>,
 ) -> Result<Json<Vec<models::Contribution>>, Error> {
-    let user_id = auth::get_user(auth.token(), &state.pool).await?;
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let user_id = claims.unwrap().uid;
 
     Ok(Json(
         sql::fetch_user_contributions(&state.pool, user_id).await?,
@@ -42,20 +43,25 @@ pub(crate) async fn get_contributions(
 }
 pub(crate) async fn get_changelog(
     Extension(state): Extension<Arc<State>>,
-    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    claims: Option<auth::Claims>,
 ) -> Result<Json<Vec<models::Changeset>>, Error> {
-    let _user_id = auth::get_user(auth.token(), &state.pool).await?;
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
 
     Ok(Json(sql::fetch_changeset_logs(&state.pool).await?))
 }
 
 pub(crate) async fn post_contrib_stop_data(
     Extension(state): Extension<Arc<State>>,
-    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    claims: Option<auth::Claims>,
     Path(stop_id): Path<i32>,
     Json(contribution): Json<requests::NewStopMetaContribution>,
 ) -> Result<Json<HashMap<String, i64>>, Error> {
-    let user_id = auth::get_user(auth.token(), &state.pool).await?;
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let user_id = claims.unwrap().uid;
 
     let stop = stops::sql::fetch_stop(&state.pool, stop_id).await?;
 
@@ -96,13 +102,16 @@ pub(crate) async fn post_contrib_stop_data(
 
 pub(crate) async fn post_contrib_stop_picture(
     Extension(state): Extension<Arc<State>>,
-    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    claims: Option<auth::Claims>,
     ContentLengthLimit(mut multipart): ContentLengthLimit<
         Multipart,
         { 30 * 1024 * 1024 },
     >,
 ) -> Result<Json<HashMap<String, i64>>, Error> {
-    let user_id = auth::get_user(auth.token(), &state.pool).await?;
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let user_id = claims.unwrap().uid;
 
     let field = get_exactly_one_field(&mut multipart).await?;
 
@@ -149,11 +158,14 @@ pub(crate) async fn post_contrib_stop_picture(
 
 pub(crate) async fn patch_contrib_stop_picture_meta(
     Extension(state): Extension<Arc<State>>,
-    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    claims: Option<auth::Claims>,
     Path(contribution_id): Path<i64>,
     Json(contribution_meta): Json<requests::NewPictureContribution>,
 ) -> Result<(), Error> {
-    let user_id = auth::get_user(auth.token(), &state.pool).await?;
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
 
     let contribution =
         sql::fetch_contribution(&state.pool, contribution_id).await?;
@@ -161,6 +173,10 @@ pub(crate) async fn patch_contrib_stop_picture_meta(
         return Err(Error::NotFoundUpstream);
     }
     let mut contribution: models::Contribution = contribution.unwrap();
+
+    if contribution.author_id != claims.uid {
+        return Err(Error::Forbidden);
+    }
 
     if contribution.accepted.is_some() {
         return Err(Error::ValidationFailure(
@@ -195,10 +211,14 @@ pub(crate) async fn patch_contrib_stop_picture_meta(
 
 pub(crate) async fn post_accept_contrib_data(
     Extension(state): Extension<Arc<State>>,
-    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    claims: Option<auth::Claims>,
     Path(contribution_id): Path<i64>,
 ) -> Result<(), Error> {
-    let user_id = auth::get_user(auth.token(), &state.pool).await?;
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let user_id = claims.unwrap().uid;
+
     let contribution =
         sql::fetch_contribution(&state.pool, contribution_id).await?;
 
@@ -265,10 +285,14 @@ pub(crate) async fn post_accept_contrib_data(
 
 pub(crate) async fn post_decline_contrib_data(
     Extension(state): Extension<Arc<State>>,
-    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    claims: Option<auth::Claims>,
     Path(contribution_id): Path<i64>,
 ) -> Result<(), Error> {
-    let user_id = auth::get_user(auth.token(), &state.pool).await?;
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let user_id = claims.unwrap().uid;
+
     let contribution =
         sql::fetch_contribution(&state.pool, contribution_id).await?;
 

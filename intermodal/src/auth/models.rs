@@ -38,14 +38,14 @@ pub struct HashedRegistration {
     pub email: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct Claims {
     // Issued at
     pub iat: i64,
     // Expiration
     pub exp: i64,
     // User id
-    pub uid: i64,
+    pub uid: i32,
     // Username
     pub uname: String,
     // Perms
@@ -53,7 +53,7 @@ pub struct Claims {
 }
 
 // TODO complete this later
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct Permissions {
     pub is_admin: bool,
 }

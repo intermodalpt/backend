@@ -18,26 +18,22 @@
 
 use std::sync::Arc;
 
-use axum::headers::{authorization::Bearer, Authorization};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::{Extension, Json, TypedHeader};
+use axum::{Extension, Json};
 
 use super::{logic, models};
 use crate::errors::Error;
 use crate::State;
 
 pub(crate) async fn check_auth(
-    Extension(state): Extension<Arc<State>>,
-    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    claims: Option<models::Claims>,
 ) -> Result<impl IntoResponse, Error> {
-    if logic::try_get_user(auth.token(), &state.pool)
-        .await?
-        .is_some()
-    {
-        Ok((StatusCode::OK, "Success").into_response())
+    println!("{:?}", claims);
+    if claims.is_some() {
+        Ok(StatusCode::OK)
     } else {
-        Ok((StatusCode::UNAUTHORIZED, "Failure").into_response())
+        Err(Error::Forbidden)
     }
 }
 

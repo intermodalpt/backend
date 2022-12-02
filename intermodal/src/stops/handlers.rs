@@ -20,8 +20,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use axum::extract::{Path, Query};
-use axum::headers::{authorization::Bearer, Authorization};
-use axum::{Extension, Json, TypedHeader};
+use axum::{Extension, Json};
 use serde::Deserialize;
 
 use super::{models, sql};
@@ -49,10 +48,18 @@ pub(crate) async fn get_stops(
 
 pub(crate) async fn create_stop(
     Extension(state): Extension<Arc<State>>,
-    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    claims: Option<auth::Claims>,
     Json(stop): Json<models::requests::NewStop>,
 ) -> Result<Json<HashMap<String, i32>>, Error> {
-    let user_id = auth::get_user(auth.token(), &state.pool).await?;
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
+    let user_id = claims.uid;
 
     // FIXME
     if user_id != 1 {
@@ -80,11 +87,19 @@ pub(crate) async fn create_stop(
 
 pub(crate) async fn patch_stop(
     Extension(state): Extension<Arc<State>>,
-    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    claims: Option<auth::Claims>,
     Json(changes): Json<models::requests::ChangeStop>,
     Path(stop_id): Path<i32>,
 ) -> Result<(), Error> {
-    let user_id = auth::get_user(auth.token(), &state.pool).await?;
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
+    let user_id = claims.uid;
 
     let stop = sql::fetch_stop(&state.pool, stop_id).await?;
     if stop.is_none() {

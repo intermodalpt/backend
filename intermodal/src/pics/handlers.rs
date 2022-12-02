@@ -20,8 +20,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use axum::extract::{ContentLengthLimit, Multipart, Path, Query};
-use axum::headers::{authorization::Bearer, Authorization};
-use axum::{Extension, Json, TypedHeader};
+use axum::{Extension, Json};
 use serde::Deserialize;
 
 use super::{logic, models, sql};
@@ -41,9 +40,11 @@ pub(crate) async fn get_public_stop_pictures(
 pub(crate) async fn get_tagged_stop_pictures(
     Extension(state): Extension<Arc<State>>,
     Path(stop_id): Path<i32>,
-    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    claims: Option<auth::Claims>,
 ) -> Result<Json<Vec<models::responses::TaggedStopPic>>, Error> {
-    let _user_id = auth::get_user(auth.token(), &state.pool).await?;
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
 
     Ok(Json(
         sql::fetch_tagged_stop_pictures(&state.pool, stop_id).await?,
@@ -52,18 +53,22 @@ pub(crate) async fn get_tagged_stop_pictures(
 
 pub(crate) async fn get_picture_stop_rels(
     Extension(state): Extension<Arc<State>>,
-    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    claims: Option<auth::Claims>,
 ) -> Result<Json<HashMap<i32, Vec<i32>>>, Error> {
-    let _user_id = auth::get_user(auth.token(), &state.pool).await?;
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
 
     Ok(Json(sql::fetch_picture_stop_rels(&state.pool).await?))
 }
 
 pub(crate) async fn get_pictures(
     Extension(state): Extension<Arc<State>>,
-    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    claims: Option<auth::Claims>,
 ) -> Result<Json<Vec<models::responses::TaggedStopPic>>, Error> {
-    let _user_id = auth::get_user(auth.token(), &state.pool).await?;
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
 
     Ok(Json(sql::fetch_stop_pictures(&state.pool).await?))
 }
@@ -78,29 +83,44 @@ const PAGE_SIZE: u32 = 20;
 
 pub(crate) async fn get_untagged_stop_pictures(
     Extension(state): Extension<Arc<State>>,
-    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    claims: Option<auth::Claims>,
     paginator: Query<Page>,
 ) -> Result<Json<Vec<models::responses::UntaggedStopPic>>, Error> {
-    let user_id = auth::get_user(auth.token(), &state.pool).await?;
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
 
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
     Ok(Json(
-        sql::fetch_untagged_stop_pictures(&state.pool, user_id, offset, take)
-            .await?,
+        sql::fetch_untagged_stop_pictures(
+            &state.pool,
+            claims.uid,
+            offset,
+            take,
+        )
+        .await?,
     ))
 }
 
 pub(crate) async fn upload_stop_picture(
     Extension(state): Extension<Arc<State>>,
-    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    claims: Option<auth::Claims>,
     ContentLengthLimit(mut multipart): ContentLengthLimit<
         Multipart,
         { 30 * 1024 * 1024 },
     >,
 ) -> Result<Json<i32>, Error> {
-    let user_id = auth::get_user(auth.token(), &state.pool).await?;
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+
+    if !(claims.permissions.is_admin) {
+        return Err(Error::Forbidden);
+    }
 
     let field = get_exactly_one_field(&mut multipart).await?;
 
@@ -116,7 +136,7 @@ pub(crate) async fn upload_stop_picture(
         .map_err(|err| Error::ValidationFailure(err.to_string()))?;
 
     let pic = logic::upload_stop_picture(
-        user_id,
+        claims.uid,
         filename.clone(),
         &state.bucket,
         &state.pool,
@@ -127,7 +147,7 @@ pub(crate) async fn upload_stop_picture(
 
     contrib::sql::insert_changeset_log(
         &state.pool,
-        user_id,
+        claims.uid,
         &[contrib::models::Change::StopPicUpload { pic, stops: vec![] }],
         None,
     )
@@ -138,11 +158,26 @@ pub(crate) async fn upload_stop_picture(
 
 pub(crate) async fn patch_stop_picture_meta(
     Extension(state): Extension<Arc<State>>,
-    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    claims: Option<auth::Claims>,
     Path(stop_picture_id): Path<i32>,
     Json(stop_pic_meta): Json<models::requests::ChangeStopPic>,
 ) -> Result<(), Error> {
-    let user_id = auth::get_user(auth.token(), &state.pool).await?;
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+
+    let pic = sql::fetch_stop_picture(&state.pool, stop_picture_id).await?;
+    if pic.is_none() {
+        return Err(Error::NotFoundUpstream);
+    }
+    let pic = pic.unwrap();
+
+    if !(claims.permissions.is_admin
+        || !pic.tagged && pic.uploader == claims.uid)
+    {
+        return Err(Error::Forbidden);
+    }
 
     //TODO as a transaction
     let pic = sql::fetch_stop_picture(&state.pool, stop_picture_id).await?;
@@ -164,7 +199,7 @@ pub(crate) async fn patch_stop_picture_meta(
     if pic.tagged {
         contrib::sql::insert_changeset_log(
             &state.pool,
-            user_id,
+            claims.uid,
             &[contrib::models::Change::StopPicMetaUpdate {
                 original_meta: pic.dyn_meta,
                 original_stops: stops,
@@ -177,7 +212,7 @@ pub(crate) async fn patch_stop_picture_meta(
     } else {
         contrib::sql::insert_changeset_log(
             &state.pool,
-            user_id,
+            claims.uid,
             &[contrib::models::Change::StopPicUpload {
                 pic,
                 stops: stop_pic_meta.stops.clone(),
@@ -197,19 +232,28 @@ pub(crate) async fn patch_stop_picture_meta(
         &state.pool,
         stop_picture_id,
         stop_pic_meta,
-        user_id,
+        claims.uid,
     )
     .await
 }
 
 pub(crate) async fn delete_stop_picture(
     Extension(state): Extension<Arc<State>>,
-    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    claims: Option<auth::Claims>,
     Path(stop_picture_id): Path<i32>,
 ) -> Result<(), Error> {
-    let user_id = auth::get_user(auth.token(), &state.pool).await?;
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
 
-    if user_id != 1 && user_id != 2 {
+    let pic = sql::fetch_stop_picture(&state.pool, stop_picture_id).await?;
+    if pic.is_none() {
+        return Err(Error::NotFoundUpstream);
+    }
+    let pic = pic.unwrap();
+
+    if !(claims.permissions.is_admin || pic.uploader == claims.uid) {
         return Err(Error::Forbidden);
     }
 

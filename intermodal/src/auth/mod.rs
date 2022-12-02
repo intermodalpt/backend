@@ -16,6 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+mod extractor;
 pub(crate) mod handlers;
 mod logic;
 mod models;
@@ -27,3 +28,4 @@ pub(crate) static SECRET_KEY: OnceCell<&'static str> = OnceCell::new();
 
 #[allow(unused_imports)]
 pub(crate) use logic::{get_user, try_get_user};
+pub(crate) use models::Claims;

@@ -18,8 +18,7 @@
 
 use std::sync::Arc;
 
-use axum::headers::{authorization::Bearer, Authorization};
-use axum::{Extension, Json, TypedHeader};
+use axum::{Extension, Json};
 use serde::Serialize;
 
 use super::{models, osm, sql};
@@ -49,9 +48,15 @@ pub(crate) struct OsmDiff {
 
 pub(crate) async fn import_osm(
     Extension(state): Extension<Arc<State>>,
-    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    claims: Option<auth::Claims>,
 ) -> Result<Json<OsmDiff>, Error> {
-    let _user_id = auth::get_user(auth.token(), &state.pool).await?;
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
 
     let (inserted, updated) = osm::import(&state.pool).await?;
 

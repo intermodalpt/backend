@@ -207,7 +207,7 @@ pub(crate) fn build_paths(state: State) -> Router {
         .route("/v1/actions/import_osm", get(geo::handlers::import_osm))
         .route("/v1/auth/login", post(auth::handlers::post_login))
         .route("/v1/auth/register", post(auth::handlers::post_register))
-        .route("/v1/auth/check", post(auth::handlers::check_auth))
+        .route("/v1/auth/check", get(auth::handlers::check_auth))
         .route("/v1/stats", get(misc::handlers::get_stats))
         .layer(Extension(Arc::new(state)))
         .route(
