@@ -246,13 +246,13 @@ async fn main() {
     let credentials = s3::creds::Credentials::new(
         Some(
             &settings
-                .get_string("access_key")
-                .expect("access_key not set"),
+                .get_string("s3_access_key")
+                .expect("s3_access_key not set"),
         ),
         Some(
             &settings
-                .get_string("secret_key")
-                .expect("secret_key not set"),
+                .get_string("s3_secret_key")
+                .expect("s3_secret_key not set"),
         ),
         None,
         None,
@@ -261,11 +261,13 @@ async fn main() {
     .unwrap();
 
     let bucket = s3::Bucket::new(
-        "stoppics",
+        &settings
+            .get_string("s3_bucket_name")
+            .expect("s3_bucket_name not set"),
         s3::Region::R2 {
             account_id: settings
-                .get_string("account_id")
-                .expect("account_id not set"),
+                .get_string("s3_account_id")
+                .expect("s3_account_id not set"),
         },
         credentials,
     )
