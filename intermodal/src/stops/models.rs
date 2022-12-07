@@ -41,7 +41,9 @@ pub enum IlluminationStrength {
     High = 5,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Component, sqlx::FromRow)]
+#[derive(
+    Debug, Clone, Serialize, Deserialize, Component, PartialEq, sqlx::FromRow,
+)]
 pub struct Stop {
     pub id: i32,
     #[component(example = "cmet")]
@@ -79,7 +81,9 @@ pub struct Stop {
     pub a11y: A11yMeta,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Component, Default)]
+#[derive(
+    Debug, Clone, Serialize, Deserialize, Component, Default, PartialEq,
+)]
 pub struct A11yMeta {
     #[serde(default)]
     pub has_crossing: Option<bool>,
@@ -144,7 +148,7 @@ pub(crate) mod requests {
         pub notes: Option<String>,
         #[serde(default)]
         pub tags: Vec<String>,
-        #[serde(default)]
+        #[serde(default, flatten)]
         pub accessibility_meta: A11yMeta,
     }
 
@@ -162,7 +166,7 @@ pub(crate) mod requests {
         pub notes: Option<String>,
         #[serde(default)]
         pub tags: Vec<String>,
-        #[serde(default)]
+        #[serde(flatten)]
         pub a11y: A11yMeta,
     }
 
@@ -317,5 +321,138 @@ pub(crate) mod responses {
         pub routes: HashMap<i32, SpiderRoute>,
         pub subroutes: HashMap<i32, SpiderSubroute>,
         pub stops: HashMap<i32, SpiderStop>,
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::{A11yMeta, IlluminationPos, IlluminationStrength, Stop};
+
+    #[test]
+    fn serialize_deserialize_a11y() {
+        let a11y = A11yMeta {
+            has_crossing: Some(false),
+            has_accessibility: None,
+            has_abusive_parking: Some(true),
+            has_outdated_info: Some(true),
+            is_damaged: Some(true),
+            is_vandalized: Some(true),
+            has_flag: Some(true),
+            has_schedules: Some(true),
+            has_sidewalk: Some(true),
+            has_shelter: Some(true),
+            has_bench: Some(true),
+            has_trash_can: Some(true),
+            illumination_strength: Some(IlluminationStrength::High),
+            illumination_position: Some(IlluminationPos::Own),
+            is_illumination_working: Some(true),
+            has_illuminated_path: Some(true),
+            has_visibility_from_within: Some(true),
+            has_visibility_from_area: Some(true),
+            is_visible_from_outside: Some(true),
+        };
+        let json = serde_json::to_string(&a11y).unwrap();
+
+        let a11y2: A11yMeta = serde_json::from_str(&json).unwrap();
+        assert_eq!(a11y, a11y2);
+    }
+
+    #[test]
+    fn deserialize_a11y() {
+        let json = r#"{
+            "has_crossing": false,
+            "has_accessibility": null,
+            "has_abusive_parking": true,
+            "has_outdated_info": true,
+            "is_damaged": true,
+            "is_vandalized": true,
+            "has_flag": true,
+            "has_schedules": true,
+            "has_sidewalk": true,
+            "has_shelter": true,
+            "has_bench": true,
+            "has_trash_can": true,
+            "illumination_strength": 5,
+            "illumination_position": 20,
+            "is_illumination_working": true,
+            "has_illuminated_path": true,
+            "has_visibility_from_within": true,
+            "has_visibility_from_area": true,
+            "is_visible_from_outside": true
+        }"#;
+        let a11y: A11yMeta = serde_json::from_str(&json).unwrap();
+
+        let a11y2 = A11yMeta {
+            has_crossing: Some(false),
+            has_accessibility: None,
+            has_abusive_parking: Some(true),
+            has_outdated_info: Some(true),
+            is_damaged: Some(true),
+            is_vandalized: Some(true),
+            has_flag: Some(true),
+            has_schedules: Some(true),
+            has_sidewalk: Some(true),
+            has_shelter: Some(true),
+            has_bench: Some(true),
+            has_trash_can: Some(true),
+            illumination_strength: Some(IlluminationStrength::High),
+            illumination_position: Some(IlluminationPos::Own),
+            is_illumination_working: Some(true),
+            has_illuminated_path: Some(true),
+            has_visibility_from_within: Some(true),
+            has_visibility_from_area: Some(true),
+            is_visible_from_outside: Some(true),
+        };
+
+        assert_eq!(a11y, a11y2);
+    }
+
+    #[test]
+    fn serialize_deserialize_stop() {
+        let stop = Stop {
+            id: 1,
+            source: "".to_string(),
+            name: Some("Test".to_string()),
+            official_name: None,
+            osm_name: None,
+            short_name: None,
+            locality: None,
+            street: None,
+            door: None,
+            parish: None,
+            lat: Some(1.0),
+            lon: Some(2.0),
+            external_id: None,
+            a11y: A11yMeta {
+                has_crossing: Some(false),
+                has_accessibility: None,
+                has_abusive_parking: Some(true),
+                has_outdated_info: Some(true),
+                is_damaged: Some(true),
+                is_vandalized: Some(true),
+                has_flag: Some(true),
+                has_schedules: Some(true),
+                has_sidewalk: Some(true),
+                has_shelter: Some(true),
+                has_bench: Some(true),
+                has_trash_can: Some(true),
+                illumination_strength: Some(IlluminationStrength::High),
+                illumination_position: Some(IlluminationPos::Own),
+                is_illumination_working: Some(true),
+                has_illuminated_path: Some(true),
+                has_visibility_from_within: Some(true),
+                has_visibility_from_area: Some(true),
+                is_visible_from_outside: Some(true),
+            },
+            tags: vec!["test".to_string()],
+            notes: Some("test".to_string()),
+            updater: 0,
+            succeeded_by: None,
+            update_date: "".to_string(),
+        };
+        let json = serde_json::to_string(&stop).unwrap();
+
+        let stop2: Stop = serde_json::from_str(&json).unwrap();
+        assert_eq!(stop, stop2);
     }
 }
