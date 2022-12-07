@@ -168,11 +168,19 @@ pub(crate) fn build_paths(state: State) -> Router {
         )
         .route(
             "/v1/contrib/changelog/contributions",
-            post(contrib::handlers::get_contributions),
+            get(contrib::handlers::get_user_contributions),
+        )
+        .route(
+            "/v1/contrib/contributions/undecided",
+            get(contrib::handlers::get_latest_undecided_contributions),
+        )
+        .route(
+            "/v1/contrib/contributions/decided",
+            get(contrib::handlers::get_latest_decided_contributions),
         )
         .route(
             "/v1/contrib/changelog",
-            post(contrib::handlers::get_changelog),
+            get(contrib::handlers::get_changelog),
         )
         .route(
             "/v1/contrib/pics",

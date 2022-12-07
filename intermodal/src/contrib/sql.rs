@@ -91,6 +91,66 @@ WHERE author_id=$1
     Ok(res)
 }
 
+pub(crate) async fn fetch_undecided_contributions(
+    pool: &PgPool,
+) -> Result<Vec<models::Contribution>> {
+    let res = sqlx::query!(
+        r#"
+SELECT id, author_id, change, submission_date, accepted,
+    evaluator_id, evaluation_date, comment
+FROM Contributions
+WHERE accepted IS NOT NULL
+ORDER BY evaluation_date DESC
+    "#
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .into_iter()
+    .map(|r| models::Contribution {
+        id: r.id,
+        author_id: r.author_id,
+        change: serde_json::from_value(r.change).unwrap(),
+        submission_date: r.submission_date.with_timezone(&Local),
+        accepted: r.accepted,
+        evaluator_id: r.evaluator_id,
+        evaluation_date: r.evaluation_date.map(|d| d.with_timezone(&Local)),
+        comment: r.comment,
+    })
+    .collect::<Vec<models::Contribution>>();
+    Ok(res)
+}
+
+pub(crate) async fn fetch_decided_contributions(
+    pool: &PgPool,
+) -> Result<Vec<models::Contribution>> {
+    let res = sqlx::query!(
+        r#"
+SELECT id, author_id, change, submission_date, accepted,
+    evaluator_id, evaluation_date, comment
+FROM Contributions
+WHERE accepted IS NOT NULL
+ORDER BY evaluation_date DESC
+    "#
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .into_iter()
+    .map(|r| models::Contribution {
+        id: r.id,
+        author_id: r.author_id,
+        change: serde_json::from_value(r.change).unwrap(),
+        submission_date: r.submission_date.with_timezone(&Local),
+        accepted: r.accepted,
+        evaluator_id: r.evaluator_id,
+        evaluation_date: r.evaluation_date.map(|d| d.with_timezone(&Local)),
+        comment: r.comment,
+    })
+    .collect::<Vec<models::Contribution>>();
+    Ok(res)
+}
+
 pub(crate) async fn insert_new_contribution(
     pool: &PgPool,
     contribution: models::Contribution,

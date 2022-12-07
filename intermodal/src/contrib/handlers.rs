@@ -28,7 +28,7 @@ use crate::errors::Error;
 use crate::utils::get_exactly_one_field;
 use crate::{auth, pics, stops, State};
 
-pub(crate) async fn get_contributions(
+pub(crate) async fn get_user_contributions(
     Extension(state): Extension<Arc<State>>,
     claims: Option<auth::Claims>,
 ) -> Result<Json<Vec<models::Contribution>>, Error> {
@@ -41,15 +41,50 @@ pub(crate) async fn get_contributions(
         sql::fetch_user_contributions(&state.pool, user_id).await?,
     ))
 }
+
+pub(crate) async fn get_latest_undecided_contributions(
+    Extension(state): Extension<Arc<State>>,
+    claims: Option<auth::Claims>,
+) -> Result<Json<Vec<models::Contribution>>, Error> {
+    if let Some(claims) = claims {
+        if !claims.permissions.is_admin {
+            return Err(Error::Forbidden);
+        }
+
+        Ok(Json(sql::fetch_undecided_contributions(&state.pool).await?))
+    } else {
+        return Err(Error::Forbidden);
+    }
+}
+
+pub(crate) async fn get_latest_decided_contributions(
+    Extension(state): Extension<Arc<State>>,
+    claims: Option<auth::Claims>,
+) -> Result<Json<Vec<models::Contribution>>, Error> {
+    if let Some(claims) = claims {
+        if !claims.permissions.is_admin {
+            return Err(Error::Forbidden);
+        }
+
+        Ok(Json(sql::fetch_decided_contributions(&state.pool).await?))
+    } else {
+        return Err(Error::Forbidden);
+    }
+}
+
 pub(crate) async fn get_changelog(
     Extension(state): Extension<Arc<State>>,
     claims: Option<auth::Claims>,
 ) -> Result<Json<Vec<models::Changeset>>, Error> {
-    if claims.is_none() {
+    if let Some(claims) = claims {
+        if !claims.permissions.is_admin {
+            return Err(Error::Forbidden);
+        }
+
+        Ok(Json(sql::fetch_changeset_logs(&state.pool).await?))
+    } else {
         return Err(Error::Forbidden);
     }
-
-    Ok(Json(sql::fetch_changeset_logs(&state.pool).await?))
 }
 
 pub(crate) async fn post_contrib_stop_data(
@@ -186,7 +221,7 @@ pub(crate) async fn patch_contrib_stop_picture_meta(
 
     contribution.comment = contribution_meta.comment;
 
-    let pic = match contribution.change {
+    let mut pic = match contribution.change {
         models::Change::StopPicUpload { pic, .. } => pic,
         _ => {
             return Err(Error::ValidationFailure(
@@ -195,11 +230,17 @@ pub(crate) async fn patch_contrib_stop_picture_meta(
         }
     };
 
-    let pic = pics::sql::fetch_stop_picture(&state.pool, pic.id).await?;
-    if pic.is_none() {
+    pic.dyn_meta = contribution_meta.contribution;
+
+    let db_pic = pics::sql::fetch_stop_picture(&state.pool, pic.id).await?;
+    if db_pic.is_none() {
         return Err(Error::NotFoundUpstream);
     }
-    let pic = pic.unwrap();
+    let db_pic = db_pic.unwrap();
+
+    if db_pic.tagged {
+        return Err(Error::DependenciesNotMet);
+    }
 
     contribution.change = models::Change::StopPicUpload {
         pic,
