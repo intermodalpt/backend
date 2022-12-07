@@ -65,8 +65,8 @@ pub(crate) async fn register_user(
     request: models::HashedRegistration,
 ) -> Result<i32> {
     let res = sqlx::query!(
-        r#"INSERT INTO Users (username, password, email)
-VALUES ($1, $2, $3)
+        r#"INSERT INTO Users (username, password, email, token)
+VALUES ($1, $2, $3, '')
 RETURNING id"#,
         request.username,
         request.password,

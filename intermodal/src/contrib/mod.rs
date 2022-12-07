@@ -19,3 +19,5 @@
 pub(crate) mod handlers;
 pub(crate) mod models;
 pub(crate) mod sql;
+
+pub(crate) use models::{requests, responses};

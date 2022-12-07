@@ -20,7 +20,7 @@ use chrono::Local;
 use serde_json::json;
 use sqlx::PgPool;
 
-use super::models;
+use super::{models, responses};
 use crate::Error;
 
 type Result<T> = std::result::Result<T, Error>;
@@ -93,13 +93,17 @@ WHERE author_id=$1
 
 pub(crate) async fn fetch_undecided_contributions(
     pool: &PgPool,
-) -> Result<Vec<models::Contribution>> {
+) -> Result<Vec<responses::Contribution>> {
     let res = sqlx::query!(
         r#"
-SELECT id, author_id, change, submission_date, accepted,
-    evaluator_id, evaluation_date, comment
+SELECT Contributions.id, Contributions.author_id, Contributions.change,
+    Contributions.submission_date, Contributions.accepted,
+    Contributions.evaluator_id, Contributions.evaluation_date,
+    Contributions.comment,
+    Authors.username as author_username
 FROM Contributions
-WHERE accepted IS NOT NULL
+INNER JOIN Users AS Authors ON author_id = Authors.id
+WHERE accepted IS NULL
 ORDER BY evaluation_date DESC
     "#
     )
@@ -107,28 +111,36 @@ ORDER BY evaluation_date DESC
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?
     .into_iter()
-    .map(|r| models::Contribution {
+    .map(|r| responses::Contribution {
         id: r.id,
         author_id: r.author_id,
+        author_username: r.author_username,
         change: serde_json::from_value(r.change).unwrap(),
         submission_date: r.submission_date.with_timezone(&Local),
         accepted: r.accepted,
         evaluator_id: r.evaluator_id,
+        evaluator_username: None,
         evaluation_date: r.evaluation_date.map(|d| d.with_timezone(&Local)),
         comment: r.comment,
     })
-    .collect::<Vec<models::Contribution>>();
+    .collect::<Vec<responses::Contribution>>();
     Ok(res)
 }
 
 pub(crate) async fn fetch_decided_contributions(
     pool: &PgPool,
-) -> Result<Vec<models::Contribution>> {
+) -> Result<Vec<responses::Contribution>> {
     let res = sqlx::query!(
         r#"
-SELECT id, author_id, change, submission_date, accepted,
-    evaluator_id, evaluation_date, comment
+SELECT Contributions.id, Contributions.author_id, Contributions.change,
+    Contributions.submission_date, Contributions.accepted,
+    Contributions.evaluator_id, Contributions.evaluation_date,
+    Contributions.comment,
+    Authors.username as author_username,
+    Evaluators.username as evaluator_username
 FROM Contributions
+INNER JOIN Users AS Authors ON author_id = Authors.id
+LEFT JOIN Users AS Evaluators ON evaluator_id = Evaluators.id
 WHERE accepted IS NOT NULL
 ORDER BY evaluation_date DESC
     "#
@@ -137,17 +149,19 @@ ORDER BY evaluation_date DESC
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?
     .into_iter()
-    .map(|r| models::Contribution {
+    .map(|r| responses::Contribution {
         id: r.id,
         author_id: r.author_id,
+        author_username: r.author_username,
         change: serde_json::from_value(r.change).unwrap(),
         submission_date: r.submission_date.with_timezone(&Local),
         accepted: r.accepted,
         evaluator_id: r.evaluator_id,
+        evaluator_username: Some(r.evaluator_username),
         evaluation_date: r.evaluation_date.map(|d| d.with_timezone(&Local)),
         comment: r.comment,
     })
-    .collect::<Vec<models::Contribution>>();
+    .collect::<Vec<responses::Contribution>>();
     Ok(res)
 }
 
@@ -247,14 +261,16 @@ WHERE id=$3
 
 pub(crate) async fn fetch_changeset_logs<'c, E>(
     executor: E,
-) -> Result<Vec<models::Changeset>>
+) -> Result<Vec<responses::Changeset>>
 where
     E: sqlx::Executor<'c, Database = sqlx::Postgres>,
 {
     Ok(sqlx::query!(
         r#"
-SELECT id, author_id, changes, datetime, contribution_id
+SELECT Changelog.id, Changelog.author_id, Changelog.changes, Changelog.datetime,
+    Changelog.contribution_id, Users.username as author_username
 FROM Changelog
+INNER JOIN Users ON author_id = Users.id
 ORDER BY datetime DESC
     "#,
     )
@@ -262,9 +278,10 @@ ORDER BY datetime DESC
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?
     .into_iter()
-    .map(|r| models::Changeset {
+    .map(|r| responses::Changeset {
         id: r.id,
         author_id: r.author_id,
+        author_username: r.author_username,
         changes: serde_json::from_value(r.changes).unwrap(),
         datetime: r.datetime.with_timezone(&Local),
         contribution_id: r.contribution_id,

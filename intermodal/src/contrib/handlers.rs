@@ -23,7 +23,7 @@ use axum::extract::{ContentLengthLimit, Multipart, Path};
 use axum::{Extension, Json};
 use chrono::Local;
 
-use super::{models, models::requests, sql};
+use super::{models, requests, responses, sql};
 use crate::errors::Error;
 use crate::utils::get_exactly_one_field;
 use crate::{auth, pics, stops, State};
@@ -45,7 +45,7 @@ pub(crate) async fn get_user_contributions(
 pub(crate) async fn get_latest_undecided_contributions(
     Extension(state): Extension<Arc<State>>,
     claims: Option<auth::Claims>,
-) -> Result<Json<Vec<models::Contribution>>, Error> {
+) -> Result<Json<Vec<responses::Contribution>>, Error> {
     if let Some(claims) = claims {
         if !claims.permissions.is_admin {
             return Err(Error::Forbidden);
@@ -60,7 +60,7 @@ pub(crate) async fn get_latest_undecided_contributions(
 pub(crate) async fn get_latest_decided_contributions(
     Extension(state): Extension<Arc<State>>,
     claims: Option<auth::Claims>,
-) -> Result<Json<Vec<models::Contribution>>, Error> {
+) -> Result<Json<Vec<responses::Contribution>>, Error> {
     if let Some(claims) = claims {
         if !claims.permissions.is_admin {
             return Err(Error::Forbidden);
@@ -75,7 +75,7 @@ pub(crate) async fn get_latest_decided_contributions(
 pub(crate) async fn get_changelog(
     Extension(state): Extension<Arc<State>>,
     claims: Option<auth::Claims>,
-) -> Result<Json<Vec<models::Changeset>>, Error> {
+) -> Result<Json<Vec<responses::Changeset>>, Error> {
     if let Some(claims) = claims {
         if !claims.permissions.is_admin {
             return Err(Error::Forbidden);

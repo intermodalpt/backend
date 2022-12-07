@@ -522,3 +522,34 @@ pub(crate) mod requests {
         }
     }
 }
+
+pub(crate) mod responses {
+    use chrono::{DateTime, Local};
+    use serde::Serialize;
+
+    use super::Change;
+
+    #[derive(Serialize)]
+    pub struct Contribution {
+        pub id: i64,
+        pub author_id: i32,
+        pub author_username: String,
+        pub change: Change,
+        pub submission_date: DateTime<Local>,
+        pub accepted: Option<bool>,
+        pub evaluator_id: Option<i32>,
+        pub evaluator_username: Option<String>,
+        pub evaluation_date: Option<DateTime<Local>>,
+        pub comment: Option<String>,
+    }
+
+    #[derive(Serialize)]
+    pub struct Changeset {
+        pub id: i64,
+        pub author_id: i32,
+        pub author_username: String,
+        pub changes: Vec<Change>,
+        pub datetime: DateTime<Local>,
+        pub contribution_id: Option<i64>,
+    }
+}
