@@ -43,7 +43,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use axum::http::Method;
-use axum::routing::{get, patch, post};
+use axum::routing::{delete, get, patch, post};
 use axum::{Extension, Json, Router};
 use config::Config;
 use sqlx::postgres::PgPool;
@@ -205,8 +205,17 @@ pub(crate) fn build_paths(state: State) -> Router {
         .route("/v1/news", get(operators::handlers::get_news))
         .route("/v1/operators", get(operators::handlers::get_operators))
         .route(
-            "/v1/operators/:operator_id/calendar",
-            get(operators::handlers::get_operator_calendars),
+            "/v1/calendars",
+            get(operators::handlers::get_calendars)
+        )
+        .route(
+            "/v1/operators/:operator_id/calendars",
+            get(operators::handlers::get_operator_calendars)
+                .post(operators::handlers::post_operator_calendar),
+        )
+        .route(
+            "/v1/operators/:operator_id/calendars/:operator_id",
+            delete(operators::handlers::delete_operator_calendar),
         )
         .route(
             "/v1/operators/:operator_id/news",

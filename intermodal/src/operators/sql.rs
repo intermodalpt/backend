@@ -19,8 +19,8 @@
 use chrono::Local;
 use sqlx::PgPool;
 
-use super::models;
-use super::models::responses;
+use super::models::{self, requests, responses};
+
 use crate::Error;
 
 type Result<T> = std::result::Result<T, Error>;
@@ -42,6 +42,28 @@ FROM Operators
 
 pub(crate) async fn fetch_calendars(
     pool: &PgPool,
+) -> Result<Vec<responses::OperatorCalendar>> {
+    Ok(sqlx::query!(
+        r#"
+SELECT id, name, calendar, operator_id
+FROM operator_calendars
+"#,
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .into_iter()
+    .map(|row| responses::OperatorCalendar {
+        id: row.id,
+        name: row.name,
+        calendar: serde_json::from_value(row.calendar).unwrap(),
+        operator_id: row.operator_id,
+    })
+    .collect())
+}
+
+pub(crate) async fn fetch_operator_calendars(
+    pool: &PgPool,
     operator_id: i32,
 ) -> Result<Vec<responses::OperatorCalendar>> {
     Ok(sqlx::query!(
@@ -60,8 +82,49 @@ WHERE operator_id=$1
         id: row.id,
         name: row.name,
         calendar: serde_json::from_value(row.calendar).unwrap(),
+        operator_id,
     })
     .collect())
+}
+
+pub(crate) async fn insert_calendar(
+    pool: &PgPool,
+    operator_id: i32,
+    calendar: requests::NewOperatorCalendar,
+) -> Result<i32> {
+    let row = sqlx::query!(
+        r#"
+INSERT INTO operator_calendars (operator_id, name, calendar)
+VALUES ($1, $2, $3)
+RETURNING id
+"#,
+        operator_id,
+        calendar.name,
+        serde_json::to_value(calendar.calendar).unwrap()
+    )
+    .fetch_one(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    Ok(row.id)
+}
+
+pub(crate) async fn delete_calendar(
+    pool: &PgPool,
+    operator_id: i32,
+    calendar_id: i32,
+) -> Result<()> {
+    sqlx::query!(
+        r#"
+DELETE FROM operator_calendars
+WHERE operator_id=$1 AND id=$2
+"#,
+        operator_id,
+        calendar_id
+    )
+    .execute(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    Ok(())
 }
 
 pub(crate) async fn fetch_news(

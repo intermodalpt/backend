@@ -16,15 +16,16 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use axum::extract::{Path, Query};
 use axum::{Extension, Json};
 use serde::Deserialize;
 
-use super::models::{self, responses};
+use super::models::{self, requests, responses};
 use super::sql;
-use crate::{Error, State};
+use crate::{auth, Error, State};
 
 pub(crate) async fn get_operators(
     Extension(state): Extension<Arc<State>>,
@@ -32,11 +33,57 @@ pub(crate) async fn get_operators(
     Ok(Json(sql::fetch_operators(&state.pool).await?))
 }
 
+pub(crate) async fn get_calendars(
+    Extension(state): Extension<Arc<State>>,
+) -> Result<Json<Vec<responses::OperatorCalendar>>, Error> {
+    Ok(Json(sql::fetch_calendars(&state.pool).await?))
+}
+
 pub(crate) async fn get_operator_calendars(
     Extension(state): Extension<Arc<State>>,
     Path(operator_id): Path<i32>,
 ) -> Result<Json<Vec<responses::OperatorCalendar>>, Error> {
-    Ok(Json(sql::fetch_calendars(&state.pool, operator_id).await?))
+    Ok(Json(
+        sql::fetch_operator_calendars(&state.pool, operator_id).await?,
+    ))
+}
+
+pub(crate) async fn post_operator_calendar(
+    Extension(state): Extension<Arc<State>>,
+    Path(operator_id): Path<i32>,
+    Json(calendar): Json<requests::NewOperatorCalendar>,
+    claims: Option<auth::Claims>,
+) -> Result<Json<HashMap<String, i32>>, Error> {
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+    let id = sql::insert_calendar(&state.pool, operator_id, calendar).await?;
+    Ok(Json({
+        let mut map = HashMap::new();
+        map.insert("id".to_string(), id);
+        map
+    }))
+}
+
+pub(crate) async fn delete_operator_calendar(
+    Extension(state): Extension<Arc<State>>,
+    Path((operator_id, calendar_id)): Path<(i32, i32)>,
+    claims: Option<auth::Claims>,
+) -> Result<(), Error> {
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+    // TODO do not allow deletion of calendars that are in use
+
+    Ok(sql::delete_calendar(&state.pool, operator_id, calendar_id).await?)
 }
 
 #[derive(Deserialize, Default)]

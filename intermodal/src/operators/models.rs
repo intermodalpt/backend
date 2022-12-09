@@ -164,7 +164,8 @@ pub(crate) mod responses {
     pub struct OperatorCalendar {
         pub id: i32,
         pub name: String,
-        pub calendar: Vec<Calendar>,
+        pub calendar: Calendar,
+        pub operator_id: i32,
     }
 
     #[derive(Debug, Serialize, Component)]
@@ -175,5 +176,18 @@ pub(crate) mod responses {
         pub datetime: DateTime<Local>,
         pub geojson: Option<String>,
         pub visible: bool,
+    }
+}
+
+pub(crate) mod requests {
+    use serde::{Deserialize};
+    use utoipa::Component;
+
+    use super::Calendar;
+
+    #[derive(Debug, Deserialize, Component)]
+    pub struct NewOperatorCalendar {
+        pub name: String,
+        pub calendar: Calendar,
     }
 }
