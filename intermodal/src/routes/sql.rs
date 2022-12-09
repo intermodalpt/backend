@@ -639,10 +639,9 @@ pub(crate) async fn fetch_schedule(
 SELECT departures.id as id,
     subroutes.id as subroute,
     departures.time as time,
-    departures.calendar_id as calendar_id,
-    departures.calendar as calendar
-FROM subroutes
-JOIN departures on departures.subroute = subroutes.id
+    departures.calendar_id as "calendar_id!: i32"
+FROM departures
+INNER JOIN subroutes on departures.subroute = subroutes.id
 WHERE subroutes.route=$1
 ORDER BY time ASC
     "#,
@@ -659,14 +658,6 @@ ORDER BY time ASC
             subroute: row.subroute,
             time: row.time,
             calendar_id: row.calendar_id,
-            calendar: if let Some(calendar) = row.calendar {
-                Some(
-                    serde_json::from_value(calendar)
-                        .map_err(|_err| Error::DatabaseDeserialization)?,
-                )
-            } else {
-                None
-            },
         });
     }
 
@@ -722,13 +713,12 @@ where
 {
     let res = sqlx::query!(
         r#"
-INSERT INTO departures(subroute, time, calendar, calendar_id)
-VALUES($1, $2, $3, $4)
+INSERT INTO departures(subroute, time, calendar_id)
+VALUES($1, $2, $3)
 RETURNING id
     "#,
         subroute_id,
         departure.time,
-        json!(departure.calendar),
         departure.calendar_id
     )
     .fetch_one(executor)
@@ -749,11 +739,11 @@ where
     let _res = sqlx::query!(
         r#"
 UPDATE departures
-SET time=$1, calendar=$2
+SET time=$1, calendar_id=$2
 WHERE id=$3 AND subroute=$4
     "#,
         departure.time,
-        json!(departure.calendar),
+        departure.calendar_id,
         departure_id,
         subroute_id,
     )

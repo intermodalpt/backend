@@ -170,13 +170,11 @@ pub(crate) mod requests {
     #[derive(Debug, Deserialize, Component)]
     pub struct ChangeDeparture {
         pub time: i16,
-        pub calendar: Option<Calendar>,
-        pub calendar_id: Option<i32>,
+        pub calendar_id: i32,
     }
 }
 
 pub(crate) mod responses {
-    use crate::calendar::Calendar;
     use serde::Serialize;
     use utoipa::Component;
 
@@ -213,10 +211,7 @@ pub(crate) mod responses {
         // Departure time in minutes starting at midnight
         #[component(example = 480)]
         pub time: i16,
-        // TODO replace this
-        pub calendar: Option<Calendar>,
-        // With this
-        pub calendar_id: Option<i32>,
+        pub calendar_id: i32,
     }
 
     #[derive(Serialize, Component)]
