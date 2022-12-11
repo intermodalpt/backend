@@ -45,7 +45,6 @@ pub struct Route {
     pub(crate) operator_id: i32,
     pub(crate) code: Option<String>,
     pub(crate) name: String,
-    pub(crate) circular: bool,
     pub(crate) main_subroute: Option<i32>,
     pub(crate) active: bool,
 }
@@ -60,7 +59,6 @@ pub struct Subroute {
 }
 
 pub(crate) mod requests {
-    use crate::calendar::Calendar;
     use crate::contrib::models::{RoutePatch, SubroutePatch};
     use serde::Deserialize;
     use utoipa::Component;
@@ -69,7 +67,6 @@ pub(crate) mod requests {
     pub struct ChangeRoute {
         pub code: Option<String>,
         pub name: String,
-        pub circular: bool,
         pub main_subroute: Option<i32>,
         pub operator_id: i32,
         pub active: bool,
@@ -81,7 +78,6 @@ pub(crate) mod requests {
             Self {
                 code: route.code,
                 name: route.name,
-                circular: route.circular,
                 main_subroute: route.main_subroute,
                 operator_id: route.operator_id,
                 active: route.active,
@@ -101,9 +97,6 @@ pub(crate) mod requests {
             }
             if self.name != route.name {
                 patch.name = Some(self.name.clone());
-            }
-            if self.circular != route.circular {
-                patch.circular = Some(self.circular);
             }
             if self.main_subroute != route.main_subroute {
                 patch.main_subroute = Some(self.main_subroute);
@@ -158,7 +151,6 @@ pub(crate) mod requests {
     #[derive(Deserialize, Component)]
     pub struct SubrouteStops {
         pub stops: Vec<i32>,
-        pub diffs: Vec<Option<i32>>,
     }
 
     #[derive(Deserialize, Component)]
@@ -224,7 +216,6 @@ pub(crate) mod responses {
     #[derive(Serialize, Component)]
     pub struct SubrouteStops {
         pub subroute: i32,
-        pub stops: Vec<i32>,
-        pub diffs: Vec<Option<i32>>,
+        pub stops: Vec<i32>
     }
 }

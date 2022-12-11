@@ -18,7 +18,6 @@
 
 use chrono::NaiveDate;
 use itertools::Itertools;
-use serde_json::json;
 use sqlx::PgPool;
 use std::collections::HashMap;
 
@@ -40,7 +39,6 @@ SELECT routes.id as id,
     routes.operator as operator_id,
     routes.code as code,
     routes.name as name,
-    routes.circular as circular,
     routes.main_subroute as main_subroute,
     routes.active as active
 FROM routes
@@ -222,15 +220,15 @@ ORDER BY routes.id asc
 
 pub(crate) async fn insert_route<'c, E>(
     executor: E,
-    route: requests::ChangeRoute,
-) -> Result<models::Route>
+    route: &requests::ChangeRoute,
+) -> Result<i32>
 where
     E: sqlx::Executor<'c, Database = sqlx::Postgres>,
 {
     let res = sqlx::query!(
         r#"
-INSERT INTO routes(code, name, main_subroute, operator, active, type, circular)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
+INSERT INTO routes(code, name, main_subroute, operator, active, type)
+VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING id
     "#,
         route.code,
@@ -238,23 +236,13 @@ RETURNING id
         route.main_subroute,
         route.operator_id,
         route.active,
-        route.type_id,
-        route.circular
+        route.type_id
     )
     .fetch_one(executor)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
-    Ok(models::Route {
-        id: res.id,
-        code: route.code,
-        name: route.name,
-        circular: route.circular,
-        main_subroute: route.main_subroute,
-        operator_id: route.operator_id,
-        active: route.active,
-        type_id: route.type_id,
-    })
+    Ok(res.id)
 }
 
 pub(crate) async fn update_route<'c, E>(
@@ -416,7 +404,7 @@ pub(crate) async fn fetch_route_stops(
 ) -> Result<Vec<responses::SubrouteStops>> {
     let res = sqlx::query!(
         r#"
-SELECT subroutes.id as subroute, subroute_stops.stop as stop, subroute_stops.time_to_next as diff
+SELECT subroutes.id as subroute, subroute_stops.stop as stop
 FROM subroutes
 JOIN subroute_stops ON subroute_stops.subroute = subroutes.id
 WHERE subroutes.route=$1
@@ -424,28 +412,18 @@ ORDER BY subroutes.id ASC, subroute_stops.idx ASC
     "#,
         route_id
     )
-        .fetch_all(pool)
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .fetch_all(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
+    // TODO Consider moving the stop indexes to an array (in the DB)
     let subroute_stops = res
         .into_iter()
         .group_by(|row| row.subroute)
         .into_iter()
-        .map(|(subroute, group)| {
-            (
-                subroute,
-                group
-                    .collect::<Vec<_>>()
-                    .into_iter()
-                    .map(|stop| (stop.stop, stop.diff))
-                    .unzip(),
-            )
-        })
-        .map(|(key, (stops, diffs))| responses::SubrouteStops {
-            subroute: key,
-            stops,
-            diffs,
+        .map(|(subroute, group)| responses::SubrouteStops {
+            subroute,
+            stops: group.map(|stop| stop.stop).collect(),
         })
         .collect::<Vec<_>>();
 
@@ -459,16 +437,9 @@ pub(crate) async fn update_subroute_stops(
     subroute_id: i32,
     request: requests::ChangeSubrouteStops,
 ) -> Result<()> {
-    // Check if the current stops match the requests's check
-    if request.from.stops.len() != request.from.diffs.len()
-        || request.to.stops.len() != request.to.diffs.len()
-    {
-        return Err(Error::ValidationFailure("Size divergence".to_string()));
-    }
-
     let existing_query_res = sqlx::query!(
         r#"
-SELECT subroute_stops.stop as stop, subroute_stops.time_to_next as diff
+SELECT subroute_stops.stop as stop
 FROM subroutes
 JOIN subroute_stops on subroute_stops.subroute = subroutes.id
 WHERE subroutes.route=$1 AND subroutes.id=$2
@@ -493,10 +464,8 @@ ORDER BY subroute_stops.idx ASC
 
     let check_matched = existing_query_res
         .iter()
-        .zip(request.from.stops.iter().zip(request.from.diffs.iter()))
-        .all(|(row, (from_stop, from_diff))| {
-            row.stop == *from_stop && row.diff == *from_diff
-        });
+        .zip(request.from.stops.iter())
+        .all(|(row, from_stop)| row.stop == *from_stop);
 
     if !check_matched {
         return Err(Error::ValidationFailure("Check mismatch".to_string()));
@@ -504,10 +473,8 @@ ORDER BY subroute_stops.idx ASC
 
     let existing_duplicates_count = existing_query_res
         .iter()
-        .zip(request.to.stops.iter().zip(request.to.diffs.iter()))
-        .filter(|(row, (from_stop, from_diff))| {
-            row.stop == **from_stop && row.diff == **from_diff
-        })
+        .zip(request.to.stops.iter())
+        .filter(|(row, from_stop)| row.stop == **from_stop)
         .count();
 
     if stored_changes == 0 && existing_duplicates_count == stored_len {
@@ -534,26 +501,19 @@ WHERE Subroute=$1 AND idx>=$2
             ));
         }
     } else if stored_changes > 0 {
-        let additional_entries = request
-            .to
-            .stops
-            .iter()
-            .zip(request.to.diffs.iter())
-            .skip(stored_len)
-            .enumerate();
+        let additional_entries =
+            request.to.stops.iter().skip(stored_len).enumerate();
 
-        for (index, (stop, _diff)) in additional_entries {
+        for (index, stop) in additional_entries {
             let index = (stored_len + index) as i16;
             let _res = sqlx::query!(
                 r#"
-INSERT INTO subroute_stops(subroute, stop, idx, time_to_next)
-VALUES ($1, $2, $3, $4)
+INSERT INTO subroute_stops(subroute, stop, idx)
+VALUES ($1, $2, $3)
     "#,
                 subroute_id,
                 stop,
-                index,
-                // FIXME this should be the diff variable
-                0
+                index
             )
             .execute(pool)
             .await
@@ -563,24 +523,18 @@ VALUES ($1, $2, $3, $4)
 
     if existing_duplicates_count != stored_len {
         // Update the already existing records
-        let overlapping_entries = request
-            .to
-            .stops
-            .iter()
-            .zip(request.to.diffs.into_iter())
-            .take(stored_len)
-            .enumerate();
+        let overlapping_entries =
+            request.to.stops.iter().take(stored_len).enumerate();
 
-        for (index, (stop, diff)) in overlapping_entries {
+        for (index, stop) in overlapping_entries {
             let index = index as i16;
             let _res = sqlx::query!(
                 r#"
 UPDATE subroute_stops
-SET stop=$1, time_to_next=$2
-WHERE  subroute=$3 AND idx=$4
+SET stop=$1
+WHERE  subroute=$2 AND idx=$3
     "#,
                 stop,
-                diff,
                 subroute_id,
                 index
             )

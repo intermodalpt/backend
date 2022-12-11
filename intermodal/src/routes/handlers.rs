@@ -23,8 +23,7 @@ use axum::extract::Path;
 use axum::{Extension, Json};
 use chrono::NaiveDate;
 
-use super::models::requests;
-use super::models::responses;
+use super::models::{self, requests, responses, sql};
 use super::sql;
 use crate::{auth, contrib, Error, State};
 
@@ -54,12 +53,20 @@ pub(crate) async fn create_route(
     if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }
-
     let user_id = claims.uid;
 
     //TODO as a transaction
-    let route = sql::insert_route(&state.pool, route).await?;
-    let id = route.id;
+
+    let id = sql::insert_route(&state.pool, &route).await?;
+    let route = models::Route {
+        id,
+        type_id: route.type_id,
+        operator_id: route.operator_id,
+        code: route.code,
+        name: route.name,
+        main_subroute: route.main_subroute,
+        active: route.active,
+    };
 
     contrib::sql::insert_changeset_log(
         &state.pool,
