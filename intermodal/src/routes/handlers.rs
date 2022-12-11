@@ -23,7 +23,7 @@ use axum::extract::Path;
 use axum::{Extension, Json};
 use chrono::NaiveDate;
 
-use super::models::{self, requests, responses, sql};
+use super::models::{self, requests, responses};
 use super::sql;
 use crate::{auth, contrib, Error, State};
 
@@ -474,4 +474,21 @@ pub(crate) async fn get_schedule_for_date(
     Ok(Json(
         sql::fetch_schedule_for_date(&state.pool, route_id, date).await?,
     ))
+}
+
+pub(crate) async fn post_replace_stop_across_routes(
+    Extension(state): Extension<Arc<State>>,
+    claims: Option<auth::Claims>,
+    Path((original_id, replacement_id)): Path<(i32, i32)>,
+) -> Result<(), Error> {
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
+    sql::migrate_stop(&state.pool, original_id, replacement_id).await?;
+    Ok(())
 }

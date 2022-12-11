@@ -728,3 +728,40 @@ WHERE id=$1 AND subroute=$2
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
     Ok(())
 }
+
+pub(crate) async fn migrate_stop(
+    pool: &PgPool,
+    original_id: i32,
+    destination_id: i32,
+) -> Result<()> {
+    let res = sqlx::query!(
+        r#"
+SELECT count(*) as cnt
+FROM stops
+WHERE id = ($1) OR id = ($2)
+    "#,
+        destination_id,
+        original_id,
+    )
+    .fetch_one(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    if res.cnt != Some(2) {
+        return Err(Error::ValidationFailure("Invalid stop id".to_string()));
+    }
+
+    let _res = sqlx::query!(
+        r#"
+UPDATE subroute_stops
+SET stop=$1
+WHERE stop=$2
+    "#,
+        destination_id,
+        original_id,
+    )
+    .execute(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    Ok(())
+}
