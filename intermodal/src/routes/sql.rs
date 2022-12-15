@@ -657,11 +657,33 @@ ORDER BY time asc
     Ok(departures)
 }
 
+pub(crate) async fn fetch_departure<'c, E>(
+    executor: E,
+    departure_id: i32,
+) -> Result<Option<models::Departure>>
+where
+    E: sqlx::Executor<'c, Database = sqlx::Postgres>,
+{
+    sqlx::query_as!(
+        models::Departure,
+        r#"
+SELECT departures.id as id,
+    Departures.time as time,
+    Departures.subroute as subroute_id,
+    Departures.calendar_id as "calendar_id!: i32"
+FROM Departures
+"#
+    )
+    .fetch_optional(executor)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+}
+
 pub(crate) async fn insert_departure<'c, E>(
     executor: E,
     subroute_id: i32,
     departure: requests::ChangeDeparture,
-) -> Result<i32>
+) -> Result<models::Departure>
 where
     E: sqlx::Executor<'c, Database = sqlx::Postgres>,
 {
@@ -678,7 +700,13 @@ RETURNING id
     .fetch_one(executor)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
-    Ok(res.id)
+
+    Ok(models::Departure {
+        id: res.id,
+        subroute_id,
+        time: departure.time,
+        calendar_id: departure.calendar_id,
+    })
 }
 
 pub(crate) async fn update_departure<'c, E>(

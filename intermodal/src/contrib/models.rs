@@ -78,6 +78,16 @@ pub enum Change {
     SubrouteDeletion {
         data: routes::Subroute,
     },
+    DepartureCreation {
+        data: routes::Departure,
+    },
+    DepartureUpdate {
+        original: routes::Departure,
+        patch: DeparturePatch,
+    },
+    DepartureDeletion {
+        data: routes::Departure,
+    },
     StopPicUpload {
         pic: pics::StopPic,
         stops: Vec<i32>,
@@ -296,6 +306,34 @@ impl SubroutePatch {
         }
         if let Some(polyline) = self.polyline {
             subroute.polyline = Some(polyline)
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Default)]
+pub struct DeparturePatch {
+    pub(crate) time: Option<i16>,
+    pub(crate) subroute_id: Option<i32>,
+    pub(crate) calendar_id: Option<i32>,
+}
+
+impl DeparturePatch {
+    pub(crate) fn is_empty(&self) -> bool {
+        self.time.is_none()
+            && self.subroute_id.is_none()
+            && self.calendar_id.is_none()
+    }
+
+    #[allow(unused)]
+    pub(crate) fn apply(self, departure: &mut routes::Departure) {
+        if let Some(time) = self.time {
+            departure.time = time
+        }
+        if let Some(subroute_id) = self.subroute_id {
+            departure.subroute_id = subroute_id
+        }
+        if let Some(calendar_id) = self.calendar_id {
+            departure.calendar_id = calendar_id
         }
     }
 }

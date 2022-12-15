@@ -18,25 +18,6 @@
 
 use serde::{Deserialize, Serialize};
 use serde_repr::Serialize_repr;
-use utoipa::Component;
-
-use crate::calendar::Calendar;
-
-#[repr(u8)]
-#[derive(Debug, Serialize_repr)]
-pub enum DepartureChangeType {
-    New = 0,
-    Change = 1,
-    Cancel = 2,
-}
-
-#[derive(Debug, Serialize, Component)]
-pub struct DepartureChange {
-    pub id: i32,
-    pub name: String,
-    pub calendar: Calendar,
-    pub departure_change_type: DepartureChangeType,
-}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Route {
@@ -58,8 +39,16 @@ pub struct Subroute {
     pub(crate) polyline: Option<String>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Departure {
+    pub id: i32,
+    pub subroute_id: i32,
+    pub time: i16,
+    pub calendar_id: i32,
+}
+
 pub(crate) mod requests {
-    use crate::contrib::models::{RoutePatch, SubroutePatch};
+    use crate::contrib::models::{DeparturePatch, RoutePatch, SubroutePatch};
     use serde::Deserialize;
     use utoipa::Component;
 
@@ -163,6 +152,22 @@ pub(crate) mod requests {
     pub struct ChangeDeparture {
         pub time: i16,
         pub calendar_id: i32,
+    }
+
+    impl ChangeDeparture {
+        pub fn derive_patch(
+            &self,
+            departure: &super::Departure,
+        ) -> DeparturePatch {
+            let mut patch = DeparturePatch::default();
+            if self.time != departure.time {
+                patch.time = Some(self.time);
+            }
+            if self.calendar_id != departure.calendar_id {
+                patch.calendar_id = Some(self.calendar_id);
+            }
+            patch
+        }
     }
 }
 

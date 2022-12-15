@@ -309,7 +309,18 @@ pub(crate) async fn create_subroute_departure(
         return Err(Error::Forbidden);
     }
 
-    let id = sql::insert_departure(&state.pool, subroute_id, departure).await?;
+    let departure =
+        sql::insert_departure(&state.pool, subroute_id, departure).await?;
+    let id = departure.id;
+
+    contrib::sql::insert_changeset_log(
+        &state.pool,
+        claims.uid,
+        &[contrib::models::Change::DepartureCreation { data: departure }],
+        None,
+    )
+    .await?;
+
     Ok(Json({
         let mut map = HashMap::new();
         map.insert("id".to_string(), id);
@@ -320,7 +331,7 @@ pub(crate) async fn create_subroute_departure(
 pub(crate) async fn patch_subroute_departure(
     Extension(state): Extension<Arc<State>>,
     claims: Option<auth::Claims>,
-    Json(departure): Json<requests::ChangeDeparture>,
+    Json(change): Json<requests::ChangeDeparture>,
     Path((subroute_id, departure_id)): Path<(i32, i32)>,
 ) -> Result<(), Error> {
     if claims.is_none() {
@@ -331,8 +342,35 @@ pub(crate) async fn patch_subroute_departure(
         return Err(Error::Forbidden);
     }
 
-    sql::update_departure(&state.pool, subroute_id, departure_id, departure)
+    let departure = sql::fetch_departure(&state.pool, departure_id).await?;
+
+    if departure.is_none() {
+        return Err(Error::NotFoundUpstream);
+    }
+    let departure = departure.unwrap();
+
+    let patch = change.derive_patch(&departure);
+
+    if patch.is_empty() {
+        return Err(Error::ValidationFailure(
+            "No changes were made".to_string(),
+        ));
+    }
+
+    sql::update_departure(&state.pool, subroute_id, departure_id, change)
         .await?;
+
+    contrib::sql::insert_changeset_log(
+        &state.pool,
+        claims.uid,
+        &[contrib::models::Change::DepartureUpdate {
+            original: departure,
+            patch,
+        }],
+        None,
+    )
+    .await?;
+
     Ok(())
 }
 
@@ -349,7 +387,22 @@ pub(crate) async fn delete_subroute_departure(
         return Err(Error::Forbidden);
     }
 
+    let departure = sql::fetch_departure(&state.pool, departure_id).await?;
+
+    if departure.is_none() {
+        return Err(Error::NotFoundUpstream);
+    }
+    let departure = departure.unwrap();
+
     sql::delete_departure(&state.pool, subroute_id, departure_id).await?;
+
+    contrib::sql::insert_changeset_log(
+        &state.pool,
+        claims.uid,
+        &[contrib::models::Change::DepartureDeletion { data: departure }],
+        None,
+    )
+    .await?;
     Ok(())
 }
 
