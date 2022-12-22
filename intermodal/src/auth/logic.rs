@@ -32,26 +32,6 @@ use std::ops::Add;
 use super::{models, models::requests, sql};
 use crate::errors::Error;
 
-pub(crate) async fn try_get_user(
-    token: &str,
-    db_pool: &PgPool,
-) -> Result<Option<i32>, Error> {
-    let user_id = sql::fetch_user_id(db_pool, token).await?;
-    Ok(user_id)
-}
-
-pub(crate) async fn get_user(
-    token: &str,
-    db_pool: &PgPool,
-) -> Result<i32, Error> {
-    let user = try_get_user(token, db_pool).await?;
-    if let Some(id) = user {
-        Ok(id)
-    } else {
-        Err(Error::Forbidden)
-    }
-}
-
 pub(crate) async fn login(
     request: requests::Login,
     db_pool: &PgPool,
@@ -122,9 +102,7 @@ pub(crate) fn encode_claims(claims: models::Claims) -> Result<String, Error> {
     .map_err(|_err| Error::Processing("Failed to encode JWT".to_string()))
 }
 
-pub(crate) fn decode_claims(
-    jwt: &str,
-) -> Result<models::Claims, Error> {
+pub(crate) fn decode_claims(jwt: &str) -> Result<models::Claims, Error> {
     let decoded_token = jsonwebtoken::decode::<models::Claims>(
         &jwt,
         &jsonwebtoken::DecodingKey::from_secret(
