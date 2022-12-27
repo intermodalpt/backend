@@ -161,7 +161,7 @@ pub(crate) async fn fetch_public_stop_pictures(
 SELECT stop_pics.id, stop_pics.sha1, stop_pics.capture_date, stop_pics.lon, stop_pics.lat, stop_pics.tags, stop_pics.quality
 FROM stop_pics
 JOIN stop_pic_stops on stop_pic_stops.pic = stop_pics.id
-WHERE stop_pics.tagged = false AND stop_pics.sensitive = false
+WHERE stop_pics.tagged = true AND stop_pics.sensitive = false
     AND stop_pics.public = true AND stop_pic_stops.stop=$1
 ORDER BY stop_pics.capture_date DESC
     "#,
