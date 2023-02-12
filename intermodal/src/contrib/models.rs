@@ -16,7 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use chrono::{DateTime, Local};
+use chrono::{DateTime, Local, NaiveDate};
 use serde::{Deserialize, Serialize};
 
 use crate::pics::models as pics;
@@ -102,61 +102,284 @@ pub enum Change {
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct StopPatch {
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "::serde_with::rust::double_option"
+    )]
+    pub name: Option<Option<String>>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "::serde_with::rust::double_option"
+    )]
+    pub short_name: Option<Option<String>>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "::serde_with::rust::double_option"
+    )]
     pub locality: Option<Option<String>>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "::serde_with::rust::double_option"
+    )]
     pub street: Option<Option<String>>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "::serde_with::rust::double_option"
+    )]
     pub door: Option<Option<String>>,
+
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "::serde_with::rust::double_option"
+    )]
+    pub schedules: Option<Option<Vec<stops::Schedule>>>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "::serde_with::rust::double_option"
+    )]
+    pub flags: Option<Option<Vec<stops::Flag>>>,
+
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "::serde_with::rust::double_option"
+    )]
+    pub has_sidewalk: Option<Option<bool>>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "::serde_with::rust::double_option"
+    )]
+    pub has_sidewalked_path: Option<Option<bool>>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "::serde_with::rust::double_option"
+    )]
+    pub has_shelter: Option<Option<bool>>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "::serde_with::rust::double_option"
+    )]
+    pub has_cover: Option<Option<bool>>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "::serde_with::rust::double_option"
+    )]
+    pub has_bench: Option<Option<bool>>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "::serde_with::rust::double_option"
+    )]
+    pub has_trash_can: Option<Option<bool>>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "::serde_with::rust::double_option"
+    )]
+    pub has_waiting_times: Option<Option<bool>>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "::serde_with::rust::double_option"
+    )]
+    pub has_ticket_seller: Option<Option<bool>>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "::serde_with::rust::double_option"
+    )]
+    pub has_costumer_support: Option<Option<bool>>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "::serde_with::rust::double_option"
+    )]
+    pub advertisement_qty: Option<Option<stops::AdvertisementQuantification>>,
+
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "::serde_with::rust::double_option"
+    )]
     pub has_crossing: Option<Option<bool>>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "::serde_with::rust::double_option"
+    )]
+    pub has_wide_access: Option<Option<bool>>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "::serde_with::rust::double_option"
+    )]
+    pub has_flat_access: Option<Option<bool>>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "::serde_with::rust::double_option"
+    )]
+    pub has_tactile_access: Option<Option<bool>>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "::serde_with::rust::double_option"
+    )]
+    pub illumination_strength: Option<Option<stops::IlluminationStrength>>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "::serde_with::rust::double_option"
+    )]
+    pub illumination_position: Option<Option<stops::IlluminationPos>>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "::serde_with::rust::double_option"
+    )]
+    pub has_illuminated_path: Option<Option<bool>>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "::serde_with::rust::double_option"
+    )]
+    pub has_visibility_from_within: Option<Option<bool>>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "::serde_with::rust::double_option"
+    )]
+    pub has_visibility_from_area: Option<Option<bool>>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "::serde_with::rust::double_option"
+    )]
+    pub is_visible_from_outside: Option<Option<bool>>,
+
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "::serde_with::rust::double_option"
+    )]
+    pub parking_visibility_impairment:
+        Option<Option<stops::ParkingVisualLimitation>>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "::serde_with::rust::double_option"
+    )]
+    pub parking_local_access_impairment:
+        Option<Option<stops::LocalParkingLimitation>>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "::serde_with::rust::double_option"
+    )]
+    pub parking_area_access_impairment:
+        Option<Option<stops::AreaParkingLimitation>>,
+
+    pub tmp_issues: Option<Vec<String>>,
+    pub tags: Option<Vec<String>>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "::serde_with::rust::double_option"
+    )]
+    pub notes: Option<Option<String>>,
+
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "::serde_with::rust::double_option"
+    )]
+    pub service_check_date: Option<Option<NaiveDate>>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "::serde_with::rust::double_option"
+    )]
+    pub infrastructure_check_date: Option<Option<NaiveDate>>,
+    pub verification_level: Option<u8>,
+
+    // FIXME Deprecated
+    pub has_schedules: Option<Option<bool>>,
     pub has_accessibility: Option<Option<bool>>,
     pub has_abusive_parking: Option<Option<bool>>,
     pub has_outdated_info: Option<Option<bool>>,
     pub is_damaged: Option<Option<bool>>,
     pub is_vandalized: Option<Option<bool>>,
     pub has_flag: Option<Option<bool>>,
-    pub has_schedules: Option<Option<bool>>,
-    pub has_sidewalk: Option<Option<bool>>,
-    pub has_shelter: Option<Option<bool>>,
-    pub has_bench: Option<Option<bool>>,
-    pub has_trash_can: Option<Option<bool>>,
-    pub illumination_strength: Option<Option<stops::IlluminationStrength>>,
-    pub illumination_position: Option<Option<stops::IlluminationPos>>,
     pub is_illumination_working: Option<Option<bool>>,
-    pub has_illuminated_path: Option<Option<bool>>,
-    pub has_visibility_from_within: Option<Option<bool>>,
-    pub has_visibility_from_area: Option<Option<bool>>,
-    pub is_visible_from_outside: Option<Option<bool>>,
-    pub tags: Option<Vec<String>>,
-    pub notes: Option<Option<String>>,
 }
 
 impl StopPatch {
     pub(crate) fn is_empty(&self) -> bool {
-        self.locality.is_none()
+        self.name.is_none()
+            && self.short_name.is_none()
+            && self.locality.is_none()
             && self.street.is_none()
             && self.door.is_none()
+            && self.flags.is_none()
+            && self.schedules.is_none()
+            && self.has_sidewalk.is_none()
+            && self.has_sidewalked_path.is_none()
+            && self.has_shelter.is_none()
+            && self.has_cover.is_none()
+            && self.has_bench.is_none()
+            && self.has_trash_can.is_none()
+            && self.has_waiting_times.is_none()
+            && self.has_ticket_seller.is_none()
+            && self.has_costumer_support.is_none()
+            && self.advertisement_qty.is_none()
             && self.has_crossing.is_none()
+            && self.has_wide_access.is_none()
+            && self.has_flat_access.is_none()
+            && self.has_tactile_access.is_none()
+            && self.illumination_strength.is_none()
+            && self.illumination_position.is_none()
+            && self.has_illuminated_path.is_none()
+            && self.has_visibility_from_within.is_none()
+            && self.has_visibility_from_area.is_none()
+            && self.is_visible_from_outside.is_none()
+            && self.parking_visibility_impairment.is_none()
+            && self.parking_local_access_impairment.is_none()
+            && self.parking_area_access_impairment.is_none()
+            && self.tmp_issues.is_none()
+            && self.tags.is_none()
+            && self.notes.is_none()
+            && self.service_check_date.is_none()
+            && self.infrastructure_check_date.is_none()
+            && self.verification_level.is_none()
+            // TODO deprecate
+            && self.has_flag.is_none()
+            && self.has_schedules.is_none()
             && self.has_accessibility.is_none()
             && self.has_abusive_parking.is_none()
             && self.has_outdated_info.is_none()
             && self.is_damaged.is_none()
             && self.is_vandalized.is_none()
-            && self.has_flag.is_none()
-            && self.has_schedules.is_none()
-            && self.has_sidewalk.is_none()
-            && self.has_shelter.is_none()
-            && self.has_bench.is_none()
-            && self.has_trash_can.is_none()
-            && self.illumination_strength.is_none()
-            && self.illumination_position.is_none()
             && self.is_illumination_working.is_none()
-            && self.has_illuminated_path.is_none()
-            && self.has_visibility_from_within.is_none()
-            && self.has_visibility_from_area.is_none()
-            && self.is_visible_from_outside.is_none()
-            && self.tags.is_none()
-            && self.notes.is_none()
     }
 
     pub(crate) fn apply(&self, stop: &mut stops::Stop) {
+        if let Some(name) = self.name.clone() {
+            stop.name = name
+        }
+        if let Some(short_name) = self.short_name.clone() {
+            stop.short_name = short_name
+        }
         if let Some(locality) = self.locality.clone() {
             stop.locality = locality
         }
@@ -166,41 +389,47 @@ impl StopPatch {
         if let Some(door) = self.door.clone() {
             stop.door = door
         }
-        if let Some(has_crossing) = self.has_crossing {
-            stop.a11y.has_crossing = has_crossing
-        }
-        if let Some(has_accessibility) = self.has_accessibility {
-            stop.a11y.has_accessibility = has_accessibility
-        }
-        if let Some(has_abusive_parking) = self.has_abusive_parking {
-            stop.a11y.has_abusive_parking = has_abusive_parking
-        }
-        if let Some(has_outdated_info) = self.has_outdated_info {
-            stop.a11y.has_outdated_info = has_outdated_info
-        }
-        if let Some(is_damaged) = self.is_damaged {
-            stop.a11y.is_damaged = is_damaged
-        }
-        if let Some(is_vandalized) = self.is_vandalized {
-            stop.a11y.is_vandalized = is_vandalized
-        }
-        if let Some(has_flag) = self.has_flag {
-            stop.a11y.has_flag = has_flag
-        }
-        if let Some(has_schedules) = self.has_schedules {
-            stop.a11y.has_schedules = has_schedules
-        }
         if let Some(has_sidewalk) = self.has_sidewalk {
             stop.a11y.has_sidewalk = has_sidewalk
         }
+        if let Some(has_sidewalked_path) = self.has_sidewalked_path {
+            stop.a11y.has_sidewalked_path = has_sidewalked_path
+        }
         if let Some(has_shelter) = self.has_shelter {
             stop.a11y.has_shelter = has_shelter
+        }
+        if let Some(has_cover) = self.has_cover {
+            stop.a11y.has_cover = has_cover
         }
         if let Some(has_bench) = self.has_bench {
             stop.a11y.has_bench = has_bench
         }
         if let Some(has_trash_can) = self.has_trash_can {
             stop.a11y.has_trash_can = has_trash_can
+        }
+        if let Some(has_waiting_times) = self.has_waiting_times {
+            stop.a11y.has_waiting_times = has_waiting_times
+        }
+        if let Some(has_ticket_seller) = self.has_ticket_seller {
+            stop.a11y.has_ticket_seller = has_ticket_seller
+        }
+        if let Some(has_costumer_support) = self.has_costumer_support {
+            stop.a11y.has_costumer_support = has_costumer_support
+        }
+        if let Some(advertisement_qty) = self.advertisement_qty {
+            stop.a11y.advertisement_qty = advertisement_qty
+        }
+        if let Some(has_crossing) = self.has_crossing {
+            stop.a11y.has_crossing = has_crossing
+        }
+        if let Some(has_wide_access) = self.has_wide_access {
+            stop.a11y.has_wide_access = has_wide_access
+        }
+        if let Some(has_flat_access) = self.has_flat_access {
+            stop.a11y.has_flat_access = has_flat_access
+        }
+        if let Some(has_tactile_access) = self.has_tactile_access {
+            stop.a11y.has_tactile_access = has_tactile_access
         }
         if let Some(illumination_strength) = self.illumination_strength {
             stop.a11y.illumination_strength = illumination_strength
@@ -225,11 +454,65 @@ impl StopPatch {
         if let Some(is_visible_from_outside) = self.is_visible_from_outside {
             stop.a11y.is_visible_from_outside = is_visible_from_outside
         }
+        if let Some(parking_visibility_impairment) =
+            self.parking_visibility_impairment
+        {
+            stop.a11y.parking_visibility_impairment =
+                parking_visibility_impairment
+        }
+        if let Some(parking_local_access_impairment) =
+            self.parking_local_access_impairment
+        {
+            stop.a11y.parking_local_access_impairment =
+                parking_local_access_impairment
+        }
+        if let Some(parking_area_access_impairment) =
+            self.parking_area_access_impairment
+        {
+            stop.a11y.parking_area_access_impairment =
+                parking_area_access_impairment
+        }
+        if let Some(tmp_issues) = self.tmp_issues.clone() {
+            stop.a11y.tmp_issues = tmp_issues
+        }
         if let Some(tags) = self.tags.clone() {
             stop.tags = tags
         }
         if let Some(notes) = self.notes.clone() {
             stop.notes = notes
+        }
+        if let Some(verification_level) = self.verification_level {
+            stop.verification_level = verification_level
+        }
+        if let Some(service_check_date) = self.service_check_date {
+            stop.service_check_date = service_check_date
+        }
+        if let Some(infrastructure_check_date) = self.infrastructure_check_date
+        {
+            stop.infrastructure_check_date = infrastructure_check_date
+        }
+
+        // FIXME deprecated
+        if let Some(has_accessibility) = self.has_accessibility {
+            stop.a11y.has_accessibility = has_accessibility
+        }
+        if let Some(has_abusive_parking) = self.has_abusive_parking {
+            stop.a11y.has_abusive_parking = has_abusive_parking
+        }
+        if let Some(has_outdated_info) = self.has_outdated_info {
+            stop.a11y.has_outdated_info = has_outdated_info
+        }
+        if let Some(is_damaged) = self.is_damaged {
+            stop.a11y.is_damaged = is_damaged
+        }
+        if let Some(is_vandalized) = self.is_vandalized {
+            stop.a11y.is_vandalized = is_vandalized
+        }
+        if let Some(has_flag) = self.has_flag {
+            stop.a11y.has_flag = has_flag
+        }
+        if let Some(has_schedules) = self.has_schedules {
+            stop.a11y.has_schedules = has_schedules
         }
     }
 }
@@ -238,9 +521,19 @@ impl StopPatch {
 pub struct RoutePatch {
     pub(crate) type_id: Option<i32>,
     pub(crate) operator_id: Option<i32>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "::serde_with::rust::double_option"
+    )]
     pub(crate) code: Option<Option<String>>,
     pub(crate) name: Option<String>,
     pub(crate) circular: Option<bool>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "::serde_with::rust::double_option"
+    )]
     pub(crate) main_subroute: Option<Option<i32>>,
     pub(crate) active: Option<bool>,
 }
@@ -269,9 +562,6 @@ impl RoutePatch {
         }
         if let Some(name) = self.name {
             route.name = name
-        }
-        if let Some(circular) = self.circular {
-            route.circular = circular
         }
         if let Some(main_subroute) = self.main_subroute {
             route.main_subroute = main_subroute
@@ -342,10 +632,25 @@ impl DeparturePatch {
 pub struct StopPicturePatch {
     pub public: Option<bool>,
     pub sensitive: Option<bool>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "::serde_with::rust::double_option"
+    )]
     pub lon: Option<Option<f64>>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "::serde_with::rust::double_option"
+    )]
     pub lat: Option<Option<f64>>,
     pub quality: Option<i16>,
     pub tags: Option<Vec<String>>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "::serde_with::rust::double_option"
+    )]
     pub notes: Option<Option<String>>,
 }
 
@@ -387,6 +692,7 @@ impl StopPicturePatch {
 }
 
 pub(crate) mod requests {
+    use chrono::NaiveDate;
     use serde::Deserialize;
 
     use super::pics;
@@ -403,27 +709,14 @@ pub(crate) mod requests {
         pub locality: Option<String>,
         pub street: Option<String>,
         pub door: Option<String>,
-        pub has_crossing: Option<bool>,
-        pub has_accessibility: Option<bool>,
-        pub has_abusive_parking: Option<bool>,
-        pub has_outdated_info: Option<bool>,
-        pub is_damaged: Option<bool>,
-        pub is_vandalized: Option<bool>,
-        pub has_flag: Option<bool>,
-        pub has_schedules: Option<bool>,
-        pub has_sidewalk: Option<bool>,
-        pub has_shelter: Option<bool>,
-        pub has_bench: Option<bool>,
-        pub has_trash_can: Option<bool>,
-        pub illumination_strength: Option<stops::IlluminationStrength>,
-        pub illumination_position: Option<stops::IlluminationPos>,
-        pub is_illumination_working: Option<bool>,
-        pub has_illuminated_path: Option<bool>,
-        pub has_visibility_from_within: Option<bool>,
-        pub has_visibility_from_area: Option<bool>,
-        pub is_visible_from_outside: Option<bool>,
+        #[serde(flatten)]
+        pub a11y: Option<stops::Accessibility>,
         pub tags: Vec<String>,
         pub notes: Option<String>,
+        #[serde(default)]
+        pub service_check_date: Option<NaiveDate>,
+        #[serde(default)]
+        pub infrastructure_check_date: Option<NaiveDate>,
         pub comment: Option<String>,
     }
 

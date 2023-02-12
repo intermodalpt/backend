@@ -16,6 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use utoipa::Component;
@@ -39,6 +40,50 @@ pub enum IlluminationStrength {
     Low = 1,
     Medium = 3,
     High = 5,
+}
+
+#[repr(u8)]
+#[derive(
+    Serialize_repr, Deserialize_repr, PartialEq, Debug, Clone, Copy, sqlx::Type,
+)]
+pub enum AdvertisementQuantification {
+    None = 0,
+    Few = 2,
+    Many = 4,
+    Intrusive = 6,
+}
+
+#[repr(u8)]
+#[derive(
+    Serialize_repr, Deserialize_repr, PartialEq, Debug, Clone, Copy, sqlx::Type,
+)]
+pub enum ParkingVisualLimitation {
+    None = 0,
+    Little = 2,
+    Some = 4,
+    Very = 6,
+}
+
+#[repr(u8)]
+#[derive(
+    Serialize_repr, Deserialize_repr, PartialEq, Debug, Clone, Copy, sqlx::Type,
+)]
+pub enum LocalParkingLimitation {
+    None = 0,
+    Low = 2,
+    Medium = 4,
+    High = 6,
+}
+
+#[repr(u8)]
+#[derive(
+    Serialize_repr, Deserialize_repr, PartialEq, Debug, Clone, Copy, sqlx::Type,
+)]
+pub enum AreaParkingLimitation {
+    None = 0,
+    Low = 2,
+    Medium = 4,
+    High = 6,
 }
 
 #[derive(
@@ -70,7 +115,7 @@ pub struct Stop {
     #[serde(default)]
     pub external_id: Option<String>,
     #[serde(default)]
-    pub succeeded_by: Option<i32>,
+    pub refs: Vec<String>,
     #[serde(default)]
     pub notes: Option<String>,
     pub updater: i32,
@@ -79,6 +124,16 @@ pub struct Stop {
     pub tags: Vec<String>,
     #[serde(flatten)]
     pub a11y: A11yMeta,
+    // This is a bit flag made of 4 duets.
+    // The four binary duets are for: Position, Service, Infra and [reserved]
+    // 0 => Not verified; 1 => Wrong; 2 => Likely; 3 => Verified
+    #[serde(default)]
+    pub verification_level: u8,
+
+    #[serde(default)]
+    pub service_check_date: Option<NaiveDate>,
+    #[serde(default)]
+    pub infrastructure_check_date: Option<NaiveDate>,
 }
 
 #[derive(
@@ -86,7 +141,68 @@ pub struct Stop {
 )]
 pub struct A11yMeta {
     #[serde(default)]
+    pub schedules: Option<Vec<Schedule>>,
+    #[serde(default)]
+    pub flags: Option<Vec<Flag>>,
+
+    // Amenities fields
+    #[serde(default)]
+    pub has_sidewalk: Option<bool>,
+    #[serde(default)]
+    pub has_sidewalked_path: Option<bool>,
+    #[serde(default)]
+    pub has_shelter: Option<bool>,
+    #[serde(default)]
+    pub has_cover: Option<bool>,
+    #[serde(default)]
+    pub has_bench: Option<bool>,
+    #[serde(default)]
+    pub has_trash_can: Option<bool>,
+    #[serde(default)]
+    pub has_waiting_times: Option<bool>,
+    #[serde(default)]
+    pub has_ticket_seller: Option<bool>,
+    #[serde(default)]
+    pub has_costumer_support: Option<bool>,
+    #[serde(default)]
+    pub advertisement_qty: Option<AdvertisementQuantification>,
+
+    // Access fields
+    #[serde(default)]
     pub has_crossing: Option<bool>,
+    #[serde(default)]
+    pub has_wide_access: Option<bool>,
+    #[serde(default)]
+    pub has_flat_access: Option<bool>,
+    #[serde(default)]
+    pub has_tactile_access: Option<bool>,
+
+    // Visibility fields
+    #[serde(default)]
+    pub illumination_strength: Option<IlluminationStrength>,
+    #[serde(default)]
+    pub illumination_position: Option<IlluminationPos>,
+    #[serde(default)]
+    pub has_illuminated_path: Option<bool>,
+    #[serde(default)]
+    pub has_visibility_from_within: Option<bool>,
+    #[serde(default)]
+    pub has_visibility_from_area: Option<bool>,
+    #[serde(default)]
+    pub is_visible_from_outside: Option<bool>,
+
+    // Parking fields
+    #[serde(default)]
+    pub parking_visibility_impairment: Option<ParkingVisualLimitation>,
+    #[serde(default)]
+    pub parking_local_access_impairment: Option<LocalParkingLimitation>,
+    #[serde(default)]
+    pub parking_area_access_impairment: Option<AreaParkingLimitation>,
+
+    #[serde(default)]
+    pub tmp_issues: Vec<String>,
+
+    // FIXME Everything below is deprecated
     #[serde(default)]
     pub has_accessibility: Option<bool>,
     #[serde(default)]
@@ -102,32 +218,36 @@ pub struct A11yMeta {
     #[serde(default)]
     pub has_schedules: Option<bool>,
     #[serde(default)]
-    pub has_sidewalk: Option<bool>,
-    #[serde(default)]
-    pub has_shelter: Option<bool>,
-    #[serde(default)]
-    pub has_bench: Option<bool>,
-    #[serde(default)]
-    pub has_trash_can: Option<bool>,
-    #[serde(default)]
-    pub illumination_strength: Option<IlluminationStrength>,
-    #[serde(default)]
-    pub illumination_position: Option<IlluminationPos>,
-    #[serde(default)]
     pub is_illumination_working: Option<bool>,
-    #[serde(default)]
-    pub has_illuminated_path: Option<bool>,
-    #[serde(default)]
-    pub has_visibility_from_within: Option<bool>,
-    #[serde(default)]
-    pub has_visibility_from_area: Option<bool>,
-    #[serde(default)]
-    pub is_visible_from_outside: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Component, PartialEq)]
+pub struct Flag {
+    pub id: String,
+    pub name: Option<String>,
+    pub route_codes: Vec<String>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Component, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum ScheduleType {
+    Origin,
+    Prediction,
+    Frequency,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Component, PartialEq)]
+pub struct Schedule {
+    pub code: String,
+    pub discriminator: Option<String>,
+    #[serde(rename = "type")]
+    pub schedule_type: ScheduleType,
 }
 
 pub(crate) mod requests {
     use crate::contrib::models::StopPatch;
     use crate::stops::models::A11yMeta;
+    use chrono::NaiveDate;
     use serde::Deserialize;
     use utoipa::Component;
 
@@ -149,7 +269,12 @@ pub(crate) mod requests {
         #[serde(default)]
         pub tags: Vec<String>,
         #[serde(default, flatten)]
-        pub accessibility_meta: A11yMeta,
+        pub a11y: A11yMeta,
+        pub verification_level: u8,
+        #[serde(default)]
+        pub service_check_date: Option<NaiveDate>,
+        #[serde(default)]
+        pub infrastructure_check_date: Option<NaiveDate>,
     }
 
     #[derive(Deserialize, Component)]
@@ -168,6 +293,11 @@ pub(crate) mod requests {
         pub tags: Vec<String>,
         #[serde(flatten)]
         pub a11y: A11yMeta,
+        pub verification_level: u8,
+        #[serde(default)]
+        pub service_check_date: Option<NaiveDate>,
+        #[serde(default)]
+        pub infrastructure_check_date: Option<NaiveDate>,
     }
 
     impl From<Stop> for ChangeStop {
@@ -184,6 +314,9 @@ pub(crate) mod requests {
                 notes: stop.notes,
                 tags: stop.tags,
                 a11y: stop.a11y,
+                verification_level: stop.verification_level,
+                service_check_date: stop.service_check_date,
+                infrastructure_check_date: stop.infrastructure_check_date,
             }
         }
     }
@@ -192,6 +325,12 @@ pub(crate) mod requests {
         pub fn derive_patch(&self, stop: &Stop) -> StopPatch {
             let mut patch = StopPatch::default();
 
+            if self.name != stop.name {
+                patch.name = Some(self.name.clone());
+            }
+            if self.short_name != stop.short_name {
+                patch.short_name = Some(self.short_name.clone());
+            }
             if self.locality != stop.locality {
                 patch.locality = Some(self.locality.clone());
             }
@@ -201,35 +340,26 @@ pub(crate) mod requests {
             if self.door != stop.door {
                 patch.door = Some(self.door.clone());
             }
-            if self.a11y.has_crossing != stop.a11y.has_crossing {
-                patch.has_crossing = Some(self.a11y.has_crossing);
+
+            if self.a11y.schedules != stop.a11y.schedules {
+                patch.schedules = Some(self.a11y.schedules.clone());
             }
-            if self.a11y.has_accessibility != stop.a11y.has_accessibility {
-                patch.has_accessibility = Some(self.a11y.has_accessibility);
+            if self.a11y.flags != stop.a11y.flags {
+                patch.flags = Some(self.a11y.flags.clone());
             }
-            if self.a11y.has_abusive_parking != stop.a11y.has_abusive_parking {
-                patch.has_abusive_parking = Some(self.a11y.has_abusive_parking);
-            }
-            if self.a11y.has_outdated_info != stop.a11y.has_outdated_info {
-                patch.has_outdated_info = Some(self.a11y.has_outdated_info);
-            }
-            if self.a11y.is_damaged != stop.a11y.is_damaged {
-                patch.is_damaged = Some(self.a11y.is_damaged);
-            }
-            if self.a11y.is_vandalized != stop.a11y.is_vandalized {
-                patch.is_vandalized = Some(self.a11y.is_vandalized);
-            }
-            if self.a11y.has_flag != stop.a11y.has_flag {
-                patch.has_flag = Some(self.a11y.has_flag);
-            }
-            if self.a11y.has_schedules != stop.a11y.has_schedules {
-                patch.has_schedules = Some(self.a11y.has_schedules);
-            }
+
             if self.a11y.has_sidewalk != stop.a11y.has_sidewalk {
                 patch.has_sidewalk = Some(self.a11y.has_sidewalk);
             }
+            if self.a11y.has_sidewalked_path != stop.a11y.has_sidewalked_path {
+                patch.has_sidewalked_path = Some(self.a11y.has_sidewalked_path);
+            }
+
             if self.a11y.has_shelter != stop.a11y.has_shelter {
                 patch.has_shelter = Some(self.a11y.has_shelter);
+            }
+            if self.a11y.has_cover != stop.a11y.has_cover {
+                patch.has_cover = Some(self.a11y.has_cover);
             }
             if self.a11y.has_bench != stop.a11y.has_bench {
                 patch.has_bench = Some(self.a11y.has_bench);
@@ -237,6 +367,32 @@ pub(crate) mod requests {
             if self.a11y.has_trash_can != stop.a11y.has_trash_can {
                 patch.has_trash_can = Some(self.a11y.has_trash_can);
             }
+            if self.a11y.has_waiting_times != stop.a11y.has_waiting_times {
+                patch.has_waiting_times = Some(self.a11y.has_waiting_times);
+            }
+            if self.a11y.has_costumer_support != stop.a11y.has_costumer_support
+            {
+                patch.has_costumer_support =
+                    Some(self.a11y.has_costumer_support);
+            }
+            if self.a11y.advertisement_qty != stop.a11y.advertisement_qty {
+                patch.advertisement_qty = Some(self.a11y.advertisement_qty);
+            }
+
+            if self.a11y.has_crossing != stop.a11y.has_crossing {
+                patch.has_crossing = Some(self.a11y.has_crossing);
+            }
+
+            if self.a11y.has_wide_access != stop.a11y.has_wide_access {
+                patch.has_wide_access = Some(self.a11y.has_wide_access);
+            }
+            if self.a11y.has_flat_access != stop.a11y.has_flat_access {
+                patch.has_flat_access = Some(self.a11y.has_flat_access);
+            }
+            if self.a11y.has_tactile_access != stop.a11y.has_tactile_access {
+                patch.has_tactile_access = Some(self.a11y.has_tactile_access);
+            }
+
             if self.a11y.illumination_strength
                 != stop.a11y.illumination_strength
             {
@@ -248,12 +404,6 @@ pub(crate) mod requests {
             {
                 patch.illumination_position =
                     Some(self.a11y.illumination_position);
-            }
-            if self.a11y.is_illumination_working
-                != stop.a11y.is_illumination_working
-            {
-                patch.is_illumination_working =
-                    Some(self.a11y.is_illumination_working);
             }
             if self.a11y.has_illuminated_path != stop.a11y.has_illuminated_path
             {
@@ -278,11 +428,49 @@ pub(crate) mod requests {
                 patch.is_visible_from_outside =
                     Some(self.a11y.is_visible_from_outside);
             }
+
+            if self.a11y.parking_visibility_impairment
+                != stop.a11y.parking_visibility_impairment
+            {
+                patch.parking_visibility_impairment =
+                    Some(self.a11y.parking_visibility_impairment);
+            }
+
+            if self.a11y.parking_local_access_impairment
+                != stop.a11y.parking_local_access_impairment
+            {
+                patch.parking_local_access_impairment =
+                    Some(self.a11y.parking_local_access_impairment);
+            }
+
+            if self.a11y.parking_area_access_impairment
+                != stop.a11y.parking_area_access_impairment
+            {
+                patch.parking_area_access_impairment =
+                    Some(self.a11y.parking_area_access_impairment);
+            }
+
+            if self.a11y.tmp_issues != stop.a11y.tmp_issues {
+                patch.tmp_issues = Some(self.a11y.tmp_issues.clone());
+            }
+
             if self.tags != stop.tags {
                 patch.tags = Some(self.tags.clone());
             }
             if self.notes != stop.notes {
                 patch.notes = Some(self.notes.clone());
+            }
+
+            if self.verification_level != stop.verification_level {
+                patch.verification_level = Some(self.verification_level);
+            }
+            if self.service_check_date != stop.service_check_date {
+                patch.service_check_date = Some(self.service_check_date);
+            }
+            if self.infrastructure_check_date != stop.infrastructure_check_date
+            {
+                patch.infrastructure_check_date =
+                    Some(self.infrastructure_check_date);
             }
 
             patch

@@ -21,7 +21,8 @@ use sqlx::PgPool;
 use std::collections::{hash_map, HashMap};
 
 use super::models;
-use crate::Error;
+use crate::stops::models::responses;
+use crate::{routes, Error};
 
 type Result<T> = std::result::Result<T, Error>;
 
@@ -32,8 +33,9 @@ pub(crate) async fn fetch_stop(
     let res = sqlx::query!(
         r#"
 SELECT id, source, name, official_name, osm_name, short_name, locality, street,
-    door, lat, lon, external_id, succeeded_by, notes, updater, update_date,
-    parish, tags, accessibility_meta
+    door, lat, lon, external_id, notes, updater, update_date,
+    parish, tags, accessibility_meta, refs,
+    verification_level, service_check_date, infrastructure_check_date
 FROM Stops
 WHERE id = $1
     "#,
@@ -55,13 +57,16 @@ WHERE id = $1
         lat: r.lat,
         lon: r.lon,
         external_id: r.external_id,
-        succeeded_by: r.succeeded_by,
+        refs: r.refs,
         notes: r.notes,
         updater: r.updater,
         update_date: r.update_date,
         parish: r.parish,
         tags: r.tags,
         a11y: serde_json::from_value(r.accessibility_meta).unwrap(),
+        verification_level: r.verification_level as u8,
+        service_check_date: r.service_check_date,
+        infrastructure_check_date: r.infrastructure_check_date,
     });
 
     Ok(res)
@@ -75,8 +80,9 @@ pub(crate) async fn fetch_stops(
         sqlx::query!(
             r#"
 SELECT id, source, name, official_name, osm_name, short_name, locality, street,
-door, lat, lon, external_id, succeeded_by, notes, updater, update_date,
-parish, tags, accessibility_meta
+door, lat, lon, external_id, notes, updater, update_date,
+parish, tags, accessibility_meta, refs,
+verification_level, service_check_date, infrastructure_check_date
 FROM Stops
 WHERE id IN (
     SELECT DISTINCT stop
@@ -101,20 +107,24 @@ WHERE id IN (
             lat: r.lat,
             lon: r.lon,
             external_id: r.external_id,
-            succeeded_by: r.succeeded_by,
+            refs: r.refs,
             notes: r.notes,
             updater: r.updater,
             update_date: r.update_date,
             parish: r.parish,
             tags: r.tags,
             a11y: serde_json::from_value(r.accessibility_meta).unwrap(),
+            verification_level: r.verification_level as u8,
+            service_check_date: r.service_check_date,
+            infrastructure_check_date: r.infrastructure_check_date,
         })
         .collect()
     } else {
         sqlx::query!(
 "SELECT id, source, name, official_name, osm_name, short_name, locality, street,
-    door, lat, lon, external_id, succeeded_by, notes, updater, update_date,
-    parish, tags, accessibility_meta
+    door, lat, lon, external_id, notes, updater, update_date,
+    parish, tags, accessibility_meta, refs,
+    verification_level, service_check_date, infrastructure_check_date
 FROM stops")
         .fetch_all(pool)
         .await
@@ -133,13 +143,16 @@ FROM stops")
             lat: r.lat,
             lon: r.lon,
             external_id: r.external_id,
-            succeeded_by: r.succeeded_by,
+            refs: r.refs,
             notes: r.notes,
             updater: r.updater,
             update_date: r.update_date,
             parish: r.parish,
             tags: r.tags,
             a11y: serde_json::from_value(r.accessibility_meta).unwrap(),
+            verification_level: r.verification_level as u8,
+            service_check_date: r.service_check_date,
+            infrastructure_check_date: r.infrastructure_check_date,
         })
         .collect()
     })
@@ -152,8 +165,9 @@ pub(crate) async fn fetch_bounded_stops(
     let res = sqlx::query!(
         r#"
 SELECT id, source, name, official_name, osm_name, short_name, locality, street,
-    door, lat, lon, external_id, succeeded_by, notes, updater, update_date,
-    parish, tags, accessibility_meta
+    door, lat, lon, external_id, notes, updater, update_date,
+    parish, tags, accessibility_meta, refs,
+    verification_level, service_check_date, infrastructure_check_date
 FROM Stops
 WHERE lon >= $1 AND lon <= $2 AND lat <= $3 AND lat >= $4 AND id IN (
     SELECT DISTINCT stop FROM subroute_stops
@@ -181,13 +195,16 @@ WHERE lon >= $1 AND lon <= $2 AND lat <= $3 AND lat >= $4 AND id IN (
         lat: r.lat,
         lon: r.lon,
         external_id: r.external_id,
-        succeeded_by: r.succeeded_by,
+        refs: r.refs,
         notes: r.notes,
         updater: r.updater,
         update_date: r.update_date,
         parish: r.parish,
         tags: r.tags,
         a11y: serde_json::from_value(r.accessibility_meta).unwrap(),
+        verification_level: r.verification_level as u8,
+        service_check_date: r.service_check_date,
+        infrastructure_check_date: r.infrastructure_check_date,
     })
     .collect();
 
@@ -204,8 +221,9 @@ pub(crate) async fn insert_stop(
     let res = sqlx::query!(
         r#"
 INSERT INTO Stops(name, short_name, official_name, locality, street, door,
-    lon, lat, notes, tags, accessibility_meta, updater, update_date, source)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+    lon, lat, notes, tags, accessibility_meta, updater, update_date, source,
+    verification_level, service_check_date, infrastructure_check_date)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
 RETURNING id
     "#,
         stop.name,
@@ -218,10 +236,13 @@ RETURNING id
         stop.lat,
         stop.notes,
         &stop.tags,
-        &serde_json::to_value(&stop.accessibility_meta).unwrap(),
+        &serde_json::to_value(&stop.a11y).unwrap(),
         user_id,
         update_date,
-        stop.source
+        stop.source,
+        stop.verification_level as i16,
+        stop.service_check_date,
+        stop.infrastructure_check_date
     )
     .fetch_one(pool)
     .await
@@ -240,13 +261,16 @@ RETURNING id
         lat: Some(stop.lat),
         lon: Some(stop.lon),
         external_id: None,
-        succeeded_by: None,
+        refs: vec![],
         notes: stop.notes,
         updater: user_id,
         update_date,
         parish: None,
         tags: stop.tags,
-        a11y: stop.accessibility_meta,
+        a11y: stop.a11y,
+        verification_level: stop.verification_level,
+        service_check_date: stop.service_check_date,
+        infrastructure_check_date: stop.infrastructure_check_date,
     })
 }
 
@@ -260,13 +284,17 @@ where
     E: sqlx::Executor<'c, Database = sqlx::Postgres>,
 {
     let update_date = Local::now().to_string();
+    dbg!(serde_json::to_value(&changes.a11y).unwrap());
 
     let _res = sqlx::query!(
         r#"
 UPDATE Stops
 SET name=$1, short_name=$2, official_name=$3, locality=$4, street=$5, door=$6,
-    lon=$7, lat=$8, notes=$9, accessibility_meta=$10 , updater=$11, update_date=$12
-WHERE id=$13
+    lon=$7, lat=$8, notes=$9, accessibility_meta=$10 , updater=$11,
+    update_date=$12, tags=$13, verification_level=$14,
+    service_check_date=$15, infrastructure_check_date=$16
+
+WHERE id=$17
     "#,
         changes.name,
         changes.short_name,
@@ -280,6 +308,10 @@ WHERE id=$13
         serde_json::to_value(&changes.a11y).unwrap(),
         user_id,
         update_date,
+        &changes.tags,
+        changes.verification_level as i16,
+        changes.service_check_date,
+        changes.infrastructure_check_date,
         stop_id
     )
     .execute(executor)
