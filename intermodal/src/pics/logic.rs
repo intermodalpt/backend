@@ -25,7 +25,7 @@ use sqlx::PgPool;
 
 use super::models;
 use super::sql;
-use crate::utils::Exif;
+use crate::utils::{Exif, ExifOrientation};
 use crate::Error;
 
 const THUMBNAIL_MAX_WIDTH: u32 = 300;
@@ -92,6 +92,35 @@ pub(crate) async fn upload_stop_picture(
         exif::Reader::new().read_from_container(&mut source_buffer)
     {
         let exif_data = Exif::from(exif);
+
+        if let Some(orientation) = exif_data.orientation {
+            match orientation {
+                ExifOrientation::Mirror => {
+                    original_img = original_img.fliph();
+                }
+                ExifOrientation::Rotate180 => {
+                    original_img = original_img.rotate180();
+                }
+                ExifOrientation::MirrorVertical => {
+                    original_img = original_img.flipv();
+                }
+                ExifOrientation::MirrorHorizontalRotate270 => {
+                    // FIXME This is broken
+                    original_img = original_img.fliph().rotate270();
+                }
+                ExifOrientation::Rotate90 => {
+                    original_img = original_img.rotate90();
+                }
+                ExifOrientation::MirrorHorizontalRotate90 => {
+                    // FIXME This is broken
+                    original_img = original_img.fliph().rotate90();
+                }
+                ExifOrientation::Rotate270 => {
+                    original_img = original_img.rotate270();
+                }
+                _ => {}
+            }
+        }
 
         stop_pic_entry.dyn_meta.lon = exif_data.lon;
         stop_pic_entry.dyn_meta.lat = exif_data.lat;
