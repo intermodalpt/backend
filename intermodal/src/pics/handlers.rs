@@ -23,7 +23,7 @@ use axum::extract::{ContentLengthLimit, Multipart, Path, Query};
 use axum::{Extension, Json};
 use serde::Deserialize;
 
-use super::{logic, models, sql};
+use super::{logic, models::requests, models::responses, sql};
 use crate::utils::get_exactly_one_field;
 use crate::{auth, contrib};
 use crate::{Error, State};
@@ -31,7 +31,7 @@ use crate::{Error, State};
 pub(crate) async fn get_public_stop_pictures(
     Extension(state): Extension<Arc<State>>,
     Path(stop_id): Path<i32>,
-) -> Result<Json<Vec<models::responses::PublicStopPic>>, Error> {
+) -> Result<Json<Vec<responses::PublicStopPic>>, Error> {
     Ok(Json(
         sql::fetch_public_stop_pictures(&state.pool, stop_id).await?,
     ))
@@ -41,13 +41,13 @@ pub(crate) async fn get_tagged_stop_pictures(
     Extension(state): Extension<Arc<State>>,
     Path(stop_id): Path<i32>,
     claims: Option<auth::Claims>,
-) -> Result<Json<Vec<models::responses::TaggedStopPic>>, Error> {
+) -> Result<Json<Vec<responses::StopPic>>, Error> {
     if claims.is_none() {
         return Err(Error::Forbidden);
     }
 
     Ok(Json(
-        sql::fetch_tagged_stop_pictures(&state.pool, stop_id).await?,
+        sql::fetch_stop_stop_pictures(&state.pool, stop_id).await?,
     ))
 }
 
@@ -56,16 +56,18 @@ pub(crate) async fn get_picture_stop_rels(
     claims: Option<auth::Claims>,
 ) -> Result<Json<HashMap<i32, Vec<i32>>>, Error> {
     if claims.is_none() {
-        return Err(Error::Forbidden);
+        Ok(Json(
+            sql::fetch_public_picture_stop_rels(&state.pool).await?,
+        ))
+    } else {
+        Ok(Json(sql::fetch_picture_stop_rels(&state.pool).await?))
     }
-
-    Ok(Json(sql::fetch_picture_stop_rels(&state.pool).await?))
 }
 
 pub(crate) async fn get_pictures(
     Extension(state): Extension<Arc<State>>,
     claims: Option<auth::Claims>,
-) -> Result<Json<Vec<models::responses::TaggedStopPic>>, Error> {
+) -> Result<Json<Vec<responses::StopPic>>, Error> {
     if claims.is_none() {
         return Err(Error::Forbidden);
     }
@@ -81,11 +83,11 @@ pub(crate) struct Page {
 
 const PAGE_SIZE: u32 = 20;
 
-pub(crate) async fn get_untagged_stop_pictures(
+pub(crate) async fn get_dangling_stop_pictures(
     Extension(state): Extension<Arc<State>>,
     claims: Option<auth::Claims>,
     paginator: Query<Page>,
-) -> Result<Json<Vec<models::responses::UntaggedStopPic>>, Error> {
+) -> Result<Json<Vec<responses::StopPic>>, Error> {
     if claims.is_none() {
         return Err(Error::Forbidden);
     }
@@ -105,14 +107,14 @@ pub(crate) async fn get_untagged_stop_pictures(
     ))
 }
 
-pub(crate) async fn upload_stop_picture(
+pub(crate) async fn upload_dangling_stop_picture(
     Extension(state): Extension<Arc<State>>,
     claims: Option<auth::Claims>,
     ContentLengthLimit(mut multipart): ContentLengthLimit<
         Multipart,
         { 30 * 1024 * 1024 },
     >,
-) -> Result<Json<i32>, Error> {
+) -> Result<Json<responses::StopPic>, Error> {
     if claims.is_none() {
         return Err(Error::Forbidden);
     }
@@ -141,26 +143,87 @@ pub(crate) async fn upload_stop_picture(
         &state.bucket,
         &state.pool,
         &content,
+        &[],
     )
     .await?;
-    let id = pic.id;
 
     contrib::sql::insert_changeset_log(
         &state.pool,
         claims.uid,
-        &[contrib::models::Change::StopPicUpload { pic, stops: vec![] }],
+        &[contrib::models::Change::StopPicUpload {
+            pic: pic.clone(),
+            stops: vec![],
+        }],
         None,
     )
     .await?;
 
-    Ok(Json(id))
+    Ok(Json(pic.into()))
+}
+
+pub(crate) async fn upload_stop_picture(
+    Extension(state): Extension<Arc<State>>,
+    claims: Option<auth::Claims>,
+    Path(stop_id): Path<i32>,
+    ContentLengthLimit(mut multipart): ContentLengthLimit<
+        Multipart,
+        { 30 * 1024 * 1024 },
+    >,
+) -> Result<Json<responses::StopPic>, Error> {
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+
+    if !(claims.permissions.is_admin) {
+        return Err(Error::Forbidden);
+    }
+
+    let field = get_exactly_one_field(&mut multipart).await?;
+
+    let filename = field
+        .file_name()
+        .ok_or_else(|| {
+            Error::ValidationFailure("File without a filename".to_string())
+        })?
+        .to_string();
+    let content = field
+        .bytes()
+        .await
+        .map_err(|err| Error::ValidationFailure(err.to_string()))?;
+
+    let pic = logic::upload_stop_picture(
+        claims.uid,
+        filename.clone(),
+        &state.bucket,
+        &state.pool,
+        &content,
+        &[stop_id],
+    )
+    .await?;
+
+    contrib::sql::insert_changeset_log(
+        &state.pool,
+        claims.uid,
+        &[contrib::models::Change::StopPicUpload {
+            pic: pic.clone(),
+            stops: vec![stop_id],
+        }],
+        None,
+    )
+    .await?;
+
+    let mut pic = responses::StopPic::from(pic);
+    pic.stops.push(stop_id);
+
+    Ok(Json(pic))
 }
 
 pub(crate) async fn patch_stop_picture_meta(
     Extension(state): Extension<Arc<State>>,
     claims: Option<auth::Claims>,
     Path(stop_picture_id): Path<i32>,
-    Json(stop_pic_meta): Json<models::requests::ChangeStopPic>,
+    Json(stop_pic_meta): Json<requests::ChangeStopPic>,
 ) -> Result<(), Error> {
     if claims.is_none() {
         return Err(Error::Forbidden);

@@ -42,6 +42,7 @@ pub(crate) async fn upload_stop_picture(
     bucket: &s3::Bucket,
     db_pool: &PgPool,
     content: &Bytes,
+    stops: &[i32],
 ) -> Result<models::StopPic, Error> {
     let mut hasher = Sha1::new();
     hasher.update(&content);
@@ -109,7 +110,7 @@ pub(crate) async fn upload_stop_picture(
     .await?;
 
     // TODO Delete if insertion fails
-    sql::insert_stop_picture(db_pool, stop_pic_entry).await
+    sql::insert_stop_picture(db_pool, stop_pic_entry, stops).await
 }
 
 pub(crate) async fn delete_stop_picture(
