@@ -46,7 +46,8 @@ WHERE id=$1
         Ok(Some(models::Contribution {
             id: contribution.id,
             author_id: contribution.author_id,
-            change: serde_json::from_value(contribution.change).unwrap(),
+            change: serde_json::from_value(contribution.change)
+                .map_err(|_e| Error::DatabaseDeserialization)?,
             submission_date: contribution.submission_date.with_timezone(&Local),
             accepted: contribution.accepted,
             evaluator_id: contribution.evaluator_id,
@@ -64,7 +65,7 @@ pub(crate) async fn fetch_user_contributions(
     pool: &PgPool,
     user_id: i32,
 ) -> Result<Vec<models::Contribution>> {
-    let res = sqlx::query!(
+    sqlx::query!(
         r#"
 SELECT id, author_id, change, submission_date, accepted,
     evaluator_id, evaluation_date, comment
@@ -77,24 +78,26 @@ WHERE author_id=$1
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?
     .into_iter()
-    .map(|r| models::Contribution {
-        id: r.id,
-        author_id: r.author_id,
-        change: serde_json::from_value(r.change).unwrap(),
-        submission_date: r.submission_date.with_timezone(&Local),
-        accepted: r.accepted,
-        evaluator_id: r.evaluator_id,
-        evaluation_date: r.evaluation_date.map(|d| d.with_timezone(&Local)),
-        comment: r.comment,
+    .map(|r| {
+        Ok(models::Contribution {
+            id: r.id,
+            author_id: r.author_id,
+            change: serde_json::from_value(r.change)
+                .map_err(|_e| Error::DatabaseDeserialization)?,
+            submission_date: r.submission_date.with_timezone(&Local),
+            accepted: r.accepted,
+            evaluator_id: r.evaluator_id,
+            evaluation_date: r.evaluation_date.map(|d| d.with_timezone(&Local)),
+            comment: r.comment,
+        })
     })
-    .collect::<Vec<models::Contribution>>();
-    Ok(res)
+    .collect::<Result<Vec<models::Contribution>>>()
 }
 
 pub(crate) async fn fetch_undecided_contributions(
     pool: &PgPool,
 ) -> Result<Vec<responses::Contribution>> {
-    let res = sqlx::query!(
+    sqlx::query!(
         r#"
 SELECT Contributions.id, Contributions.author_id, Contributions.change,
     Contributions.submission_date, Contributions.accepted,
@@ -111,26 +114,28 @@ ORDER BY evaluation_date DESC
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?
     .into_iter()
-    .map(|r| responses::Contribution {
-        id: r.id,
-        author_id: r.author_id,
-        author_username: r.author_username,
-        change: serde_json::from_value(r.change).unwrap(),
-        submission_date: r.submission_date.with_timezone(&Local),
-        accepted: r.accepted,
-        evaluator_id: r.evaluator_id,
-        evaluator_username: None,
-        evaluation_date: r.evaluation_date.map(|d| d.with_timezone(&Local)),
-        comment: r.comment,
+    .map(|r| {
+        Ok(responses::Contribution {
+            id: r.id,
+            author_id: r.author_id,
+            author_username: r.author_username,
+            change: serde_json::from_value(r.change)
+                .map_err(|_e| Error::DatabaseDeserialization)?,
+            submission_date: r.submission_date.with_timezone(&Local),
+            accepted: r.accepted,
+            evaluator_id: r.evaluator_id,
+            evaluator_username: None,
+            evaluation_date: r.evaluation_date.map(|d| d.with_timezone(&Local)),
+            comment: r.comment,
+        })
     })
-    .collect::<Vec<responses::Contribution>>();
-    Ok(res)
+    .collect::<Result<Vec<responses::Contribution>>>()
 }
 
 pub(crate) async fn fetch_decided_contributions(
     pool: &PgPool,
 ) -> Result<Vec<responses::Contribution>> {
-    let res = sqlx::query!(
+    sqlx::query!(
         r#"
 SELECT Contributions.id, Contributions.author_id, Contributions.change,
     Contributions.submission_date, Contributions.accepted,
@@ -149,20 +154,22 @@ ORDER BY evaluation_date DESC
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?
     .into_iter()
-    .map(|r| responses::Contribution {
-        id: r.id,
-        author_id: r.author_id,
-        author_username: r.author_username,
-        change: serde_json::from_value(r.change).unwrap(),
-        submission_date: r.submission_date.with_timezone(&Local),
-        accepted: r.accepted,
-        evaluator_id: r.evaluator_id,
-        evaluator_username: Some(r.evaluator_username),
-        evaluation_date: r.evaluation_date.map(|d| d.with_timezone(&Local)),
-        comment: r.comment,
+    .map(|r| {
+        Ok(responses::Contribution {
+            id: r.id,
+            author_id: r.author_id,
+            author_username: r.author_username,
+            change: serde_json::from_value(r.change)
+                .map_err(|_e| Error::DatabaseDeserialization)?,
+            submission_date: r.submission_date.with_timezone(&Local),
+            accepted: r.accepted,
+            evaluator_id: r.evaluator_id,
+            evaluator_username: Some(r.evaluator_username),
+            evaluation_date: r.evaluation_date.map(|d| d.with_timezone(&Local)),
+            comment: r.comment,
+        })
     })
-    .collect::<Vec<responses::Contribution>>();
-    Ok(res)
+    .collect::<Result<Vec<responses::Contribution>>>()
 }
 
 pub(crate) async fn insert_new_contribution(
@@ -176,7 +183,8 @@ VALUES ($1, $2, $3, $4)
 RETURNING id
     "#,
         contribution.author_id,
-        serde_json::to_value(&contribution.change).unwrap(),
+        serde_json::to_value(&contribution.change)
+            .map_err(|_e| Error::DatabaseDeserialization)?,
         contribution.submission_date,
         contribution.comment
     )
@@ -265,7 +273,7 @@ pub(crate) async fn fetch_changeset_logs<'c, E>(
 where
     E: sqlx::Executor<'c, Database = sqlx::Postgres>,
 {
-    Ok(sqlx::query!(
+    sqlx::query!(
         r#"
 SELECT Changelog.id, Changelog.author_id, Changelog.changes, Changelog.datetime,
     Changelog.contribution_id, Users.username as author_username
@@ -278,15 +286,18 @@ ORDER BY datetime DESC
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?
     .into_iter()
-    .map(|r| responses::Changeset {
-        id: r.id,
-        author_id: r.author_id,
-        author_username: r.author_username,
-        changes: serde_json::from_value(r.changes).unwrap(),
-        datetime: r.datetime.with_timezone(&Local),
-        contribution_id: r.contribution_id,
+    .map(|r| {
+        Ok(responses::Changeset {
+            id: r.id,
+            author_id: r.author_id,
+            author_username: r.author_username,
+            changes: serde_json::from_value(r.changes)
+                .map_err(|_e| Error::DatabaseDeserialization)?,
+            datetime: r.datetime.with_timezone(&Local),
+            contribution_id: r.contribution_id,
+        })
     })
-    .collect())
+    .collect()
 }
 
 pub(crate) async fn insert_changeset_log<'c, E>(

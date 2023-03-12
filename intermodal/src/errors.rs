@@ -23,7 +23,7 @@ use utoipa::Component;
 
 #[derive(Error, Debug, PartialEq, Eq, Component)]
 pub enum Error {
-    #[error("Storage credentials refused")]
+    #[error("Failed to deserialize data from the database")]
     DatabaseDeserialization,
     #[error("Requested data not in the storage")]
     NotFoundUpstream,

@@ -30,7 +30,7 @@ pub(crate) async fn fetch_stop(
     pool: &PgPool,
     stop_id: i32,
 ) -> Result<Option<models::Stop>> {
-    let res = sqlx::query!(
+    sqlx::query!(
         r#"
 SELECT id, source, name, official_name, osm_name, short_name, locality, street,
     door, lat, lon, external_id, notes, updater, update_date,
@@ -44,39 +44,41 @@ WHERE id = $1
     .fetch_optional(pool)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?
-    .map(|r| models::Stop {
-        id: r.id,
-        source: r.source,
-        name: r.name,
-        official_name: r.official_name,
-        osm_name: r.osm_name,
-        short_name: r.short_name,
-        locality: r.locality,
-        street: r.street,
-        door: r.door,
-        lat: r.lat,
-        lon: r.lon,
-        external_id: r.external_id,
-        refs: r.refs,
-        notes: r.notes,
-        updater: r.updater,
-        update_date: r.update_date,
-        parish: r.parish,
-        tags: r.tags,
-        a11y: serde_json::from_value(r.accessibility_meta).unwrap(),
-        verification_level: r.verification_level as u8,
-        service_check_date: r.service_check_date,
-        infrastructure_check_date: r.infrastructure_check_date,
-    });
-
-    Ok(res)
+    .map(|r| {
+        Ok(models::Stop {
+            id: r.id,
+            source: r.source,
+            name: r.name,
+            official_name: r.official_name,
+            osm_name: r.osm_name,
+            short_name: r.short_name,
+            locality: r.locality,
+            street: r.street,
+            door: r.door,
+            lat: r.lat,
+            lon: r.lon,
+            external_id: r.external_id,
+            refs: r.refs,
+            notes: r.notes,
+            updater: r.updater,
+            update_date: r.update_date,
+            parish: r.parish,
+            tags: r.tags,
+            a11y: serde_json::from_value(r.accessibility_meta)
+                .map_err(|_e| Error::DatabaseDeserialization)?,
+            verification_level: r.verification_level as u8,
+            service_check_date: r.service_check_date,
+            infrastructure_check_date: r.infrastructure_check_date,
+        })
+    })
+    .transpose()
 }
 
 pub(crate) async fn fetch_stops(
     pool: &PgPool,
     filter_used: bool,
 ) -> Result<Vec<models::Stop>> {
-    Ok(if filter_used {
+    if filter_used {
         sqlx::query!(
             r#"
 SELECT id, source, name, official_name, osm_name, short_name, locality, street,
@@ -94,29 +96,32 @@ WHERE id IN (
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?
         .into_iter()
-        .map(|r| models::Stop {
-            id: r.id,
-            source: r.source,
-            name: r.name,
-            official_name: r.official_name,
-            osm_name: r.osm_name,
-            short_name: r.short_name,
-            locality: r.locality,
-            street: r.street,
-            door: r.door,
-            lat: r.lat,
-            lon: r.lon,
-            external_id: r.external_id,
-            refs: r.refs,
-            notes: r.notes,
-            updater: r.updater,
-            update_date: r.update_date,
-            parish: r.parish,
-            tags: r.tags,
-            a11y: serde_json::from_value(r.accessibility_meta).unwrap(),
-            verification_level: r.verification_level as u8,
-            service_check_date: r.service_check_date,
-            infrastructure_check_date: r.infrastructure_check_date,
+        .map(|r| {
+            Ok(models::Stop {
+                id: r.id,
+                source: r.source,
+                name: r.name,
+                official_name: r.official_name,
+                osm_name: r.osm_name,
+                short_name: r.short_name,
+                locality: r.locality,
+                street: r.street,
+                door: r.door,
+                lat: r.lat,
+                lon: r.lon,
+                external_id: r.external_id,
+                refs: r.refs,
+                notes: r.notes,
+                updater: r.updater,
+                update_date: r.update_date,
+                parish: r.parish,
+                tags: r.tags,
+                a11y: serde_json::from_value(r.accessibility_meta)
+                    .map_err(|_e| Error::DatabaseDeserialization)?,
+                verification_level: r.verification_level as u8,
+                service_check_date: r.service_check_date,
+                infrastructure_check_date: r.infrastructure_check_date,
+            })
         })
         .collect()
     } else {
@@ -130,39 +135,58 @@ FROM stops")
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?
         .into_iter()
-        .map(|r| models::Stop {
-            id: r.id,
-            source: r.source,
-            name: r.name,
-            official_name: r.official_name,
-            osm_name: r.osm_name,
-            short_name: r.short_name,
-            locality: r.locality,
-            street: r.street,
-            door: r.door,
-            lat: r.lat,
-            lon: r.lon,
-            external_id: r.external_id,
-            refs: r.refs,
-            notes: r.notes,
-            updater: r.updater,
-            update_date: r.update_date,
-            parish: r.parish,
-            tags: r.tags,
-            a11y: serde_json::from_value(r.accessibility_meta).unwrap(),
-            verification_level: r.verification_level as u8,
-            service_check_date: r.service_check_date,
-            infrastructure_check_date: r.infrastructure_check_date,
+        .map(|r| {
+            Ok(models::Stop {
+                id: r.id,
+                source: r.source,
+                name: r.name,
+                official_name: r.official_name,
+                osm_name: r.osm_name,
+                short_name: r.short_name,
+                locality: r.locality,
+                street: r.street,
+                door: r.door,
+                lat: r.lat,
+                lon: r.lon,
+                external_id: r.external_id,
+                refs: r.refs,
+                notes: r.notes,
+                updater: r.updater,
+                update_date: r.update_date,
+                parish: r.parish,
+                tags: r.tags,
+                a11y: serde_json::from_value(r.accessibility_meta)
+                    .map_err(|_e| Error::DatabaseDeserialization)?,
+                verification_level: r.verification_level as u8,
+                service_check_date: r.service_check_date,
+                infrastructure_check_date: r.infrastructure_check_date,
+            })
         })
         .collect()
-    })
+    }
+}
+
+pub(crate) async fn fetch_stops_base(
+    pool: &PgPool,
+) -> Result<Vec<responses::BaseStop>> {
+    sqlx::query_as!(
+        responses::BaseStop,
+"SELECT id, COALESCE(name, osm_name) as name, official_name, short_name, lat, lon, tags
+FROM stops
+WHERE id IN (
+    SELECT DISTINCT stop
+    FROM subroute_stops
+)")
+        .fetch_all(pool)
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
 pub(crate) async fn fetch_bounded_stops(
     pool: &PgPool,
     (x0, y0, x1, y1): (f64, f64, f64, f64),
 ) -> Result<Vec<models::Stop>> {
-    let res = sqlx::query!(
+    sqlx::query!(
         r#"
 SELECT id, source, name, official_name, osm_name, short_name, locality, street,
     door, lat, lon, external_id, notes, updater, update_date,
@@ -182,33 +206,83 @@ WHERE lon >= $1 AND lon <= $2 AND lat <= $3 AND lat >= $4 AND id IN (
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?
     .into_iter()
-    .map(|r| models::Stop {
-        id: r.id,
-        source: r.source,
-        name: r.name,
-        official_name: r.official_name,
-        osm_name: r.osm_name,
-        short_name: r.short_name,
-        locality: r.locality,
-        street: r.street,
-        door: r.door,
-        lat: r.lat,
-        lon: r.lon,
-        external_id: r.external_id,
-        refs: r.refs,
-        notes: r.notes,
-        updater: r.updater,
-        update_date: r.update_date,
-        parish: r.parish,
-        tags: r.tags,
-        a11y: serde_json::from_value(r.accessibility_meta).unwrap(),
-        verification_level: r.verification_level as u8,
-        service_check_date: r.service_check_date,
-        infrastructure_check_date: r.infrastructure_check_date,
+    .map(|r| {
+        Ok(models::Stop {
+            id: r.id,
+            source: r.source,
+            name: r.name,
+            official_name: r.official_name,
+            osm_name: r.osm_name,
+            short_name: r.short_name,
+            locality: r.locality,
+            street: r.street,
+            door: r.door,
+            lat: r.lat,
+            lon: r.lon,
+            external_id: r.external_id,
+            refs: r.refs,
+            notes: r.notes,
+            updater: r.updater,
+            update_date: r.update_date,
+            parish: r.parish,
+            tags: r.tags,
+            a11y: serde_json::from_value(r.accessibility_meta)
+                .map_err(|_e| Error::DatabaseDeserialization)?,
+            verification_level: r.verification_level as u8,
+            service_check_date: r.service_check_date,
+            infrastructure_check_date: r.infrastructure_check_date,
+        })
     })
-    .collect();
+    .collect()
+}
 
-    Ok(res)
+pub(crate) async fn fetch_gtfs_stops(
+    pool: &PgPool,
+) -> Result<Vec<models::TMLStop>> {
+    sqlx::query!(
+        r#"
+SELECT id, source, name, official_name, osm_name, short_name, locality, street,
+    door, lat, lon, external_id, notes, updater, update_date,
+    parish, tags, accessibility_meta, refs, tml_id, tml_id_verified, deleted_upstream,
+    verification_level, service_check_date, infrastructure_check_date
+FROM Stops
+        "#,
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .into_iter()
+    .map(|r| Ok(models::TMLStop {
+        stop: models::Stop {
+            id: r.id,
+            source: r.source,
+            name: r.name,
+            official_name: r.official_name,
+            osm_name: r.osm_name,
+            short_name: r.short_name,
+            locality: r.locality,
+            street: r.street,
+            door: r.door,
+            lat: r.lat,
+            lon: r.lon,
+            external_id: r.external_id,
+            refs: r.refs,
+            notes: r.notes,
+            updater: r.updater,
+            update_date: r.update_date,
+            parish: r.parish,
+            tags: r.tags,
+            a11y: serde_json::from_value(r.accessibility_meta)
+                .map_err(|_e| Error::DatabaseDeserialization)?,
+            verification_level: r.verification_level as u8,
+            service_check_date: r.service_check_date,
+            infrastructure_check_date: r.infrastructure_check_date,
+        },
+        tml_id: r.tml_id,
+        tml_id_verified: r.tml_id_verified,
+        deleted_upstream: r.deleted_upstream,
+    }))
+    .collect()
 }
 
 pub(crate) async fn insert_stop(
@@ -244,9 +318,9 @@ RETURNING id
         stop.service_check_date,
         stop.infrastructure_check_date
     )
-    .fetch_one(pool)
-    .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+        .fetch_one(pool)
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     Ok(models::Stop {
         id: res.id,
@@ -284,7 +358,6 @@ where
     E: sqlx::Executor<'c, Database = sqlx::Postgres>,
 {
     let update_date = Local::now().to_string();
-    dbg!(serde_json::to_value(&changes.a11y).unwrap());
 
     let _res = sqlx::query!(
         r#"

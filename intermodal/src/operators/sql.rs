@@ -43,7 +43,7 @@ FROM Operators
 pub(crate) async fn fetch_calendars(
     pool: &PgPool,
 ) -> Result<Vec<responses::OperatorCalendar>> {
-    Ok(sqlx::query!(
+    sqlx::query!(
         r#"
 SELECT id, name, calendar, operator_id
 FROM operator_calendars
@@ -53,20 +53,23 @@ FROM operator_calendars
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?
     .into_iter()
-    .map(|row| responses::OperatorCalendar {
-        id: row.id,
-        name: row.name,
-        calendar: serde_json::from_value(row.calendar).unwrap(),
-        operator_id: row.operator_id,
+    .map(|row| {
+        Ok(responses::OperatorCalendar {
+            id: row.id,
+            name: row.name,
+            calendar: serde_json::from_value(row.calendar)
+                .map_err(|_e| Error::DatabaseDeserialization)?,
+            operator_id: row.operator_id,
+        })
     })
-    .collect())
+    .collect()
 }
 
 pub(crate) async fn fetch_operator_calendars(
     pool: &PgPool,
     operator_id: i32,
 ) -> Result<Vec<responses::OperatorCalendar>> {
-    Ok(sqlx::query!(
+    sqlx::query!(
         r#"
 SELECT id, name, calendar
 FROM operator_calendars
@@ -78,13 +81,16 @@ WHERE operator_id=$1
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?
     .into_iter()
-    .map(|row| responses::OperatorCalendar {
-        id: row.id,
-        name: row.name,
-        calendar: serde_json::from_value(row.calendar).unwrap(),
-        operator_id,
+    .map(|row| {
+        Ok(responses::OperatorCalendar {
+            id: row.id,
+            name: row.name,
+            calendar: serde_json::from_value(row.calendar)
+                .map_err(|_e| Error::DatabaseDeserialization)?,
+            operator_id,
+        })
     })
-    .collect())
+    .collect()
 }
 
 pub(crate) async fn insert_calendar(
@@ -127,12 +133,49 @@ WHERE operator_id=$1 AND id=$2
     Ok(())
 }
 
+pub(crate) async fn fetch_calendars_for_date(
+    pool: &PgPool,
+    operator_id: i32,
+    date: NaiveDate,
+) -> Result<Vec<responses::OperatorCalendar>> {
+    sqlx::query!(
+        r#"
+SELECT id, name, calendar
+FROM operator_calendars
+WHERE operator_id=$1
+    "#,
+        operator_id
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .into_iter()
+    .filter_map(
+        |row| match serde_json::from_value::<Calendar>(row.calendar) {
+            Ok(calendar) => {
+                if calendar.includes(date) {
+                    Some(Ok(responses::OperatorCalendar {
+                        id: row.id,
+                        name: row.name,
+                        calendar,
+                        operator_id,
+                    }))
+                } else {
+                    None
+                }
+            }
+            Err(_e) => Some(Err(Error::DatabaseDeserialization)),
+        },
+    )
+    .collect()
+}
+
 pub(crate) async fn fetch_news(
     pool: &PgPool,
     skip: i64,
     take: i64,
 ) -> Result<Vec<models::NewsItem>> {
-    Ok(sqlx::query!(
+    sqlx::query!(
         r#"
 SELECT id, operator_id, summary, content, datetime, geojson, visible
 FROM news_items
@@ -145,20 +188,25 @@ LIMIT $1 OFFSET $2
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?
     .into_iter()
-    .map(|row| models::NewsItem {
-        id: row.id,
-        operator_id: row.operator_id,
-        summary: row.summary,
-        content: row.content,
-        datetime: row.datetime.with_timezone(&Local),
-        geojson: if let Some(geojson) = row.geojson {
-            Some(serde_json::from_value(geojson).unwrap())
-        } else {
-            None
-        },
-        visible: row.visible,
+    .map(|row| {
+        Ok(models::NewsItem {
+            id: row.id,
+            operator_id: row.operator_id,
+            summary: row.summary,
+            content: row.content,
+            datetime: row.datetime.with_timezone(&Local),
+            geojson: if let Some(geojson) = row.geojson {
+                Some(
+                    serde_json::from_value(geojson)
+                        .map_err(|_e| Error::DatabaseDeserialization)?,
+                )
+            } else {
+                None
+            },
+            visible: row.visible,
+        })
     })
-    .collect())
+    .collect()
 }
 
 pub(crate) async fn fetch_operator_news(
@@ -167,7 +215,7 @@ pub(crate) async fn fetch_operator_news(
     skip: i64,
     take: i64,
 ) -> Result<Vec<responses::OperatorNewsItem>> {
-    Ok(sqlx::query!(
+    sqlx::query!(
         r#"
 SELECT id, operator_id, summary, content, datetime, geojson, visible
 FROM news_items
@@ -182,17 +230,22 @@ LIMIT $2 OFFSET $3
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?
     .into_iter()
-    .map(|row| responses::OperatorNewsItem {
-        id: row.id,
-        summary: row.summary,
-        content: row.content,
-        datetime: row.datetime.with_timezone(&Local),
-        geojson: if let Some(geojson) = row.geojson {
-            Some(serde_json::from_value(geojson).unwrap())
-        } else {
-            None
-        },
-        visible: row.visible,
+    .map(|row| {
+        Ok(responses::OperatorNewsItem {
+            id: row.id,
+            summary: row.summary,
+            content: row.content,
+            datetime: row.datetime.with_timezone(&Local),
+            geojson: if let Some(geojson) = row.geojson {
+                Some(
+                    serde_json::from_value(geojson)
+                        .map_err(|_e| Error::DatabaseDeserialization)?,
+                )
+            } else {
+                None
+            },
+            visible: row.visible,
+        })
     })
-    .collect())
+    .collect()
 }
