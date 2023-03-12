@@ -238,7 +238,7 @@ pub enum ScheduleType {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Component, PartialEq)]
 pub struct Schedule {
-    pub code: String,
+    pub code: Option<String>,
     pub discriminator: Option<String>,
     #[serde(rename = "type")]
     pub schedule_type: ScheduleType,
