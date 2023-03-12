@@ -110,8 +110,7 @@ pub(crate) async fn patch_stop(
     let patch = changes.derive_patch(&stop);
 
     if patch.is_empty() {
-        return Err(Error::ValidationFailure("No changes".to_string()));
-        // return Ok(());
+        return Ok(());
     }
 
     contrib::sql::insert_changeset_log(

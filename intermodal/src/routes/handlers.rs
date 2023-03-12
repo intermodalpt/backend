@@ -123,9 +123,7 @@ pub(crate) async fn patch_route(
     let patch = changes.derive_patch(&route);
 
     if patch.is_empty() {
-        return Err(Error::ValidationFailure(
-            "No changes were made".to_string(),
-        ));
+        return Ok(());
     }
 
     contrib::sql::insert_changeset_log(
@@ -235,9 +233,7 @@ pub(crate) async fn patch_subroute(
     let patch = changes.derive_patch(&subroute);
 
     if patch.is_empty() {
-        return Err(Error::ValidationFailure(
-            "No changes were made".to_string(),
-        ));
+        return Ok(());
     }
 
     contrib::sql::insert_changeset_log(
@@ -353,9 +349,7 @@ pub(crate) async fn patch_subroute_departure(
     let patch = change.derive_patch(&departure);
 
     if patch.is_empty() {
-        return Err(Error::ValidationFailure(
-            "No changes were made".to_string(),
-        ));
+        return Ok(());
     }
 
     sql::update_departure(&state.pool, subroute_id, departure_id, change)
