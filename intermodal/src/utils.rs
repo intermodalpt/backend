@@ -74,17 +74,71 @@ pub fn datetime_from_exif_ascii(
     Ok(datetime)
 }
 
+pub fn u16_from_exif(repr: &[u16]) -> Result<u16, Error> {
+    if repr.len() != 1 {
+        return Err(Error::Processing("Invalid EXIF u16".to_string()));
+    }
+
+    Ok(repr[0])
+}
+
+#[derive(Debug, Copy, Clone)]
+pub(crate) enum ExifOrientation {
+    Horizontal = 1,
+    Mirror = 2,
+    Rotate180 = 3,
+    MirrorVertical = 4,
+    MirrorHorizontalRotate270 = 5,
+    Rotate90 = 6,
+    MirrorHorizontalRotate90 = 7,
+    Rotate270 = 8,
+}
+
+fn orientation_from_u16(orientation: u16) -> ExifOrientation {
+    match orientation {
+        1 => ExifOrientation::Horizontal,
+        2 => ExifOrientation::Mirror,
+        3 => ExifOrientation::Rotate180,
+        4 => ExifOrientation::MirrorVertical,
+        5 => ExifOrientation::MirrorHorizontalRotate270,
+        6 => ExifOrientation::Rotate90,
+        7 => ExifOrientation::MirrorHorizontalRotate90,
+        8 => ExifOrientation::Rotate270,
+        _ => {
+            eprintln!(
+                "Invalid EXIF orientation: {}. Proceeding with horizontal.",
+                orientation
+            );
+            ExifOrientation::Horizontal
+        }
+    }
+}
+
 #[derive(Default, Debug)]
 pub(crate) struct Exif {
     pub(crate) lat: Option<f64>,
     pub(crate) lon: Option<f64>,
     pub(crate) capture: Option<NaiveDateTime>,
     pub(crate) camera: Option<String>,
+    pub(crate) orientation: Option<ExifOrientation>,
 }
 
 impl From<exif::Exif> for Exif {
     fn from(data: exif::Exif) -> Self {
         let mut result = Exif::default();
+
+        if let Some(field) =
+            data.get_field(exif::Tag::Orientation, exif::In::PRIMARY)
+        {
+            if let exif::Value::Short(val) = &field.value {
+                if let Ok(orientation) = u16_from_exif(&val) {
+                    result.orientation =
+                        Some(orientation_from_u16(orientation));
+                }
+            } else {
+                println!("Possibly bad orientation EXIF");
+            }
+        }
 
         if let Some(field) =
             data.get_field(exif::Tag::GPSLatitude, exif::In::PRIMARY)
