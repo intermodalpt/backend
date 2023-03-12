@@ -150,21 +150,22 @@ pub(crate) fn build_paths(state: State) -> Router {
             patch(routes::handlers::patch_subroute_stops),
         )
         .route(
-            "/v1/upload/stops",
+            "/v1/stop_pics/dangling",
+            get(pics::handlers::get_dangling_stop_pictures)
+                .post(pics::handlers::upload_dangling_stop_picture),
+        )
+        .route(
+            "/v1/stop_pics/linked/:stop_id",
             post(pics::handlers::upload_stop_picture),
         )
         .route(
-            "/v1/upload/stops/:picture_id",
+            "/v1/stop_pics/:picture_id",
             patch(pics::handlers::patch_stop_picture_meta)
                 .delete(pics::handlers::delete_stop_picture),
         )
         .route(
-            "/v1/tagging/stops/untagged",
-            get(pics::handlers::get_untagged_stop_pictures),
-        )
-        .route(
             "/v1/contrib/upload/stops",
-            post(pics::handlers::upload_stop_picture),
+            post(pics::handlers::upload_dangling_stop_picture),
         )
         .route(
             "/v1/contrib/changelog/contributions",
