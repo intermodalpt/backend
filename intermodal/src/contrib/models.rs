@@ -717,7 +717,7 @@ pub(crate) mod requests {
         pub street: Option<String>,
         pub door: Option<String>,
         #[serde(flatten)]
-        pub a11y: Option<stops::Accessibility>,
+        pub a11y: stops::A11yMeta,
         pub tags: Vec<String>,
         pub notes: Option<String>,
         #[serde(default)]
@@ -743,72 +743,64 @@ pub(crate) mod requests {
             if self.door != stop.door {
                 patch.door = Some(self.door)
             }
-            if self.has_crossing != stop.a11y.has_crossing {
-                patch.has_crossing = Some(self.has_crossing)
+            if self.a11y.has_crossing != stop.a11y.has_crossing {
+                patch.has_crossing = Some(self.a11y.has_crossing)
             }
-            if self.has_accessibility != stop.a11y.has_accessibility {
-                patch.has_accessibility = Some(self.has_accessibility)
+            if self.a11y.has_schedules != stop.a11y.has_schedules {
+                patch.has_schedules = Some(self.a11y.has_schedules)
             }
-            if self.has_abusive_parking != stop.a11y.has_abusive_parking {
-                patch.has_abusive_parking = Some(self.has_abusive_parking)
+            if self.a11y.has_sidewalk != stop.a11y.has_sidewalk {
+                patch.has_sidewalk = Some(self.a11y.has_sidewalk)
             }
-            if self.has_outdated_info != stop.a11y.has_outdated_info {
-                patch.has_outdated_info = Some(self.has_outdated_info)
+            if self.a11y.has_shelter != stop.a11y.has_shelter {
+                patch.has_shelter = Some(self.a11y.has_shelter)
             }
-            if self.is_damaged != stop.a11y.is_damaged {
-                patch.is_damaged = Some(self.is_damaged)
+            if self.a11y.has_bench != stop.a11y.has_bench {
+                patch.has_bench = Some(self.a11y.has_bench)
             }
-            if self.is_vandalized != stop.a11y.is_vandalized {
-                patch.is_vandalized = Some(self.is_vandalized)
+            if self.a11y.has_trash_can != stop.a11y.has_trash_can {
+                patch.has_trash_can = Some(self.a11y.has_trash_can)
             }
-            if self.has_flag != stop.a11y.has_flag {
-                patch.has_flag = Some(self.has_flag)
+            if self.a11y.illumination_strength
+                != stop.a11y.illumination_strength
+            {
+                patch.illumination_strength =
+                    Some(self.a11y.illumination_strength)
             }
-            if self.has_schedules != stop.a11y.has_schedules {
-                patch.has_schedules = Some(self.has_schedules)
+            if self.a11y.illumination_position
+                != stop.a11y.illumination_position
+            {
+                patch.illumination_position =
+                    Some(self.a11y.illumination_position)
             }
-            if self.has_sidewalk != stop.a11y.has_sidewalk {
-                patch.has_sidewalk = Some(self.has_sidewalk)
-            }
-            if self.has_shelter != stop.a11y.has_shelter {
-                patch.has_shelter = Some(self.has_shelter)
-            }
-            if self.has_bench != stop.a11y.has_bench {
-                patch.has_bench = Some(self.has_bench)
-            }
-            if self.has_trash_can != stop.a11y.has_trash_can {
-                patch.has_trash_can = Some(self.has_trash_can)
-            }
-            if self.illumination_strength != stop.a11y.illumination_strength {
-                patch.illumination_strength = Some(self.illumination_strength)
-            }
-            if self.illumination_position != stop.a11y.illumination_position {
-                patch.illumination_position = Some(self.illumination_position)
-            }
-            if self.is_illumination_working != stop.a11y.is_illumination_working
+            if self.a11y.is_illumination_working
+                != stop.a11y.is_illumination_working
             {
                 patch.is_illumination_working =
-                    Some(self.is_illumination_working)
+                    Some(self.a11y.is_illumination_working)
             }
-            if self.has_illuminated_path != stop.a11y.has_illuminated_path {
-                patch.has_illuminated_path = Some(self.has_illuminated_path)
+            if self.a11y.has_illuminated_path != stop.a11y.has_illuminated_path
+            {
+                patch.has_illuminated_path =
+                    Some(self.a11y.has_illuminated_path)
             }
-            if self.has_visibility_from_within
+            if self.a11y.has_visibility_from_within
                 != stop.a11y.has_visibility_from_within
             {
                 patch.has_visibility_from_within =
-                    Some(self.has_visibility_from_within)
+                    Some(self.a11y.has_visibility_from_within)
             }
-            if self.has_visibility_from_area
+            if self.a11y.has_visibility_from_area
                 != stop.a11y.has_visibility_from_area
             {
                 patch.has_visibility_from_area =
-                    Some(self.has_visibility_from_area)
+                    Some(self.a11y.has_visibility_from_area)
             }
-            if self.is_visible_from_outside != stop.a11y.is_visible_from_outside
+            if self.a11y.is_visible_from_outside
+                != stop.a11y.is_visible_from_outside
             {
                 patch.is_visible_from_outside =
-                    Some(self.is_visible_from_outside)
+                    Some(self.a11y.is_visible_from_outside)
             }
             if self.tags != stop.tags {
                 patch.tags = Some(self.tags)
