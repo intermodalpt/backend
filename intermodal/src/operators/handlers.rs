@@ -21,6 +21,7 @@ use std::sync::Arc;
 
 use axum::extract::{Path, Query};
 use axum::{Extension, Json};
+use chrono::NaiveDate;
 use serde::Deserialize;
 
 use super::models::{self, requests, responses};
@@ -84,6 +85,18 @@ pub(crate) async fn delete_operator_calendar(
     // TODO do not allow deletion of calendars that are in use
 
     Ok(sql::delete_calendar(&state.pool, operator_id, calendar_id).await?)
+}
+
+pub(crate) async fn get_operator_calendars_for_date(
+    Extension(state): Extension<Arc<State>>,
+    Path((operator_id, date)): Path<(i32, String)>,
+) -> Result<Json<Vec<responses::OperatorCalendar>>, Error> {
+    let date = NaiveDate::parse_from_str(&date, "%Y-%m-%d")
+        .map_err(|err| Error::ValidationFailure(err.to_string()))?;
+
+    Ok(Json(
+        sql::fetch_calendars_for_date(&state.pool, operator_id, date).await?,
+    ))
 }
 
 #[derive(Deserialize, Default)]

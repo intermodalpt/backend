@@ -200,17 +200,18 @@ pub(crate) fn build_paths(state: State) -> Router {
         )
         .route("/v1/news", get(operators::handlers::get_news))
         .route("/v1/operators", get(operators::handlers::get_operators))
-        .route(
-            "/v1/calendars",
-            get(operators::handlers::get_calendars)
-        )
+        .route("/v1/calendars", get(operators::handlers::get_calendars))
         .route(
             "/v1/operators/:operator_id/calendars",
             get(operators::handlers::get_operator_calendars)
                 .post(operators::handlers::post_operator_calendar),
         )
         .route(
-            "/v1/operators/:operator_id/calendars/:operator_id",
+            "/v1/operators/:operator_id/calendars/date/:date",
+            get(operators::handlers::get_operator_calendars_for_date),
+        )
+        .route(
+            "/v1/operators/:operator_id/calendars/:calendar_id",
             delete(operators::handlers::delete_operator_calendar),
         )
         .route(

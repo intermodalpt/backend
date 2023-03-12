@@ -180,7 +180,7 @@ pub(crate) mod responses {
 }
 
 pub(crate) mod requests {
-    use serde::{Deserialize};
+    use serde::Deserialize;
     use utoipa::Component;
 
     use super::Calendar;
