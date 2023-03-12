@@ -249,6 +249,10 @@ async fn main() {
             .expect("jwt_secret not set"),
     )));
 
+    let _ = pics::IMG_ROOT.set(Box::leak(Box::new(
+        settings.get_string("img_root").expect("img_root not set"),
+    )));
+
     let credentials = s3::creds::Credentials::new(
         Some(
             &settings
