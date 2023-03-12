@@ -86,6 +86,7 @@ SELECT routes.id as route,
     routes.main_subroute as main_subroute,
     routes.active as active,
     routes.type as service_type,
+    routes.parishes as parishes,
     route_types.badge_text_color as text_color,
     route_types.badge_bg_color as bg_color,
     subroutes.id as subroute,
@@ -124,6 +125,7 @@ ORDER BY routes.id asc
             }],
             active: row.active,
             operator: row.operator,
+            parishes: row.parishes,
         };
 
         for row in row_iter {
@@ -153,6 +155,7 @@ SELECT routes.id as route,
     routes.circular as circular,
     routes.main_subroute as main_subroute,
     routes.active as active,
+    routes.parishes as parishes,
     route_types.badge_text_color as text_color,
     route_types.badge_bg_color as bg_color,
     subroutes.id as "subroute!: Option<i32>",
@@ -211,6 +214,7 @@ ORDER BY routes.id asc
                 active: row.active,
                 operator: row.operator,
                 type_id: row.service_type,
+                parishes: row.parishes,
             });
     }
 

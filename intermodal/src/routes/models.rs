@@ -195,6 +195,7 @@ pub(crate) mod responses {
         pub(crate) badge_text: String,
         pub(crate) badge_bg: String,
         pub(crate) active: bool,
+        pub(crate) parishes: Vec<i16>,
     }
 
     #[derive(Debug, Serialize, Component)]
