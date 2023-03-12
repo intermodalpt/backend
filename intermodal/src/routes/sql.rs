@@ -634,7 +634,9 @@ SELECT departures.id as id,
     Departures.subroute as subroute_id,
     Departures.calendar_id as "calendar_id!: i32"
 FROM Departures
-"#
+WHERE departures.id = $1
+"#,
+        departure_id
     )
     .fetch_optional(executor)
     .await
