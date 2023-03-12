@@ -21,7 +21,6 @@ use std::sync::Arc;
 
 use axum::extract::Path;
 use axum::{Extension, Json};
-use chrono::NaiveDate;
 
 use super::models::{self, requests, responses};
 use super::sql;
@@ -302,7 +301,7 @@ pub(crate) async fn create_subroute_departure(
         return Err(Error::Forbidden);
     }
     let claims = claims.unwrap();
-    if !claims.permissions.is_admin {
+    if !(claims.permissions.is_admin || claims.permissions.is_trusted) {
         return Err(Error::Forbidden);
     }
 
@@ -335,7 +334,7 @@ pub(crate) async fn patch_subroute_departure(
         return Err(Error::Forbidden);
     }
     let claims = claims.unwrap();
-    if !claims.permissions.is_admin {
+    if !(claims.permissions.is_admin || claims.permissions.is_trusted) {
         return Err(Error::Forbidden);
     }
 
@@ -378,7 +377,7 @@ pub(crate) async fn delete_subroute_departure(
         return Err(Error::Forbidden);
     }
     let claims = claims.unwrap();
-    if !claims.permissions.is_admin {
+    if !(claims.permissions.is_admin || claims.permissions.is_trusted) {
         return Err(Error::Forbidden);
     }
 

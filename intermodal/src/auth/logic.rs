@@ -65,6 +65,7 @@ pub(crate) async fn login(
         uname: user.username,
         permissions: models::Permissions {
             is_admin: user.is_admin,
+            is_trusted: user.is_trusted,
         },
     };
     encode_claims(claims)
@@ -124,7 +125,10 @@ mod tests {
             exp: 0,
             uid: 0,
             uname: "test".to_string(),
-            permissions: models::Permissions { is_admin: false },
+            permissions: models::Permissions {
+                is_admin: false,
+                is_trusted: false,
+            },
         };
         let encoded = encode_claims(claims.clone()).unwrap();
         let decoded = decode_claims(&encoded).unwrap();

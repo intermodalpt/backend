@@ -55,6 +55,7 @@ pub struct Claims {
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct Permissions {
     pub is_admin: bool,
+    pub is_trusted: bool,
 }
 
 pub(crate) mod requests {
