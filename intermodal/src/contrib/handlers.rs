@@ -107,9 +107,11 @@ pub(crate) async fn post_contrib_stop_data(
     let patch = contribution.contribution.derive_patch(&stop);
 
     if patch.is_empty() {
-        return Err(Error::ValidationFailure(
-            "No changes were made".to_string(),
-        ));
+        return Ok(Json({
+            let mut map = HashMap::new();
+            map.insert("id".to_string(), -1);
+            map
+        }));
     }
 
     let contribution = models::Contribution {
@@ -168,6 +170,7 @@ pub(crate) async fn post_contrib_stop_picture(
         &state.bucket,
         &state.pool,
         &content,
+        &[],
     )
     .await?;
 
