@@ -16,7 +16,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use chrono::NaiveDate;
 use itertools::Itertools;
 use sqlx::PgPool;
 use std::collections::HashMap;
@@ -40,6 +39,7 @@ SELECT routes.id as id,
     routes.code as code,
     routes.name as name,
     routes.main_subroute as main_subroute,
+    routes.circular as circular,
     routes.active as active
 FROM routes
 WHERE routes.id = $1
@@ -227,14 +227,15 @@ where
 {
     let res = sqlx::query!(
         r#"
-INSERT INTO routes(code, name, main_subroute, operator, active, type)
-VALUES ($1, $2, $3, $4, $5, $6)
+INSERT INTO routes(code, name, main_subroute, operator, circular, active, type)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 RETURNING id
     "#,
         route.code,
         route.name,
         route.main_subroute,
         route.operator_id,
+        route.circular,
         route.active,
         route.type_id
     )
@@ -256,13 +257,14 @@ where
     let _res = sqlx::query!(
         r#"
 UPDATE Routes
-SET code=$1, name=$2, main_subroute=$3, operator=$4, active=$5, type=$6
-WHERE id=$7
+SET code=$1, name=$2, main_subroute=$3, operator=$4, circular=$5, active=$6, type=$7
+WHERE id=$8
     "#,
         changes.code,
         changes.name,
         changes.main_subroute,
         changes.operator_id,
+        changes.circular,
         changes.active,
         changes.type_id,
         route_id

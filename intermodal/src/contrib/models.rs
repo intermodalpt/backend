@@ -569,6 +569,9 @@ impl RoutePatch {
         if let Some(active) = self.active {
             route.active = active
         }
+        if let Some(circular) = self.circular {
+            route.circular = circular
+        }
     }
 }
 

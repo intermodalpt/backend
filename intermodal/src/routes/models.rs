@@ -17,7 +17,6 @@
 */
 
 use serde::{Deserialize, Serialize};
-use serde_repr::Serialize_repr;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Route {
@@ -26,6 +25,7 @@ pub struct Route {
     pub(crate) operator_id: i32,
     pub(crate) code: Option<String>,
     pub(crate) name: String,
+    pub(crate) circular: bool,
     pub(crate) main_subroute: Option<i32>,
     pub(crate) active: bool,
 }
@@ -60,6 +60,7 @@ pub(crate) mod requests {
         pub operator_id: i32,
         pub active: bool,
         pub type_id: i32,
+        pub circular: bool,
     }
 
     impl From<super::Route> for ChangeRoute {
@@ -71,6 +72,7 @@ pub(crate) mod requests {
                 operator_id: route.operator_id,
                 active: route.active,
                 type_id: route.type_id,
+                circular: route.circular,
             }
         }
     }
@@ -95,6 +97,9 @@ pub(crate) mod requests {
             }
             if self.active != route.active {
                 patch.active = Some(self.active);
+            }
+            if self.circular != route.circular {
+                patch.circular = Some(self.circular);
             }
             patch
         }
@@ -221,6 +226,6 @@ pub(crate) mod responses {
     #[derive(Serialize, Component)]
     pub struct SubrouteStops {
         pub subroute: i32,
-        pub stops: Vec<i32>
+        pub stops: Vec<i32>,
     }
 }

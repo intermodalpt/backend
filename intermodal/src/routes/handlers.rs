@@ -64,6 +64,7 @@ pub(crate) async fn create_route(
         operator_id: route.operator_id,
         code: route.code,
         name: route.name,
+        circular: route.circular,
         main_subroute: route.main_subroute,
         active: route.active,
     };
