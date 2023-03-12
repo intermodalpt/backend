@@ -526,21 +526,3 @@ WHERE id=$1
 
     Ok(())
 }
-
-pub(crate) async fn fetch_stop_pic_stop_count(
-    pool: &PgPool,
-    pic_id: i32,
-) -> Result<i64> {
-    Ok(sqlx::query!(
-        r#"
-SELECT count(*) as count
-FROM stop_pic_stops
-WHERE pic=$1"#,
-        pic_id
-    )
-    .fetch_one(pool)
-    .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
-    .count
-    .unwrap_or(0))
-}

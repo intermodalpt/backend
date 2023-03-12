@@ -485,51 +485,6 @@ pub(crate) async fn get_schedule(
     Ok(Json(sql::fetch_schedule(&state.pool, route_id).await?))
 }
 
-#[utoipa::path(
-    get,
-    path = "/v1/routes/{route_id}/schedule/{date}",
-    params(
-        (
-            "route_id",
-            path,
-            description = "Route identifier"
-        ),
-    ),
-    params(
-        (
-            "date",
-            path,
-            description = "Date of the schedule, in the YYYY-MM-DD format"
-        ),
-    ),
-    responses(
-        (
-            status = 200,
-            description = "Route schedule for a specific day",
-            body = [DateDeparture]
-        ),
-        (
-            status = 400,
-            description = "Invalid date"
-        ),
-        (
-            status = 404,
-            description = "Route does not exist"
-        ),
-    )
-)]
-pub(crate) async fn get_schedule_for_date(
-    Extension(state): Extension<Arc<State>>,
-    Path((route_id, date)): Path<(i32, String)>,
-) -> Result<Json<Vec<responses::DateDeparture>>, Error> {
-    let date = NaiveDate::parse_from_str(&date, "%Y-%m-%d")
-        .map_err(|err| Error::ValidationFailure(err.to_string()))?;
-
-    Ok(Json(
-        sql::fetch_schedule_for_date(&state.pool, route_id, date).await?,
-    ))
-}
-
 pub(crate) async fn post_replace_stop_across_routes(
     Extension(state): Extension<Arc<State>>,
     claims: Option<auth::Claims>,

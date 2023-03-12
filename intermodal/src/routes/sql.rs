@@ -21,7 +21,6 @@ use sqlx::PgPool;
 use std::collections::HashMap;
 
 use super::models::{self, requests, responses};
-use crate::calendar::Calendar;
 use crate::Error;
 
 type Result<T> = std::result::Result<T, Error>;
@@ -615,45 +614,6 @@ ORDER BY time ASC
             time: row.time,
             calendar_id: row.calendar_id,
         });
-    }
-
-    Ok(departures)
-}
-
-pub(crate) async fn fetch_schedule_for_date(
-    pool: &PgPool,
-    route_id: i32,
-    date: NaiveDate,
-) -> Result<Vec<responses::DateDeparture>> {
-    let res = sqlx::query!(
-        r#"
-SELECT subroutes.id as subroute, departures.time as time, departures.calendar as calendar
-FROM subroutes
-JOIN departures on departures.subroute = subroutes.id
-WHERE subroutes.route=$1
-ORDER BY time asc
-    "#,
-        route_id
-    )
-        .fetch_all(pool)
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
-
-    let mut departures = vec![];
-    for row in res {
-        if let Some(calendar) = row.calendar {
-            let calendar: Calendar = serde_json::from_value(calendar)
-                .map_err(|_err| Error::DatabaseDeserialization)?;
-            if calendar.includes(date) {
-                departures.push(responses::DateDeparture {
-                    subroute: row.subroute,
-                    time: row.time,
-                });
-            }
-        } else {
-            // TODO
-            continue;
-        };
     }
 
     Ok(departures)

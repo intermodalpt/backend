@@ -129,10 +129,6 @@ pub(crate) fn build_paths(state: State) -> Router {
             get(routes::handlers::get_schedule),
         )
         .route(
-            "/v1/routes/:route_id/schedule/:date",
-            get(routes::handlers::get_schedule_for_date),
-        )
-        .route(
             "/v1/schedules/:subroute_id",
             post(routes::handlers::create_subroute_departure),
         )
@@ -319,7 +315,6 @@ use stops::models::Stop;
         stops::handlers::get_stops,
         routes::handlers::get_routes,
         routes::handlers::get_schedule,
-        routes::handlers::get_schedule_for_date,
         routes::handlers::get_route_stops,
     ),
     components(
