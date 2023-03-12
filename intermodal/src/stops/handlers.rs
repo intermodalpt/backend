@@ -145,6 +145,13 @@ pub(crate) async fn get_bounded_stops(
     Ok(Json(sql::fetch_bounded_stops(&state.pool, boundary).await?))
 }
 
+pub(crate) async fn get_stop_routes(
+    Extension(state): Extension<Arc<State>>,
+    Path(stop_id): Path<i32>,
+) -> Result<Json<Vec<routes::models::Route>>, Error> {
+    Ok(Json(sql::fetch_stop_routes(&state.pool, stop_id).await?))
+}
+
 #[utoipa::path(get, path = "/v1/stops/{stop_id}/spider")]
 pub(crate) async fn get_stop_spider(
     Extension(state): Extension<Arc<State>>,

@@ -394,10 +394,36 @@ WHERE id=$17
     Ok(())
 }
 
+pub(crate) async fn fetch_stop_routes(
+    pool: &PgPool,
+    stop_id: i32,
+) -> Result<Vec<routes::models::Route>> {
+    sqlx::query_as!(
+        routes::models::Route,
+        r#"
+SELECT routes.id as id,
+    routes.type as type_id,
+    routes.operator as operator_id,
+    routes.code as code,
+    routes.name as name,
+    routes.circular as circular,
+    routes.main_subroute as main_subroute,
+    routes.active as active
+FROM routes
+JOIN subroutes ON routes.id = subroutes.route
+JOIN subroute_stops ON subroutes.id = subroute_stops.subroute
+WHERE subroute_stops.stop = $1"#,
+        &stop_id
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+}
+
 pub(crate) async fn fetch_stop_spider(
     pool: &PgPool,
     stops: &[i32],
-) -> Result<models::responses::SpiderMap> {
+) -> Result<responses::SpiderMap> {
     let res = sqlx::query!(
         r#"
 SELECT Routes.id as route_id,
