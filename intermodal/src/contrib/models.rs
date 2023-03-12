@@ -98,6 +98,10 @@ pub enum Change {
         meta_patch: StopPicturePatch,
         stops: Vec<i32>,
     },
+    StopPicDeletion {
+        pic: pics::StopPic,
+        stops: Vec<i32>,
+    },
 }
 
 #[derive(Serialize, Deserialize, Default)]

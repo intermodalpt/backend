@@ -493,6 +493,21 @@ pub(crate) async fn delete_stop_picture(
     pool: &PgPool,
     pic_id: i32,
 ) -> Result<()> {
+    let mut transaction = pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    sqlx::query!(
+        r#"
+DELETE FROM stop_pic_stops
+WHERE pic=$1"#,
+        pic_id
+    )
+    .execute(&mut transaction)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
     sqlx::query!(
         r#"
 DELETE FROM stop_pics
@@ -500,9 +515,14 @@ WHERE id=$1
         "#,
         pic_id
     )
-    .execute(pool)
+    .execute(&mut transaction)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     Ok(())
 }

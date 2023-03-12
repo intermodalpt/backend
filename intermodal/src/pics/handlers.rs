@@ -310,6 +310,7 @@ pub(crate) async fn delete_stop_picture(
     }
     let claims = claims.unwrap();
 
+    // TODO put all of this in a transaction
     let pic = sql::fetch_stop_picture(&state.pool, stop_picture_id).await?;
     if pic.is_none() {
         return Err(Error::NotFoundUpstream);
@@ -320,6 +321,16 @@ pub(crate) async fn delete_stop_picture(
         return Err(Error::Forbidden);
     }
 
+    let stops = sql::fetch_picture_stops(&state.pool, pic.id).await?;
+
     logic::delete_stop_picture(stop_picture_id, &state.bucket, &state.pool)
-        .await
+        .await?;
+
+    contrib::sql::insert_changeset_log(
+        &state.pool,
+        claims.uid,
+        &[contrib::models::Change::StopPicDeletion { pic, stops }],
+        None,
+    )
+    .await?;
 }

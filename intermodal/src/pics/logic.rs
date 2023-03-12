@@ -147,13 +147,6 @@ pub(crate) async fn delete_stop_picture(
     bucket: &s3::Bucket,
     db_pool: &PgPool,
 ) -> Result<(), Error> {
-    let tagged_stops =
-        sql::fetch_stop_pic_stop_count(db_pool, stop_picture_id).await?;
-
-    if tagged_stops > 0 {
-        return Err(Error::DependenciesNotMet);
-    }
-
     let stop_pic = sql::fetch_stop_picture(db_pool, stop_picture_id)
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
