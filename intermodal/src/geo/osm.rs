@@ -82,33 +82,28 @@ impl From<XmlNode> for Stop {
             lat: Some(node.lat),
             lon: Some(node.lon),
             external_id: Some(node.id.to_string()),
-            succeeded_by: None,
+            refs: vec![],
             notes: None,
             a11y: stops::models::A11yMeta::default(),
             updater: -1,
             update_date: Local::now().to_string(),
             tags: vec![],
+            verification_level: 0,
+            service_check_date: None,
+            infrastructure_check_date: None,
         };
 
         for tag in node.tags {
             match tag.k.as_str() {
                 "name" => res.osm_name = Some(tag.v),
                 "official_name" => res.official_name = Some(tag.v),
-                "shelter" => match tag.v.as_str() {
-                    "yes" => res.a11y.has_shelter = Some(true),
-                    "no" => res.a11y.has_shelter = Some(false),
-                    _ => {}
-                },
-                "bench" => match tag.v.as_str() {
-                    "yes" => res.a11y.has_bench = Some(true),
-                    "no" => res.a11y.has_bench = Some(false),
-                    _ => {}
-                },
-                "bin" => match tag.v.as_str() {
-                    "yes" => res.a11y.has_trash_can = Some(true),
-                    "no" => res.a11y.has_trash_can = Some(false),
-                    _ => {}
-                },
+                "ref" => {
+                    res.refs = tag
+                        .v
+                        .split(';')
+                        .map(|s| s.trim().to_string())
+                        .collect::<Vec<String>>()
+                }
                 _ => {}
             }
         }
@@ -132,6 +127,7 @@ pub(crate) async fn import(db_pool: &PgPool) -> Result<(usize, usize), Error> {
         })
         .collect::<HashMap<String, Stop>>();
 
+    let mut osm_stop_ids = vec![];
     fetch_osm_stops()
         .await?
         .nodes
@@ -144,6 +140,7 @@ pub(crate) async fn import(db_pool: &PgPool) -> Result<(usize, usize), Error> {
             }
         })
         .for_each(|mut osm_stop| {
+            osm_stop_ids.push(osm_stop.external_id.clone().unwrap());
             if let Some(stop) =
                 stop_index.get(osm_stop.external_id.as_ref().unwrap())
             {
@@ -155,12 +152,7 @@ pub(crate) async fn import(db_pool: &PgPool) -> Result<(usize, usize), Error> {
                     || stop.osm_name != osm_stop.osm_name
                     || (stop.official_name.is_none()
                         && stop.official_name != osm_stop.official_name)
-                    // || (stop.has_shelter.is_none()
-                    // && stop.has_shelter != osm_stop.has_shelter)
-                    // || (stop.has_trash_can.is_none()
-                    // && stop.has_trash_can != osm_stop.has_trash_can)
-                    // || (stop.is_illuminated.is_none()
-                    // && stop.is_illuminated != osm_stop.is_illuminated)
+                    || (stop.refs != osm_stop.refs)
                 {
                     // Prevent OSM from overriding some of the meta fields
                     if stop.official_name.is_some()
@@ -168,21 +160,6 @@ pub(crate) async fn import(db_pool: &PgPool) -> Result<(usize, usize), Error> {
                     {
                         osm_stop.official_name = stop.official_name.clone();
                     }
-                    // if stop.has_shelter.is_some()
-                    //     && stop.has_shelter != osm_stop.has_shelter
-                    // {
-                    //     osm_stop.has_shelter = stop.has_shelter;
-                    // }
-                    // if stop.has_trash_can.is_some()
-                    //     && stop.has_trash_can != osm_stop.has_trash_can
-                    // {
-                    //     osm_stop.has_trash_can = stop.has_trash_can;
-                    // }
-                    // if stop.is_illuminated.is_some()
-                    //     && stop.is_illuminated != osm_stop.is_illuminated
-                    // {
-                    //     osm_stop.is_illuminated = stop.is_illuminated;
-                    // }
                     updated_stops.push(osm_stop);
                 }
             } else {
@@ -194,6 +171,7 @@ pub(crate) async fn import(db_pool: &PgPool) -> Result<(usize, usize), Error> {
 
     update_stops(db_pool, updated_stops).await?;
     insert_stops(db_pool, new_stops).await?;
+    tag_missing_stops(db_pool, osm_stop_ids).await?;
     Ok(counts)
 }
 
@@ -250,15 +228,52 @@ async fn update_stops(db_pool: &PgPool, stops: Vec<Stop>) -> Result<(), Error> {
         let _res = sqlx::query!(
             r#"
 UPDATE Stops
-SET official_name=$1, osm_name=$2, lon=$3, lat=$4
-WHERE id=$5 AND external_id=$6
+SET official_name=$1, osm_name=$2, lon=$3, lat=$4, refs=$5
+WHERE id=$6 AND external_id=$7
     "#,
             stop.official_name,
             stop.osm_name,
             stop.lon,
             stop.lat,
+            &stop.refs,
             stop.id,
             stop.external_id,
+        )
+        .execute(db_pool)
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    }
+    Ok(())
+}
+
+async fn tag_missing_stops(
+    db_pool: &PgPool,
+    osm_ids: Vec<String>,
+) -> Result<(), Error> {
+    let db_ids: Vec<String> =
+        sqlx::query!("SELECT external_id FROM Stops WHERE source='osm'")
+            .fetch_all(db_pool)
+            .await
+            .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+            .into_iter()
+            .filter_map(|s| s.external_id)
+            .collect();
+
+    // Check which IDs in the db have disappeared from osm
+    let missing_ids: Vec<String> = db_ids
+        .iter()
+        .filter(|id| !osm_ids.contains(id))
+        .map(|id| id.clone())
+        .collect();
+
+    for missing_id in missing_ids {
+        let _res = sqlx::query!(
+            r#"
+    UPDATE Stops
+    SET deleted_upstream=true
+    WHERE external_id=$1
+        "#,
+            missing_id
         )
         .execute(db_pool)
         .await
