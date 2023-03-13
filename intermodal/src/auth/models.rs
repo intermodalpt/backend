@@ -17,9 +17,9 @@
 */
 
 use serde::{Deserialize, Serialize};
-use utoipa::Component;
+use utoipa::ToSchema;
 
-#[derive(Debug, Serialize, Deserialize, Component)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct User {
     pub id: i32,
     pub username: String,

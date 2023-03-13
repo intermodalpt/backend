@@ -17,14 +17,15 @@
 */
 
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::{fs, io};
 
-use axum::extract::{Path, Query};
-use axum::{Extension, Json};
-use serde::Deserialize;
+use axum::extract::{Path, Query, State};
+use axum::Json;
+use serde::{Deserialize, Serialize};
 
 use super::{models, sql};
-use crate::{auth, contrib, Error, State};
+use crate::stops::models::responses;
+use crate::{auth, contrib, routes, AppState, Error};
 
 #[derive(Deserialize)]
 pub(crate) struct StopQueryParam {
@@ -40,14 +41,34 @@ pub(crate) struct StopQueryParam {
     )
 )]
 pub(crate) async fn get_stops(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     params: Query<StopQueryParam>,
 ) -> Result<Json<Vec<models::Stop>>, Error> {
     Ok(Json(sql::fetch_stops(&state.pool, !params.all).await?))
 }
 
+#[utoipa::path(
+    get,
+    path = "/v1/stop/{id}",
+    responses(
+        (status = 200, description = "Stop information", body = Stop)
+    )
+)]
+pub(crate) async fn get_stop(
+    State(state): State<AppState>,
+    Path(stop_id): Path<i32>,
+) -> Result<Json<models::Stop>, Error> {
+    let stop = sql::fetch_stop(&state.pool, stop_id).await?;
+
+    if let Some(stop) = stop {
+        Ok(Json(stop))
+    } else {
+        Err(Error::NotFoundUpstream)
+    }
+}
+
 pub(crate) async fn create_stop(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     claims: Option<auth::Claims>,
     Json(stop): Json<models::requests::NewStop>,
 ) -> Result<Json<HashMap<String, i32>>, Error> {
@@ -86,10 +107,10 @@ pub(crate) async fn create_stop(
 }
 
 pub(crate) async fn patch_stop(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     claims: Option<auth::Claims>,
-    Json(changes): Json<models::requests::ChangeStop>,
     Path(stop_id): Path<i32>,
+    Json(changes): Json<models::requests::ChangeStop>,
 ) -> Result<(), Error> {
     if claims.is_none() {
         return Err(Error::Forbidden);
@@ -127,25 +148,15 @@ pub(crate) async fn patch_stop(
     sql::update_stop(&state.pool, stop_id, changes, user_id).await
 }
 
-#[utoipa::path(
-    get,
-    path = "/v1/stops/{x0}/{y0}/{x1}/{y1}",
-    responses(
-    (
-        status = 200,
-        description = "List of stops that fit within a boundary",
-        body = [Stop])
-    )
-)]
 pub(crate) async fn get_bounded_stops(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     Path(boundary): Path<(f64, f64, f64, f64)>,
 ) -> Result<Json<Vec<models::Stop>>, Error> {
     Ok(Json(sql::fetch_bounded_stops(&state.pool, boundary).await?))
 }
 
 pub(crate) async fn get_stop_routes(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     Path(stop_id): Path<i32>,
 ) -> Result<Json<Vec<routes::models::Route>>, Error> {
     Ok(Json(sql::fetch_stop_routes(&state.pool, stop_id).await?))
@@ -153,15 +164,15 @@ pub(crate) async fn get_stop_routes(
 
 #[utoipa::path(get, path = "/v1/stops/{stop_id}/spider")]
 pub(crate) async fn get_stop_spider(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     Path(stop_id): Path<i32>,
-) -> Result<Json<models::responses::SpiderMap>, Error> {
-    get_stops_spider(Extension(state), Json(vec![stop_id])).await
+) -> Result<Json<responses::SpiderMap>, Error> {
+    get_stops_spider(State(state), Json(vec![stop_id])).await
 }
 
 pub(crate) async fn get_stops_spider(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     Json(stops): Json<Vec<i32>>,
-) -> Result<Json<models::responses::SpiderMap>, Error> {
+) -> Result<Json<responses::SpiderMap>, Error> {
     Ok(Json(sql::fetch_stop_spider(&state.pool, &stops).await?))
 }

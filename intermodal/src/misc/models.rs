@@ -18,9 +18,9 @@
 
 pub(crate) mod responses {
     use serde::Serialize;
-    use utoipa::Component;
+    use utoipa::ToSchema;
 
-    #[derive(Serialize, Clone, Component)]
+    #[derive(Serialize, Clone, ToSchema)]
     pub struct Stats {
         pub stop_count: i64,
         pub route_count: i64,

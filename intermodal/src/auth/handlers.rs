@@ -16,15 +16,14 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use std::sync::Arc;
-
+use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::{Extension, Json};
+use axum::Json;
 
 use super::{logic, models};
 use crate::errors::Error;
-use crate::State;
+use crate::AppState;
 
 pub(crate) async fn check_auth(
     claims: Option<models::Claims>,
@@ -38,14 +37,14 @@ pub(crate) async fn check_auth(
 }
 
 pub(crate) async fn post_register(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     Json(registration): Json<models::requests::Register>,
 ) -> Result<(), Error> {
     logic::register(registration, &state.pool).await
 }
 
 pub(crate) async fn post_login(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     Json(request): Json<models::requests::Login>,
 ) -> Result<String, Error> {
     let user = logic::login(request, &state.pool).await?;

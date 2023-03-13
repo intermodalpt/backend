@@ -19,9 +19,9 @@
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use thiserror::Error;
-use utoipa::Component;
+use utoipa::ToSchema;
 
-#[derive(Error, Debug, PartialEq, Eq, Component)]
+#[derive(Error, Debug, PartialEq, Eq, ToSchema)]
 pub enum Error {
     #[error("Failed to deserialize data from the database")]
     DatabaseDeserialization,

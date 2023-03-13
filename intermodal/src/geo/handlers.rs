@@ -16,13 +16,12 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use std::sync::Arc;
-
-use axum::{Extension, Json};
+use axum::extract::State;
+use axum::Json;
 use serde::Serialize;
 
 use super::{models, osm, sql};
-use crate::{auth, Error, State};
+use crate::{auth, AppState, Error};
 
 #[utoipa::path(
     get,
@@ -35,7 +34,7 @@ use crate::{auth, Error, State};
     )
 )]
 pub(crate) async fn get_parishes(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
 ) -> Result<Json<Vec<models::Parish>>, Error> {
     Ok(Json(sql::fetch_parishes(&state.pool).await?))
 }
@@ -47,7 +46,7 @@ pub(crate) struct OsmDiff {
 }
 
 pub(crate) async fn import_osm(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     claims: Option<auth::Claims>,
 ) -> Result<Json<OsmDiff>, Error> {
     if claims.is_none() {

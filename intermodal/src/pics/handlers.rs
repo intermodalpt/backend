@@ -17,19 +17,18 @@
 */
 
 use std::collections::HashMap;
-use std::sync::Arc;
 
-use axum::extract::{ContentLengthLimit, Multipart, Path, Query};
-use axum::{Extension, Json};
+use axum::extract::{Multipart, Path, Query, State};
+use axum::{Json};
 use serde::Deserialize;
 
 use super::{logic, models::requests, models::responses, sql};
 use crate::utils::get_exactly_one_field;
-use crate::{auth, contrib};
-use crate::{Error, State};
+use crate::Error;
+use crate::{auth, contrib, AppState};
 
 pub(crate) async fn get_public_stop_pictures(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     Path(stop_id): Path<i32>,
 ) -> Result<Json<Vec<responses::PublicStopPic>>, Error> {
     Ok(Json(
@@ -38,7 +37,7 @@ pub(crate) async fn get_public_stop_pictures(
 }
 
 pub(crate) async fn get_tagged_stop_pictures(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     Path(stop_id): Path<i32>,
     claims: Option<auth::Claims>,
 ) -> Result<Json<Vec<responses::StopPic>>, Error> {
@@ -52,7 +51,7 @@ pub(crate) async fn get_tagged_stop_pictures(
 }
 
 pub(crate) async fn get_picture_stop_rels(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     claims: Option<auth::Claims>,
 ) -> Result<Json<HashMap<i32, Vec<i32>>>, Error> {
     if claims.is_none() {
@@ -65,7 +64,7 @@ pub(crate) async fn get_picture_stop_rels(
 }
 
 pub(crate) async fn get_pictures(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     claims: Option<auth::Claims>,
 ) -> Result<Json<Vec<responses::StopPic>>, Error> {
     if claims.is_none() {
@@ -84,7 +83,7 @@ pub(crate) struct Page {
 const PAGE_SIZE: u32 = 20;
 
 pub(crate) async fn get_dangling_stop_pictures(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     claims: Option<auth::Claims>,
     paginator: Query<Page>,
 ) -> Result<Json<Vec<responses::StopPic>>, Error> {
@@ -108,12 +107,9 @@ pub(crate) async fn get_dangling_stop_pictures(
 }
 
 pub(crate) async fn upload_dangling_stop_picture(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     claims: Option<auth::Claims>,
-    ContentLengthLimit(mut multipart): ContentLengthLimit<
-        Multipart,
-        { 30 * 1024 * 1024 },
-    >,
+    mut multipart: Multipart,
 ) -> Result<Json<responses::StopPic>, Error> {
     if claims.is_none() {
         return Err(Error::Forbidden);
@@ -162,13 +158,10 @@ pub(crate) async fn upload_dangling_stop_picture(
 }
 
 pub(crate) async fn upload_stop_picture(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     claims: Option<auth::Claims>,
     Path(stop_id): Path<i32>,
-    ContentLengthLimit(mut multipart): ContentLengthLimit<
-        Multipart,
-        { 30 * 1024 * 1024 },
-    >,
+    mut multipart: Multipart,
 ) -> Result<Json<responses::StopPic>, Error> {
     if claims.is_none() {
         return Err(Error::Forbidden);
@@ -220,7 +213,7 @@ pub(crate) async fn upload_stop_picture(
 }
 
 pub(crate) async fn patch_stop_picture_meta(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     claims: Option<auth::Claims>,
     Path(stop_picture_id): Path<i32>,
     Json(stop_pic_meta): Json<requests::ChangeStopPic>,
@@ -301,7 +294,7 @@ pub(crate) async fn patch_stop_picture_meta(
 }
 
 pub(crate) async fn delete_stop_picture(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     claims: Option<auth::Claims>,
     Path(stop_picture_id): Path<i32>,
 ) -> Result<(), Error> {
@@ -333,4 +326,6 @@ pub(crate) async fn delete_stop_picture(
         None,
     )
     .await?;
+
+    Ok(())
 }

@@ -19,7 +19,7 @@
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
-use utoipa::Component;
+use utoipa::ToSchema;
 
 #[repr(u8)]
 #[derive(
@@ -87,30 +87,30 @@ pub enum AreaParkingLimitation {
 }
 
 #[derive(
-    Debug, Clone, Serialize, Deserialize, Component, PartialEq, sqlx::FromRow,
+    Debug, Clone, Serialize, Deserialize, ToSchema, PartialEq, sqlx::FromRow,
 )]
 pub struct Stop {
     pub id: i32,
-    #[component(example = "cmet")]
+    #[schema(example = "cmet")]
     pub source: String,
-    #[component(example = "Setúbal (ITS)")]
+    #[schema(example = "Setúbal (ITS)")]
     pub name: Option<String>,
-    #[component(example = "Setúbal (ITS)")]
+    #[schema(example = "Setúbal (ITS)")]
     pub official_name: Option<String>,
-    #[component(example = "Setúbal (ITS)")]
+    #[schema(example = "Setúbal (ITS)")]
     pub osm_name: Option<String>,
-    #[component(example = "Setúbal")]
+    #[schema(example = "Setúbal")]
     pub short_name: Option<String>,
-    #[component(example = "Bairro das bairradas")]
+    #[schema(example = "Bairro das bairradas")]
     pub locality: Option<String>,
-    #[component(example = "Rua do Não Sei Decor")]
+    #[schema(example = "Rua do Não Sei Decor")]
     pub street: Option<String>,
-    #[component(example = "123-A")]
+    #[schema(example = "123-A")]
     pub door: Option<String>,
     pub parish: Option<i32>,
-    #[component(example = 38.123_456)]
+    #[schema(example = 38.123_456)]
     pub lat: Option<f64>,
-    #[component(example = -9.654_321)]
+    #[schema(example = -9.654_321)]
     pub lon: Option<f64>,
     #[serde(default)]
     pub external_id: Option<String>,
@@ -137,7 +137,7 @@ pub struct Stop {
 }
 
 #[derive(
-    Debug, Clone, Serialize, Deserialize, Component, Default, PartialEq,
+    Debug, Clone, Serialize, Deserialize, ToSchema, Default, PartialEq,
 )]
 pub struct A11yMeta {
     #[serde(default)]
@@ -221,14 +221,14 @@ pub struct A11yMeta {
     pub is_illumination_working: Option<bool>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Component, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, PartialEq)]
 pub struct Flag {
     pub id: String,
     pub name: Option<String>,
     pub route_codes: Vec<String>,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, Component, PartialEq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, ToSchema, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum ScheduleType {
     Origin,
@@ -236,7 +236,7 @@ pub enum ScheduleType {
     Frequency,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Component, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, PartialEq)]
 pub struct Schedule {
     pub code: Option<String>,
     pub discriminator: Option<String>,
@@ -249,11 +249,11 @@ pub(crate) mod requests {
     use crate::stops::models::A11yMeta;
     use chrono::NaiveDate;
     use serde::Deserialize;
-    use utoipa::Component;
+    use utoipa::ToSchema;
 
     use super::Stop;
 
-    #[derive(Deserialize, Component)]
+    #[derive(Deserialize, ToSchema)]
     pub struct NewStop {
         pub source: String,
         pub lon: f64,
@@ -277,7 +277,7 @@ pub(crate) mod requests {
         pub infrastructure_check_date: Option<NaiveDate>,
     }
 
-    #[derive(Deserialize, Component)]
+    #[derive(Deserialize, ToSchema)]
     pub struct ChangeStop {
         pub lon: Option<f64>,
         pub lat: Option<f64>,
@@ -481,30 +481,30 @@ pub(crate) mod requests {
 pub(crate) mod responses {
     use serde::Serialize;
     use std::collections::HashMap;
-    use utoipa::Component;
+    use utoipa::ToSchema;
 
-    #[derive(Serialize, Component)]
+    #[derive(Serialize, ToSchema)]
     pub struct SpiderRoute {
         pub code: Option<String>,
         pub name: String,
         pub circular: bool,
     }
 
-    #[derive(Serialize, Component)]
+    #[derive(Serialize, ToSchema)]
     pub struct SpiderSubroute {
         pub route: i32,
         pub flag: String,
         pub stop_sequence: Vec<i32>,
     }
 
-    #[derive(Serialize, Component)]
+    #[derive(Serialize, ToSchema)]
     pub struct SpiderStop {
         pub name: Option<String>,
         pub lat: Option<f64>,
         pub lon: Option<f64>,
     }
 
-    #[derive(Serialize, Component)]
+    #[derive(Serialize, ToSchema)]
     pub struct SpiderMap {
         pub routes: HashMap<i32, SpiderRoute>,
         pub subroutes: HashMap<i32, SpiderSubroute>,

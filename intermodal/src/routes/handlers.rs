@@ -17,14 +17,13 @@
 */
 
 use std::collections::HashMap;
-use std::sync::Arc;
 
-use axum::extract::Path;
-use axum::{Extension, Json};
+use axum::extract::{Path, State};
+use axum::Json;
 
 use super::models::{self, requests, responses};
 use super::sql;
-use crate::{auth, contrib, Error, State};
+use crate::{auth, contrib, AppState, Error};
 
 #[utoipa::path(
     get,
@@ -34,14 +33,14 @@ use crate::{auth, contrib, Error, State};
     )
 )]
 pub(crate) async fn get_routes(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
 ) -> Result<Json<Vec<responses::Route>>, Error> {
     let routes = sql::fetch_routes_with_subroutes(&state.pool).await?;
     Ok(Json(routes))
 }
 
 pub(crate) async fn create_route(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     claims: Option<auth::Claims>,
     Json(route): Json<requests::ChangeRoute>,
 ) -> Result<Json<HashMap<String, i32>>, Error> {
@@ -84,7 +83,7 @@ pub(crate) async fn create_route(
 }
 
 pub(crate) async fn get_route(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     Path(route_id): Path<i32>,
 ) -> Result<Json<responses::Route>, Error> {
     if let Some(route) =
@@ -97,7 +96,7 @@ pub(crate) async fn get_route(
 }
 
 pub(crate) async fn patch_route(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     claims: Option<auth::Claims>,
     Path(route_id): Path<i32>,
     Json(changes): Json<requests::ChangeRoute>,
@@ -140,7 +139,7 @@ pub(crate) async fn patch_route(
 }
 
 pub(crate) async fn delete_route(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     claims: Option<auth::Claims>,
     Path(route_id): Path<i32>,
 ) -> Result<(), Error> {
@@ -171,7 +170,7 @@ pub(crate) async fn delete_route(
 }
 
 pub(crate) async fn create_subroute(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     claims: Option<auth::Claims>,
     Path(route_id): Path<i32>,
     Json(subroute): Json<requests::ChangeSubroute>,
@@ -207,7 +206,7 @@ pub(crate) async fn create_subroute(
 }
 
 pub(crate) async fn patch_subroute(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     claims: Option<auth::Claims>,
     Path((route_id, subroute_id)): Path<(i32, i32)>,
     Json(changes): Json<requests::ChangeSubroute>,
@@ -250,7 +249,7 @@ pub(crate) async fn patch_subroute(
 }
 
 pub(crate) async fn delete_subroute(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     claims: Option<auth::Claims>,
     Path((route_id, subroute_id)): Path<(i32, i32)>,
 ) -> Result<(), Error> {
@@ -292,10 +291,10 @@ pub(crate) async fn delete_subroute(
 }
 
 pub(crate) async fn create_subroute_departure(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     claims: Option<auth::Claims>,
-    Json(departure): Json<requests::ChangeDeparture>,
     Path(subroute_id): Path<i32>,
+    Json(departure): Json<requests::ChangeDeparture>,
 ) -> Result<Json<HashMap<String, i32>>, Error> {
     if claims.is_none() {
         return Err(Error::Forbidden);
@@ -325,10 +324,10 @@ pub(crate) async fn create_subroute_departure(
 }
 
 pub(crate) async fn patch_subroute_departure(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     claims: Option<auth::Claims>,
-    Json(change): Json<requests::ChangeDeparture>,
     Path((subroute_id, departure_id)): Path<(i32, i32)>,
+    Json(change): Json<requests::ChangeDeparture>,
 ) -> Result<(), Error> {
     if claims.is_none() {
         return Err(Error::Forbidden);
@@ -369,7 +368,7 @@ pub(crate) async fn patch_subroute_departure(
 }
 
 pub(crate) async fn delete_subroute_departure(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     claims: Option<auth::Claims>,
     Path((subroute_id, departure_id)): Path<(i32, i32)>,
 ) -> Result<(), Error> {
@@ -406,7 +405,7 @@ pub(crate) async fn delete_subroute_departure(
     params(
         (
             "route_id",
-            path,
+            Path,
             description = "Route identifier"
         ),
     ),
@@ -422,7 +421,7 @@ pub(crate) async fn delete_subroute_departure(
     )
 )]
 pub(crate) async fn get_route_stops(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     Path(route_id): Path<i32>,
 ) -> Result<Json<Vec<responses::SubrouteStops>>, Error> {
     Ok(Json(sql::fetch_route_stops(&state.pool, route_id).await?))
@@ -430,7 +429,7 @@ pub(crate) async fn get_route_stops(
 
 #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
 pub(crate) async fn patch_subroute_stops(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     claims: Option<auth::Claims>,
     Path((route_id, subroute_id)): Path<(i32, i32)>,
     Json(request): Json<requests::ChangeSubrouteStops>,
@@ -455,7 +454,7 @@ pub(crate) async fn patch_subroute_stops(
     params(
         (
             "route_id",
-            path,
+            Path,
             description = "Route identifier"
         ),
     ),
@@ -472,14 +471,14 @@ pub(crate) async fn patch_subroute_stops(
     )
 )]
 pub(crate) async fn get_schedule(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     Path(route_id): Path<i32>,
 ) -> Result<Json<Vec<responses::Departure>>, Error> {
     Ok(Json(sql::fetch_schedule(&state.pool, route_id).await?))
 }
 
 pub(crate) async fn post_replace_stop_across_routes(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     claims: Option<auth::Claims>,
     Path((original_id, replacement_id)): Path<(i32, i32)>,
 ) -> Result<(), Error> {

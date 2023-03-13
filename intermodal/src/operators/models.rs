@@ -21,18 +21,18 @@ use std::fmt;
 
 use serde::Serialize;
 use serde_repr::Serialize_repr;
-use utoipa::Component;
+use utoipa::ToSchema;
 
 use crate::calendar::Calendar;
 
-#[derive(Debug, Serialize, Component)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct Operator {
     pub id: i32,
     pub name: String,
     pub tag: String,
 }
 
-#[derive(Debug, Serialize, Component)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct OperatorCalendar {
     pub id: i32,
     pub operator: i32,
@@ -40,7 +40,7 @@ pub struct OperatorCalendar {
     pub calendar: Calendar,
 }
 
-#[derive(Debug, Serialize, Component)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct OperatorVehicle {
     pub id: i32,
     pub name: String,
@@ -56,7 +56,7 @@ pub struct OperatorVehicle {
     // TODO complete
 }
 
-#[derive(Debug, Serialize, Component)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct Reseller {
     pub id: i32,
     pub name: String,
@@ -109,7 +109,7 @@ impl fmt::Display for NewsItemType {
     }
 }
 
-#[derive(Debug, Serialize, Component)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct NewsItem {
     pub id: i32,
     pub operator_id: Option<i32>,
@@ -156,11 +156,11 @@ pub enum TicketStatus {
 pub(crate) mod responses {
     use chrono::{DateTime, Local};
     use serde::Serialize;
-    use utoipa::Component;
+    use utoipa::ToSchema;
 
     use super::Calendar;
 
-    #[derive(Debug, Serialize, Component)]
+    #[derive(Debug, Serialize, ToSchema)]
     pub struct OperatorCalendar {
         pub id: i32,
         pub name: String,
@@ -168,7 +168,7 @@ pub(crate) mod responses {
         pub operator_id: i32,
     }
 
-    #[derive(Debug, Serialize, Component)]
+    #[derive(Debug, Serialize, ToSchema)]
     pub struct OperatorNewsItem {
         pub id: i32,
         pub summary: String,
@@ -181,11 +181,11 @@ pub(crate) mod responses {
 
 pub(crate) mod requests {
     use serde::Deserialize;
-    use utoipa::Component;
+    use utoipa::ToSchema;
 
     use super::Calendar;
 
-    #[derive(Debug, Deserialize, Component)]
+    #[derive(Debug, Deserialize, ToSchema)]
     pub struct NewOperatorCalendar {
         pub name: String,
         pub calendar: Calendar,

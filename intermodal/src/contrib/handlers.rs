@@ -17,19 +17,18 @@
 */
 
 use std::collections::HashMap;
-use std::sync::Arc;
 
-use axum::extract::{ContentLengthLimit, Multipart, Path};
-use axum::{Extension, Json};
+use axum::extract::{Multipart, Path, State};
+use axum::{Json};
 use chrono::Local;
 
 use super::{models, requests, responses, sql};
 use crate::errors::Error;
 use crate::utils::get_exactly_one_field;
-use crate::{auth, pics, stops, State};
+use crate::{auth, pics, stops, AppState};
 
 pub(crate) async fn get_user_contributions(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     claims: Option<auth::Claims>,
 ) -> Result<Json<Vec<models::Contribution>>, Error> {
     if claims.is_none() {
@@ -43,7 +42,7 @@ pub(crate) async fn get_user_contributions(
 }
 
 pub(crate) async fn get_latest_undecided_contributions(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     claims: Option<auth::Claims>,
 ) -> Result<Json<Vec<responses::Contribution>>, Error> {
     if let Some(claims) = claims {
@@ -58,7 +57,7 @@ pub(crate) async fn get_latest_undecided_contributions(
 }
 
 pub(crate) async fn get_latest_decided_contributions(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     claims: Option<auth::Claims>,
 ) -> Result<Json<Vec<responses::Contribution>>, Error> {
     if let Some(claims) = claims {
@@ -73,7 +72,7 @@ pub(crate) async fn get_latest_decided_contributions(
 }
 
 pub(crate) async fn get_changelog(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     claims: Option<auth::Claims>,
 ) -> Result<Json<Vec<responses::Changeset>>, Error> {
     if let Some(claims) = claims {
@@ -88,7 +87,7 @@ pub(crate) async fn get_changelog(
 }
 
 pub(crate) async fn post_contrib_stop_data(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     claims: Option<auth::Claims>,
     Path(stop_id): Path<i32>,
     Json(contribution): Json<requests::NewStopMetaContribution>,
@@ -138,12 +137,9 @@ pub(crate) async fn post_contrib_stop_data(
 }
 
 pub(crate) async fn post_contrib_stop_picture(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     claims: Option<auth::Claims>,
-    ContentLengthLimit(mut multipart): ContentLengthLimit<
-        Multipart,
-        { 30 * 1024 * 1024 },
-    >,
+    mut multipart: Multipart,
 ) -> Result<Json<HashMap<String, i64>>, Error> {
     if claims.is_none() {
         return Err(Error::Forbidden);
@@ -195,7 +191,7 @@ pub(crate) async fn post_contrib_stop_picture(
 }
 
 pub(crate) async fn patch_contrib_stop_picture_meta(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     claims: Option<auth::Claims>,
     Path(contribution_id): Path<i64>,
     Json(contribution_meta): Json<requests::NewPictureContribution>,
@@ -254,7 +250,7 @@ pub(crate) async fn patch_contrib_stop_picture_meta(
 }
 
 pub(crate) async fn post_accept_contrib_data(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     claims: Option<auth::Claims>,
     Path(contribution_id): Path<i64>,
 ) -> Result<(), Error> {
@@ -328,7 +324,7 @@ pub(crate) async fn post_accept_contrib_data(
 }
 
 pub(crate) async fn post_decline_contrib_data(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     claims: Option<auth::Claims>,
     Path(contribution_id): Path<i64>,
 ) -> Result<(), Error> {

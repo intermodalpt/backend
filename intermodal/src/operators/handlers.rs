@@ -17,31 +17,30 @@
 */
 
 use std::collections::HashMap;
-use std::sync::Arc;
 
-use axum::extract::{Path, Query};
-use axum::{Extension, Json};
+use axum::extract::{Path, Query, State};
+use axum::Json;
 use chrono::NaiveDate;
 use serde::Deserialize;
 
 use super::models::{self, requests, responses};
 use super::sql;
-use crate::{auth, Error, State};
+use crate::{auth, AppState, Error};
 
 pub(crate) async fn get_operators(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
 ) -> Result<Json<Vec<models::Operator>>, Error> {
     Ok(Json(sql::fetch_operators(&state.pool).await?))
 }
 
 pub(crate) async fn get_calendars(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
 ) -> Result<Json<Vec<responses::OperatorCalendar>>, Error> {
     Ok(Json(sql::fetch_calendars(&state.pool).await?))
 }
 
 pub(crate) async fn get_operator_calendars(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     Path(operator_id): Path<i32>,
 ) -> Result<Json<Vec<responses::OperatorCalendar>>, Error> {
     Ok(Json(
@@ -50,10 +49,10 @@ pub(crate) async fn get_operator_calendars(
 }
 
 pub(crate) async fn post_operator_calendar(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     Path(operator_id): Path<i32>,
-    Json(calendar): Json<requests::NewOperatorCalendar>,
     claims: Option<auth::Claims>,
+    Json(calendar): Json<requests::NewOperatorCalendar>,
 ) -> Result<Json<HashMap<String, i32>>, Error> {
     if claims.is_none() {
         return Err(Error::Forbidden);
@@ -71,7 +70,7 @@ pub(crate) async fn post_operator_calendar(
 }
 
 pub(crate) async fn delete_operator_calendar(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     Path((operator_id, calendar_id)): Path<(i32, i32)>,
     claims: Option<auth::Claims>,
 ) -> Result<(), Error> {
@@ -88,7 +87,7 @@ pub(crate) async fn delete_operator_calendar(
 }
 
 pub(crate) async fn get_operator_calendars_for_date(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     Path((operator_id, date)): Path<(i32, String)>,
 ) -> Result<Json<Vec<responses::OperatorCalendar>>, Error> {
     let date = NaiveDate::parse_from_str(&date, "%Y-%m-%d")
@@ -108,7 +107,7 @@ pub(crate) struct Page {
 const PAGE_SIZE: u32 = 20;
 
 pub(crate) async fn get_news(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     paginator: Query<Page>,
 ) -> Result<Json<Vec<models::NewsItem>>, Error> {
     let offset = i64::from(paginator.p * PAGE_SIZE);
@@ -118,7 +117,7 @@ pub(crate) async fn get_news(
 }
 
 pub(crate) async fn get_operator_news(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
     Path(operator_id): Path<i32>,
     paginator: Query<Page>,
 ) -> Result<Json<Vec<responses::OperatorNewsItem>>, Error> {

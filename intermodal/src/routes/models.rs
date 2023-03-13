@@ -50,9 +50,9 @@ pub struct Departure {
 pub(crate) mod requests {
     use crate::contrib::models::{DeparturePatch, RoutePatch, SubroutePatch};
     use serde::Deserialize;
-    use utoipa::Component;
+    use utoipa::ToSchema;
 
-    #[derive(Deserialize, Component)]
+    #[derive(Deserialize, ToSchema)]
     pub struct ChangeRoute {
         pub code: Option<String>,
         pub name: String,
@@ -105,7 +105,7 @@ pub(crate) mod requests {
         }
     }
 
-    #[derive(Deserialize, Component)]
+    #[derive(Deserialize, ToSchema)]
     pub struct ChangeSubroute {
         pub flag: String,
         pub circular: bool,
@@ -142,18 +142,18 @@ pub(crate) mod requests {
         }
     }
 
-    #[derive(Deserialize, Component)]
+    #[derive(Deserialize, ToSchema)]
     pub struct SubrouteStops {
         pub stops: Vec<i32>,
     }
 
-    #[derive(Deserialize, Component)]
+    #[derive(Deserialize, ToSchema)]
     pub struct ChangeSubrouteStops {
         pub from: SubrouteStops,
         pub to: SubrouteStops,
     }
 
-    #[derive(Debug, Deserialize, Component)]
+    #[derive(Debug, Deserialize, ToSchema)]
     pub struct ChangeDeparture {
         pub time: i16,
         pub calendar_id: i32,
@@ -178,18 +178,18 @@ pub(crate) mod requests {
 
 pub(crate) mod responses {
     use serde::Serialize;
-    use utoipa::Component;
+    use utoipa::ToSchema;
 
-    #[derive(Serialize, Component)]
+    #[derive(Serialize, ToSchema)]
     pub struct Route {
         pub(crate) id: i32,
         pub(crate) type_id: i32,
         pub(crate) operator: i32,
         pub(crate) subroutes: Vec<Subroute>,
-        #[component(example = "Azeitão (Circular)")]
+        #[schema(example = "Azeitão (Circular)")]
         pub(crate) code: Option<String>,
         pub(crate) name: String,
-        #[component(example = true)]
+        #[schema(example = true)]
         pub(crate) circular: bool,
         pub(crate) main_subroute: Option<i32>,
         pub(crate) badge_text: String,
@@ -198,33 +198,33 @@ pub(crate) mod responses {
         pub(crate) parishes: Vec<i16>,
     }
 
-    #[derive(Debug, Serialize, Component)]
+    #[derive(Debug, Serialize, ToSchema)]
     pub struct Subroute {
         pub(crate) id: i32,
-        #[component(example = "Azeitão (Circular)")]
+        #[schema(example = "Azeitão (Circular)")]
         pub(crate) flag: String,
         pub(crate) circular: bool,
         pub(crate) polyline: Option<String>,
     }
 
-    #[derive(Serialize, Component)]
+    #[derive(Serialize, ToSchema)]
     pub struct Departure {
         pub id: i32,
         pub subroute: i32,
         // Departure time in minutes starting at midnight
-        #[component(example = 480)]
+        #[schema(example = 480)]
         pub time: i16,
         pub calendar_id: i32,
     }
 
-    #[derive(Serialize, Component)]
+    #[derive(Serialize, ToSchema)]
     pub struct DateDeparture {
         pub subroute: i32,
-        #[component(example = 480)]
+        #[schema(example = 480)]
         pub time: i16,
     }
 
-    #[derive(Serialize, Component)]
+    #[derive(Serialize, ToSchema)]
     pub struct SubrouteStops {
         pub subroute: i32,
         pub stops: Vec<i32>,

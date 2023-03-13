@@ -17,17 +17,17 @@
 */
 
 use serde::Serialize;
-use utoipa::Component;
+use utoipa::ToSchema;
 
-#[derive(Serialize, Component)]
+#[derive(Serialize, ToSchema)]
 pub struct Parish {
     pub id: i32,
-    #[component(example = "Quinta do Conde")]
+    #[schema(example = "Quinta do Conde")]
     pub name: String,
-    #[component(example = "Sesimbra")]
+    #[schema(example = "Sesimbra")]
     pub municipality: String,
-    #[component(example = 3)]
+    #[schema(example = 3)]
     pub zone: i32,
-    #[component(example = "GeoJSON polygon")]
+    #[schema(example = "GeoJSON polygon")]
     pub polygon: Option<String>,
 }

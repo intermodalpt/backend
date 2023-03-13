@@ -16,40 +16,14 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use std::sync::Arc;
-
-use axum::extract::Path;
-use axum::http::StatusCode;
+use axum::extract::State;
 use axum::response::IntoResponse;
-use axum::{Extension, Json};
-use utoipa_swagger_ui::Config;
+use axum::Json;
 
-use crate::State;
+use crate::AppState;
 
 pub(crate) async fn get_stats(
-    Extension(state): Extension<Arc<State>>,
+    State(state): State<AppState>,
 ) -> impl IntoResponse {
     Json(&state.stats).into_response()
-}
-
-#[allow(clippy::unused_async)]
-pub(crate) async fn serve_swagger_ui(
-    Path(tail): Path<String>,
-    Extension(state): Extension<Arc<Config<'static>>>,
-) -> impl IntoResponse {
-    match utoipa_swagger_ui::serve(&tail[1..], state) {
-        Ok(file) => file.map_or_else(
-            || StatusCode::NOT_FOUND.into_response(),
-            |file| {
-                (
-                    StatusCode::OK,
-                    [("Content-Type", file.content_type)],
-                    file.bytes,
-                )
-                    .into_response()
-            },
-        ),
-        Err(error) => (StatusCode::INTERNAL_SERVER_ERROR, error.to_string())
-            .into_response(),
-    }
 }

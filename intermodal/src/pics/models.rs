@@ -17,9 +17,9 @@
 */
 
 use serde::{Deserialize, Serialize};
-use utoipa::Component;
+use utoipa::ToSchema;
 
-#[derive(Debug, Serialize, Component)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct TaggedStopPic {
     pub id: i32,
     pub original_filename: String,
@@ -43,7 +43,7 @@ pub struct TaggedStopPic {
     pub tagged: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Component)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct StopPic {
     pub id: i32,
     pub original_filename: String,
@@ -61,7 +61,7 @@ pub struct StopPic {
     pub dyn_meta: StopPicDynMeta,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Component)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct StopPicDynMeta {
     pub public: bool,
     pub sensitive: bool,
@@ -75,9 +75,9 @@ pub struct StopPicDynMeta {
 pub(crate) mod requests {
     use crate::contrib;
     use serde::Deserialize;
-    use utoipa::Component;
+    use utoipa::ToSchema;
 
-    #[derive(Debug, Deserialize, Component)]
+    #[derive(Debug, Deserialize, ToSchema)]
     pub struct ChangeStopPic {
         pub public: bool,
         pub sensitive: bool,
@@ -127,9 +127,9 @@ pub(crate) mod responses {
         get_full_path, get_medium_path, get_original_path, get_thumb_path,
     };
     use serde::Serialize;
-    use utoipa::Component;
+    use utoipa::ToSchema;
 
-    #[derive(Debug, Serialize, Component)]
+    #[derive(Debug, Serialize, ToSchema)]
     pub struct PublicStopPic {
         pub id: i32,
         // TODO deprecate
@@ -161,7 +161,7 @@ pub(crate) mod responses {
         }
     }
 
-    #[derive(Debug, Serialize, Component)]
+    #[derive(Debug, Serialize, ToSchema)]
     pub struct StopPic {
         pub id: i32,
         pub original_filename: String,
@@ -220,7 +220,7 @@ pub(crate) mod responses {
         }
     }
 
-    #[derive(Debug, Serialize, Component)]
+    #[derive(Debug, Serialize, ToSchema)]
     pub struct UntaggedStopPic {
         pub id: i32,
         pub original_filename: String,

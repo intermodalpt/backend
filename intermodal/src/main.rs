@@ -37,18 +37,21 @@ mod routes;
 mod stops;
 mod utils;
 
-use errors::Error;
-
 use std::net::SocketAddr;
 use std::sync::Arc;
 
 use axum::http::Method;
 use axum::routing::{delete, get, patch, post};
-use axum::{Extension, Json, Router};
+use axum::Router;
 use config::Config;
 use sqlx::postgres::PgPool;
 use tower_http::cors::{Any, CorsLayer};
 use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
+
+use errors::Error;
+
+pub(crate) type AppState = Arc<State>;
 
 #[derive(Clone)]
 pub(crate) struct State {
@@ -57,11 +60,7 @@ pub(crate) struct State {
     pub(crate) stats: Stats,
 }
 
-pub(crate) fn build_paths(state: State) -> Router {
-    let api_doc = ApiDoc::openapi();
-    let config =
-        Arc::new(utoipa_swagger_ui::Config::from("/api-doc/openapi.json"));
-
+pub(crate) fn build_paths(state: AppState) -> Router {
     let cors = CorsLayer::new()
         .allow_methods([
             Method::HEAD,
@@ -75,8 +74,13 @@ pub(crate) fn build_paths(state: State) -> Router {
         .allow_origin(Any);
 
     Router::new()
+        .merge(
+            SwaggerUi::new("/docs")
+                .url("/api-doc/openapi.json", ApiDoc::openapi()),
+        )
         .route("/v1/parishes", get(geo::handlers::get_parishes))
         .route("/v1/stops", get(stops::handlers::get_stops))
+        .route("/v1/stops/:stop_id", get(stops::handlers::get_stop))
         .route("/v1/stops/create", post(stops::handlers::create_stop))
         .route(
             "/v1/stops/update/:stop_id",
@@ -224,19 +228,15 @@ pub(crate) fn build_paths(state: State) -> Router {
             get(operators::handlers::get_operator_news),
         )
         .route("/v1/actions/import_osm", get(geo::handlers::import_osm))
+        .route(
+            "/v1/actions/migrate_stop/:original_id/:replacement_id",
+            post(routes::handlers::post_replace_stop_across_routes),
+        )
         .route("/v1/auth/login", post(auth::handlers::post_login))
         .route("/v1/auth/register", post(auth::handlers::post_register))
         .route("/v1/auth/check", get(auth::handlers::check_auth))
         .route("/v1/stats", get(misc::handlers::get_stats))
-        .layer(Extension(Arc::new(state)))
-        .route(
-            "/api-doc/openapi.json",
-            get(move || async { Json(api_doc) }),
-        )
-        .route(
-            "/docs/*tail",
-            get(misc::handlers::serve_swagger_ui).layer(Extension(config)),
-        )
+        .with_state(state)
         .layer(cors)
 }
 
@@ -293,11 +293,11 @@ async fn main() {
         .await
         .expect("Unable to connect to the database");
     let stats = misc::sql::get_stats(&pool).await.unwrap();
-    let state = State {
+    let state = Arc::new(State {
         bucket,
         pool,
         stats,
-    };
+    });
 
     let addr = SocketAddr::from((
         [0, 0, 0, 0],
@@ -320,14 +320,14 @@ use stops::models::Stop;
 
 #[derive(OpenApi)]
 #[openapi(
-    handlers(
+    paths(
         geo::handlers::get_parishes,
         stops::handlers::get_stops,
         routes::handlers::get_routes,
         routes::handlers::get_schedule,
         routes::handlers::get_route_stops,
     ),
-    components(
+    components(schemas(
         Stop,
         Calendar,
         Weekday,
@@ -337,7 +337,7 @@ use stops::models::Stop;
         Route,
         Subroute,
         SubrouteStops,
-    ),
+    )),
     tags()
 )]
 struct ApiDoc;
