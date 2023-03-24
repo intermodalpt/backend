@@ -735,78 +735,141 @@ pub(crate) mod requests {
             let mut patch = super::StopPatch::default();
 
             if self.locality != stop.locality {
-                patch.locality = Some(self.locality)
+                patch.locality = Some(self.locality.clone());
             }
             if self.street != stop.street {
-                patch.street = Some(self.street)
+                patch.street = Some(self.street.clone());
             }
             if self.door != stop.door {
-                patch.door = Some(self.door)
+                patch.door = Some(self.door.clone());
             }
-            if self.a11y.has_crossing != stop.a11y.has_crossing {
-                patch.has_crossing = Some(self.a11y.has_crossing)
+
+            if self.a11y.schedules != stop.a11y.schedules {
+                patch.schedules = Some(self.a11y.schedules.clone());
             }
-            if self.a11y.has_schedules != stop.a11y.has_schedules {
-                patch.has_schedules = Some(self.a11y.has_schedules)
+            if self.a11y.flags != stop.a11y.flags {
+                patch.flags = Some(self.a11y.flags.clone());
             }
+
             if self.a11y.has_sidewalk != stop.a11y.has_sidewalk {
-                patch.has_sidewalk = Some(self.a11y.has_sidewalk)
+                patch.has_sidewalk = Some(self.a11y.has_sidewalk);
             }
+            if self.a11y.has_sidewalked_path != stop.a11y.has_sidewalked_path {
+                patch.has_sidewalked_path = Some(self.a11y.has_sidewalked_path);
+            }
+
             if self.a11y.has_shelter != stop.a11y.has_shelter {
-                patch.has_shelter = Some(self.a11y.has_shelter)
+                patch.has_shelter = Some(self.a11y.has_shelter);
+            }
+            if self.a11y.has_cover != stop.a11y.has_cover {
+                patch.has_cover = Some(self.a11y.has_cover);
             }
             if self.a11y.has_bench != stop.a11y.has_bench {
-                patch.has_bench = Some(self.a11y.has_bench)
+                patch.has_bench = Some(self.a11y.has_bench);
             }
             if self.a11y.has_trash_can != stop.a11y.has_trash_can {
-                patch.has_trash_can = Some(self.a11y.has_trash_can)
+                patch.has_trash_can = Some(self.a11y.has_trash_can);
             }
+            if self.a11y.has_waiting_times != stop.a11y.has_waiting_times {
+                patch.has_waiting_times = Some(self.a11y.has_waiting_times);
+            }
+            if self.a11y.has_costumer_support != stop.a11y.has_costumer_support
+            {
+                patch.has_costumer_support =
+                    Some(self.a11y.has_costumer_support);
+            }
+            if self.a11y.advertisement_qty != stop.a11y.advertisement_qty {
+                patch.advertisement_qty = Some(self.a11y.advertisement_qty);
+            }
+
+            if self.a11y.has_crossing != stop.a11y.has_crossing {
+                patch.has_crossing = Some(self.a11y.has_crossing);
+            }
+
+            if self.a11y.has_wide_access != stop.a11y.has_wide_access {
+                patch.has_wide_access = Some(self.a11y.has_wide_access);
+            }
+            if self.a11y.has_flat_access != stop.a11y.has_flat_access {
+                patch.has_flat_access = Some(self.a11y.has_flat_access);
+            }
+            if self.a11y.has_tactile_access != stop.a11y.has_tactile_access {
+                patch.has_tactile_access = Some(self.a11y.has_tactile_access);
+            }
+
             if self.a11y.illumination_strength
                 != stop.a11y.illumination_strength
             {
                 patch.illumination_strength =
-                    Some(self.a11y.illumination_strength)
+                    Some(self.a11y.illumination_strength);
             }
             if self.a11y.illumination_position
                 != stop.a11y.illumination_position
             {
                 patch.illumination_position =
-                    Some(self.a11y.illumination_position)
-            }
-            if self.a11y.is_illumination_working
-                != stop.a11y.is_illumination_working
-            {
-                patch.is_illumination_working =
-                    Some(self.a11y.is_illumination_working)
+                    Some(self.a11y.illumination_position);
             }
             if self.a11y.has_illuminated_path != stop.a11y.has_illuminated_path
             {
                 patch.has_illuminated_path =
-                    Some(self.a11y.has_illuminated_path)
+                    Some(self.a11y.has_illuminated_path);
             }
             if self.a11y.has_visibility_from_within
                 != stop.a11y.has_visibility_from_within
             {
                 patch.has_visibility_from_within =
-                    Some(self.a11y.has_visibility_from_within)
+                    Some(self.a11y.has_visibility_from_within);
             }
             if self.a11y.has_visibility_from_area
                 != stop.a11y.has_visibility_from_area
             {
                 patch.has_visibility_from_area =
-                    Some(self.a11y.has_visibility_from_area)
+                    Some(self.a11y.has_visibility_from_area);
             }
             if self.a11y.is_visible_from_outside
                 != stop.a11y.is_visible_from_outside
             {
                 patch.is_visible_from_outside =
-                    Some(self.a11y.is_visible_from_outside)
+                    Some(self.a11y.is_visible_from_outside);
+            }
+
+            if self.a11y.parking_visibility_impairment
+                != stop.a11y.parking_visibility_impairment
+            {
+                patch.parking_visibility_impairment =
+                    Some(self.a11y.parking_visibility_impairment);
+            }
+
+            if self.a11y.parking_local_access_impairment
+                != stop.a11y.parking_local_access_impairment
+            {
+                patch.parking_local_access_impairment =
+                    Some(self.a11y.parking_local_access_impairment);
+            }
+
+            if self.a11y.parking_area_access_impairment
+                != stop.a11y.parking_area_access_impairment
+            {
+                patch.parking_area_access_impairment =
+                    Some(self.a11y.parking_area_access_impairment);
+            }
+
+            if self.a11y.tmp_issues != stop.a11y.tmp_issues {
+                patch.tmp_issues = Some(self.a11y.tmp_issues.clone());
             }
             if self.tags != stop.tags {
                 patch.tags = Some(self.tags)
             }
             if self.notes != stop.notes {
                 patch.notes = Some(self.notes)
+            }
+
+            if self.service_check_date != stop.service_check_date {
+                patch.service_check_date = Some(self.service_check_date);
+            }
+            if self.infrastructure_check_date != stop.infrastructure_check_date
+            {
+                patch.infrastructure_check_date =
+                    Some(self.infrastructure_check_date);
             }
 
             patch
