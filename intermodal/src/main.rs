@@ -40,12 +40,14 @@ mod utils;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
+use axum::extract::DefaultBodyLimit;
 use axum::http::Method;
 use axum::routing::{delete, get, patch, post};
 use axum::Router;
 use config::Config;
 use sqlx::postgres::PgPool;
 use tower_http::cors::{Any, CorsLayer};
+use tower_http::limit::RequestBodyLimitLayer;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
@@ -237,6 +239,8 @@ pub(crate) fn build_paths(state: AppState) -> Router {
         .route("/v1/auth/check", get(auth::handlers::check_auth))
         .route("/v1/stats", get(misc::handlers::get_stats))
         .with_state(state)
+        .layer(DefaultBodyLimit::disable())
+        .layer(RequestBodyLimitLayer::new(30 * 1024 * 1024 /* 30mb */))
         .layer(cors)
 }
 
