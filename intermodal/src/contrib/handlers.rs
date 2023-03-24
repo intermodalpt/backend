@@ -18,26 +18,129 @@
 
 use std::collections::HashMap;
 
-use axum::extract::{Multipart, Path, State};
-use axum::{Json};
+use axum::extract::{Multipart, Path, Query, State};
+use axum::Json;
 use chrono::Local;
+use serde::Deserialize;
 
 use super::{models, requests, responses, sql};
 use crate::errors::Error;
 use crate::utils::get_exactly_one_field;
 use crate::{auth, pics, stops, AppState};
 
-pub(crate) async fn get_user_contributions(
+#[derive(Deserialize, Default)]
+pub(crate) struct Page {
+    #[serde(default)]
+    p: u32,
+}
+
+const PAGE_SIZE: u32 = 100;
+
+pub(crate) async fn get_decided_own_contributions(
     State(state): State<AppState>,
     claims: Option<auth::Claims>,
+    paginator: Query<Page>,
 ) -> Result<Json<Vec<models::Contribution>>, Error> {
     if claims.is_none() {
         return Err(Error::Forbidden);
     }
+
     let user_id = claims.unwrap().uid;
 
+    let offset = i64::from(paginator.p * PAGE_SIZE);
+    let take = i64::from(PAGE_SIZE);
+
     Ok(Json(
-        sql::fetch_user_contributions(&state.pool, user_id).await?,
+        sql::fetch_decided_user_contributions(
+            &state.pool,
+            user_id,
+            offset,
+            take,
+        )
+        .await?,
+    ))
+}
+
+pub(crate) async fn get_undecided_own_contributions(
+    State(state): State<AppState>,
+    claims: Option<auth::Claims>,
+    paginator: Query<Page>,
+) -> Result<Json<Vec<models::Contribution>>, Error> {
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+
+    let user_id = claims.unwrap().uid;
+
+    let offset = i64::from(paginator.p * PAGE_SIZE);
+    let take = i64::from(PAGE_SIZE);
+
+    Ok(Json(
+        sql::fetch_undecided_user_contributions(
+            &state.pool,
+            user_id,
+            offset,
+            take,
+        )
+        .await?,
+    ))
+}
+
+pub(crate) async fn get_decided_user_contributions(
+    State(state): State<AppState>,
+    claims: Option<auth::Claims>,
+    Path(user_id): Path<i32>,
+    paginator: Query<Page>,
+) -> Result<Json<Vec<models::Contribution>>, Error> {
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
+    let offset = i64::from(paginator.p * PAGE_SIZE);
+    let take = i64::from(PAGE_SIZE);
+
+    Ok(Json(
+        sql::fetch_decided_user_contributions(
+            &state.pool,
+            user_id,
+            offset,
+            take,
+        )
+        .await?,
+    ))
+}
+
+pub(crate) async fn get_undecided_user_contributions(
+    State(state): State<AppState>,
+    claims: Option<auth::Claims>,
+    Path(user_id): Path<i32>,
+    paginator: Query<Page>,
+) -> Result<Json<Vec<models::Contribution>>, Error> {
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
+    let offset = i64::from(paginator.p * PAGE_SIZE);
+    let take = i64::from(PAGE_SIZE);
+
+    Ok(Json(
+        sql::fetch_undecided_user_contributions(
+            &state.pool,
+            user_id,
+            offset,
+            take,
+        )
+        .await?,
     ))
 }
 

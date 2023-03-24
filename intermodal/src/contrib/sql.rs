@@ -61,18 +61,63 @@ WHERE id=$1
     }
 }
 
-pub(crate) async fn fetch_user_contributions(
+pub(crate) async fn fetch_decided_user_contributions(
     pool: &PgPool,
     user_id: i32,
+    skip: i64,
+    take: i64,
 ) -> Result<Vec<models::Contribution>> {
     sqlx::query!(
         r#"
 SELECT id, author_id, change, submission_date, accepted,
     evaluator_id, evaluation_date, comment
 FROM Contributions
-WHERE author_id=$1
+WHERE accepted IS NOT NULL AND author_id=$1
+ORDER BY submission_date DESC
+LIMIT $2 OFFSET $3
     "#,
-        user_id
+        user_id,
+        take,
+        skip
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .into_iter()
+    .map(|r| {
+        Ok(models::Contribution {
+            id: r.id,
+            author_id: r.author_id,
+            change: serde_json::from_value(r.change)
+                .map_err(|_e| Error::DatabaseDeserialization)?,
+            submission_date: r.submission_date.with_timezone(&Local),
+            accepted: r.accepted,
+            evaluator_id: r.evaluator_id,
+            evaluation_date: r.evaluation_date.map(|d| d.with_timezone(&Local)),
+            comment: r.comment,
+        })
+    })
+    .collect::<Result<Vec<models::Contribution>>>()
+}
+
+pub(crate) async fn fetch_undecided_user_contributions(
+    pool: &PgPool,
+    user_id: i32,
+    skip: i64,
+    take: i64,
+) -> Result<Vec<models::Contribution>> {
+    sqlx::query!(
+        r#"
+SELECT id, author_id, change, submission_date, accepted,
+    evaluator_id, evaluation_date, comment
+FROM Contributions
+WHERE accepted is NULL AND author_id=$1
+ORDER BY submission_date DESC
+LIMIT $2 OFFSET $3
+    "#,
+        user_id,
+        take,
+        skip
     )
     .fetch_all(pool)
     .await

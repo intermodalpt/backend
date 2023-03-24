@@ -174,13 +174,27 @@ pub(crate) fn build_paths(state: AppState) -> Router {
             post(pics::handlers::upload_dangling_stop_picture),
         )
         .route(
-            "/v1/contrib/changelog/contributions",
-            get(contrib::handlers::get_user_contributions),
+            "/v1/contrib/contributions/own/decided",
+            get(contrib::handlers::get_decided_own_contributions),
         )
+        .route(
+            "/v1/contrib/contributions/own/undecided",
+            get(contrib::handlers::get_undecided_own_contributions),
+        )
+        .route(
+            "/v1/contrib/contributions/:user_id/decided",
+            get(contrib::handlers::get_decided_user_contributions),
+        )
+        .route(
+            "/v1/contrib/contributions/:user_id/undecided",
+            get(contrib::handlers::get_undecided_user_contributions),
+        )
+        // TODO deprecate
         .route(
             "/v1/contrib/contributions/undecided",
             get(contrib::handlers::get_latest_undecided_contributions),
         )
+        // TODO deprecate
         .route(
             "/v1/contrib/contributions/decided",
             get(contrib::handlers::get_latest_decided_contributions),
