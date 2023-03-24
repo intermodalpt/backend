@@ -81,8 +81,8 @@ pub(crate) mod requests {
     pub struct ChangeStopPic {
         pub public: bool,
         pub sensitive: bool,
-        pub lon: f64,
-        pub lat: f64,
+        pub lon: Option<f64>,
+        pub lat: Option<f64>,
         pub tags: Vec<String>,
         pub stops: Vec<i32>,
         pub notes: Option<String>,
@@ -102,11 +102,11 @@ pub(crate) mod requests {
             if self.sensitive != pic.dyn_meta.sensitive {
                 patch.sensitive = Some(self.sensitive);
             }
-            if Some(self.lon) != pic.dyn_meta.lon {
-                patch.lon = Some(Some(self.lon));
+            if self.lon != pic.dyn_meta.lon {
+                patch.lon = Some(self.lon);
             }
-            if Some(self.lat) != pic.dyn_meta.lat {
-                patch.lat = Some(Some(self.lat));
+            if self.lat != pic.dyn_meta.lat {
+                patch.lat = Some(self.lat);
             }
             if self.quality != pic.dyn_meta.quality {
                 patch.quality = Some(self.quality);
