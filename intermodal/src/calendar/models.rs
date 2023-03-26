@@ -328,7 +328,7 @@ mod test {
 
     #[test]
     fn yes_holiday() {
-        let date = NaiveDate::from_ymd(2022, 12, 25);
+        let date = NaiveDate::from_ymd_opt(2022, 12, 25).unwrap();
         let cal = Calendar {
             weekdays: EVERY_DAY.to_vec(),
             only_if: vec![Condition::Holiday],
@@ -340,7 +340,7 @@ mod test {
 
     #[test]
     fn no_holiday() {
-        let date = NaiveDate::from_ymd(2022, 12, 24);
+        let date = NaiveDate::from_ymd_opt(2022, 12, 24).unwrap();
         let cal = Calendar {
             weekdays: EVERY_DAY.to_vec(),
             only_if: vec![Condition::Holiday],
@@ -352,7 +352,7 @@ mod test {
 
     #[test]
     fn no_pre_summer_start() {
-        let date = NaiveDate::from_ymd(2022, 06, 22);
+        let date = NaiveDate::from_ymd_opt(2022, 06, 22).unwrap();
         let cal = Calendar {
             weekdays: EVERY_DAY.to_vec(),
             only_if: vec![Condition::Summer],
@@ -364,7 +364,7 @@ mod test {
 
     #[test]
     fn yes_summer_start() {
-        let date = NaiveDate::from_ymd(2022, 06, 23);
+        let date = NaiveDate::from_ymd_opt(2022, 06, 23).unwrap();
         let cal = Calendar {
             weekdays: EVERY_DAY.to_vec(),
             only_if: vec![Condition::Summer],
@@ -376,7 +376,7 @@ mod test {
 
     #[test]
     fn yes_summer_end() {
-        let date = NaiveDate::from_ymd(2022, 09, 23);
+        let date = NaiveDate::from_ymd_opt(2022, 09, 23).unwrap();
         let cal = Calendar {
             weekdays: EVERY_DAY.to_vec(),
             only_if: vec![Condition::Summer],
@@ -388,7 +388,7 @@ mod test {
 
     #[test]
     fn no_summer_post_end() {
-        let date = NaiveDate::from_ymd(2022, 09, 24);
+        let date = NaiveDate::from_ymd_opt(2022, 09, 24).unwrap();
         let cal = Calendar {
             weekdays: EVERY_DAY.to_vec(),
             only_if: vec![Condition::Summer],
@@ -400,7 +400,7 @@ mod test {
 
     #[test]
     fn no_pre_school_start() {
-        let date = NaiveDate::from_ymd(2022, 01, 04);
+        let date = NaiveDate::from_ymd_opt(2022, 01, 04).unwrap();
         let cal = Calendar {
             weekdays: EVERY_DAY.to_vec(),
             only_if: vec![Condition::School],
@@ -412,7 +412,7 @@ mod test {
 
     #[test]
     fn yes_school_start() {
-        let date = NaiveDate::from_ymd(2022, 01, 05);
+        let date = NaiveDate::from_ymd_opt(2022, 01, 05).unwrap();
         let cal = Calendar {
             weekdays: EVERY_DAY.to_vec(),
             only_if: vec![Condition::School],
@@ -424,7 +424,7 @@ mod test {
 
     #[test]
     fn yes_school_end() {
-        let date = NaiveDate::from_ymd(2022, 12, 15);
+        let date = NaiveDate::from_ymd_opt(2022, 12, 15).unwrap();
         let cal = Calendar {
             weekdays: EVERY_DAY.to_vec(),
             only_if: vec![Condition::School],
@@ -436,7 +436,7 @@ mod test {
 
     #[test]
     fn no_school_post_end() {
-        let date = NaiveDate::from_ymd(2022, 12, 16);
+        let date = NaiveDate::from_ymd_opt(2022, 12, 16).unwrap();
         let cal = Calendar {
             weekdays: EVERY_DAY.to_vec(),
             only_if: vec![Condition::School],
@@ -448,7 +448,7 @@ mod test {
 
     #[test]
     fn allow_exception() {
-        let date = NaiveDate::from_ymd(2022, 12, 25);
+        let date = NaiveDate::from_ymd_opt(2022, 12, 25).unwrap();
         let cal = Calendar {
             weekdays: vec![],
             only_if: vec![],
@@ -460,7 +460,7 @@ mod test {
 
     #[test]
     fn deny_exemption() {
-        let date = NaiveDate::from_ymd(2022, 12, 25);
+        let date = NaiveDate::from_ymd_opt(2022, 12, 25).unwrap();
         let cal = Calendar {
             weekdays: EVERY_DAY.to_vec(),
             only_if: vec![],
@@ -472,7 +472,7 @@ mod test {
 
     #[test]
     fn yes_single_weekday() {
-        let date = NaiveDate::from_ymd(2022, 12, 15);
+        let date = NaiveDate::from_ymd_opt(2022, 12, 18).unwrap();
         let cal = Calendar {
             weekdays: vec![Weekday::Sunday],
             only_if: vec![],
@@ -484,7 +484,7 @@ mod test {
 
     #[test]
     fn yes_multiple_weekdays() {
-        let date = NaiveDate::from_ymd(2022, 12, 15);
+        let date = NaiveDate::from_ymd_opt(2022, 12, 17).unwrap();
         let cal = Calendar {
             weekdays: WEEKEND.to_vec(),
             only_if: vec![],
@@ -496,7 +496,7 @@ mod test {
 
     #[test]
     fn no_single_weekday() {
-        let date = NaiveDate::from_ymd(2022, 12, 15);
+        let date = NaiveDate::from_ymd_opt(2022, 12, 15).unwrap();
         let cal = Calendar {
             weekdays: vec![],
             only_if: vec![],
@@ -508,7 +508,7 @@ mod test {
 
     #[test]
     fn no_multiple_weekdays() {
-        let date = NaiveDate::from_ymd(2022, 12, 15);
+        let date = NaiveDate::from_ymd_opt(2022, 12, 17).unwrap();
         let cal = Calendar {
             weekdays: BUSINESS_WEEKDAYS.to_vec(),
             only_if: vec![],

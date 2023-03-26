@@ -514,13 +514,31 @@ pub(crate) mod responses {
 
 #[cfg(test)]
 mod test {
-    use super::{A11yMeta, IlluminationPos, IlluminationStrength, Stop};
+    use super::{
+        A11yMeta, AdvertisementQuantification, AreaParkingLimitation,
+        IlluminationPos, IlluminationStrength, LocalParkingLimitation,
+        ParkingVisualLimitation, ScheduleType, Stop,
+    };
+    use crate::stops::models::{Flag, Schedule};
+    use chrono::NaiveDate;
 
     #[test]
     fn serialize_deserialize_a11y() {
         let a11y = A11yMeta {
+            schedules: Some(vec![Schedule {
+                code: Some("123".to_string()),
+                discriminator: Some("321".to_string()),
+                schedule_type: ScheduleType::Origin,
+            }]),
+            flags: Some(vec![Flag {
+                id: "123".to_string(),
+                name: Some("ABC".to_string()),
+                route_codes: vec!["1234".to_string(), "4321".to_string()],
+            }]),
             has_crossing: Some(false),
-            has_accessibility: None,
+            has_wide_access: None,
+            has_flat_access: Some(true),
+            has_accessibility: Some(true),
             has_abusive_parking: Some(true),
             has_outdated_info: Some(true),
             is_damaged: Some(true),
@@ -528,9 +546,14 @@ mod test {
             has_flag: Some(true),
             has_schedules: Some(true),
             has_sidewalk: Some(true),
+            has_sidewalked_path: Some(true),
             has_shelter: Some(true),
+            has_cover: Some(true),
             has_bench: Some(true),
             has_trash_can: Some(true),
+            has_waiting_times: Some(true),
+            has_ticket_seller: Some(true),
+            has_costumer_support: Some(true),
             illumination_strength: Some(IlluminationStrength::High),
             illumination_position: Some(IlluminationPos::Own),
             is_illumination_working: Some(true),
@@ -538,6 +561,16 @@ mod test {
             has_visibility_from_within: Some(true),
             has_visibility_from_area: Some(true),
             is_visible_from_outside: Some(true),
+            parking_visibility_impairment: Some(
+                ParkingVisualLimitation::Little,
+            ),
+            parking_local_access_impairment: Some(
+                LocalParkingLimitation::Medium,
+            ),
+            parking_area_access_impairment: Some(AreaParkingLimitation::Medium),
+            advertisement_qty: Some(AdvertisementQuantification::Many),
+            has_tactile_access: Some(true),
+            tmp_issues: vec!["foo".to_string(), "bar".to_string()],
         };
         let json = serde_json::to_string(&a11y).unwrap();
 
@@ -548,14 +581,21 @@ mod test {
     #[test]
     fn deserialize_a11y() {
         let json = r#"{
+            "schedules": [
+                {
+                    "code": "123",
+                    "discriminator": "321",
+                    "type": "origin"
+                }
+            ],
+            "flags": [
+                {
+                    "id": "123",
+                    "name": "ABC",
+                    "route_codes": ["1234", "4321"]
+                }
+            ],
             "has_crossing": false,
-            "has_accessibility": null,
-            "has_abusive_parking": true,
-            "has_outdated_info": true,
-            "is_damaged": true,
-            "is_vandalized": true,
-            "has_flag": true,
-            "has_schedules": true,
             "has_sidewalk": true,
             "has_shelter": true,
             "has_bench": true,
@@ -566,23 +606,47 @@ mod test {
             "has_illuminated_path": true,
             "has_visibility_from_within": true,
             "has_visibility_from_area": true,
-            "is_visible_from_outside": true
+            "is_visible_from_outside": true,
+            "advertisement_qty": 4,
+            "has_sidewalked_path": true,
+            "has_cover": true,
+            "has_waiting_times": true,
+            "has_ticket_seller": true,
+            "has_costumer_support": true,
+            "has_wide_access": true,
+            "has_flat_access": true,
+            "has_tactile_access": true,
+            "parking_visibility_impairment": 2,
+            "parking_local_access_impairment": 4,
+            "parking_area_access_impairment": 4
         }"#;
         let a11y: A11yMeta = serde_json::from_str(&json).unwrap();
 
+        println!("{}", serde_json::to_string(&a11y).unwrap());
+
         let a11y2 = A11yMeta {
+            schedules: Some(vec![Schedule {
+                code: Some("123".to_string()),
+                discriminator: Some("321".to_string()),
+                schedule_type: ScheduleType::Origin,
+            }]),
+            flags: Some(vec![Flag {
+                id: "123".to_string(),
+                name: Some("ABC".to_string()),
+                route_codes: vec!["1234".to_string(), "4321".to_string()],
+            }]),
             has_crossing: Some(false),
-            has_accessibility: None,
-            has_abusive_parking: Some(true),
-            has_outdated_info: Some(true),
-            is_damaged: Some(true),
-            is_vandalized: Some(true),
-            has_flag: Some(true),
-            has_schedules: Some(true),
+            has_wide_access: Some(true),
+            has_flat_access: Some(true),
             has_sidewalk: Some(true),
+            has_sidewalked_path: Some(true),
             has_shelter: Some(true),
+            has_cover: Some(true),
             has_bench: Some(true),
             has_trash_can: Some(true),
+            has_waiting_times: Some(true),
+            has_ticket_seller: Some(true),
+            has_costumer_support: Some(true),
             illumination_strength: Some(IlluminationStrength::High),
             illumination_position: Some(IlluminationPos::Own),
             is_illumination_working: Some(true),
@@ -590,6 +654,24 @@ mod test {
             has_visibility_from_within: Some(true),
             has_visibility_from_area: Some(true),
             is_visible_from_outside: Some(true),
+            parking_visibility_impairment: Some(
+                ParkingVisualLimitation::Little,
+            ),
+            parking_local_access_impairment: Some(
+                LocalParkingLimitation::Medium,
+            ),
+            parking_area_access_impairment: Some(AreaParkingLimitation::Medium),
+            advertisement_qty: Some(AdvertisementQuantification::Many),
+            has_tactile_access: Some(true),
+            tmp_issues: vec![],
+            // TODO Deprecated
+            has_flag: None,
+            has_schedules: None,
+            has_accessibility: None,
+            has_abusive_parking: None,
+            has_outdated_info: None,
+            is_damaged: None,
+            is_vandalized: None,
         };
 
         assert_eq!(a11y, a11y2);
@@ -612,8 +694,20 @@ mod test {
             lon: Some(2.0),
             external_id: None,
             a11y: A11yMeta {
+                schedules: Some(vec![Schedule {
+                    code: Some("123".to_string()),
+                    discriminator: Some("321".to_string()),
+                    schedule_type: ScheduleType::Origin,
+                }]),
+                flags: Some(vec![Flag {
+                    id: "123".to_string(),
+                    name: Some("ABC".to_string()),
+                    route_codes: vec!["1234".to_string(), "4321".to_string()],
+                }]),
                 has_crossing: Some(false),
-                has_accessibility: None,
+                has_wide_access: None,
+                has_flat_access: Some(true),
+                has_accessibility: Some(true),
                 has_abusive_parking: Some(true),
                 has_outdated_info: Some(true),
                 is_damaged: Some(true),
@@ -621,9 +715,14 @@ mod test {
                 has_flag: Some(true),
                 has_schedules: Some(true),
                 has_sidewalk: Some(true),
+                has_sidewalked_path: Some(true),
                 has_shelter: Some(true),
+                has_cover: Some(true),
                 has_bench: Some(true),
                 has_trash_can: Some(true),
+                has_waiting_times: Some(true),
+                has_ticket_seller: Some(true),
+                has_costumer_support: Some(true),
                 illumination_strength: Some(IlluminationStrength::High),
                 illumination_position: Some(IlluminationPos::Own),
                 is_illumination_working: Some(true),
@@ -631,12 +730,31 @@ mod test {
                 has_visibility_from_within: Some(true),
                 has_visibility_from_area: Some(true),
                 is_visible_from_outside: Some(true),
+                parking_visibility_impairment: Some(
+                    ParkingVisualLimitation::Little,
+                ),
+                parking_local_access_impairment: Some(
+                    LocalParkingLimitation::Medium,
+                ),
+                parking_area_access_impairment: Some(
+                    AreaParkingLimitation::Medium,
+                ),
+                advertisement_qty: Some(AdvertisementQuantification::Many),
+                has_tactile_access: Some(true),
+                tmp_issues: vec!["foo".to_string(), "bar".to_string()],
             },
+            verification_level: 4,
+            service_check_date: Some(
+                NaiveDate::from_ymd_opt(2020, 1, 1).unwrap(),
+            ),
+            infrastructure_check_date: Some(
+                NaiveDate::from_ymd_opt(2020, 1, 2).unwrap(),
+            ),
             tags: vec!["test".to_string()],
             notes: Some("test".to_string()),
             updater: 0,
-            succeeded_by: None,
             update_date: "".to_string(),
+            refs: vec!["aaaa".to_string()],
         };
         let json = serde_json::to_string(&stop).unwrap();
 

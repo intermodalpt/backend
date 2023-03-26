@@ -120,9 +120,14 @@ mod tests {
     #[test]
     fn encode_decode_claims() {
         use super::*;
+
+        //The key must be set
+        let _ =
+            SECRET_KEY.set(Box::leak(Box::new("super_secret_key".to_string())));
+
         let claims = models::Claims {
             iat: 0,
-            exp: 0,
+            exp: 2000000000,
             uid: 0,
             uname: "test".to_string(),
             permissions: models::Permissions {
