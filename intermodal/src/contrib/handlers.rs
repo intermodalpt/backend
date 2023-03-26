@@ -23,7 +23,7 @@ use axum::Json;
 use chrono::Local;
 use serde::Deserialize;
 
-use super::{models, requests, responses, sql};
+use super::{logic, models, requests, responses, sql};
 use crate::errors::Error;
 use crate::utils::get_exactly_one_field;
 use crate::{auth, pics, stops, AppState};
@@ -142,6 +142,25 @@ pub(crate) async fn get_undecided_user_contributions(
         )
         .await?,
     ))
+}
+
+pub(crate) async fn get_pending_stop_patch(
+    State(state): State<AppState>,
+    claims: Option<auth::Claims>,
+) -> Result<Json<Vec<stops::models::Stop>>, Error> {
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+
+    let user_id = claims.uid;
+
+    let contributions =
+        sql::fetch_user_stop_meta_contributions(&state.pool, user_id).await?;
+    let modified_stops =
+        logic::summarize_stop_meta_contributions(contributions);
+
+    Ok(Json(modified_stops))
 }
 
 pub(crate) async fn get_latest_undecided_contributions(

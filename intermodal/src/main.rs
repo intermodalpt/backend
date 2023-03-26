@@ -189,6 +189,10 @@ pub(crate) fn build_paths(state: AppState) -> Router {
             "/v1/contrib/contributions/:user_id/undecided",
             get(contrib::handlers::get_undecided_user_contributions),
         )
+        .route(
+            "/v1/contrib/pending_stop_patch/own",
+            get(contrib::handlers::get_pending_stop_patch),
+        )
         // TODO deprecate
         .route(
             "/v1/contrib/contributions/undecided",

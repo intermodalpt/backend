@@ -370,3 +370,52 @@ RETURNING id
 
     Ok(res.id)
 }
+
+pub(crate) async fn fetch_user_stop_meta_contributions(
+    pool: &PgPool,
+    user_id: i32,
+) -> Result<Vec<models::Contribution>> {
+    sqlx::query!(
+        r#"
+SELECT id, author_id, change, submission_date, accepted,
+    evaluator_id, evaluation_date, comment
+FROM Contributions
+WHERE accepted is NULL AND author_id=$1
+ORDER BY submission_date ASC
+    "#,
+        user_id
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .into_iter()
+    .filter_map(|r| {
+        let change = match serde_json::from_value(r.change) {
+            Ok(change) => change,
+            Err(_e) => return Some(Err(Error::DatabaseDeserialization)),
+        };
+
+        let contribution = models::Contribution {
+            id: r.id,
+            author_id: r.author_id,
+            change,
+            submission_date: r.submission_date.with_timezone(&Local),
+            accepted: r.accepted,
+            evaluator_id: r.evaluator_id,
+            evaluation_date: r.evaluation_date.map(|d| d.with_timezone(&Local)),
+            comment: r.comment,
+        };
+        if matches!(
+            contribution,
+            models::Contribution {
+                change: models::Change::StopUpdate { .. },
+                ..
+            }
+        ) {
+            Some(Ok(contribution))
+        } else {
+            None
+        }
+    })
+    .collect::<Result<Vec<models::Contribution>>>()
+}
