@@ -393,6 +393,13 @@ impl StopPatch {
         if let Some(door) = self.door.clone() {
             stop.door = door
         }
+        if let Some(schedules) = self.schedules.clone() {
+            stop.a11y.schedules = schedules
+        }
+        if let Some(flags) = self.flags.clone() {
+            stop.a11y.flags = flags
+        }
+
         if let Some(has_sidewalk) = self.has_sidewalk {
             stop.a11y.has_sidewalk = has_sidewalk
         }
@@ -772,6 +779,9 @@ pub(crate) mod requests {
             }
             if self.a11y.has_waiting_times != stop.a11y.has_waiting_times {
                 patch.has_waiting_times = Some(self.a11y.has_waiting_times);
+            }
+            if self.a11y.has_ticket_seller != stop.a11y.has_ticket_seller {
+                patch.has_ticket_seller = Some(self.a11y.has_ticket_seller);
             }
             if self.a11y.has_costumer_support != stop.a11y.has_costumer_support
             {

@@ -277,13 +277,18 @@ pub(crate) mod requests {
         pub infrastructure_check_date: Option<NaiveDate>,
     }
 
-    #[derive(Deserialize, ToSchema)]
+    #[derive(Clone, Deserialize, ToSchema)]
     pub struct ChangeStop {
+        // These two are not versioned
         pub lon: Option<f64>,
         pub lat: Option<f64>,
+
+        // Neither this one, but we don't have a reason to change it
+        // Consider dropping
+        pub official_name: Option<String>,
+
         pub name: Option<String>,
         pub short_name: Option<String>,
-        pub official_name: Option<String>,
         pub locality: Option<String>,
         pub street: Option<String>,
         pub door: Option<String>,
@@ -370,11 +375,15 @@ pub(crate) mod requests {
             if self.a11y.has_waiting_times != stop.a11y.has_waiting_times {
                 patch.has_waiting_times = Some(self.a11y.has_waiting_times);
             }
+            if self.a11y.has_ticket_seller != stop.a11y.has_ticket_seller {
+                patch.has_ticket_seller = Some(self.a11y.has_ticket_seller);
+            }
             if self.a11y.has_costumer_support != stop.a11y.has_costumer_support
             {
                 patch.has_costumer_support =
                     Some(self.a11y.has_costumer_support);
             }
+
             if self.a11y.advertisement_qty != stop.a11y.advertisement_qty {
                 patch.advertisement_qty = Some(self.a11y.advertisement_qty);
             }
