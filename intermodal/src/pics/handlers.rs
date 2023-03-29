@@ -19,7 +19,7 @@
 use std::collections::HashMap;
 
 use axum::extract::{Multipart, Path, Query, State};
-use axum::{Json};
+use axum::Json;
 use serde::Deserialize;
 
 use super::{logic, models::requests, models::responses, sql};

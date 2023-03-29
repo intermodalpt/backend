@@ -631,8 +631,6 @@ mod test {
         }"#;
         let a11y: A11yMeta = serde_json::from_str(&json).unwrap();
 
-        println!("{}", serde_json::to_string(&a11y).unwrap());
-
         let a11y2 = A11yMeta {
             schedules: Some(vec![Schedule {
                 code: Some("123".to_string()),

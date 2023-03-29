@@ -17,11 +17,10 @@
 */
 
 use std::collections::HashMap;
-use std::{fs, io};
 
 use axum::extract::{Path, Query, State};
 use axum::Json;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 use super::{models, sql};
 use crate::stops::models::responses;
@@ -81,11 +80,6 @@ pub(crate) async fn create_stop(
     }
 
     let user_id = claims.uid;
-
-    // FIXME
-    if user_id != 1 {
-        return Err(Error::Forbidden);
-    }
 
     //TODO as a transaction
     let stop = sql::insert_stop(&state.pool, stop, user_id).await?;

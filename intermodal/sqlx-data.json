@@ -222,20 +222,6 @@
     },
     "query": "\nSELECT id, original_filename, sha1, tagged, public, sensitive, uploader,\n    upload_date, capture_date, lon, lat, quality, width,\n    height, camera_ref, tags, notes\nFROM stop_pics\nWHERE sha1 = $1\n"
   },
-  "0d301019196bb242f2e492ae2ce99127a846583ff2818d0dd53931740cd62383": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Left": [
-          "Varchar",
-          "Bool",
-          "Int4"
-        ]
-      }
-    },
-    "query": "\nUPDATE Stops\nSET tml_id=$1, tml_id_verified=$2\nWHERE id=$3\n    "
-  },
   "11925ce536cf865402b1e41ed275fd44e8d7d1cd3334f911d28f817b92cfbfa1": {
     "describe": {
       "columns": [],
@@ -2387,6 +2373,21 @@
       }
     },
     "query": "\nSELECT id, author_id, change, submission_date, accepted,\n    evaluator_id, evaluation_date, comment\nFROM Contributions\nWHERE accepted is NULL AND author_id=$1\nORDER BY submission_date ASC\n    "
+  },
+  "8912ac0a641dd4d996b45aefc06424d3478692058d707e40bc16f47037d018f4": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Bool",
+          "Text",
+          "Int4"
+        ]
+      }
+    },
+    "query": "\nUPDATE Stops\nSET tml_id=$1, tml_id_verified=$2, tml_id_source=$3\nWHERE id=$4\n    "
   },
   "8bf741665db0772a48f7ecb8ce0b6ab911afc8baae2c38d925e46cad8a3712bd": {
     "describe": {
