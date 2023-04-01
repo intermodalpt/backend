@@ -29,6 +29,34 @@ pub struct GTFSStop {
     pub stop_lon: f64,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GTFSStopTimes {
+    pub(crate) trip_id: String,
+    pub(crate) stop_id: u32,
+    pub(crate) stop_sequence: u32,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GTFSTrips {
+    pub(crate) route_id: String,
+    service_id: String,
+    pub(crate) trip_id: String,
+    pub(crate) trip_headsign: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TMLTrip {
+    pub(crate) id: String,
+    pub(crate) headsign: String,
+    pub(crate) stops: Vec<u32>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TMLRoute {
+    pub(crate) id: String,
+    pub(crate) trips: Vec<TMLTrip>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, sqlx::FromRow)]
 pub struct TMLStop {
     #[serde(flatten)]

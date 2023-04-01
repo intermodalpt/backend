@@ -19,9 +19,11 @@
 use std::{fs, io};
 
 use axum::extract::{Path, Query, State};
+use axum::http::{header, Response};
 use axum::Json;
+use itertools::Itertools;
 
-use super::{models, sql};
+use super::{logic, models, sql};
 use crate::{auth, AppState, Error};
 
 pub(crate) async fn tml_get_stops(
@@ -71,4 +73,84 @@ pub(crate) async fn tml_match_stop(
         &params.source.to_string(),
     )
     .await?)
+}
+
+// Read trips from GTFS tile
+fn tml_gtfs_trips() -> Vec<models::GTFSTrips> {
+    let f = fs::File::open("gtfs/trips.txt").unwrap();
+    let reader = io::BufReader::new(f);
+
+    let mut rdr = csv::ReaderBuilder::new()
+        .trim(csv::Trim::All)
+        .from_reader(reader);
+
+    rdr.deserialize()
+        .into_iter()
+        .map(|result| result.unwrap())
+        .collect::<Vec<models::GTFSTrips>>()
+}
+
+// Read stop times from GTFS tile
+fn load_gtfs_stop_times() -> Vec<models::GTFSStopTimes> {
+    let f = fs::File::open("gtfs/stop_times.txt").unwrap();
+    let reader = io::BufReader::new(f);
+
+    let mut rdr = csv::ReaderBuilder::new()
+        .trim(csv::Trim::All)
+        .from_reader(reader);
+
+    rdr.deserialize()
+        .into_iter()
+        .map(|result| result.unwrap())
+        .collect::<Vec<models::GTFSStopTimes>>()
+}
+
+pub(crate) async fn tml_gtfs_route_trips() -> Json<Vec<models::TMLRoute>> {
+    let gtfs_stop_times = load_gtfs_stop_times();
+    let gtfs_trips = tml_gtfs_trips();
+
+    let trips_stop_seq = logic::calculate_gtfs_stop_sequence(&gtfs_stop_times);
+
+    let route = gtfs_trips
+        .into_iter()
+        .group_by(|trip| trip.route_id.clone())
+        .into_iter()
+        .map(|(route_id, trips)| models::TMLRoute {
+            id: route_id,
+            trips: trips
+                .map(|trip| models::TMLTrip {
+                    headsign: trip.trip_headsign,
+                    stops: trips_stop_seq
+                        .get(&trip.trip_id)
+                        .cloned()
+                        .unwrap_or_default(),
+                    id: trip.trip_id,
+                })
+                .collect(),
+        })
+        .collect::<Vec<models::TMLRoute>>();
+
+    Json(route)
+}
+
+pub(crate) async fn tml_gtfs_stop_sliding_windows(
+) -> Result<Json<Vec<Vec<u32>>>, Error> {
+    let f = fs::File::open("gtfs/stop_times.txt").unwrap();
+    let reader = io::BufReader::new(f);
+
+    let mut rdr = csv::ReaderBuilder::new()
+        .trim(csv::Trim::All)
+        .from_reader(reader);
+
+    let gtfs_stop_times = rdr
+        .deserialize()
+        .into_iter()
+        .map(|result| result.unwrap())
+        .collect::<Vec<models::GTFSStopTimes>>();
+
+    let trips_stop_seq = logic::calculate_gtfs_stop_sequence(&gtfs_stop_times);
+    let sliding_windows =
+        logic::calculate_stop_sliding_windows(&trips_stop_seq);
+
+    Ok(Json(sliding_windows))
 }

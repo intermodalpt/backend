@@ -17,5 +17,6 @@
 */
 
 pub(crate) mod handlers;
+mod logic;
 mod models;
 mod sql;
