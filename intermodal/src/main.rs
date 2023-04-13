@@ -46,6 +46,7 @@ use axum::http::Method;
 use axum::routing::{delete, get, patch, post};
 use axum::Router;
 use config::Config;
+use once_cell::sync::OnceCell;
 use sqlx::postgres::PgPool;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::limit::RequestBodyLimitLayer;
@@ -61,6 +62,13 @@ pub(crate) struct State {
     pub(crate) bucket: s3::Bucket,
     pub(crate) pool: PgPool,
     pub(crate) stats: Stats,
+    pub(crate) cached: Cached,
+}
+
+#[derive(Clone)]
+struct Cached {
+    gtfs_stops: OnceCell<Arc<Vec<tml::models::GTFSStop>>>,
+    tml_routes: OnceCell<Arc<Vec<tml::models::TMLRoute>>>,
 }
 
 pub(crate) fn build_paths(state: AppState) -> Router {
@@ -263,6 +271,14 @@ pub(crate) fn build_paths(state: AppState) -> Router {
             "/v1/tml/match/:stop_id/:gtfs_id",
             post(tml::handlers::tml_match_stop),
         )
+        .route(
+            "/v1/tml/gtfs_routes",
+            get(tml::handlers::tml_gtfs_route_trips),
+        )
+        .route(
+            "/v1/tml/stops/sliding",
+            get(tml::handlers::tml_gtfs_stop_sliding_windows),
+        )
         .with_state(state)
         .layer(DefaultBodyLimit::disable())
         .layer(RequestBodyLimitLayer::new(30 * 1024 * 1024 /* 30mb */))
@@ -326,6 +342,10 @@ async fn main() {
         bucket,
         pool,
         stats,
+        cached: Cached {
+            gtfs_stops: Default::default(),
+            tml_routes: Default::default(),
+        },
     });
 
     let addr = SocketAddr::from((

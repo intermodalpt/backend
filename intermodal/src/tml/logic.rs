@@ -9,7 +9,7 @@ pub fn calculate_gtfs_stop_sequence(
 ) -> HashMap<String, Vec<u32>> {
     gtfs_stop_times
         .into_iter()
-        .group_by(|x| &x.trip_id)
+        .into_group_map_by(|x| &x.trip_id)
         .into_iter()
         .map(|(trip_id, stop_times)| {
             let stop_ids = stop_times

@@ -18,6 +18,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::fmt;
+use std::hash::{Hash, Hasher};
 
 use crate::stops::models as stops;
 
@@ -44,11 +45,26 @@ pub struct GTFSTrips {
     pub(crate) trip_headsign: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Eq, Clone, Serialize, Deserialize)]
 pub struct TMLTrip {
     pub(crate) id: String,
     pub(crate) headsign: String,
     pub(crate) stops: Vec<u32>,
+}
+
+impl PartialEq for TMLTrip {
+    fn eq(&self, other: &Self) -> bool {
+        // self.id == other.id
+        self.stops == other.stops && self.headsign == other.headsign
+    }
+}
+
+impl Hash for TMLTrip {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        // self.id.hash(state);
+        self.headsign.hash(state);
+        self.stops.hash(state);
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -78,18 +94,195 @@ pub(crate) struct MatchVerification {
 #[serde(rename_all = "lowercase")]
 pub(crate) enum MatchSource {
     Unknown,
+    Tml,
     Manual,
     OSM,
     Flags,
+    H1,
 }
 
 impl fmt::Display for MatchSource {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             MatchSource::Unknown => write!(f, "unknown"),
+            MatchSource::Tml => write!(f, "tml"),
             MatchSource::Manual => write!(f, "manual"),
             MatchSource::OSM => write!(f, "osm"),
             MatchSource::Flags => write!(f, "flags"),
+            MatchSource::H1 => write!(f, "h1"),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{TMLRoute, TMLTrip};
+    use itertools::Itertools;
+    fn trip_dedup() {
+        let route = TMLRoute {
+            id: "4308_0".to_string(),
+            trips: vec![
+                TMLTrip {
+                    id: "p3_306".to_string(),
+                    headsign: "Pinhal Novo (Estação)".to_string(),
+                    stops: vec![
+                        130807, 130028, 130026, 130024, 130021, 130020, 130200,
+                        130202, 130204, 130205, 130207, 130210, 130212, 130213,
+                        130211, 130216, 130218, 130220, 130222, 130224, 130226,
+                        130229,
+                    ],
+                },
+                TMLTrip {
+                    id: "p3_307".to_string(),
+                    headsign: "Pinhal Novo (Estação)".to_string(),
+                    stops: vec![
+                        130807, 130028, 130026, 130024, 130021, 130020, 130200,
+                        130202, 130204, 130205, 130207, 130210, 130212, 130213,
+                        130211, 130216, 130218, 130220, 130222, 130224, 130226,
+                        130229,
+                    ],
+                },
+                TMLTrip {
+                    id: "p3_308".to_string(),
+                    headsign: "Pinhal Novo (Estação)".to_string(),
+                    stops: vec![
+                        130807, 130028, 130026, 130024, 130021, 130020, 130200,
+                        130202, 130204, 130205, 130207, 130210, 130212, 130213,
+                        130211, 130216, 130218, 130220, 130222, 130224, 130226,
+                        130229,
+                    ],
+                },
+                TMLTrip {
+                    id: "p3_309".to_string(),
+                    headsign: "Pinhal Novo (Estação)".to_string(),
+                    stops: vec![
+                        130807, 130028, 130026, 130024, 130021, 130020, 130200,
+                        130202, 130204, 130205, 130207, 130210, 130212, 130213,
+                        130211, 130216, 130218, 130220, 130222, 130224, 130226,
+                        130229,
+                    ],
+                },
+                TMLTrip {
+                    id: "p3_310".to_string(),
+                    headsign: "Pinhal Novo (Estação)".to_string(),
+                    stops: vec![
+                        130807, 130028, 130026, 130024, 130021, 130020, 130200,
+                        130202, 130204, 130205, 130207, 130210, 130212, 130213,
+                        130211, 130216, 130218, 130220, 130222, 130224, 130226,
+                        130229,
+                    ],
+                },
+                TMLTrip {
+                    id: "p3_311".to_string(),
+                    headsign: "Pinhal Novo (Estação)".to_string(),
+                    stops: vec![
+                        130807, 130028, 130026, 130024, 130021, 130020, 130200,
+                        130202, 130204, 130205, 130207, 130210, 130212, 130213,
+                        130211, 130216, 130218, 130220, 130222, 130224, 130226,
+                        130229,
+                    ],
+                },
+                TMLTrip {
+                    id: "p3_312".to_string(),
+                    headsign: "Palmela (Terminal)".to_string(),
+                    stops: vec![
+                        130230, 130227, 130225, 130223, 130221, 130219, 130217,
+                        130215, 130212, 130213, 130211, 130209, 130231, 130233,
+                        130203, 130201, 130199, 130019, 130022, 130023, 130025,
+                        130027, 130807,
+                    ],
+                },
+                TMLTrip {
+                    id: "p3_313".to_string(),
+                    headsign: "Palmela (Terminal)".to_string(),
+                    stops: vec![
+                        130230, 130227, 130225, 130223, 130221, 130219, 130217,
+                        130215, 130212, 130213, 130211, 130209, 130231, 130233,
+                        130203, 130201, 130199, 130019, 130022, 130023, 130025,
+                        130027, 130807,
+                    ],
+                },
+                TMLTrip {
+                    id: "p3_314".to_string(),
+                    headsign: "Palmela (Terminal)".to_string(),
+                    stops: vec![
+                        130230, 130227, 130225, 130223, 130221, 130219, 130217,
+                        130215, 130212, 130213, 130211, 130209, 130231, 130233,
+                        130203, 130201, 130199, 130019, 130022, 130023, 130025,
+                        130027, 130807,
+                    ],
+                },
+                TMLTrip {
+                    id: "p3_315".to_string(),
+                    headsign: "Palmela (Terminal)".to_string(),
+                    stops: vec![
+                        130230, 130227, 130225, 130223, 130221, 130219, 130217,
+                        130215, 130212, 130213, 130211, 130209, 130231, 130233,
+                        130203, 130201, 130199, 130019, 130022, 130023, 130025,
+                        130027, 130807,
+                    ],
+                },
+                TMLTrip {
+                    id: "p3_316".to_string(),
+                    headsign: "Palmela (Terminal)".to_string(),
+                    stops: vec![
+                        130230, 130227, 130225, 130223, 130221, 130219, 130217,
+                        130215, 130212, 130213, 130211, 130209, 130231, 130233,
+                        130203, 130201, 130199, 130019, 130022, 130023, 130025,
+                        130027, 130807,
+                    ],
+                },
+                TMLTrip {
+                    id: "p3_317".to_string(),
+                    headsign: "Palmela (Terminal)".to_string(),
+                    stops: vec![
+                        130230, 130227, 130225, 130223, 130221, 130219, 130217,
+                        130215, 130212, 130213, 130211, 130209, 130231, 130233,
+                        130203, 130201, 130199, 130019, 130022, 130023, 130025,
+                        130027, 130807,
+                    ],
+                },
+            ],
+        };
+    }
+
+    #[test]
+    fn trips_dedup() {
+        assert!(
+            TMLTrip {
+                id: "p3_306".to_string(),
+                headsign: "AAA".to_string(),
+                stops: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+            } == TMLTrip {
+                id: "p3_307".to_string(),
+                headsign: "AAA".to_string(),
+                stops: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+            }
+        );
+
+        let reeee = vec![
+            vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+            vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+        ];
+
+        let reeeeeeeeeeeeeeee = reeee.into_iter().unique().collect::<Vec<_>>();
+        assert_eq!(reeeeeeeeeeeeeeee.len(), 1);
+
+        let trips = vec![
+            TMLTrip {
+                id: "p3_306".to_string(),
+                headsign: "AAA".to_string(),
+                stops: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+            },
+            TMLTrip {
+                id: "p3_307".to_string(),
+                headsign: "AAA".to_string(),
+                stops: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+            },
+        ]
+        .into_iter()
+        .unique()
+        .collect::<Vec<_>>();
+        assert_eq!(trips.len(), 1);
     }
 }

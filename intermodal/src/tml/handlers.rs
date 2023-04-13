@@ -16,12 +16,14 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+use std::sync::Arc;
 use std::{fs, io};
 
 use axum::extract::{Path, Query, State};
-use axum::http::{header, Response};
 use axum::Json;
 use itertools::Itertools;
+use once_cell::sync::Lazy;
+use regex::Regex;
 
 use super::{logic, models, sql};
 use crate::{auth, AppState, Error};
@@ -33,20 +35,29 @@ pub(crate) async fn tml_get_stops(
 }
 
 pub(crate) async fn tml_get_gtfs_stops(
-) -> Result<Json<Vec<models::GTFSStop>>, Error> {
-    let f = fs::File::open("gtfs/stops.txt").unwrap();
-    let reader = io::BufReader::new(f);
+    State(state): State<AppState>,
+) -> Result<Json<Arc<Vec<models::GTFSStop>>>, Error> {
+    let gtfs_stops = state
+        .cached
+        .gtfs_stops
+        .get_or_init(|| {
+            let f = fs::File::open("gtfs/stops.txt").unwrap();
+            let reader = io::BufReader::new(f);
 
-    let csv_reader = csv::ReaderBuilder::new()
-        .trim(csv::Trim::All)
-        .from_reader(reader);
-    let mut rdr = csv_reader;
+            let csv_reader = csv::ReaderBuilder::new()
+                // .trim(csv::Trim::All)
+                .from_reader(reader);
+            let mut rdr = csv_reader;
 
-    let gtfs_stops = rdr
-        .deserialize()
-        .into_iter()
-        .map(|result| result.unwrap())
-        .collect();
+            let gtfs_stops = rdr
+                .deserialize()
+                .into_iter()
+                .map(|result| result.unwrap())
+                .collect();
+
+            Arc::new(gtfs_stops)
+        })
+        .clone();
 
     Ok(Json(gtfs_stops))
 }
@@ -81,7 +92,7 @@ fn tml_gtfs_trips() -> Vec<models::GTFSTrips> {
     let reader = io::BufReader::new(f);
 
     let mut rdr = csv::ReaderBuilder::new()
-        .trim(csv::Trim::All)
+        // .trim(csv::Trim::All)
         .from_reader(reader);
 
     rdr.deserialize()
@@ -96,7 +107,7 @@ fn load_gtfs_stop_times() -> Vec<models::GTFSStopTimes> {
     let reader = io::BufReader::new(f);
 
     let mut rdr = csv::ReaderBuilder::new()
-        .trim(csv::Trim::All)
+        // .trim(csv::Trim::All)
         .from_reader(reader);
 
     rdr.deserialize()
@@ -105,32 +116,57 @@ fn load_gtfs_stop_times() -> Vec<models::GTFSStopTimes> {
         .collect::<Vec<models::GTFSStopTimes>>()
 }
 
-pub(crate) async fn tml_gtfs_route_trips() -> Json<Vec<models::TMLRoute>> {
-    let gtfs_stop_times = load_gtfs_stop_times();
-    let gtfs_trips = tml_gtfs_trips();
+// Have regex as a static
+static SUBROUTE_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"^[\w\d]*_(?P<subroute>\d{4}_\d_\d)_").unwrap());
 
-    let trips_stop_seq = logic::calculate_gtfs_stop_sequence(&gtfs_stop_times);
+fn simplified_trip_id(trip_id: &str) -> String {
+    if let Some(caps) = SUBROUTE_RE.captures(trip_id) {
+        caps.name("subroute").unwrap().as_str().to_string()
+    } else {
+        trip_id.to_string()
+    }
+}
 
-    let route = gtfs_trips
-        .into_iter()
-        .group_by(|trip| trip.route_id.clone())
-        .into_iter()
-        .map(|(route_id, trips)| models::TMLRoute {
-            id: route_id,
-            trips: trips
-                .map(|trip| models::TMLTrip {
-                    headsign: trip.trip_headsign,
-                    stops: trips_stop_seq
-                        .get(&trip.trip_id)
-                        .cloned()
-                        .unwrap_or_default(),
-                    id: trip.trip_id,
+pub(crate) async fn tml_gtfs_route_trips(
+    State(state): State<AppState>,
+) -> Json<Arc<Vec<models::TMLRoute>>> {
+    let tml_routes = state
+        .cached
+        .tml_routes
+        .get_or_init(|| {
+            let gtfs_stop_times = load_gtfs_stop_times();
+            let gtfs_trips = tml_gtfs_trips();
+
+            let trips_stop_seq =
+                logic::calculate_gtfs_stop_sequence(&gtfs_stop_times);
+
+            let routes = gtfs_trips
+                .into_iter()
+                .into_group_map_by(|trip| trip.route_id.clone())
+                .into_iter()
+                .map(|(route_id, trips)| models::TMLRoute {
+                    id: route_id.clone(),
+                    trips: trips
+                        .into_iter()
+                        .map(|trip| models::TMLTrip {
+                            headsign: trip.trip_headsign,
+                            stops: trips_stop_seq
+                                .get(&trip.trip_id)
+                                .cloned()
+                                .unwrap_or_default(),
+                            id: simplified_trip_id(&trip.trip_id),
+                        })
+                        .unique()
+                        .collect(),
                 })
-                .collect(),
-        })
-        .collect::<Vec<models::TMLRoute>>();
+                .collect::<Vec<models::TMLRoute>>();
 
-    Json(route)
+            Arc::new(routes)
+        })
+        .clone();
+
+    Json(tml_routes)
 }
 
 pub(crate) async fn tml_gtfs_stop_sliding_windows(
