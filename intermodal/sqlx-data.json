@@ -644,6 +644,30 @@
     },
     "query": "\nUPDATE subroute_stops\nSET stop=$1\nWHERE  subroute=$2 AND idx=$3\n    "
   },
+  "3b87717ff8297d11dedfefafe59078cf79935a2d3c97f19581cd84fdfae8788a": {
+    "describe": {
+      "columns": [
+        {
+          "name": "stop",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "pic_count!: i32",
+          "ordinal": 1,
+          "type_info": "Int4"
+        }
+      ],
+      "nullable": [
+        false,
+        null
+      ],
+      "parameters": {
+        "Left": []
+      }
+    },
+    "query": "\nSELECT stop_pic_stops.stop, count(*)::int as \"pic_count!: i32\"\nFROM stop_pic_stops\nGROUP BY stop_pic_stops.stop\n    "
+  },
   "3d08e0d2424c1a9701337ed74066cadcce9bf0a028c4737defdc3edfbdf3e93b": {
     "describe": {
       "columns": [],
@@ -1314,54 +1338,6 @@
     },
     "query": "\nSELECT count(*) as cnt\nFROM Routes\n    "
   },
-  "5787d0f99171068106dd2d96a7f4b2d33c6785c47a381fa2472c80c781771f06": {
-    "describe": {
-      "columns": [
-        {
-          "name": "id",
-          "ordinal": 0,
-          "type_info": "Int8"
-        },
-        {
-          "name": "author_id",
-          "ordinal": 1,
-          "type_info": "Int4"
-        },
-        {
-          "name": "changes",
-          "ordinal": 2,
-          "type_info": "Jsonb"
-        },
-        {
-          "name": "datetime",
-          "ordinal": 3,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "contribution_id",
-          "ordinal": 4,
-          "type_info": "Int8"
-        },
-        {
-          "name": "author_username",
-          "ordinal": 5,
-          "type_info": "Varchar"
-        }
-      ],
-      "nullable": [
-        false,
-        false,
-        false,
-        false,
-        true,
-        false
-      ],
-      "parameters": {
-        "Left": []
-      }
-    },
-    "query": "\nSELECT Changelog.id, Changelog.author_id, Changelog.changes, Changelog.datetime,\n    Changelog.contribution_id, Users.username as author_username\nFROM Changelog\nINNER JOIN Users ON author_id = Users.id\nORDER BY datetime DESC\n    "
-  },
   "599d642f6d624e920c66a30b97152259cc71ebe1803dffdc66e85716bc63cb72": {
     "describe": {
       "columns": [
@@ -1393,60 +1369,6 @@
       }
     },
     "query": "\nSELECT id, name, calendar\nFROM operator_calendars\nWHERE operator_id=$1\n    "
-  },
-  "5b17e836b5419e36454a0a66af53572f090208c1206f4f2de92accdf12249cd9": {
-    "describe": {
-      "columns": [
-        {
-          "name": "id",
-          "ordinal": 0,
-          "type_info": "Int4"
-        },
-        {
-          "name": "name",
-          "ordinal": 1,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "official_name",
-          "ordinal": 2,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "short_name",
-          "ordinal": 3,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "lat",
-          "ordinal": 4,
-          "type_info": "Float8"
-        },
-        {
-          "name": "lon",
-          "ordinal": 5,
-          "type_info": "Float8"
-        },
-        {
-          "name": "tags",
-          "ordinal": 6,
-          "type_info": "VarcharArray"
-        }
-      ],
-      "nullable": [
-        false,
-        null,
-        true,
-        true,
-        true,
-        true,
-        false
-      ],
-      "parameters": {
-        "Left": []
-      }
-    },
-    "query": "SELECT id, COALESCE(name, osm_name) as name, official_name, short_name, lat, lon, tags\nFROM stops\nWHERE id IN (\n    SELECT DISTINCT stop\n    FROM subroute_stops\n)"
   },
   "5cd73e08fb02b01ac6849883c5e22c7ece82b4e1936e277938ede78410cecda7": {
     "describe": {
@@ -1749,72 +1671,6 @@
     },
     "query": "\nSELECT routes.id as route,\n    routes.code as code,\n    routes.name as name,\n    routes.operator as operator,\n    routes.type as service_type,\n    routes.circular as circular,\n    routes.main_subroute as main_subroute,\n    routes.active as active,\n    routes.parishes as parishes,\n    route_types.badge_text_color as text_color,\n    route_types.badge_bg_color as bg_color,\n    subroutes.id as \"subroute!: Option<i32>\",\n    subroutes.flag as \"subroute_flag!: Option<String>\",\n    subroutes.circular as \"subroute_circular!: Option<bool>\",\n    subroutes.polyline as \"subroute_polyline!: Option<String>\"\nFROM routes\nJOIN route_types on routes.type = route_types.id\nLEFT JOIN subroutes ON routes.id = subroutes.route\nORDER BY routes.id asc\n"
   },
-  "71e40fa0a08d4b575cc7ab0ab00e06c653b30f5178438eb47543f6a6fa0fe382": {
-    "describe": {
-      "columns": [
-        {
-          "name": "id",
-          "ordinal": 0,
-          "type_info": "Int8"
-        },
-        {
-          "name": "author_id",
-          "ordinal": 1,
-          "type_info": "Int4"
-        },
-        {
-          "name": "change",
-          "ordinal": 2,
-          "type_info": "Jsonb"
-        },
-        {
-          "name": "submission_date",
-          "ordinal": 3,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "accepted",
-          "ordinal": 4,
-          "type_info": "Bool"
-        },
-        {
-          "name": "evaluator_id",
-          "ordinal": 5,
-          "type_info": "Int4"
-        },
-        {
-          "name": "evaluation_date",
-          "ordinal": 6,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "comment",
-          "ordinal": 7,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "author_username",
-          "ordinal": 8,
-          "type_info": "Varchar"
-        }
-      ],
-      "nullable": [
-        false,
-        false,
-        false,
-        false,
-        true,
-        true,
-        true,
-        true,
-        false
-      ],
-      "parameters": {
-        "Left": []
-      }
-    },
-    "query": "\nSELECT Contributions.id, Contributions.author_id, Contributions.change,\n    Contributions.submission_date, Contributions.accepted,\n    Contributions.evaluator_id, Contributions.evaluation_date,\n    Contributions.comment,\n    Authors.username as author_username\nFROM Contributions\nINNER JOIN Users AS Authors ON author_id = Authors.id\nWHERE accepted IS NULL\nORDER BY evaluation_date DESC\n    "
-  },
   "727e2b534345af9b2224681da2f36cabac7723f0a8446623ce82c1aea27228d8": {
     "describe": {
       "columns": [
@@ -1852,6 +1708,110 @@
       }
     },
     "query": "\nSELECT departures.id as id,\n    subroutes.id as subroute,\n    departures.time as time,\n    departures.calendar_id as \"calendar_id!: i32\"\nFROM departures\nINNER JOIN subroutes on departures.subroute = subroutes.id\nWHERE subroutes.route=$1\nORDER BY time ASC\n    "
+  },
+  "75f65d308c1fc38a170c67169a1ff05dde8fbb19cf8685b9259fd337a2048533": {
+    "describe": {
+      "columns": [
+        {
+          "name": "route",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "code",
+          "ordinal": 1,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "name",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "operator",
+          "ordinal": 3,
+          "type_info": "Int4"
+        },
+        {
+          "name": "service_type",
+          "ordinal": 4,
+          "type_info": "Int4"
+        },
+        {
+          "name": "circular",
+          "ordinal": 5,
+          "type_info": "Bool"
+        },
+        {
+          "name": "main_subroute",
+          "ordinal": 6,
+          "type_info": "Int4"
+        },
+        {
+          "name": "active",
+          "ordinal": 7,
+          "type_info": "Bool"
+        },
+        {
+          "name": "parishes",
+          "ordinal": 8,
+          "type_info": "Int2Array"
+        },
+        {
+          "name": "text_color",
+          "ordinal": 9,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "bg_color",
+          "ordinal": 10,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "subroute!: Option<i32>",
+          "ordinal": 11,
+          "type_info": "Int4"
+        },
+        {
+          "name": "subroute_flag!: Option<String>",
+          "ordinal": 12,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "subroute_circular!: Option<bool>",
+          "ordinal": 13,
+          "type_info": "Bool"
+        },
+        {
+          "name": "subroute_polyline!: Option<String>",
+          "ordinal": 14,
+          "type_info": "Varchar"
+        }
+      ],
+      "nullable": [
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      }
+    },
+    "query": "\nSELECT routes.id as route,\n    routes.code as code,\n    routes.name as name,\n    routes.operator as operator,\n    routes.type as service_type,\n    routes.circular as circular,\n    routes.main_subroute as main_subroute,\n    routes.active as active,\n    routes.parishes as parishes,\n    route_types.badge_text_color as text_color,\n    route_types.badge_bg_color as bg_color,\n    subroutes.id as \"subroute!: Option<i32>\",\n    subroutes.flag as \"subroute_flag!: Option<String>\",\n    subroutes.circular as \"subroute_circular!: Option<bool>\",\n    subroutes.polyline as \"subroute_polyline!: Option<String>\"\nFROM routes\nJOIN route_types on routes.type = route_types.id\nLEFT JOIN subroutes ON routes.id = subroutes.route\nJOIN operators ON routes.operator = operators.id\nWHERE routes.operator = $1\nORDER BY routes.id asc\n"
   },
   "7609478e49ed175220146508a0fad77201f743f20120446a4c13c01e2602017a": {
     "describe": {
@@ -2388,6 +2348,81 @@
       }
     },
     "query": "\nUPDATE Stops\nSET tml_id=$1, tml_id_verified=$2, tml_id_source=$3\nWHERE id=$4\n    "
+  },
+  "89352ecd32e398616e438688193d4a1b5e82e5f4f045d4ceb4f5f685f635c5ef": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int8"
+        },
+        {
+          "name": "author_id",
+          "ordinal": 1,
+          "type_info": "Int4"
+        },
+        {
+          "name": "change",
+          "ordinal": 2,
+          "type_info": "Jsonb"
+        },
+        {
+          "name": "submission_date",
+          "ordinal": 3,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "accepted",
+          "ordinal": 4,
+          "type_info": "Bool"
+        },
+        {
+          "name": "evaluator_id",
+          "ordinal": 5,
+          "type_info": "Int4"
+        },
+        {
+          "name": "evaluation_date",
+          "ordinal": 6,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "comment",
+          "ordinal": 7,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "author_username",
+          "ordinal": 8,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "evaluator_username",
+          "ordinal": 9,
+          "type_info": "Varchar"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Int8"
+        ]
+      }
+    },
+    "query": "\nSELECT Contributions.id, Contributions.author_id, Contributions.change,\n    Contributions.submission_date, Contributions.accepted,\n    Contributions.evaluator_id, Contributions.evaluation_date,\n    Contributions.comment,\n    Authors.username as author_username,\n    Evaluators.username as evaluator_username\nFROM Contributions\nINNER JOIN Users AS Authors ON author_id = Authors.id\nLEFT JOIN Users AS Evaluators ON evaluator_id = Evaluators.id\nWHERE accepted IS NOT NULL\nORDER BY evaluation_date DESC\nLIMIT $1 OFFSET $2\n    "
   },
   "8bf741665db0772a48f7ecb8ce0b6ab911afc8baae2c38d925e46cad8a3712bd": {
     "describe": {
@@ -3365,78 +3400,6 @@
     },
     "query": "\nSELECT count(*) as cnt\nFROM stops\nWHERE id = ($1) OR id = ($2)\n    "
   },
-  "d94811f98442dd1fc8bacd7f9a1408c7701e498c6df583a42c0d1fbd12e19604": {
-    "describe": {
-      "columns": [
-        {
-          "name": "id",
-          "ordinal": 0,
-          "type_info": "Int8"
-        },
-        {
-          "name": "author_id",
-          "ordinal": 1,
-          "type_info": "Int4"
-        },
-        {
-          "name": "change",
-          "ordinal": 2,
-          "type_info": "Jsonb"
-        },
-        {
-          "name": "submission_date",
-          "ordinal": 3,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "accepted",
-          "ordinal": 4,
-          "type_info": "Bool"
-        },
-        {
-          "name": "evaluator_id",
-          "ordinal": 5,
-          "type_info": "Int4"
-        },
-        {
-          "name": "evaluation_date",
-          "ordinal": 6,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "comment",
-          "ordinal": 7,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "author_username",
-          "ordinal": 8,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "evaluator_username",
-          "ordinal": 9,
-          "type_info": "Varchar"
-        }
-      ],
-      "nullable": [
-        false,
-        false,
-        false,
-        false,
-        true,
-        true,
-        true,
-        true,
-        false,
-        false
-      ],
-      "parameters": {
-        "Left": []
-      }
-    },
-    "query": "\nSELECT Contributions.id, Contributions.author_id, Contributions.change,\n    Contributions.submission_date, Contributions.accepted,\n    Contributions.evaluator_id, Contributions.evaluation_date,\n    Contributions.comment,\n    Authors.username as author_username,\n    Evaluators.username as evaluator_username\nFROM Contributions\nINNER JOIN Users AS Authors ON author_id = Authors.id\nLEFT JOIN Users AS Evaluators ON evaluator_id = Evaluators.id\nWHERE accepted IS NOT NULL\nORDER BY evaluation_date DESC\n    "
-  },
   "dff59c3c31a7adb1baab26cc98197193721a5a00876720d2c6bdde2936ab1841": {
     "describe": {
       "columns": [],
@@ -3638,5 +3601,125 @@
       }
     },
     "query": "\nDELETE FROM subroute_stops\nWHERE Subroute=$1 AND idx>=$2\n    "
+  },
+  "f00215331e753789554feb61ea0c6ef746fc5c591931db87bd72b00186cbfc70": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int8"
+        },
+        {
+          "name": "author_id",
+          "ordinal": 1,
+          "type_info": "Int4"
+        },
+        {
+          "name": "change",
+          "ordinal": 2,
+          "type_info": "Jsonb"
+        },
+        {
+          "name": "submission_date",
+          "ordinal": 3,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "accepted",
+          "ordinal": 4,
+          "type_info": "Bool"
+        },
+        {
+          "name": "evaluator_id",
+          "ordinal": 5,
+          "type_info": "Int4"
+        },
+        {
+          "name": "evaluation_date",
+          "ordinal": 6,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "comment",
+          "ordinal": 7,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "author_username",
+          "ordinal": 8,
+          "type_info": "Varchar"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Int8"
+        ]
+      }
+    },
+    "query": "\nSELECT Contributions.id, Contributions.author_id, Contributions.change,\n    Contributions.submission_date, Contributions.accepted,\n    Contributions.evaluator_id, Contributions.evaluation_date,\n    Contributions.comment,\n    Authors.username as author_username\nFROM Contributions\nINNER JOIN Users AS Authors ON author_id = Authors.id\nWHERE accepted IS NULL\nORDER BY submission_date ASC\nLIMIT $1 OFFSET $2\n    "
+  },
+  "f2bb20fe7200f0084d4dc505edd3e961a60520ee7002b8b6bbfe62f96f2377e8": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int8"
+        },
+        {
+          "name": "author_id",
+          "ordinal": 1,
+          "type_info": "Int4"
+        },
+        {
+          "name": "changes",
+          "ordinal": 2,
+          "type_info": "Jsonb"
+        },
+        {
+          "name": "datetime",
+          "ordinal": 3,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "contribution_id",
+          "ordinal": 4,
+          "type_info": "Int8"
+        },
+        {
+          "name": "author_username",
+          "ordinal": 5,
+          "type_info": "Varchar"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        true,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Int8"
+        ]
+      }
+    },
+    "query": "\nSELECT Changelog.id, Changelog.author_id, Changelog.changes, Changelog.datetime,\n    Changelog.contribution_id, Users.username as author_username\nFROM Changelog\nINNER JOIN Users ON author_id = Users.id\nORDER BY datetime DESC\nLIMIT $1 OFFSET $2\n    "
   }
 }
