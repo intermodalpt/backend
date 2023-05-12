@@ -18,6 +18,7 @@
 
 use std::sync::Arc;
 use std::{fs, io};
+use std::collections::HashMap;
 
 use axum::extract::{Path, Query, State};
 use axum::Json;
@@ -87,6 +88,21 @@ pub(crate) async fn tml_match_stop(
 }
 
 // Read trips from GTFS tile
+fn tml_gtfs_routes() -> Vec<models::GTFSRoute> {
+    let f = fs::File::open("gtfs/routes.txt").unwrap();
+    let reader = io::BufReader::new(f);
+
+    let mut rdr = csv::ReaderBuilder::new()
+        // .trim(csv::Trim::All)
+        .from_reader(reader);
+
+    rdr.deserialize()
+        .into_iter()
+        .map(|result| result.unwrap())
+        .collect::<Vec<models::GTFSRoute>>()
+}
+
+// Read trips from GTFS tile
 fn tml_gtfs_trips() -> Vec<models::GTFSTrips> {
     let f = fs::File::open("gtfs/trips.txt").unwrap();
     let reader = io::BufReader::new(f);
@@ -137,6 +153,12 @@ pub(crate) async fn tml_gtfs_route_trips(
         .get_or_init(|| {
             let gtfs_stop_times = load_gtfs_stop_times();
             let gtfs_trips = tml_gtfs_trips();
+            let gtfs_routes = tml_gtfs_routes();
+
+            let gtfs_route_names = gtfs_routes
+                .into_iter()
+                .map(|route| (route.route_id, route.route_long_name))
+                .collect::<HashMap<String, String>>();
 
             let trips_stop_seq =
                 logic::calculate_gtfs_stop_sequence(&gtfs_stop_times);
@@ -147,6 +169,7 @@ pub(crate) async fn tml_gtfs_route_trips(
                 .into_iter()
                 .map(|(route_id, trips)| models::TMLRoute {
                     id: route_id.clone(),
+                    name: gtfs_route_names.get(&route_id).cloned().unwrap_or_default(),
                     trips: trips
                         .into_iter()
                         .map(|trip| models::TMLTrip {

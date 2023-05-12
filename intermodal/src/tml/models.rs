@@ -38,6 +38,13 @@ pub struct GTFSStopTimes {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct GTFSRoute {
+    pub(crate) route_id: String,
+    pub(crate) route_short_name: String,
+    pub(crate) route_long_name: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct GTFSTrips {
     pub(crate) route_id: String,
     service_id: String,
@@ -70,6 +77,7 @@ impl Hash for TMLTrip {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TMLRoute {
     pub(crate) id: String,
+    pub(crate) name: String,
     pub(crate) trips: Vec<TMLTrip>,
 }
 
@@ -121,6 +129,7 @@ mod tests {
     fn trip_dedup() {
         let route = TMLRoute {
             id: "4308_0".to_string(),
+            name: "Pinhal Novo - Palmela".to_string(),
             trips: vec![
                 TMLTrip {
                     id: "p3_306".to_string(),
