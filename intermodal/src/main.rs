@@ -256,6 +256,10 @@ pub(crate) fn build_paths(state: AppState) -> Router {
             "/v1/operators/:operator_id/news",
             get(operators::handlers::get_operator_news),
         )
+        .route(
+            "/v1/operators/:operator_id/routes",
+            get(routes::handlers::get_operator_routes),
+        )
         .route("/v1/actions/import_osm", get(geo::handlers::import_osm))
         .route(
             "/v1/actions/migrate_stop/:original_id/:replacement_id",

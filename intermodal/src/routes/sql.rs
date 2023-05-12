@@ -221,6 +221,89 @@ ORDER BY routes.id asc
     Ok(routes.into_values().collect::<Vec<_>>())
 }
 
+pub(crate) async fn fetch_operator_routes_with_subroutes(
+    pool: &PgPool,
+    operator_id: i32,
+) -> Result<Vec<responses::Route>> {
+    let res = sqlx::query!(
+        r#"
+SELECT routes.id as route,
+    routes.code as code,
+    routes.name as name,
+    routes.operator as operator,
+    routes.type as service_type,
+    routes.circular as circular,
+    routes.main_subroute as main_subroute,
+    routes.active as active,
+    routes.parishes as parishes,
+    route_types.badge_text_color as text_color,
+    route_types.badge_bg_color as bg_color,
+    subroutes.id as "subroute!: Option<i32>",
+    subroutes.flag as "subroute_flag!: Option<String>",
+    subroutes.circular as "subroute_circular!: Option<bool>",
+    subroutes.polyline as "subroute_polyline!: Option<String>"
+FROM routes
+JOIN route_types on routes.type = route_types.id
+LEFT JOIN subroutes ON routes.id = subroutes.route
+JOIN operators ON routes.operator = operators.id
+WHERE routes.operator = $1
+ORDER BY routes.id asc
+"#,
+        operator_id
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    let mut routes: HashMap<i32, responses::Route> = HashMap::new();
+
+    for row in res {
+        routes
+            .entry(row.route)
+            .and_modify(|route| {
+                if let (Some(id), Some(flag), Some(circular)) = (
+                    row.subroute,
+                    row.subroute_flag.clone(),
+                    row.subroute_circular,
+                ) {
+                    route.subroutes.push(responses::Subroute {
+                        id,
+                        flag,
+                        circular,
+                        polyline: row.subroute_polyline.clone(),
+                    });
+                }
+            })
+            .or_insert(responses::Route {
+                id: row.route,
+                code: row.code,
+                name: row.name,
+                circular: row.circular,
+                main_subroute: row.main_subroute,
+                badge_text: row.text_color,
+                badge_bg: row.bg_color,
+                subroutes: if let (Some(id), Some(flag), Some(circular)) =
+                    (row.subroute, row.subroute_flag, row.subroute_circular)
+                {
+                    vec![responses::Subroute {
+                        id,
+                        flag,
+                        circular,
+                        polyline: row.subroute_polyline,
+                    }]
+                } else {
+                    vec![]
+                },
+                active: row.active,
+                operator: row.operator,
+                type_id: row.service_type,
+                parishes: row.parishes,
+            });
+    }
+
+    Ok(routes.into_values().collect::<Vec<_>>())
+}
+
 pub(crate) async fn insert_route<'c, E>(
     executor: E,
     route: &requests::ChangeRoute,

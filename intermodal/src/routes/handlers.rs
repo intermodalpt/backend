@@ -39,6 +39,16 @@ pub(crate) async fn get_routes(
     Ok(Json(routes))
 }
 
+pub(crate) async fn get_operator_routes(
+    State(state): State<AppState>,
+    Path(operator_id): Path<i32>,
+) -> Result<Json<Vec<responses::Route>>, Error> {
+    let routes =
+        sql::fetch_operator_routes_with_subroutes(&state.pool, operator_id)
+            .await?;
+    Ok(Json(routes))
+}
+
 pub(crate) async fn create_route(
     State(state): State<AppState>,
     claims: Option<auth::Claims>,
