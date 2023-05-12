@@ -166,46 +166,67 @@ pub(crate) async fn get_pending_stop_patch(
 pub(crate) async fn get_latest_undecided_contributions(
     State(state): State<AppState>,
     claims: Option<auth::Claims>,
+    paginator: Query<Page>,
 ) -> Result<Json<Vec<responses::Contribution>>, Error> {
-    if let Some(claims) = claims {
-        if !claims.permissions.is_admin {
-            return Err(Error::Forbidden);
-        }
-
-        Ok(Json(sql::fetch_undecided_contributions(&state.pool).await?))
-    } else {
+    if claims.is_none() {
         return Err(Error::Forbidden);
     }
+
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
+    let offset = i64::from(paginator.p * PAGE_SIZE);
+    let take = i64::from(PAGE_SIZE);
+
+    Ok(Json(
+        sql::fetch_undecided_contributions(&state.pool, offset, take).await?,
+    ))
 }
 
 pub(crate) async fn get_latest_decided_contributions(
     State(state): State<AppState>,
     claims: Option<auth::Claims>,
+    paginator: Query<Page>,
 ) -> Result<Json<Vec<responses::Contribution>>, Error> {
-    if let Some(claims) = claims {
-        if !claims.permissions.is_admin {
-            return Err(Error::Forbidden);
-        }
-
-        Ok(Json(sql::fetch_decided_contributions(&state.pool).await?))
-    } else {
+    if claims.is_none() {
         return Err(Error::Forbidden);
     }
+
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
+    let offset = i64::from(paginator.p * PAGE_SIZE);
+    let take = i64::from(PAGE_SIZE);
+
+    Ok(Json(
+        sql::fetch_decided_contributions(&state.pool, offset, take).await?,
+    ))
 }
 
 pub(crate) async fn get_changelog(
     State(state): State<AppState>,
     claims: Option<auth::Claims>,
+    paginator: Query<Page>,
 ) -> Result<Json<Vec<responses::Changeset>>, Error> {
-    if let Some(claims) = claims {
-        if !claims.permissions.is_admin {
-            return Err(Error::Forbidden);
-        }
-
-        Ok(Json(sql::fetch_changeset_logs(&state.pool).await?))
-    } else {
+    if claims.is_none() {
         return Err(Error::Forbidden);
     }
+
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
+    let offset = i64::from(paginator.p * PAGE_SIZE);
+    let take = i64::from(PAGE_SIZE);
+
+    Ok(Json(
+        sql::fetch_changeset_logs(&state.pool, offset, take).await?,
+    ))
 }
 
 pub(crate) async fn post_contrib_stop_data(

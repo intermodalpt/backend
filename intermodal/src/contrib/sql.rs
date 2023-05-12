@@ -141,6 +141,8 @@ LIMIT $2 OFFSET $3
 
 pub(crate) async fn fetch_undecided_contributions(
     pool: &PgPool,
+    skip: i64,
+    take: i64,
 ) -> Result<Vec<responses::Contribution>> {
     sqlx::query!(
         r#"
@@ -152,8 +154,11 @@ SELECT Contributions.id, Contributions.author_id, Contributions.change,
 FROM Contributions
 INNER JOIN Users AS Authors ON author_id = Authors.id
 WHERE accepted IS NULL
-ORDER BY evaluation_date DESC
-    "#
+ORDER BY submission_date ASC
+LIMIT $1 OFFSET $2
+    "#,
+        take,
+        skip
     )
     .fetch_all(pool)
     .await
@@ -179,6 +184,8 @@ ORDER BY evaluation_date DESC
 
 pub(crate) async fn fetch_decided_contributions(
     pool: &PgPool,
+    skip: i64,
+    take: i64,
 ) -> Result<Vec<responses::Contribution>> {
     sqlx::query!(
         r#"
@@ -193,7 +200,10 @@ INNER JOIN Users AS Authors ON author_id = Authors.id
 LEFT JOIN Users AS Evaluators ON evaluator_id = Evaluators.id
 WHERE accepted IS NOT NULL
 ORDER BY evaluation_date DESC
-    "#
+LIMIT $1 OFFSET $2
+    "#,
+        take,
+        skip
     )
     .fetch_all(pool)
     .await
@@ -314,6 +324,8 @@ WHERE id=$3
 
 pub(crate) async fn fetch_changeset_logs<'c, E>(
     executor: E,
+    skip: i64,
+    take: i64,
 ) -> Result<Vec<responses::Changeset>>
 where
     E: sqlx::Executor<'c, Database = sqlx::Postgres>,
@@ -325,7 +337,10 @@ SELECT Changelog.id, Changelog.author_id, Changelog.changes, Changelog.datetime,
 FROM Changelog
 INNER JOIN Users ON author_id = Users.id
 ORDER BY datetime DESC
+LIMIT $1 OFFSET $2
     "#,
+        take,
+        skip
     )
     .fetch_all(executor)
     .await
