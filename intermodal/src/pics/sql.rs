@@ -526,3 +526,23 @@ WHERE id=$1
 
     Ok(())
 }
+
+pub(crate) async fn fetch_picture_count_by_stop(
+    pool: &PgPool,
+) -> Result<HashMap<i32, i32>> {
+    let res = sqlx::query!(
+        r#"
+SELECT stop_pic_stops.stop, count(*)::int as "pic_count!: i32"
+FROM stop_pic_stops
+GROUP BY stop_pic_stops.stop
+    "#
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .into_iter()
+    .map(|row| (row.stop, row.pic_count))
+    .collect();
+
+    Ok(res)
+}

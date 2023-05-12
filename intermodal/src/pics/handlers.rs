@@ -329,3 +329,9 @@ pub(crate) async fn delete_stop_picture(
 
     Ok(())
 }
+
+pub(crate) async fn get_picture_count_by_stop(
+    State(state): State<AppState>,
+) -> Result<Json<HashMap<i32, i32>>, Error> {
+    Ok(Json(sql::fetch_picture_count_by_stop(&state.pool).await?))
+}

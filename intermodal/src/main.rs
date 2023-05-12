@@ -179,6 +179,10 @@ pub(crate) fn build_paths(state: AppState) -> Router {
                 .delete(pics::handlers::delete_stop_picture),
         )
         .route(
+            "/v1/stop_pics/by_stop",
+            get(pics::handlers::get_picture_count_by_stop),
+        )
+        .route(
             "/v1/contrib/upload/stops",
             post(pics::handlers::upload_dangling_stop_picture),
         )
