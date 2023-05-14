@@ -236,23 +236,13 @@ pub(crate) async fn patch_stop_picture_meta(
     }
 
     //TODO as a transaction
-    let pic = sql::fetch_stop_picture(&state.pool, stop_picture_id).await?;
-    if pic.is_none() {
-        return Err(Error::NotFoundUpstream);
-    }
-    let pic = pic.unwrap();
-
     let stops = sql::fetch_picture_stops(&state.pool, pic.id).await?;
 
     let patch = stop_pic_meta.derive_patch(&pic);
 
-    if patch.is_empty() {
-        return Err(Error::ValidationFailure(
-            "No changes were made".to_string(),
-        ));
-    }
+    let changed = !(patch.is_empty() && stops == stop_pic_meta.stops);
 
-    if pic.tagged {
+    if changed {
         contrib::sql::insert_changeset_log(
             &state.pool,
             claims.uid,
@@ -264,25 +254,8 @@ pub(crate) async fn patch_stop_picture_meta(
             }],
             None,
         )
-        .await?;
-    } else {
-        contrib::sql::insert_changeset_log(
-            &state.pool,
-            claims.uid,
-            &[contrib::models::Change::StopPicUpload {
-                pic,
-                stops: stop_pic_meta.stops.clone(),
-            }],
-            None,
-        )
-        .await?;
-        // pic.tagged = true;
+            .await?;
     }
-
-    // TODO Do this
-    // patch.apply(&mut pic);
-    // and change the function bellow to take a pic instead of a change request
-    // + uncomment above pic.tagged
 
     sql::update_stop_picture_meta(
         &state.pool,

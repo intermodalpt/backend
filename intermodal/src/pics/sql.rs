@@ -434,6 +434,11 @@ pub(crate) async fn update_stop_picture_meta(
 ) -> Result<()> {
     let update_date = Local::now().to_string();
 
+    let mut transaction = pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
     let _res = sqlx::query!(
         r#"
 UPDATE stop_pics
@@ -451,7 +456,7 @@ WHERE id=$9
         update_date,
         stop_picture_id
     )
-    .execute(pool)
+    .execute(&mut transaction)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
@@ -466,7 +471,7 @@ WHERE id=$9
         "#
         ))
         .bind(stop_picture_id)
-        .execute(pool)
+        .execute(&mut transaction)
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
@@ -480,11 +485,16 @@ ON CONFLICT DO NOTHING
                 stop_picture_id,
                 stop_id
             )
-            .execute(pool)
+            .execute(&mut transaction)
             .await
             .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
         }
     }
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     Ok(())
 }
