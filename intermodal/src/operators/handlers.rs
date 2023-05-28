@@ -25,12 +25,107 @@ use serde::Deserialize;
 
 use super::models::{self, requests, responses};
 use super::sql;
-use crate::{auth, AppState, Error};
+use crate::{auth, contrib, AppState, Error};
 
 pub(crate) async fn get_operators(
     State(state): State<AppState>,
 ) -> Result<Json<Vec<models::Operator>>, Error> {
     Ok(Json(sql::fetch_operators(&state.pool).await?))
+}
+
+pub(crate) async fn get_issues(
+    State(state): State<AppState>,
+) -> Result<Json<Vec<models::Issue>>, Error> {
+    Ok(Json(sql::fetch_issues(&state.pool).await?))
+}
+
+pub(crate) async fn get_issue(
+    State(state): State<AppState>,
+    Path(issue_id): Path<i32>,
+) -> Result<Json<models::Issue>, Error> {
+    Ok(Json(sql::fetch_issue(&state.pool, issue_id).await?))
+}
+
+pub(crate) async fn get_operator_issues(
+    State(state): State<AppState>,
+    Path(operator_id): Path<i32>,
+) -> Result<Json<Vec<responses::Issue>>, Error> {
+    Ok(Json(
+        sql::fetch_issue_operators(&state.pool, operator_id).await?,
+    ))
+}
+
+pub(crate) async fn post_issue(
+    State(state): State<AppState>,
+    claims: Option<auth::Claims>,
+    Json(issue): Json<requests::NewIssue>,
+) -> Result<Json<HashMap<String, i32>>, Error> {
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+    let id = sql::insert_issue(&state.pool, &issue).await?;
+
+    let issue = models::Issue {
+        id,
+        ..models::Issue::from(issue)
+    };
+
+    // TODO transaction
+    contrib::sql::insert_changeset_log(
+        &state.pool,
+        claims.uid,
+        &[contrib::models::Change::IssueCreation { data: issue }],
+        None,
+    )
+    .await?;
+
+    Ok(Json({
+        let mut map = HashMap::new();
+        map.insert("id".to_string(), id);
+        map
+    }))
+}
+
+pub(crate) async fn patch_issue(
+    State(state): State<AppState>,
+    claims: Option<auth::Claims>,
+    Path(issue_id): Path<i32>,
+    Json(change): Json<requests::ChangeIssue>,
+) -> Result<(), Error> {
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
+    // TODO transaction
+    let issue = sql::fetch_issue(&state.pool, issue_id).await?;
+
+    let patch = change.derive_patch(&issue);
+    if patch.is_empty() {
+        return Ok(());
+    }
+    sql::update_issue(&state.pool, issue_id, change).await?;
+
+    // TODO transaction
+    contrib::sql::insert_changeset_log(
+        &state.pool,
+        claims.uid,
+        &[contrib::models::Change::IssueUpdate {
+            original: issue,
+            patch,
+        }],
+        None,
+    )
+    .await?;
+
+    Ok(())
 }
 
 pub(crate) async fn get_calendars(

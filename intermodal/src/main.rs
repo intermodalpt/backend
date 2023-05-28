@@ -183,6 +183,20 @@ pub(crate) fn build_paths(state: AppState) -> Router {
             get(pics::handlers::get_picture_count_by_stop),
         )
         .route(
+            "/v1/issues",
+            get(operators::handlers::get_issues)
+                .post(operators::handlers::post_issue),
+        )
+        .route(
+            "/v1/issues/:issue_id",
+            get(operators::handlers::get_issue)
+                .patch(operators::handlers::patch_issue),
+        )
+        .route(
+            "/v1/operators/:operator_id/issues",
+            get(operators::handlers::get_operator_issues),
+        )
+        .route(
             "/v1/contrib/upload/stops",
             post(pics::handlers::upload_dangling_stop_picture),
         )

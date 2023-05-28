@@ -18,7 +18,9 @@
 
 use chrono::{DateTime, Local, NaiveDate};
 use serde::{Deserialize, Serialize};
+use sqlx::types::JsonValue;
 
+use crate::operators::models as operators;
 use crate::pics::models as pics;
 use crate::routes::models as routes;
 use crate::stops::models as stops;
@@ -101,6 +103,13 @@ pub enum Change {
     StopPicDeletion {
         pic: pics::StopPic,
         stops: Vec<i32>,
+    },
+    IssueCreation {
+        data: operators::Issue,
+    },
+    IssueUpdate {
+        original: operators::Issue,
+        patch: IssuePatch,
     },
 }
 
@@ -701,6 +710,99 @@ impl StopPicturePatch {
         }
         if let Some(notes) = self.notes {
             pic.dyn_meta.notes = notes
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Default)]
+pub struct IssuePatch {
+    pub(crate) title: Option<String>,
+    pub(crate) message: Option<String>,
+    pub(crate) creation: Option<DateTime<Local>>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "::serde_with::rust::double_option"
+    )]
+    pub(crate) geojson: Option<Option<JsonValue>>,
+    pub(crate) category: Option<operators::IssueCategory>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "::serde_with::rust::double_option"
+    )]
+    pub(crate) lat: Option<Option<f64>>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "::serde_with::rust::double_option"
+    )]
+    pub(crate) lon: Option<Option<f64>>,
+    pub(crate) state: Option<operators::IssueState>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "::serde_with::rust::double_option"
+    )]
+    pub(crate) state_justification: Option<Option<String>>,
+    pub(crate) operator_ids: Option<Vec<i32>>,
+    pub(crate) route_ids: Option<Vec<i32>>,
+    pub(crate) stop_ids: Option<Vec<i32>>,
+}
+
+impl IssuePatch {
+    pub(crate) fn is_empty(&self) -> bool {
+        self.title.is_none()
+            && self.message.is_none()
+            && self.creation.is_none()
+            && self.geojson.is_none()
+            && self.category.is_none()
+            && self.lat.is_none()
+            && self.lon.is_none()
+            && self.state.is_none()
+            && self.state_justification.is_none()
+            && self.operator_ids.is_none()
+            && self.route_ids.is_none()
+            && self.stop_ids.is_none()
+    }
+
+    #[allow(unused)]
+    pub(crate) fn apply(self, issue: &mut operators::Issue) {
+        if let Some(title) = self.title {
+            issue.title = title
+        }
+        if let Some(message) = self.message {
+            issue.message = message
+        }
+        if let Some(creation) = self.creation {
+            issue.creation = creation
+        }
+        if let Some(geojson) = self.geojson {
+            issue.geojson = geojson
+        }
+        if let Some(category) = self.category {
+            issue.category = category
+        }
+        if let Some(lat) = self.lat {
+            issue.lat = lat
+        }
+        if let Some(lon) = self.lon {
+            issue.lon = lon
+        }
+        if let Some(state) = self.state {
+            issue.state = state
+        }
+        if let Some(state_justification) = self.state_justification {
+            issue.state_justification = state_justification
+        }
+        if let Some(operator_ids) = self.operator_ids {
+            issue.operator_ids = operator_ids
+        }
+        if let Some(route_ids) = self.route_ids {
+            issue.route_ids = route_ids
+        }
+        if let Some(stop_ids) = self.stop_ids {
+            issue.stop_ids = stop_ids
         }
     }
 }
