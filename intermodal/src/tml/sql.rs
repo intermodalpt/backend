@@ -62,8 +62,12 @@ FROM Stops
                 update_date: r.update_date,
                 parish: r.parish,
                 tags: r.tags,
-                a11y: serde_json::from_value(r.accessibility_meta)
-                    .map_err(|_e| Error::DatabaseDeserialization)?,
+                a11y: serde_json::from_value(r.accessibility_meta).map_err(
+                    |e| {
+                        log::error!("Error deserializing: {}", e);
+                        Error::DatabaseDeserialization
+                    },
+                )?,
                 verification_level: r.verification_level as u8,
                 service_check_date: r.service_check_date,
                 infrastructure_check_date: r.infrastructure_check_date,

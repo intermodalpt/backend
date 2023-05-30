@@ -64,8 +64,12 @@ WHERE id = $1
             update_date: r.update_date,
             parish: r.parish,
             tags: r.tags,
-            a11y: serde_json::from_value(r.accessibility_meta)
-                .map_err(|_e| Error::DatabaseDeserialization)?,
+            a11y: serde_json::from_value(r.accessibility_meta).map_err(
+                |e| {
+                    log::error!("Error deserializing: {}", e);
+                    Error::DatabaseDeserialization
+                },
+            )?,
             verification_level: r.verification_level as u8,
             service_check_date: r.service_check_date,
             infrastructure_check_date: r.infrastructure_check_date,
@@ -116,8 +120,12 @@ WHERE id IN (
                 update_date: r.update_date,
                 parish: r.parish,
                 tags: r.tags,
-                a11y: serde_json::from_value(r.accessibility_meta)
-                    .map_err(|_e| Error::DatabaseDeserialization)?,
+                a11y: serde_json::from_value(r.accessibility_meta).map_err(
+                    |e| {
+                        log::error!("Error deserializing: {}", e);
+                        Error::DatabaseDeserialization
+                    },
+                )?,
                 verification_level: r.verification_level as u8,
                 service_check_date: r.service_check_date,
                 infrastructure_check_date: r.infrastructure_check_date,
@@ -155,8 +163,12 @@ FROM stops")
                 update_date: r.update_date,
                 parish: r.parish,
                 tags: r.tags,
-                a11y: serde_json::from_value(r.accessibility_meta)
-                    .map_err(|_e| Error::DatabaseDeserialization)?,
+                a11y: serde_json::from_value(r.accessibility_meta).map_err(
+                    |e| {
+                        log::error!("Error deserializing: {}", e);
+                        Error::DatabaseDeserialization
+                    },
+                )?,
                 verification_level: r.verification_level as u8,
                 service_check_date: r.service_check_date,
                 infrastructure_check_date: r.infrastructure_check_date,
@@ -210,8 +222,12 @@ WHERE lon >= $1 AND lon <= $2 AND lat <= $3 AND lat >= $4 AND id IN (
             update_date: r.update_date,
             parish: r.parish,
             tags: r.tags,
-            a11y: serde_json::from_value(r.accessibility_meta)
-                .map_err(|_e| Error::DatabaseDeserialization)?,
+            a11y: serde_json::from_value(r.accessibility_meta).map_err(
+                |e| {
+                    log::error!("Error deserializing: {}", e);
+                    Error::DatabaseDeserialization
+                },
+            )?,
             verification_level: r.verification_level as u8,
             service_check_date: r.service_check_date,
             infrastructure_check_date: r.infrastructure_check_date,

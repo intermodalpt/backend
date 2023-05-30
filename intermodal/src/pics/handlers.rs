@@ -254,7 +254,7 @@ pub(crate) async fn patch_stop_picture_meta(
             }],
             None,
         )
-            .await?;
+        .await?;
     }
 
     sql::update_stop_picture_meta(

@@ -309,6 +309,8 @@ pub(crate) fn build_paths(state: AppState) -> Router {
 
 #[tokio::main]
 async fn main() {
+    env_logger::init();
+
     let settings = Config::builder()
         .add_source(config::File::with_name("./settings.toml"))
         .add_source(config::Environment::with_prefix("SETTINGS"))

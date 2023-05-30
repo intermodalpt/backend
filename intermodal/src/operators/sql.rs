@@ -42,9 +42,7 @@ FROM Operators
     .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
-pub(crate) async fn fetch_issues(
-    pool: &PgPool,
-) -> Result<Vec<models::Issue>> {
+pub(crate) async fn fetch_issues(pool: &PgPool) -> Result<Vec<models::Issue>> {
     sqlx::query!(
         r#"
 SELECT issues.id, issues.title, issues.message, issues.geojson, issues.category, issues.lat,
@@ -70,10 +68,16 @@ GROUP BY issues.id
             message: row.message,
             geojson: row.geojson,
             category: serde_json::from_str(&row.category)
-                .map_err(|_e| Error::DatabaseDeserialization)?,
+                .map_err(|e| {
+                    log::error!("Error deserializing: {}", e);
+                    Error::DatabaseDeserialization
+                })?,
             creation: row.creation.into(),
             state: serde_json::from_str(&row.state)
-                .map_err(|_e| Error::DatabaseDeserialization)?,
+                .map_err(|e| {
+                    log::error!("Error deserializing: {}", e);
+                    Error::DatabaseDeserialization
+                })?,
             state_justification: row.state_justification,
             lat: row.lat,
             lon: row.lon,
@@ -121,13 +125,19 @@ GROUP BY issues.id
             message: row.message,
             geojson: row.geojson,
             category: serde_json::from_str(&row.category)
-                .map_err(|_e| Error::DatabaseDeserialization)?,
+                .map_err(|e| {
+                    log::error!("Error deserializing: {}", e);
+                    Error::DatabaseDeserialization
+                })?,
             creation: row.creation.into(),
             lat: row.lat,
             lon: row.lon,
             impact: row.impact,
             state: serde_json::from_str(&row.state)
-                .map_err(|_e| Error::DatabaseDeserialization)?,
+                .map_err(|e| {
+                    log::error!("Error deserializing: {}", e);
+                    Error::DatabaseDeserialization
+                })?,
             state_justification: row.state_justification,
             operator_ids: row.operators,
             route_ids: row.routes,
@@ -166,10 +176,16 @@ GROUP BY issues.id"#,
             message: row.message,
             creation: row.creation.into(),
             category: serde_json::from_str(&row.category)
-                .map_err(|_e| Error::DatabaseDeserialization)?,
+                .map_err(|e| {
+                    log::error!("Error deserializing: {}", e);
+                    Error::DatabaseDeserialization
+                })?,
             impact: row.impact,
             state: serde_json::from_str(&row.state)
-                .map_err(|_e| Error::DatabaseDeserialization)?,
+                .map_err(|e| {
+                    log::error!("Error deserializing: {}", e);
+                    Error::DatabaseDeserialization
+                })?,
             state_justification: row.state_justification,
             lat: row.lat,
             lon: row.lon,
@@ -398,8 +414,10 @@ FROM operator_calendars
         Ok(responses::OperatorCalendar {
             id: row.id,
             name: row.name,
-            calendar: serde_json::from_value(row.calendar)
-                .map_err(|_e| Error::DatabaseDeserialization)?,
+            calendar: serde_json::from_value(row.calendar).map_err(|e| {
+                log::error!("Error deserializing: {}", e);
+                Error::DatabaseDeserialization
+            })?,
             operator_id: row.operator_id,
         })
     })
@@ -426,8 +444,10 @@ WHERE operator_id=$1
         Ok(responses::OperatorCalendar {
             id: row.id,
             name: row.name,
-            calendar: serde_json::from_value(row.calendar)
-                .map_err(|_e| Error::DatabaseDeserialization)?,
+            calendar: serde_json::from_value(row.calendar).map_err(|e| {
+                log::error!("Error deserializing: {}", e);
+                Error::DatabaseDeserialization
+            })?,
             operator_id,
         })
     })
@@ -537,10 +557,10 @@ LIMIT $1 OFFSET $2
             content: row.content,
             datetime: row.datetime.with_timezone(&Local),
             geojson: if let Some(geojson) = row.geojson {
-                Some(
-                    serde_json::from_value(geojson)
-                        .map_err(|_e| Error::DatabaseDeserialization)?,
-                )
+                Some(serde_json::from_value(geojson).map_err(|e| {
+                    log::error!("Error deserializing: {}", e);
+                    Error::DatabaseDeserialization
+                })?)
             } else {
                 None
             },
@@ -578,10 +598,10 @@ LIMIT $2 OFFSET $3
             content: row.content,
             datetime: row.datetime.with_timezone(&Local),
             geojson: if let Some(geojson) = row.geojson {
-                Some(
-                    serde_json::from_value(geojson)
-                        .map_err(|_e| Error::DatabaseDeserialization)?,
-                )
+                Some(serde_json::from_value(geojson).map_err(|e| {
+                    log::error!("Error deserializing: {}", e);
+                    Error::DatabaseDeserialization
+                })?)
             } else {
                 None
             },

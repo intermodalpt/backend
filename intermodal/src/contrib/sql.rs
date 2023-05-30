@@ -46,8 +46,12 @@ WHERE id=$1
         Ok(Some(models::Contribution {
             id: contribution.id,
             author_id: contribution.author_id,
-            change: serde_json::from_value(contribution.change)
-                .map_err(|_e| Error::DatabaseDeserialization)?,
+            change: serde_json::from_value(contribution.change).map_err(
+                |e| {
+                    log::error!("Error deserializing: {}", e);
+                    Error::DatabaseDeserialization
+                },
+            )?,
             submission_date: contribution.submission_date.with_timezone(&Local),
             accepted: contribution.accepted,
             evaluator_id: contribution.evaluator_id,
@@ -88,8 +92,10 @@ LIMIT $2 OFFSET $3
         Ok(models::Contribution {
             id: r.id,
             author_id: r.author_id,
-            change: serde_json::from_value(r.change)
-                .map_err(|_e| Error::DatabaseDeserialization)?,
+            change: serde_json::from_value(r.change).map_err(|e| {
+                log::error!("Error deserializing: {}", e);
+                Error::DatabaseDeserialization
+            })?,
             submission_date: r.submission_date.with_timezone(&Local),
             accepted: r.accepted,
             evaluator_id: r.evaluator_id,
@@ -127,8 +133,10 @@ LIMIT $2 OFFSET $3
         Ok(models::Contribution {
             id: r.id,
             author_id: r.author_id,
-            change: serde_json::from_value(r.change)
-                .map_err(|_e| Error::DatabaseDeserialization)?,
+            change: serde_json::from_value(r.change).map_err(|e| {
+                log::error!("Error deserializing: {}", e);
+                Error::DatabaseDeserialization
+            })?,
             submission_date: r.submission_date.with_timezone(&Local),
             accepted: r.accepted,
             evaluator_id: r.evaluator_id,
@@ -169,8 +177,10 @@ LIMIT $1 OFFSET $2
             id: r.id,
             author_id: r.author_id,
             author_username: r.author_username,
-            change: serde_json::from_value(r.change)
-                .map_err(|_e| Error::DatabaseDeserialization)?,
+            change: serde_json::from_value(r.change).map_err(|e| {
+                log::error!("Error deserializing: {}", e);
+                Error::DatabaseDeserialization
+            })?,
             submission_date: r.submission_date.with_timezone(&Local),
             accepted: r.accepted,
             evaluator_id: r.evaluator_id,
@@ -214,8 +224,10 @@ LIMIT $1 OFFSET $2
             id: r.id,
             author_id: r.author_id,
             author_username: r.author_username,
-            change: serde_json::from_value(r.change)
-                .map_err(|_e| Error::DatabaseDeserialization)?,
+            change: serde_json::from_value(r.change).map_err(|e| {
+                log::error!("Error deserializing: {}", e);
+                Error::DatabaseDeserialization
+            })?,
             submission_date: r.submission_date.with_timezone(&Local),
             accepted: r.accepted,
             evaluator_id: r.evaluator_id,
@@ -238,8 +250,10 @@ VALUES ($1, $2, $3, $4)
 RETURNING id
     "#,
         contribution.author_id,
-        serde_json::to_value(&contribution.change)
-            .map_err(|_e| Error::DatabaseDeserialization)?,
+        serde_json::to_value(&contribution.change).map_err(|e| {
+            log::error!("Error deserializing: {}", e);
+            Error::DatabaseDeserialization
+        })?,
         contribution.submission_date,
         contribution.comment
     )
@@ -351,8 +365,10 @@ LIMIT $1 OFFSET $2
             id: r.id,
             author_id: r.author_id,
             author_username: r.author_username,
-            changes: serde_json::from_value(r.changes)
-                .map_err(|_e| Error::DatabaseDeserialization)?,
+            changes: serde_json::from_value(r.changes).map_err(|e| {
+                log::error!("Error deserializing: {}", e);
+                Error::DatabaseDeserialization
+            })?,
             datetime: r.datetime.with_timezone(&Local),
             contribution_id: r.contribution_id,
         })
