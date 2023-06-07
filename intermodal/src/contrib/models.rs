@@ -647,6 +647,72 @@ impl StopPatch {
             self.verification_level = None;
         }
     }
+
+    pub(crate) fn deverify(
+        &mut self,
+        original_verification: stops::StopVerification,
+    ) {
+        let deverify_service = self.flags.is_some() || self.schedules.is_some();
+        let deverify_infra = self.has_sidewalk.is_some()
+            || self.has_sidewalked_path.is_some()
+            || self.has_shelter.is_some()
+            || self.has_cover.is_some()
+            || self.has_bench.is_some()
+            || self.has_trash_can.is_some()
+            || self.has_waiting_times.is_some()
+            || self.has_ticket_seller.is_some()
+            || self.has_costumer_support.is_some()
+            || self.advertisement_qty.is_some()
+            || self.has_crossing.is_some()
+            || self.has_wide_access.is_some()
+            || self.has_flat_access.is_some()
+            || self.has_tactile_access.is_some()
+            || self.illumination_strength.is_some()
+            || self.illumination_position.is_some()
+            || self.has_illuminated_path.is_some()
+            || self.has_visibility_from_within.is_some()
+            || self.has_visibility_from_area.is_some()
+            || self.is_visible_from_outside.is_some()
+            || self.parking_visibility_impairment.is_some()
+            || self.parking_local_access_impairment.is_some()
+            || self.parking_area_access_impairment.is_some();
+
+        let mut new_verification = original_verification;
+
+        if deverify_service {
+            new_verification.service = stops::Verification::NotVerified;
+        }
+        if deverify_infra {
+            new_verification.infrastructure = stops::Verification::NotVerified;
+        }
+
+        // We allow the patch to deverify by itself
+        if let Some(patch_verification) = self.verification_level {
+            let patch_verification =
+                stops::StopVerification::from(patch_verification);
+
+            if patch_verification.service == stops::Verification::NotVerified {
+                new_verification.service = stops::Verification::NotVerified
+            };
+
+            if patch_verification.infrastructure
+                == stops::Verification::NotVerified
+            {
+                new_verification.infrastructure =
+                    stops::Verification::NotVerified
+            };
+
+            if patch_verification.position == stops::Verification::NotVerified {
+                new_verification.position = stops::Verification::NotVerified
+            };
+        }
+
+        self.verification_level = if new_verification == original_verification {
+            None
+        } else {
+            Some(new_verification.into())
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Default)]

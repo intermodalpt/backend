@@ -136,6 +136,12 @@ pub struct Stop {
     pub infrastructure_check_date: Option<NaiveDate>,
 }
 
+impl Stop {
+    pub fn verification(&self) -> StopVerification {
+        StopVerification::from(self.verification_level)
+    }
+}
+
 #[derive(
     Debug, Clone, Serialize, Deserialize, ToSchema, Default, PartialEq,
 )]
@@ -242,6 +248,98 @@ pub struct Schedule {
     pub discriminator: Option<String>,
     #[serde(rename = "type")]
     pub schedule_type: ScheduleType,
+}
+
+#[derive(Eq, PartialEq, Debug, Copy, Clone)]
+pub enum Verification {
+    NotVerified = 0,
+    Wrong = 1,
+    Likely = 2,
+    Verified = 3,
+}
+
+#[derive(Eq, PartialEq, Debug, Copy, Clone)]
+pub struct StopVerification {
+    pub position: Verification,
+    pub service: Verification,
+    pub infrastructure: Verification,
+}
+
+impl StopVerification {
+    pub fn is_fully_verified(&self) -> bool {
+        self.position == Verification::Verified
+            && self.service == Verification::Verified
+            && self.infrastructure == Verification::Verified
+    }
+
+    pub fn verified() -> Self {
+        StopVerification {
+            position: Verification::Verified,
+            service: Verification::Verified,
+            infrastructure: Verification::Verified,
+        }
+    }
+
+    pub fn unverified() -> Self {
+        StopVerification {
+            position: Verification::NotVerified,
+            service: Verification::NotVerified,
+            infrastructure: Verification::NotVerified,
+        }
+    }
+}
+
+impl From<u8> for StopVerification {
+    fn from(value: u8) -> Self {
+        StopVerification {
+            position: match value & 0b11 {
+                0 => Verification::NotVerified,
+                1 => Verification::Wrong,
+                2 => Verification::Likely,
+                3 => Verification::Verified,
+                _ => unreachable!(),
+            },
+            service: match (value >> 2) & 0b11 {
+                0 => Verification::NotVerified,
+                1 => Verification::Wrong,
+                2 => Verification::Likely,
+                3 => Verification::Verified,
+                _ => unreachable!(),
+            },
+            infrastructure: match (value >> 4) & 0b11 {
+                0 => Verification::NotVerified,
+                1 => Verification::Wrong,
+                2 => Verification::Likely,
+                3 => Verification::Verified,
+                _ => unreachable!(),
+            },
+        }
+    }
+}
+
+impl From<StopVerification> for u8 {
+    fn from(value: StopVerification) -> Self {
+        let mut result = 0;
+        result |= match value.position {
+            Verification::NotVerified => 0,
+            Verification::Wrong => 1,
+            Verification::Likely => 2,
+            Verification::Verified => 3,
+        };
+        result |= match value.service {
+            Verification::NotVerified => 0,
+            Verification::Wrong => 1,
+            Verification::Likely => 2,
+            Verification::Verified => 3,
+        } << 2;
+        result |= match value.infrastructure {
+            Verification::NotVerified => 0,
+            Verification::Wrong => 1,
+            Verification::Likely => 2,
+            Verification::Verified => 3,
+        } << 4;
+        result
+    }
 }
 
 pub(crate) mod requests {
