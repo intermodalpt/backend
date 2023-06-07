@@ -19,6 +19,7 @@
 use chrono::{DateTime, Local, NaiveDate};
 use serde::{Deserialize, Serialize};
 use sqlx::types::JsonValue;
+use std::collections::HashSet;
 
 use crate::operators::models as operators;
 use crate::pics::models as pics;
@@ -535,6 +536,117 @@ impl StopPatch {
             stop.a11y.has_schedules = has_schedules
         }
     }
+
+    pub(crate) fn drop_fields(&mut self, fields: &HashSet<&str>) {
+        if fields.contains(&"name") {
+            self.name = None;
+        }
+        if fields.contains(&"short_name") {
+            self.short_name = None;
+        }
+        if fields.contains(&"locality") {
+            self.locality = None;
+        }
+        if fields.contains(&"street") {
+            self.street = None;
+        }
+        if fields.contains(&"door") {
+            self.door = None;
+        }
+        if fields.contains(&"flags") {
+            self.flags = None;
+        }
+        if fields.contains(&"schedules") {
+            self.schedules = None;
+        }
+        if fields.contains(&"has_sidewalk") {
+            self.has_sidewalk = None;
+        }
+        if fields.contains(&"has_sidewalked_path") {
+            self.has_sidewalked_path = None;
+        }
+        if fields.contains(&"has_shelter") {
+            self.has_shelter = None;
+        }
+        if fields.contains(&"has_cover") {
+            self.has_cover = None;
+        }
+        if fields.contains(&"has_bench") {
+            self.has_bench = None;
+        }
+        if fields.contains(&"has_trash_can") {
+            self.has_trash_can = None;
+        }
+        if fields.contains(&"has_waiting_times") {
+            self.has_waiting_times = None;
+        }
+        if fields.contains(&"has_ticket_seller") {
+            self.has_ticket_seller = None;
+        }
+        if fields.contains(&"has_costumer_support") {
+            self.has_costumer_support = None;
+        }
+        if fields.contains(&"advertisement_qty") {
+            self.advertisement_qty = None;
+        }
+        if fields.contains(&"has_crossing") {
+            self.has_crossing = None;
+        }
+        if fields.contains(&"has_wide_access") {
+            self.has_wide_access = None;
+        }
+        if fields.contains(&"has_flat_access") {
+            self.has_flat_access = None;
+        }
+        if fields.contains(&"has_tactile_access") {
+            self.has_tactile_access = None;
+        }
+        if fields.contains(&"illumination_strength") {
+            self.illumination_strength = None;
+        }
+        if fields.contains(&"illumination_position") {
+            self.illumination_position = None;
+        }
+        if fields.contains(&"has_illuminated_path") {
+            self.has_illuminated_path = None;
+        }
+        if fields.contains(&"has_visibility_from_within") {
+            self.has_visibility_from_within = None;
+        }
+        if fields.contains(&"has_visibility_from_area") {
+            self.has_visibility_from_area = None;
+        }
+        if fields.contains(&"is_visible_from_outside") {
+            self.is_visible_from_outside = None;
+        }
+        if fields.contains(&"parking_visibility_impairment") {
+            self.parking_visibility_impairment = None;
+        }
+        if fields.contains(&"parking_local_access_impairment") {
+            self.parking_local_access_impairment = None;
+        }
+        if fields.contains(&"parking_area_access_impairment") {
+            self.parking_area_access_impairment = None;
+        }
+        if fields.contains(&"tmp_issues") {
+            self.tmp_issues = None;
+        }
+        if fields.contains(&"tags") {
+            self.tags = None;
+        }
+        if fields.contains(&"notes") {
+            self.notes = None;
+        }
+        if fields.contains(&"service_check_date") {
+            self.service_check_date = None;
+        }
+        if fields.contains(&"infrastructure_check_date") {
+            self.infrastructure_check_date = None;
+        }
+        if fields.contains(&"verification_level") {
+            self.verification_level = None;
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Default)]
@@ -571,8 +683,8 @@ impl RoutePatch {
 
     #[allow(unused)]
     pub(crate) fn apply(self, route: &mut routes::Route) {
-        if let Some(service_type) = self.type_id {
-            route.type_id = service_type
+        if let Some(type_id) = self.type_id {
+            route.type_id = type_id
         }
         if let Some(operator) = self.operator_id {
             route.operator_id = operator

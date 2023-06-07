@@ -16,7 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use axum::extract::{Multipart, Path, Query, State};
 use axum::Json;
@@ -392,9 +392,16 @@ pub(crate) async fn patch_contrib_stop_picture_meta(
     sql::update_contribution(&state.pool, &contribution).await
 }
 
+#[derive(Deserialize)]
+pub(crate) struct ContribAcceptanceParam {
+    #[serde(default)]
+    ignored: Option<String>,
+}
+
 pub(crate) async fn post_accept_contrib_data(
     State(state): State<AppState>,
     claims: Option<auth::Claims>,
+    params: Query<ContribAcceptanceParam>,
     Path(contribution_id): Path<i64>,
 ) -> Result<(), Error> {
     if claims.is_none() {
@@ -408,7 +415,7 @@ pub(crate) async fn post_accept_contrib_data(
     if contribution.is_none() {
         return Err(Error::NotFoundUpstream);
     }
-    let contribution = contribution.unwrap();
+    let mut contribution = contribution.unwrap();
 
     if contribution.accepted.is_some() {
         return Err(Error::DependenciesNotMet);
@@ -420,13 +427,25 @@ pub(crate) async fn post_accept_contrib_data(
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
-    match &contribution.change {
+    match &mut contribution.change {
         models::Change::StopUpdate { original, patch } => {
             let stop = stops::sql::fetch_stop(&state.pool, original.id).await?;
             if stop.is_none() {
-                return Err(Error::NotFoundUpstream);
+                // # TODO Do something about this
+                return Err(Error::ValidationFailure(
+                    "Stop no longer exists".to_string(),
+                ));
             }
             let mut stop = stop.unwrap();
+
+            let ignored_fields = if let Some(ignored) = &params.ignored {
+                ignored.split(',').map(|s| s).collect()
+            } else {
+                HashSet::new()
+            };
+
+            patch.drop_fields(&ignored_fields);
+
             patch.apply(&mut stop);
 
             stops::sql::update_stop(
