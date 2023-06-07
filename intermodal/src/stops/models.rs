@@ -113,7 +113,7 @@ pub struct Stop {
     #[schema(example = -9.654_321)]
     pub lon: Option<f64>,
     #[serde(default)]
-    pub external_id: Option<String>,
+    pub external_id: String,
     #[serde(default)]
     pub refs: Vec<String>,
     #[serde(default)]
@@ -699,7 +699,7 @@ mod test {
             parish: None,
             lat: Some(1.0),
             lon: Some(2.0),
-            external_id: None,
+            external_id: "".to_string(),
             a11y: A11yMeta {
                 schedules: Some(vec![Schedule {
                     code: Some("123".to_string()),

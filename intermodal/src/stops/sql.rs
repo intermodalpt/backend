@@ -285,7 +285,7 @@ RETURNING id
         door: stop.door,
         lat: Some(stop.lat),
         lon: Some(stop.lon),
-        external_id: None,
+        external_id: "".to_string(),
         refs: vec![],
         notes: stop.notes,
         updater: user_id,

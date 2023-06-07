@@ -81,7 +81,7 @@ impl From<XmlNode> for Stop {
             parish: None,
             lat: Some(node.lat),
             lon: Some(node.lon),
-            external_id: Some(node.id.to_string()),
+            external_id: node.id.to_string(),
             refs: vec![],
             notes: None,
             a11y: stops::models::A11yMeta::default(),
@@ -120,11 +120,7 @@ pub(crate) async fn import(db_pool: &PgPool) -> Result<(usize, usize), Error> {
 
     let stop_index = stops
         .into_iter()
-        .filter_map(|stop| {
-            stop.external_id
-                .clone()
-                .map(|external_id| (external_id, stop))
-        })
+        .map(|stop| (stop.external_id.clone(), stop))
         .collect::<HashMap<String, Stop>>();
 
     let mut osm_stop_ids = vec![];
@@ -140,10 +136,8 @@ pub(crate) async fn import(db_pool: &PgPool) -> Result<(usize, usize), Error> {
             }
         })
         .for_each(|mut osm_stop| {
-            osm_stop_ids.push(osm_stop.external_id.clone().unwrap());
-            if let Some(stop) =
-                stop_index.get(osm_stop.external_id.as_ref().unwrap())
-            {
+            osm_stop_ids.push(osm_stop.external_id.clone());
+            if let Some(stop) = stop_index.get(&osm_stop.external_id) {
                 osm_stop.id = stop.id;
                 if (stop.lat.unwrap() - osm_stop.lat.unwrap()).abs()
                     > FLOAT_TOLERANCE
@@ -256,7 +250,7 @@ async fn tag_missing_stops(
             .await
             .map_err(|err| Error::DatabaseExecution(err.to_string()))?
             .into_iter()
-            .filter_map(|s| s.external_id)
+            .map(|s| s.external_id)
             .collect();
 
     // Check which IDs in the db have disappeared from osm
