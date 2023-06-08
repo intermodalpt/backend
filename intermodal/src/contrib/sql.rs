@@ -266,15 +266,22 @@ RETURNING id
 
 pub(crate) async fn update_contribution(
     pool: &PgPool,
-    contribution: &models::Contribution,
+    id: i64,
+    change: &models::Change,
+    comment: &Option<String>,
 ) -> Result<()> {
+    // FIXME the hell?
+    let comment = comment.as_ref().map(|s| s.as_str());
+
     sqlx::query!(
         r#"
 UPDATE Contributions
 SET change=$1, comment=$2
+WHERE id=$3
     "#,
-        json!(contribution.change),
-        contribution.comment
+        json!(change),
+        comment,
+        id
     )
     .execute(pool)
     .await

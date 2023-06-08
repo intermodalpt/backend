@@ -389,7 +389,13 @@ pub(crate) async fn patch_contrib_stop_picture_meta(
         stops: contribution_meta.stops,
     };
 
-    sql::update_contribution(&state.pool, &contribution).await
+    sql::update_contribution(
+        &state.pool,
+        contribution_id,
+        &contribution.change,
+        &contribution.comment,
+    )
+    .await
 }
 
 #[derive(Deserialize)]
