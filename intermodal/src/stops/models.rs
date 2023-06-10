@@ -234,7 +234,9 @@ pub struct Flag {
     pub route_codes: Vec<String>,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, ToSchema, PartialEq)]
+#[derive(
+    Debug, Clone, Copy, Serialize, Deserialize, ToSchema, PartialEq, Eq, Hash,
+)]
 #[serde(rename_all = "snake_case")]
 pub enum ScheduleType {
     Origin,

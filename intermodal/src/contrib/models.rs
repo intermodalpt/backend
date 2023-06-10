@@ -537,6 +537,212 @@ impl StopPatch {
         }
     }
 
+    pub(crate) fn drop_noops(&mut self, stop: &stops::Stop) {
+        if let Some(name) = &self.name {
+            if name == &stop.name {
+                self.name = None;
+            }
+        }
+        if let Some(short_name) = &self.short_name {
+            if short_name == &stop.short_name {
+                self.short_name = None;
+            }
+        }
+        if let Some(locality) = &self.locality {
+            if locality == &stop.locality {
+                self.locality = None;
+            }
+        }
+        if let Some(street) = &self.street {
+            if street == &stop.street {
+                self.street = None;
+            }
+        }
+        if let Some(door) = &self.door {
+            if door == &stop.door {
+                self.door = None;
+            }
+        }
+        if let Some(flags) = &self.flags {
+            if flags == &stop.a11y.flags {
+                self.flags = None;
+            }
+        }
+        if let Some(schedules) = &self.schedules {
+            if schedules == &stop.a11y.schedules {
+                self.schedules = None;
+            }
+        }
+        if let Some(has_sidewalk) = &self.has_sidewalk {
+            if has_sidewalk == &stop.a11y.has_sidewalk {
+                self.has_sidewalk = None;
+            }
+        }
+        if let Some(has_sidewalked_path) = &self.has_sidewalked_path {
+            if has_sidewalked_path == &stop.a11y.has_sidewalked_path {
+                self.has_sidewalked_path = None;
+            }
+        }
+        if let Some(has_shelter) = &self.has_shelter {
+            if has_shelter == &stop.a11y.has_shelter {
+                self.has_shelter = None;
+            }
+        }
+        if let Some(has_cover) = &self.has_cover {
+            if has_cover == &stop.a11y.has_cover {
+                self.has_cover = None;
+            }
+        }
+        if let Some(has_bench) = &self.has_bench {
+            if has_bench == &stop.a11y.has_bench {
+                self.has_bench = None;
+            }
+        }
+        if let Some(has_trash_can) = &self.has_trash_can {
+            if has_trash_can == &stop.a11y.has_trash_can {
+                self.has_trash_can = None;
+            }
+        }
+        if let Some(has_waiting_times) = &self.has_waiting_times {
+            if has_waiting_times == &stop.a11y.has_waiting_times {
+                self.has_waiting_times = None;
+            }
+        }
+        if let Some(has_ticket_seller) = &self.has_ticket_seller {
+            if has_ticket_seller == &stop.a11y.has_ticket_seller {
+                self.has_ticket_seller = None;
+            }
+        }
+        if let Some(has_costumer_support) = &self.has_costumer_support {
+            if has_costumer_support == &stop.a11y.has_costumer_support {
+                self.has_costumer_support = None;
+            }
+        }
+        if let Some(advertisement_qty) = &self.advertisement_qty {
+            if advertisement_qty == &stop.a11y.advertisement_qty {
+                self.advertisement_qty = None;
+            }
+        }
+        if let Some(advertisement_qty) = &self.advertisement_qty {
+            if advertisement_qty == &stop.a11y.advertisement_qty {
+                self.advertisement_qty = None;
+            }
+        }
+        if let Some(has_crossing) = &self.has_crossing {
+            if has_crossing == &stop.a11y.has_crossing {
+                self.has_crossing = None;
+            }
+        }
+        if let Some(has_wide_access) = &self.has_wide_access {
+            if has_wide_access == &stop.a11y.has_wide_access {
+                self.has_wide_access = None;
+            }
+        }
+        if let Some(has_flat_access) = &self.has_flat_access {
+            if has_flat_access == &stop.a11y.has_flat_access {
+                self.has_flat_access = None;
+            }
+        }
+        if let Some(has_tactile_access) = &self.has_tactile_access {
+            if has_tactile_access == &stop.a11y.has_tactile_access {
+                self.has_tactile_access = None;
+            }
+        }
+        if let Some(illumination_strength) = &self.illumination_strength {
+            if illumination_strength == &stop.a11y.illumination_strength {
+                self.illumination_strength = None;
+            }
+        }
+        if let Some(illumination_position) = &self.illumination_position {
+            if illumination_position == &stop.a11y.illumination_position {
+                self.illumination_position = None;
+            }
+        }
+        if let Some(has_illuminated_path) = &self.has_illuminated_path {
+            if has_illuminated_path == &stop.a11y.has_illuminated_path {
+                self.has_illuminated_path = None;
+            }
+        }
+        if let Some(has_visibility_from_within) =
+            &self.has_visibility_from_within
+        {
+            if has_visibility_from_within
+                == &stop.a11y.has_visibility_from_within
+            {
+                self.has_visibility_from_within = None;
+            }
+        }
+        if let Some(has_visibility_from_area) = &self.has_visibility_from_area {
+            if has_visibility_from_area == &stop.a11y.has_visibility_from_area {
+                self.has_visibility_from_area = None;
+            }
+        }
+        if let Some(is_visible_from_outside) = &self.is_visible_from_outside {
+            if is_visible_from_outside == &stop.a11y.is_visible_from_outside {
+                self.is_visible_from_outside = None;
+            }
+        }
+        if let Some(parking_visibility_impairment) =
+            &self.parking_visibility_impairment
+        {
+            if parking_visibility_impairment
+                == &stop.a11y.parking_visibility_impairment
+            {
+                self.parking_visibility_impairment = None;
+            }
+        }
+        if let Some(parking_local_access_impairment) =
+            &self.parking_local_access_impairment
+        {
+            if parking_local_access_impairment
+                == &stop.a11y.parking_local_access_impairment
+            {
+                self.parking_local_access_impairment = None;
+            }
+        }
+        if let Some(parking_area_access_impairment) =
+            &self.parking_area_access_impairment
+        {
+            if parking_area_access_impairment
+                == &stop.a11y.parking_area_access_impairment
+            {
+                self.parking_area_access_impairment = None;
+            }
+        }
+        if let Some(tmp_issues) = &self.tmp_issues {
+            if tmp_issues == &stop.a11y.tmp_issues {
+                self.tmp_issues = None;
+            }
+        }
+        if let Some(tags) = &self.tags {
+            if tags == &stop.tags {
+                self.tags = None;
+            }
+        }
+        if let Some(notes) = &self.notes {
+            if notes == &stop.notes {
+                self.notes = None;
+            }
+        }
+        if let Some(service_check_date) = &self.service_check_date {
+            if service_check_date == &stop.service_check_date {
+                self.service_check_date = None;
+            }
+        }
+        if let Some(infrastructure_check_date) = &self.infrastructure_check_date
+        {
+            if infrastructure_check_date == &stop.infrastructure_check_date
+            {
+                self.infrastructure_check_date = None;
+            }
+        }
+        if let Some(verification_level) = &self.verification_level {
+            if verification_level == &stop.verification_level {
+                self.verification_level = None;
+            }
+        }
+    }
+
     pub(crate) fn drop_fields(&mut self, fields: &HashSet<&str>) {
         if fields.contains(&"name") {
             self.name = None;

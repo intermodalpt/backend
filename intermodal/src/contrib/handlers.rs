@@ -402,6 +402,7 @@ pub(crate) async fn patch_contrib_stop_picture_meta(
 pub(crate) struct ContribAcceptanceParam {
     #[serde(default)]
     ignored: Option<String>,
+    verify: Option<bool>,
 }
 
 pub(crate) async fn post_accept_contrib_data(
@@ -423,6 +424,8 @@ pub(crate) async fn post_accept_contrib_data(
     }
     let mut contribution = contribution.unwrap();
 
+    let verify = params.verify.unwrap_or(false);
+
     if contribution.accepted.is_some() {
         return Err(Error::DependenciesNotMet);
     }
@@ -438,6 +441,7 @@ pub(crate) async fn post_accept_contrib_data(
             let stop = stops::sql::fetch_stop(&state.pool, original.id).await?;
             if stop.is_none() {
                 // # TODO Do something about this
+                // # TODO Prevent patches from reaching this state
                 return Err(Error::ValidationFailure(
                     "Stop no longer exists".to_string(),
                 ));
@@ -445,12 +449,39 @@ pub(crate) async fn post_accept_contrib_data(
             let mut stop = stop.unwrap();
 
             let ignored_fields = if let Some(ignored) = &params.ignored {
-                ignored.split(',').map(|s| s).collect()
+                ignored
+                    .split(',')
+                    .map(|s| s)
+                    .filter_map(|s| {
+                        // Remove whitespace strings
+                        if s.trim().is_empty() {
+                            None
+                        } else {
+                            Some(s)
+                        }
+                    })
+                    .collect()
             } else {
                 HashSet::new()
             };
 
             patch.drop_fields(&ignored_fields);
+
+            if !verify {
+                patch.deverify(stop.verification_level.into());
+            }
+
+            // Make the current stop the original stop for the changeset to reflect the real update
+            *original = stop.clone();
+
+            patch.drop_noops(original);
+
+            if patch.is_empty() {
+                // TODO Prevent patches from reaching this state
+                return Err(Error::ValidationFailure(
+                    "Patch no longer does anything".to_string(),
+                ));
+            }
 
             patch.apply(&mut stop);
 

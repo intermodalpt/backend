@@ -264,12 +264,17 @@ RETURNING id
     Ok(res.id)
 }
 
-pub(crate) async fn update_contribution(
-    pool: &PgPool,
+
+
+pub(crate) async fn update_contribution<'c, E>(
+    executor: E,
     id: i64,
     change: &models::Change,
     comment: &Option<String>,
-) -> Result<()> {
+) -> Result<()>
+    where
+        E: sqlx::Executor<'c, Database = sqlx::Postgres>
+{
     // FIXME the hell?
     let comment = comment.as_ref().map(|s| s.as_str());
 
@@ -283,7 +288,7 @@ WHERE id=$3
         comment,
         id
     )
-    .execute(pool)
+    .execute(executor)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
     Ok(())
