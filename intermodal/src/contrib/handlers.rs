@@ -16,7 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use axum::extract::{Multipart, Path, Query, State};
 use axum::Json;
@@ -414,112 +414,24 @@ pub(crate) async fn post_accept_contrib_data(
     if claims.is_none() {
         return Err(Error::Forbidden);
     }
-    let user_id = claims.unwrap().uid;
+    let claims = claims.unwrap();
 
-    let contribution =
-        sql::fetch_contribution(&state.pool, contribution_id).await?;
-
-    if contribution.is_none() {
-        return Err(Error::NotFoundUpstream);
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
     }
-    let mut contribution = contribution.unwrap();
+
+    let user_id = claims.uid;
 
     let verify = params.verify.unwrap_or(false);
 
-    if contribution.accepted.is_some() {
-        return Err(Error::DependenciesNotMet);
-    }
-
-    let mut transaction = state
-        .pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
-
-    match &mut contribution.change {
-        models::Change::StopUpdate { original, patch } => {
-            let stop = stops::sql::fetch_stop(&state.pool, original.id).await?;
-            if stop.is_none() {
-                // # TODO Do something about this
-                // # TODO Prevent patches from reaching this state
-                return Err(Error::ValidationFailure(
-                    "Stop no longer exists".to_string(),
-                ));
-            }
-            let mut stop = stop.unwrap();
-
-            let ignored_fields = if let Some(ignored) = &params.ignored {
-                ignored
-                    .split(',')
-                    .map(|s| s)
-                    .filter_map(|s| {
-                        // Remove whitespace strings
-                        if s.trim().is_empty() {
-                            None
-                        } else {
-                            Some(s)
-                        }
-                    })
-                    .collect()
-            } else {
-                HashSet::new()
-            };
-
-            patch.drop_fields(&ignored_fields);
-
-            if !verify {
-                patch.deverify(stop.verification_level.into());
-            }
-
-            // Make the current stop the original stop for the changeset to reflect the real update
-            *original = stop.clone();
-
-            patch.drop_noops(original);
-
-            if patch.is_empty() {
-                // TODO Prevent patches from reaching this state
-                return Err(Error::ValidationFailure(
-                    "Patch no longer does anything".to_string(),
-                ));
-            }
-
-            patch.apply(&mut stop);
-
-            stops::sql::update_stop(
-                &mut transaction,
-                original.id,
-                stop.into(),
-                user_id,
-            )
-            .await?;
-        }
-        models::Change::StopPicUpload { pic, stops } => {
-            todo!()
-        }
-        _ => {
-            unreachable!()
-        }
-    }
-
-    sql::insert_changeset_log(
-        &mut transaction,
-        user_id,
-        &vec![contribution.change],
-        Some(contribution_id),
-    )
-    .await?;
-
-    sql::update_guest_contribution_to_accept(
-        &mut transaction,
+    logic::accept_contribution(
+        &state.pool,
         contribution_id,
         user_id,
+        verify,
+        &params.ignored,
     )
-    .await?;
-
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    .await
 }
 
 pub(crate) async fn post_decline_contrib_data(
