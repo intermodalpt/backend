@@ -1132,6 +1132,7 @@ pub struct IssuePatch {
     pub(crate) operator_ids: Option<Vec<i32>>,
     pub(crate) route_ids: Option<Vec<i32>>,
     pub(crate) stop_ids: Option<Vec<i32>>,
+    pub(crate) pic_ids: Option<Vec<i32>>,
 }
 
 impl IssuePatch {
@@ -1148,6 +1149,7 @@ impl IssuePatch {
             && self.operator_ids.is_none()
             && self.route_ids.is_none()
             && self.stop_ids.is_none()
+            && self.pic_ids.is_none()
     }
 
     #[allow(unused)]
@@ -1187,6 +1189,9 @@ impl IssuePatch {
         }
         if let Some(stop_ids) = self.stop_ids {
             issue.stop_ids = stop_ids
+        }
+        if let Some(pic_ids) = self.pic_ids {
+            issue.pic_ids = pic_ids
         }
     }
 }

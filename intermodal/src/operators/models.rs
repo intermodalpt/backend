@@ -116,6 +116,7 @@ pub struct Issue {
     pub operator_ids: Vec<i32>,
     pub route_ids: Vec<i32>,
     pub stop_ids: Vec<i32>,
+    pub pic_ids: Vec<i32>,
 }
 
 #[derive(Debug, PartialEq, Copy, Clone, Serialize, Deserialize, sqlx::Type)]
@@ -294,6 +295,7 @@ pub(crate) mod requests {
         pub operator_ids: Vec<i32>,
         pub route_ids: Vec<i32>,
         pub stop_ids: Vec<i32>,
+        pub pic_ids: Vec<i32>,
     }
 
     impl From<NewIssue> for Issue {
@@ -313,6 +315,7 @@ pub(crate) mod requests {
                 operator_ids: value.operator_ids,
                 route_ids: value.route_ids,
                 stop_ids: value.stop_ids,
+                pic_ids: value.pic_ids,
             }
         }
     }
@@ -330,6 +333,7 @@ pub(crate) mod requests {
         pub operator_ids: Vec<i32>,
         pub route_ids: Vec<i32>,
         pub stop_ids: Vec<i32>,
+        pub pic_ids: Vec<i32>,
     }
 
     impl ChangeIssue {
@@ -369,6 +373,9 @@ pub(crate) mod requests {
             }
             if self.stop_ids != issue.stop_ids {
                 patch.stop_ids = Some(self.stop_ids.clone());
+            }
+            if self.pic_ids != issue.pic_ids {
+                patch.pic_ids = Some(self.pic_ids.clone());
             }
 
             patch

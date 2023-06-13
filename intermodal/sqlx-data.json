@@ -222,104 +222,6 @@
     },
     "query": "\nSELECT id, original_filename, sha1, tagged, public, sensitive, uploader,\n    upload_date, capture_date, lon, lat, quality, width,\n    height, camera_ref, tags, notes\nFROM stop_pics\nWHERE sha1 = $1\n"
   },
-  "073b75b879184726efd5c8805faed295d0fea40bac6b060a76264153ef60a551": {
-    "describe": {
-      "columns": [
-        {
-          "name": "id",
-          "ordinal": 0,
-          "type_info": "Int4"
-        },
-        {
-          "name": "title",
-          "ordinal": 1,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "message",
-          "ordinal": 2,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "category",
-          "ordinal": 3,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "impact",
-          "ordinal": 4,
-          "type_info": "Int4"
-        },
-        {
-          "name": "creation",
-          "ordinal": 5,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "lat",
-          "ordinal": 6,
-          "type_info": "Float8"
-        },
-        {
-          "name": "lon",
-          "ordinal": 7,
-          "type_info": "Float8"
-        },
-        {
-          "name": "geojson",
-          "ordinal": 8,
-          "type_info": "Jsonb"
-        },
-        {
-          "name": "state",
-          "ordinal": 9,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "state_justification",
-          "ordinal": 10,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "operators!: Vec<i32>",
-          "ordinal": 11,
-          "type_info": "Int4Array"
-        },
-        {
-          "name": "routes!: Vec<i32>",
-          "ordinal": 12,
-          "type_info": "Int4Array"
-        },
-        {
-          "name": "stops!: Vec<i32>",
-          "ordinal": 13,
-          "type_info": "Int4Array"
-        }
-      ],
-      "nullable": [
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        true,
-        true,
-        true,
-        false,
-        true,
-        null,
-        null,
-        null
-      ],
-      "parameters": {
-        "Left": [
-          "Int4"
-        ]
-      }
-    },
-    "query": "SELECT issues.id, issues.title, issues.message, issues.category, issues.impact,\n        issues.creation, issues.lat, issues.lon, issues.geojson,\n        issues.state, issues.state_justification,\n    array_agg(issue_operators.operator_id) as \"operators!: Vec<i32>\",\n    array_agg(issue_routes.route_id) as \"routes!: Vec<i32>\",\n    array_agg(issue_stops.stop_id) as \"stops!: Vec<i32>\"\nFROM issues\nJOIN issue_operators on issue_operators.issue_id = issues.id\nJOIN issue_routes on issue_routes.issue_id = issues.id\nJOIN issue_stops on issue_stops.issue_id = issues.id\nWHERE issues.id = $1\nGROUP BY issues.id"
-  },
   "0956d4c365eb52620a31d9bfb2e02f51e0cfed20d6f78534ee6b359c6a12dfe3": {
     "describe": {
       "columns": [
@@ -1259,7 +1161,7 @@
     },
     "query": "\nSELECT count(*) as cnt\nFROM Departures\n    "
   },
-  "4dcd5c0fda2b8a9e1659d471c05f1ce47141709b96f63489fbc3893c6f6eb002": {
+  "4d87ef2d4e96fff27f9322d1d4dab2723d591325f06b59a457ba37b7faa01d39": {
     "describe": {
       "columns": [
         {
@@ -1331,6 +1233,11 @@
           "name": "stops!: Vec<i32>",
           "ordinal": 13,
           "type_info": "Int4Array"
+        },
+        {
+          "name": "pics!: Vec<i32>",
+          "ordinal": 14,
+          "type_info": "Int4Array"
         }
       ],
       "nullable": [
@@ -1347,15 +1254,14 @@
         true,
         null,
         null,
+        null,
         null
       ],
       "parameters": {
-        "Left": [
-          "Int4"
-        ]
+        "Left": []
       }
     },
-    "query": "\nSELECT issues.id, issues.title, issues.message, issues.geojson, issues.category, issues.lat,\n    issues.creation, issues.lon, issues.impact, issues.state, issues.state_justification,\n    array_agg(issue_operators.operator_id) as \"operators!: Vec<i32>\",\n    array_agg(issue_routes.route_id) as \"routes!: Vec<i32>\",\n    array_agg(issue_stops.stop_id) as \"stops!: Vec<i32>\"\nFROM issues\nJOIN issue_operators on issue_operators.issue_id = issues.id\nJOIN issue_routes on issue_routes.issue_id = issues.id\nJOIN issue_stops on issue_stops.issue_id = issues.id\nWHERE issues.id IN (\n    SELECT issue_id\n    FROM issue_operators\n    WHERE issue_operators.operator_id = $1\n)\nGROUP BY issues.id\n"
+    "query": "\nSELECT issues.id, issues.title, issues.message, issues.geojson, issues.category, issues.lat,\n    issues.creation, issues.lon, issues.impact, issues.state, issues.state_justification,\n    array_agg(issue_operators.operator_id) as \"operators!: Vec<i32>\",\n    array_agg(issue_routes.route_id) as \"routes!: Vec<i32>\",\n    array_agg(issue_stops.stop_id) as \"stops!: Vec<i32>\",\n    array_agg(issue_pics.pic_id) as \"pics!: Vec<i32>\"\nFROM issues\nJOIN issue_operators on issue_operators.issue_id = issues.id\nJOIN issue_routes on issue_routes.issue_id = issues.id\nJOIN issue_stops on issue_stops.issue_id = issues.id\nJOIN issue_pics on issue_pics.issue_id = issues.id\nGROUP BY issues.id\n"
   },
   "4fc0b267123ed1aed7f07e95e08d77855c97b97d20d361499990011daadb9cde": {
     "describe": {
@@ -1644,6 +1550,110 @@
       }
     },
     "query": "\nSELECT id, name, calendar\nFROM operator_calendars\nWHERE operator_id=$1\n    "
+  },
+  "5badf9c3fa04af535b5c68bd2bba517ef69bc71bcbc453853a0648dfe43357e8": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "title",
+          "ordinal": 1,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "message",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "category",
+          "ordinal": 3,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "impact",
+          "ordinal": 4,
+          "type_info": "Int4"
+        },
+        {
+          "name": "creation",
+          "ordinal": 5,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "lat",
+          "ordinal": 6,
+          "type_info": "Float8"
+        },
+        {
+          "name": "lon",
+          "ordinal": 7,
+          "type_info": "Float8"
+        },
+        {
+          "name": "geojson",
+          "ordinal": 8,
+          "type_info": "Jsonb"
+        },
+        {
+          "name": "state",
+          "ordinal": 9,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "state_justification",
+          "ordinal": 10,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "operators!: Vec<i32>",
+          "ordinal": 11,
+          "type_info": "Int4Array"
+        },
+        {
+          "name": "routes!: Vec<i32>",
+          "ordinal": 12,
+          "type_info": "Int4Array"
+        },
+        {
+          "name": "stops!: Vec<i32>",
+          "ordinal": 13,
+          "type_info": "Int4Array"
+        },
+        {
+          "name": "pics!: Vec<i32>",
+          "ordinal": 14,
+          "type_info": "Int4Array"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        false,
+        true,
+        null,
+        null,
+        null,
+        null
+      ],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      }
+    },
+    "query": "SELECT issues.id, issues.title, issues.message, issues.category, issues.impact,\n        issues.creation, issues.lat, issues.lon, issues.geojson,\n        issues.state, issues.state_justification,\n    array_agg(issue_operators.operator_id) as \"operators!: Vec<i32>\",\n    array_agg(issue_routes.route_id) as \"routes!: Vec<i32>\",\n    array_agg(issue_stops.stop_id) as \"stops!: Vec<i32>\",\n    array_agg(issue_pics.pic_id) as \"pics!: Vec<i32>\"\nFROM issues\nJOIN issue_operators on issue_operators.issue_id = issues.id\nJOIN issue_routes on issue_routes.issue_id = issues.id\nJOIN issue_stops on issue_stops.issue_id = issues.id\nJOIN issue_pics on issue_pics.issue_id = issues.id\nWHERE issues.id = $1\nGROUP BY issues.id"
   },
   "5cd73e08fb02b01ac6849883c5e22c7ece82b4e1936e277938ede78410cecda7": {
     "describe": {
@@ -2107,6 +2117,18 @@
       }
     },
     "query": "\nSELECT count(*) as count\nFROM departures\nWHERE subroute=$1\n"
+  },
+  "76a4dc59694e1d7a0c7a1b3e895107690b5be0089670331058b089f52404e32e": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      }
+    },
+    "query": "\n        DELETE FROM issue_pics\n        WHERE issue_id = $1\n        "
   },
   "770604d6d1e6a7453de44e6da2129dd1ce805b8f442fd60bacf42cb506900d7d": {
     "describe": {
@@ -2984,102 +3006,6 @@
     },
     "query": "\nSELECT count(*) as cnt\nFROM stop_pics\n    "
   },
-  "a12fad42ec0ec20db1051bf520796733b3c304a5121a741693a2318f10bf2147": {
-    "describe": {
-      "columns": [
-        {
-          "name": "id",
-          "ordinal": 0,
-          "type_info": "Int4"
-        },
-        {
-          "name": "title",
-          "ordinal": 1,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "message",
-          "ordinal": 2,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "geojson",
-          "ordinal": 3,
-          "type_info": "Jsonb"
-        },
-        {
-          "name": "category",
-          "ordinal": 4,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "lat",
-          "ordinal": 5,
-          "type_info": "Float8"
-        },
-        {
-          "name": "creation",
-          "ordinal": 6,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "lon",
-          "ordinal": 7,
-          "type_info": "Float8"
-        },
-        {
-          "name": "impact",
-          "ordinal": 8,
-          "type_info": "Int4"
-        },
-        {
-          "name": "state",
-          "ordinal": 9,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "state_justification",
-          "ordinal": 10,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "operators!: Vec<i32>",
-          "ordinal": 11,
-          "type_info": "Int4Array"
-        },
-        {
-          "name": "routes!: Vec<i32>",
-          "ordinal": 12,
-          "type_info": "Int4Array"
-        },
-        {
-          "name": "stops!: Vec<i32>",
-          "ordinal": 13,
-          "type_info": "Int4Array"
-        }
-      ],
-      "nullable": [
-        false,
-        false,
-        false,
-        true,
-        false,
-        true,
-        false,
-        true,
-        false,
-        false,
-        true,
-        null,
-        null,
-        null
-      ],
-      "parameters": {
-        "Left": []
-      }
-    },
-    "query": "\nSELECT issues.id, issues.title, issues.message, issues.geojson, issues.category, issues.lat,\n    issues.creation, issues.lon, issues.impact, issues.state, issues.state_justification,\n    array_agg(issue_operators.operator_id) as \"operators!: Vec<i32>\",\n    array_agg(issue_routes.route_id) as \"routes!: Vec<i32>\",\n    array_agg(issue_stops.stop_id) as \"stops!: Vec<i32>\"\nFROM issues\nJOIN issue_operators on issue_operators.issue_id = issues.id\nJOIN issue_routes on issue_routes.issue_id = issues.id\nJOIN issue_stops on issue_stops.issue_id = issues.id\nGROUP BY issues.id\n"
-  },
   "a2b1e0a992ec7dddc88a321ac4d63ffc2778dda9cba8cedee428c05e36cc3b61": {
     "describe": {
       "columns": [
@@ -3248,6 +3174,110 @@
     },
     "query": "\nSELECT id, source, name, official_name, osm_name, short_name, locality, street,\n    door, lat, lon, external_id, notes, updater, update_date,\n    parish, tags, accessibility_meta, refs, tml_id, tml_id_verified,\n    tml_id_source, deleted_upstream,\n    verification_level, service_check_date, infrastructure_check_date\nFROM Stops\n        "
   },
+  "a830170c8d712e5c912bd78cc7285295cc2adae652376c0bd241eec7d73a96fa": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "title",
+          "ordinal": 1,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "message",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "geojson",
+          "ordinal": 3,
+          "type_info": "Jsonb"
+        },
+        {
+          "name": "category",
+          "ordinal": 4,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "lat",
+          "ordinal": 5,
+          "type_info": "Float8"
+        },
+        {
+          "name": "creation",
+          "ordinal": 6,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "lon",
+          "ordinal": 7,
+          "type_info": "Float8"
+        },
+        {
+          "name": "impact",
+          "ordinal": 8,
+          "type_info": "Int4"
+        },
+        {
+          "name": "state",
+          "ordinal": 9,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "state_justification",
+          "ordinal": 10,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "operators!: Vec<i32>",
+          "ordinal": 11,
+          "type_info": "Int4Array"
+        },
+        {
+          "name": "routes!: Vec<i32>",
+          "ordinal": 12,
+          "type_info": "Int4Array"
+        },
+        {
+          "name": "stops!: Vec<i32>",
+          "ordinal": 13,
+          "type_info": "Int4Array"
+        },
+        {
+          "name": "pics!: Vec<i32>",
+          "ordinal": 14,
+          "type_info": "Int4Array"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        true,
+        false,
+        true,
+        false,
+        true,
+        false,
+        false,
+        true,
+        null,
+        null,
+        null,
+        null
+      ],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      }
+    },
+    "query": "\nSELECT issues.id, issues.title, issues.message, issues.geojson, issues.category, issues.lat,\n    issues.creation, issues.lon, issues.impact, issues.state, issues.state_justification,\n    array_agg(issue_operators.operator_id) as \"operators!: Vec<i32>\",\n    array_agg(issue_routes.route_id) as \"routes!: Vec<i32>\",\n    array_agg(issue_stops.stop_id) as \"stops!: Vec<i32>\",\n    array_agg(issue_pics.pic_id) as \"pics!: Vec<i32>\"\nFROM issues\nJOIN issue_operators on issue_operators.issue_id = issues.id\nJOIN issue_routes on issue_routes.issue_id = issues.id\nJOIN issue_stops on issue_stops.issue_id = issues.id\nJOIN issue_pics on issue_pics.issue_id = issues.id\nWHERE issues.id IN (\n    SELECT issue_id\n    FROM issue_operators\n    WHERE issue_operators.operator_id = $1\n)\nGROUP BY issues.id\n"
+  },
   "a85754ca147fdc09a2f899bef3bcb0c62ca5797526411250ec00b39b6a924ce7": {
     "describe": {
       "columns": [
@@ -3385,6 +3415,19 @@
       }
     },
     "query": "\nINSERT INTO Stops(name, osm_name, official_name, lon, lat, source, external_id)\nVALUES ($1, $2, $3, $4, $5, $6, $7)\n    "
+  },
+  "ba6bfb2c92b38150d44d050d7974d2e6bf82f5b23b53e71057a518cf5560579c": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Int4"
+        ]
+      }
+    },
+    "query": "\n            INSERT INTO issue_pics (pic_id, issue_id)\n            VALUES ($1, $2)\n            "
   },
   "bb9c5a4f045ca06cecac748ba80cd6e23c43e2e553e4b5de8ed75cb908fe0725": {
     "describe": {

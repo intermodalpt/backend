@@ -49,11 +49,13 @@ SELECT issues.id, issues.title, issues.message, issues.geojson, issues.category,
     issues.creation, issues.lon, issues.impact, issues.state, issues.state_justification,
     array_agg(issue_operators.operator_id) as "operators!: Vec<i32>",
     array_agg(issue_routes.route_id) as "routes!: Vec<i32>",
-    array_agg(issue_stops.stop_id) as "stops!: Vec<i32>"
+    array_agg(issue_stops.stop_id) as "stops!: Vec<i32>",
+    array_agg(issue_pics.pic_id) as "pics!: Vec<i32>"
 FROM issues
 JOIN issue_operators on issue_operators.issue_id = issues.id
 JOIN issue_routes on issue_routes.issue_id = issues.id
 JOIN issue_stops on issue_stops.issue_id = issues.id
+JOIN issue_pics on issue_pics.issue_id = issues.id
 GROUP BY issues.id
 "#,
     )
@@ -85,6 +87,7 @@ GROUP BY issues.id
             operator_ids: row.operators,
             route_ids: row.routes,
             stop_ids: row.stops,
+            pic_ids: row.pics,
         })
     })
     .collect()
@@ -100,11 +103,13 @@ SELECT issues.id, issues.title, issues.message, issues.geojson, issues.category,
     issues.creation, issues.lon, issues.impact, issues.state, issues.state_justification,
     array_agg(issue_operators.operator_id) as "operators!: Vec<i32>",
     array_agg(issue_routes.route_id) as "routes!: Vec<i32>",
-    array_agg(issue_stops.stop_id) as "stops!: Vec<i32>"
+    array_agg(issue_stops.stop_id) as "stops!: Vec<i32>",
+    array_agg(issue_pics.pic_id) as "pics!: Vec<i32>"
 FROM issues
 JOIN issue_operators on issue_operators.issue_id = issues.id
 JOIN issue_routes on issue_routes.issue_id = issues.id
 JOIN issue_stops on issue_stops.issue_id = issues.id
+JOIN issue_pics on issue_pics.issue_id = issues.id
 WHERE issues.id IN (
     SELECT issue_id
     FROM issue_operators
@@ -157,11 +162,13 @@ pub(crate) async fn fetch_issue(
         issues.state, issues.state_justification,
     array_agg(issue_operators.operator_id) as "operators!: Vec<i32>",
     array_agg(issue_routes.route_id) as "routes!: Vec<i32>",
-    array_agg(issue_stops.stop_id) as "stops!: Vec<i32>"
+    array_agg(issue_stops.stop_id) as "stops!: Vec<i32>",
+    array_agg(issue_pics.pic_id) as "pics!: Vec<i32>"
 FROM issues
 JOIN issue_operators on issue_operators.issue_id = issues.id
 JOIN issue_routes on issue_routes.issue_id = issues.id
 JOIN issue_stops on issue_stops.issue_id = issues.id
+JOIN issue_pics on issue_pics.issue_id = issues.id
 WHERE issues.id = $1
 GROUP BY issues.id"#,
         issue_id
@@ -193,6 +200,7 @@ GROUP BY issues.id"#,
             operator_ids: row.operators,
             route_ids: row.routes,
             stop_ids: row.stops,
+            pic_ids: row.pics,
         })
     })
 }
@@ -264,6 +272,20 @@ RETURNING id
             VALUES ($1, $2)
             "#,
             stop_id,
+            id
+        )
+        .execute(&mut transaction)
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    }
+
+    for pic_id in &issue.pic_ids {
+        sqlx::query!(
+            r#"
+            INSERT INTO issue_pics (pic_id, issue_id)
+            VALUES ($1, $2)
+            "#,
+            pic_id,
             id
         )
         .execute(&mut transaction)
@@ -349,6 +371,17 @@ pub(crate) async fn update_issue(
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
+    sqlx::query!(
+        r#"
+        DELETE FROM issue_pics
+        WHERE issue_id = $1
+        "#,
+        issue_id
+    )
+    .execute(&mut transaction)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
     for operator_id in &issue.operator_ids {
         sqlx::query!(
             r#"
@@ -384,6 +417,20 @@ pub(crate) async fn update_issue(
             VALUES ($1, $2)
             "#,
             stop_id,
+            issue_id
+        )
+        .execute(&mut transaction)
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    }
+
+    for pic_id in &issue.pic_ids {
+        sqlx::query!(
+            r#"
+            INSERT INTO issue_pics (pic_id, issue_id)
+            VALUES ($1, $2)
+            "#,
+            pic_id,
             issue_id
         )
         .execute(&mut transaction)
