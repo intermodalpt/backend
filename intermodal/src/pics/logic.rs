@@ -49,7 +49,7 @@ pub(crate) async fn upload_stop_picture(
     let hash = hasher.finalize();
     let hex_hash = base16ct::lower::encode_string(&hash);
 
-    let res = sql::fetch_stop_picture_by_hash(db_pool, &hex_hash).await?;
+    let res = sql::fetch_picture_by_hash(db_pool, &hex_hash).await?;
 
     if let Some(pic) = res {
         return Ok(pic);
@@ -139,15 +139,15 @@ pub(crate) async fn upload_stop_picture(
     .await?;
 
     // TODO Delete if insertion fails
-    sql::insert_stop_picture(db_pool, stop_pic_entry, stops).await
+    sql::insert_picture(db_pool, stop_pic_entry, stops).await
 }
 
-pub(crate) async fn delete_stop_picture(
-    stop_picture_id: i32,
+pub(crate) async fn delete_picture(
+    picture_id: i32,
     bucket: &s3::Bucket,
     db_pool: &PgPool,
 ) -> Result<(), Error> {
-    let stop_pic = sql::fetch_stop_picture(db_pool, stop_picture_id)
+    let stop_pic = sql::fetch_picture(db_pool, picture_id)
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
@@ -158,7 +158,7 @@ pub(crate) async fn delete_stop_picture(
         return Err(Error::NotFoundUpstream);
     }
 
-    sql::delete_stop_picture(db_pool, stop_picture_id).await
+    sql::delete_picture(db_pool, picture_id).await
 }
 
 async fn upload_picture_to_storage(

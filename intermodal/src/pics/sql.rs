@@ -27,7 +27,7 @@ use crate::Error;
 
 type Result<T> = std::result::Result<T, Error>;
 
-pub(crate) async fn fetch_stop_picture(
+pub(crate) async fn fetch_picture(
     pool: &PgPool,
     picture_id: i32,
 ) -> Result<Option<models::StopPic>> {
@@ -71,7 +71,7 @@ WHERE id = $1
     })
 }
 
-pub(crate) async fn fetch_stop_picture_by_hash(
+pub(crate) async fn fetch_picture_by_hash(
     pool: &PgPool,
     pic_hash: &str,
 ) -> Result<Option<models::StopPic>> {
@@ -115,7 +115,7 @@ WHERE sha1 = $1
     })
 }
 
-pub(crate) async fn fetch_stop_pictures(
+pub(crate) async fn fetch_pictures(
     pool: &PgPool,
 ) -> Result<Vec<responses::StopPic>> {
     Ok(sqlx::query!(
@@ -215,7 +215,7 @@ ORDER BY stop_pics.capture_date DESC
     )
 }
 
-pub(crate) async fn fetch_stop_stop_pictures(
+pub(crate) async fn fetch_stop_pictures(
     pool: &PgPool,
     stop_id: i32,
 ) -> Result<Vec<responses::StopPic>> {
@@ -265,7 +265,7 @@ ORDER BY quality DESC
     .collect())
 }
 
-pub(crate) async fn fetch_untagged_stop_pictures(
+pub(crate) async fn fetch_untagged_pictures(
     pool: &PgPool,
     user_id: i32,
     skip: i64,
@@ -374,7 +374,7 @@ ORDER BY stop ASC
     Ok(stops)
 }
 
-pub(crate) async fn insert_stop_picture(
+pub(crate) async fn insert_picture(
     pool: &PgPool,
     mut pic: models::StopPic,
     stops: &[i32],
@@ -426,7 +426,7 @@ ON CONFLICT DO NOTHING
     Ok(pic)
 }
 
-pub(crate) async fn update_stop_picture_meta(
+pub(crate) async fn update_picture_meta(
     pool: &PgPool,
     stop_picture_id: i32,
     stop_pic_meta: requests::ChangeStopPic,
@@ -499,10 +499,7 @@ ON CONFLICT DO NOTHING
     Ok(())
 }
 
-pub(crate) async fn delete_stop_picture(
-    pool: &PgPool,
-    pic_id: i32,
-) -> Result<()> {
+pub(crate) async fn delete_picture(pool: &PgPool, pic_id: i32) -> Result<()> {
     let mut transaction = pool
         .begin()
         .await

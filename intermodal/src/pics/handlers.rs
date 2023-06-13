@@ -45,9 +45,7 @@ pub(crate) async fn get_tagged_stop_pictures(
         return Err(Error::Forbidden);
     }
 
-    Ok(Json(
-        sql::fetch_stop_stop_pictures(&state.pool, stop_id).await?,
-    ))
+    Ok(Json(sql::fetch_stop_pictures(&state.pool, stop_id).await?))
 }
 
 pub(crate) async fn get_picture_stop_rels(
@@ -71,7 +69,8 @@ pub(crate) async fn get_pictures(
         return Err(Error::Forbidden);
     }
 
-    Ok(Json(sql::fetch_stop_pictures(&state.pool).await?))
+    // TODO depending on the claims, this should not return pics tagged sensitive
+    Ok(Json(sql::fetch_pictures(&state.pool).await?))
 }
 
 #[derive(Deserialize, Default)]
@@ -96,13 +95,8 @@ pub(crate) async fn get_dangling_stop_pictures(
     let take = i64::from(PAGE_SIZE);
 
     Ok(Json(
-        sql::fetch_untagged_stop_pictures(
-            &state.pool,
-            claims.uid,
-            offset,
-            take,
-        )
-        .await?,
+        sql::fetch_untagged_pictures(&state.pool, claims.uid, offset, take)
+            .await?,
     ))
 }
 
@@ -223,7 +217,7 @@ pub(crate) async fn patch_stop_picture_meta(
     }
     let claims = claims.unwrap();
 
-    let pic = sql::fetch_stop_picture(&state.pool, stop_picture_id).await?;
+    let pic = sql::fetch_picture(&state.pool, stop_picture_id).await?;
     if pic.is_none() {
         return Err(Error::NotFoundUpstream);
     }
@@ -257,7 +251,7 @@ pub(crate) async fn patch_stop_picture_meta(
         .await?;
     }
 
-    sql::update_stop_picture_meta(
+    sql::update_picture_meta(
         &state.pool,
         stop_picture_id,
         stop_pic_meta,
@@ -266,10 +260,10 @@ pub(crate) async fn patch_stop_picture_meta(
     .await
 }
 
-pub(crate) async fn delete_stop_picture(
+pub(crate) async fn delete_picture(
     State(state): State<AppState>,
     claims: Option<auth::Claims>,
-    Path(stop_picture_id): Path<i32>,
+    Path(picture_id): Path<i32>,
 ) -> Result<(), Error> {
     if claims.is_none() {
         return Err(Error::Forbidden);
@@ -277,7 +271,7 @@ pub(crate) async fn delete_stop_picture(
     let claims = claims.unwrap();
 
     // TODO put all of this in a transaction
-    let pic = sql::fetch_stop_picture(&state.pool, stop_picture_id).await?;
+    let pic = sql::fetch_picture(&state.pool, picture_id).await?;
     if pic.is_none() {
         return Err(Error::NotFoundUpstream);
     }
@@ -289,8 +283,7 @@ pub(crate) async fn delete_stop_picture(
 
     let stops = sql::fetch_picture_stops(&state.pool, pic.id).await?;
 
-    logic::delete_stop_picture(stop_picture_id, &state.bucket, &state.pool)
-        .await?;
+    logic::delete_picture(picture_id, &state.bucket, &state.pool).await?;
 
     contrib::sql::insert_changeset_log(
         &state.pool,
