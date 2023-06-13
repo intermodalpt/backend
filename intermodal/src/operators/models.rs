@@ -324,12 +324,13 @@ pub(crate) mod requests {
     pub struct ChangeIssue {
         pub title: String,
         pub message: String,
-        pub geojson: Option<JsonValue>,
         pub category: IssueCategory,
+        pub impact: i32,
         pub state: IssueState,
         pub state_justification: Option<String>,
         pub lat: Option<f64>,
         pub lon: Option<f64>,
+        pub geojson: Option<JsonValue>,
         pub operator_ids: Vec<i32>,
         pub route_ids: Vec<i32>,
         pub stop_ids: Vec<i32>,
@@ -346,11 +347,11 @@ pub(crate) mod requests {
             if self.message != issue.message {
                 patch.message = Some(self.message.clone());
             }
-            if self.geojson != issue.geojson {
-                patch.geojson = Some(self.geojson.clone());
-            }
             if self.category != issue.category {
                 patch.category = Some(self.category);
+            }
+            if self.impact != issue.impact {
+                patch.impact = Some(self.impact);
             }
             if self.state != issue.state {
                 patch.state = Some(self.state);
@@ -364,6 +365,9 @@ pub(crate) mod requests {
             }
             if self.lon != issue.lon {
                 patch.lon = Some(self.lon);
+            }
+            if self.geojson != issue.geojson {
+                patch.geojson = Some(self.geojson.clone());
             }
             if self.operator_ids != issue.operator_ids {
                 patch.operator_ids = Some(self.operator_ids.clone());

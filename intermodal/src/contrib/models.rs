@@ -1103,13 +1103,15 @@ pub struct IssuePatch {
     pub(crate) title: Option<String>,
     pub(crate) message: Option<String>,
     pub(crate) creation: Option<DateTime<Local>>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        with = "::serde_with::rust::double_option"
-    )]
-    pub(crate) geojson: Option<Option<JsonValue>>,
     pub(crate) category: Option<operators::IssueCategory>,
+    pub(crate) impact: Option<i32>,
+    pub(crate) state: Option<operators::IssueState>,
+    #[serde(
+    default,
+    skip_serializing_if = "Option::is_none",
+    with = "::serde_with::rust::double_option"
+    )]
+    pub(crate) state_justification: Option<Option<String>>,
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
@@ -1122,13 +1124,12 @@ pub struct IssuePatch {
         with = "::serde_with::rust::double_option"
     )]
     pub(crate) lon: Option<Option<f64>>,
-    pub(crate) state: Option<operators::IssueState>,
     #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        with = "::serde_with::rust::double_option"
+    default,
+    skip_serializing_if = "Option::is_none",
+    with = "::serde_with::rust::double_option"
     )]
-    pub(crate) state_justification: Option<Option<String>>,
+    pub(crate) geojson: Option<Option<JsonValue>>,
     pub(crate) operator_ids: Option<Vec<i32>>,
     pub(crate) route_ids: Option<Vec<i32>>,
     pub(crate) stop_ids: Option<Vec<i32>>,
@@ -1140,12 +1141,13 @@ impl IssuePatch {
         self.title.is_none()
             && self.message.is_none()
             && self.creation.is_none()
-            && self.geojson.is_none()
+            && self.impact.is_none()
             && self.category.is_none()
-            && self.lat.is_none()
-            && self.lon.is_none()
             && self.state.is_none()
             && self.state_justification.is_none()
+            && self.lat.is_none()
+            && self.lon.is_none()
+            && self.geojson.is_none()
             && self.operator_ids.is_none()
             && self.route_ids.is_none()
             && self.stop_ids.is_none()
@@ -1163,11 +1165,17 @@ impl IssuePatch {
         if let Some(creation) = self.creation {
             issue.creation = creation
         }
-        if let Some(geojson) = self.geojson {
-            issue.geojson = geojson
-        }
         if let Some(category) = self.category {
             issue.category = category
+        }
+        if let Some(impact) = self.impact {
+            issue.impact = impact
+        }
+        if let Some(state) = self.state {
+            issue.state = state
+        }
+        if let Some(state_justification) = self.state_justification {
+            issue.state_justification = state_justification
         }
         if let Some(lat) = self.lat {
             issue.lat = lat
@@ -1175,11 +1183,8 @@ impl IssuePatch {
         if let Some(lon) = self.lon {
             issue.lon = lon
         }
-        if let Some(state) = self.state {
-            issue.state = state
-        }
-        if let Some(state_justification) = self.state_justification {
-            issue.state_justification = state_justification
+        if let Some(geojson) = self.geojson {
+            issue.geojson = geojson
         }
         if let Some(operator_ids) = self.operator_ids {
             issue.operator_ids = operator_ids
