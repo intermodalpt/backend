@@ -2966,6 +2966,128 @@
     },
     "query": "\nSELECT routes.id as route,\n    routes.operator as operator,\n    routes.code as code,\n    routes.name as name,\n    routes.circular as circular,\n    routes.main_subroute as main_subroute,\n    routes.active as active,\n    routes.type as service_type,\n    routes.parishes as parishes,\n    route_types.badge_text_color as text_color,\n    route_types.badge_bg_color as bg_color,\n    subroutes.id as subroute,\n    subroutes.flag as subroute_flag,\n    subroutes.circular as subroute_circular,\n    subroutes.polyline as subroute_polyline\nFROM routes\nJOIN route_types on routes.type = route_types.id\nLEFT JOIN subroutes on routes.id = subroutes.route\nWHERE routes.id = $1\nORDER BY routes.id asc\n"
   },
+  "9b4523cbf10f1c79d07875c61a270641a39da1d8ffecddae427527bb8a14f99f": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "original_filename",
+          "ordinal": 1,
+          "type_info": "Text"
+        },
+        {
+          "name": "sha1",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "public",
+          "ordinal": 3,
+          "type_info": "Bool"
+        },
+        {
+          "name": "sensitive",
+          "ordinal": 4,
+          "type_info": "Bool"
+        },
+        {
+          "name": "uploader",
+          "ordinal": 5,
+          "type_info": "Int4"
+        },
+        {
+          "name": "upload_date",
+          "ordinal": 6,
+          "type_info": "Text"
+        },
+        {
+          "name": "capture_date",
+          "ordinal": 7,
+          "type_info": "Text"
+        },
+        {
+          "name": "lon",
+          "ordinal": 8,
+          "type_info": "Float8"
+        },
+        {
+          "name": "lat",
+          "ordinal": 9,
+          "type_info": "Float8"
+        },
+        {
+          "name": "quality",
+          "ordinal": 10,
+          "type_info": "Int2"
+        },
+        {
+          "name": "width",
+          "ordinal": 11,
+          "type_info": "Int4"
+        },
+        {
+          "name": "height",
+          "ordinal": 12,
+          "type_info": "Int4"
+        },
+        {
+          "name": "camera_ref",
+          "ordinal": 13,
+          "type_info": "Text"
+        },
+        {
+          "name": "tags",
+          "ordinal": 14,
+          "type_info": "VarcharArray"
+        },
+        {
+          "name": "notes",
+          "ordinal": 15,
+          "type_info": "Text"
+        },
+        {
+          "name": "tagged",
+          "ordinal": 16,
+          "type_info": "Bool"
+        },
+        {
+          "name": "stops!: Vec<i32>",
+          "ordinal": 17,
+          "type_info": "Int4Array"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        false,
+        false,
+        false,
+        true,
+        false,
+        true,
+        false,
+        null
+      ],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      }
+    },
+    "query": "\nSELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,\n    stop_pics.public, stop_pics.sensitive, stop_pics.uploader,\n    stop_pics.upload_date, stop_pics.capture_date, stop_pics.lon, stop_pics.lat,\n    stop_pics.quality, stop_pics.width, stop_pics.height, stop_pics.camera_ref,\n    stop_pics.tags, stop_pics.notes, stop_pics.tagged,\n    array_remove(array_agg(stop_pic_stops.stop), NULL) as \"stops!: Vec<i32>\"\nFROM stop_pics\nLEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id\nWHERE stop_pics.id = $1\nGROUP BY stop_pics.id\n"
+  },
   "9b669cdb3c66ee8e20e664f9714810c33660e963d352196c96816a8dd1dc9936": {
     "describe": {
       "columns": [

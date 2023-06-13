@@ -22,7 +22,7 @@ use axum::extract::{Multipart, Path, Query, State};
 use axum::Json;
 use serde::Deserialize;
 
-use super::{logic, models::requests, models::responses, sql};
+use super::{logic, models, models::requests, models::responses, sql};
 use crate::utils::get_exactly_one_field;
 use crate::Error;
 use crate::{auth, contrib, AppState};
@@ -40,7 +40,7 @@ pub(crate) async fn get_tagged_stop_pictures(
     State(state): State<AppState>,
     Path(stop_id): Path<i32>,
     claims: Option<auth::Claims>,
-) -> Result<Json<Vec<responses::StopPic>>, Error> {
+) -> Result<Json<Vec<responses::PicWithStops>>, Error> {
     if claims.is_none() {
         return Err(Error::Forbidden);
     }
@@ -64,13 +64,13 @@ pub(crate) async fn get_picture_stop_rels(
 pub(crate) async fn get_pictures(
     State(state): State<AppState>,
     claims: Option<auth::Claims>,
-) -> Result<Json<Vec<responses::StopPic>>, Error> {
+) -> Result<Json<Vec<responses::PicWithStops>>, Error> {
     if claims.is_none() {
         return Err(Error::Forbidden);
     }
 
     // TODO depending on the claims, this should not return pics tagged sensitive
-    Ok(Json(sql::fetch_pictures(&state.pool).await?))
+    Ok(Json(sql::fetch_pictures_with_stops(&state.pool).await?))
 }
 
 #[derive(Deserialize, Default)]
@@ -85,7 +85,7 @@ pub(crate) async fn get_dangling_stop_pictures(
     State(state): State<AppState>,
     claims: Option<auth::Claims>,
     paginator: Query<Page>,
-) -> Result<Json<Vec<responses::StopPic>>, Error> {
+) -> Result<Json<Vec<responses::PicWithStops>>, Error> {
     if claims.is_none() {
         return Err(Error::Forbidden);
     }
@@ -104,15 +104,16 @@ pub(crate) async fn upload_dangling_stop_picture(
     State(state): State<AppState>,
     claims: Option<auth::Claims>,
     mut multipart: Multipart,
-) -> Result<Json<responses::StopPic>, Error> {
+) -> Result<Json<models::StopPic>, Error> {
     if claims.is_none() {
         return Err(Error::Forbidden);
     }
     let claims = claims.unwrap();
 
-    if !(claims.permissions.is_admin) {
-        return Err(Error::Forbidden);
-    }
+    // TODO replace this with some rate limited for untrusted users
+    // if !(claims.permissions.is_admin) {
+    //     return Err(Error::Forbidden);
+    // }
 
     let field = get_exactly_one_field(&mut multipart).await?;
 
@@ -156,15 +157,16 @@ pub(crate) async fn upload_stop_picture(
     claims: Option<auth::Claims>,
     Path(stop_id): Path<i32>,
     mut multipart: Multipart,
-) -> Result<Json<responses::StopPic>, Error> {
+) -> Result<Json<responses::PicWithStops>, Error> {
     if claims.is_none() {
         return Err(Error::Forbidden);
     }
     let claims = claims.unwrap();
 
-    if !(claims.permissions.is_admin) {
-        return Err(Error::Forbidden);
-    }
+    // TODO replace this with some rate limited for untrusted users
+    // if !(claims.permissions.is_admin) {
+    //     return Err(Error::Forbidden);
+    // }
 
     let field = get_exactly_one_field(&mut multipart).await?;
 
@@ -200,8 +202,32 @@ pub(crate) async fn upload_stop_picture(
     )
     .await?;
 
-    let mut pic = responses::StopPic::from(pic);
-    pic.stops.push(stop_id);
+    let pic = responses::PicWithStops::from((pic, vec![stop_id]));
+
+    Ok(Json(pic))
+}
+
+pub(crate) async fn get_stop_picture_meta(
+    State(state): State<AppState>,
+    claims: Option<auth::Claims>,
+    Path(picture_id): Path<i32>,
+) -> Result<Json<responses::PicWithStops>, Error> {
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+
+    let pic = sql::fetch_picture_with_stops(&state.pool, picture_id).await?;
+    if pic.is_none() {
+        return Err(Error::NotFoundUpstream);
+    }
+    let pic = pic.unwrap();
+
+    if !(claims.permissions.is_admin
+        || !pic.tagged && pic.uploader == claims.uid)
+    {
+        return Err(Error::Forbidden);
+    }
 
     Ok(Json(pic))
 }

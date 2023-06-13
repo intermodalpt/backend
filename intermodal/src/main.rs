@@ -175,7 +175,8 @@ pub(crate) fn build_paths(state: AppState) -> Router {
         )
         .route(
             "/v1/stop_pics/:picture_id",
-            patch(pics::handlers::patch_stop_picture_meta)
+            get(pics::handlers::get_stop_picture_meta)
+                .patch(pics::handlers::patch_stop_picture_meta)
                 .delete(pics::handlers::delete_picture),
         )
         .route(

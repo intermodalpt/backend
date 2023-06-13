@@ -130,6 +130,14 @@ pub(crate) mod responses {
     use utoipa::ToSchema;
 
     #[derive(Debug, Serialize, ToSchema)]
+    pub struct MinimalPic {
+        pub id: i32,
+        pub url_full: String,
+        pub url_medium: String,
+        pub url_thumb: String,
+    }
+
+    #[derive(Debug, Serialize, ToSchema)]
     pub struct PublicStopPic {
         pub id: i32,
         // TODO deprecate
@@ -162,7 +170,7 @@ pub(crate) mod responses {
     }
 
     #[derive(Debug, Serialize, ToSchema)]
-    pub struct StopPic {
+    pub struct PicWithStops {
         pub id: i32,
         pub original_filename: String,
         // TODO deprecate
@@ -189,33 +197,34 @@ pub(crate) mod responses {
         pub url_thumb: String,
     }
 
-    impl From<super::StopPic> for StopPic {
-        fn from(value: super::StopPic) -> Self {
+    impl From<(super::StopPic, Vec<i32>)> for PicWithStops {
+        fn from(value: (super::StopPic, Vec<i32>)) -> Self {
+            let (pic, stops) = value;
             Self {
-                id: value.id,
+                id: pic.id,
                 url_full: get_original_path(
-                    &value.sha1,
-                    &value.original_filename,
+                    &pic.sha1,
+                    &pic.original_filename,
                 ),
-                url_medium: get_medium_path(&value.sha1),
-                url_thumb: get_thumb_path(&value.sha1),
-                original_filename: value.original_filename,
-                sha1: value.sha1,
-                public: value.dyn_meta.public,
-                sensitive: value.dyn_meta.sensitive,
-                uploader: value.uploader,
-                upload_date: value.upload_date,
-                capture_date: value.capture_date,
-                lon: value.dyn_meta.lon,
-                lat: value.dyn_meta.lat,
-                width: value.width,
-                height: value.height,
-                quality: value.dyn_meta.quality,
-                camera_ref: value.camera_ref,
-                tags: value.dyn_meta.tags,
-                notes: value.dyn_meta.notes,
-                tagged: value.tagged,
-                stops: vec![],
+                url_medium: get_medium_path(&pic.sha1),
+                url_thumb: get_thumb_path(&pic.sha1),
+                original_filename: pic.original_filename,
+                sha1: pic.sha1,
+                public: pic.dyn_meta.public,
+                sensitive: pic.dyn_meta.sensitive,
+                uploader: pic.uploader,
+                upload_date: pic.upload_date,
+                capture_date: pic.capture_date,
+                lon: pic.dyn_meta.lon,
+                lat: pic.dyn_meta.lat,
+                width: pic.width,
+                height: pic.height,
+                quality: pic.dyn_meta.quality,
+                camera_ref: pic.camera_ref,
+                tags: pic.dyn_meta.tags,
+                notes: pic.dyn_meta.notes,
+                tagged: pic.tagged,
+                stops,
             }
         }
     }
