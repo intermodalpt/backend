@@ -81,6 +81,7 @@ pub(crate) struct Page {
 
 const PAGE_SIZE: u32 = 20;
 
+// TODO deprecate
 pub(crate) async fn get_dangling_stop_pictures(
     State(state): State<AppState>,
     claims: Option<auth::Claims>,
@@ -95,8 +96,82 @@ pub(crate) async fn get_dangling_stop_pictures(
     let take = i64::from(PAGE_SIZE);
 
     Ok(Json(
-        sql::fetch_untagged_pictures(&state.pool, claims.uid, offset, take)
+        sql::fetch_user_untagged_pictures(
+            &state.pool,
+            claims.uid,
+            offset,
+            take,
+        )
+        .await?,
+    ))
+}
+
+#[derive(Deserialize, Default)]
+pub(crate) struct PicsPage {
+    #[serde(default)]
+    p: u32,
+    #[serde(default)]
+    tagged_only: bool,
+    #[serde(default)]
+    untagged_only: bool,
+}
+
+pub(crate) async fn get_latest_stop_pictures(
+    State(state): State<AppState>,
+    claims: Option<auth::Claims>,
+    qs: Query<PicsPage>,
+) -> Result<Json<Vec<responses::PicWithStops>>, Error> {
+    let offset = i64::from(qs.p * PAGE_SIZE);
+    let take = i64::from(PAGE_SIZE);
+
+    if claims.is_none() {
+        if qs.untagged_only {
+            return Ok(Json(vec![]));
+        }
+
+        return Ok(Json(
+            sql::fetch_latest_pictures(&state.pool, offset, take).await?,
+        ));
+    }
+
+    let claims = claims.unwrap();
+
+    if qs.tagged_only && qs.untagged_only {
+        return Ok(Json(vec![]));
+    }
+
+    if qs.untagged_only {
+        return Ok(Json(
+            sql::fetch_user_untagged_pictures(
+                &state.pool,
+                claims.uid,
+                offset,
+                take,
+            )
             .await?,
+        ));
+    }
+
+    if qs.tagged_only {
+        return Ok(Json(
+            sql::fetch_user_tagged_pictures(
+                &state.pool,
+                claims.uid,
+                offset,
+                take,
+            )
+            .await?,
+        ));
+    }
+
+    Ok(Json(
+        sql::fetch_latest_plus_user_pictures(
+            &state.pool,
+            claims.uid,
+            offset,
+            take,
+        )
+        .await?,
     ))
 }
 
