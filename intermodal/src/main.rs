@@ -165,6 +165,10 @@ pub(crate) fn build_paths(state: AppState) -> Router {
             patch(routes::handlers::patch_subroute_stops),
         )
         .route(
+            "/v1/stop_pics/map",
+            get(pics::handlers::get_pictures_map)
+        )
+        .route(
             "/v1/stop_pics/dangling",
             get(pics::handlers::get_dangling_stop_pictures)
                 .post(pics::handlers::upload_dangling_stop_picture),

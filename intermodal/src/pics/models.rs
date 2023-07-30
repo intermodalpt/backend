@@ -202,10 +202,7 @@ pub(crate) mod responses {
             let (pic, stops) = value;
             Self {
                 id: pic.id,
-                url_full: get_original_path(
-                    &pic.sha1,
-                    &pic.original_filename,
-                ),
+                url_full: get_original_path(&pic.sha1, &pic.original_filename),
                 url_medium: get_medium_path(&pic.sha1),
                 url_thumb: get_thumb_path(&pic.sha1),
                 original_filename: pic.original_filename,
@@ -249,5 +246,17 @@ pub(crate) mod responses {
         pub url_full: String,
         pub url_medium: String,
         pub url_thumb: String,
+    }
+
+    #[derive(Debug, Serialize, ToSchema)]
+    pub struct MinimalPicWithStops {
+        pub id: i32,
+        pub public: bool,
+        pub sensitive: bool,
+        pub lon: Option<f64>,
+        pub lat: Option<f64>,
+        pub stops: Vec<i32>,
+        // TODO Consider this
+        pub tagged: bool,
     }
 }

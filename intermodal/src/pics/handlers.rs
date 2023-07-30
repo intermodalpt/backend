@@ -68,9 +68,26 @@ pub(crate) async fn get_pictures(
     if claims.is_none() {
         return Err(Error::Forbidden);
     }
-
-    // TODO depending on the claims, this should not return pics tagged sensitive
     Ok(Json(sql::fetch_pictures_with_stops(&state.pool).await?))
+}
+
+pub(crate) async fn get_pictures_map(
+    State(state): State<AppState>,
+    claims: Option<auth::Claims>,
+) -> Result<Json<Vec<responses::MinimalPicWithStops>>, Error> {
+    let is_trusted = matches!(
+        claims,
+        Some(auth::Claims {
+            permissions: auth::Permissions { is_admin: true, .. },
+            ..
+        })
+    );
+    let uid = claims.and_then(|c| Some(c.uid));
+
+    Ok(Json(
+        sql::fetch_minimal_pictures_with_stops(&state.pool, is_trusted, uid)
+            .await?,
+    ))
 }
 
 #[derive(Deserialize, Default)]

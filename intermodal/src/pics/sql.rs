@@ -208,6 +208,40 @@ GROUP BY stop_pics.id
     .collect())
 }
 
+pub(crate) async fn fetch_minimal_pictures_with_stops(
+    pool: &PgPool,
+    trusted: bool,
+    uid: Option<i32>,
+) -> Result<Vec<responses::MinimalPicWithStops>> {
+    Ok(sqlx::query!(
+        r#"
+SELECT stop_pics.id, stop_pics.public, stop_pics.sensitive,
+    stop_pics.lon, stop_pics.lat, stop_pics.tagged,
+    array_remove(array_agg(stop_pic_stops.stop), NULL) as "stops!: Vec<i32>"
+FROM stop_pics
+LEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id
+WHERE stop_pics.uploader = $1 OR stop_pics.public = true OR $2 = true
+GROUP BY stop_pics.id
+"#,
+        uid,
+        trusted
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .into_iter()
+    .map(|r| responses::MinimalPicWithStops {
+        id: r.id,
+        tagged: r.tagged,
+        public: r.public,
+        sensitive: r.sensitive,
+        lon: r.lon,
+        lat: r.lat,
+        stops: r.stops,
+    })
+    .collect())
+}
+
 pub(crate) async fn fetch_picture_stops(
     pool: &PgPool,
     picture_id: i32,
