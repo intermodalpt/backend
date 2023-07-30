@@ -107,7 +107,7 @@ pub(crate) fn build_paths(state: AppState) -> Router {
         )
         .route(
             "/v1/stops/:stop_id/pictures/all",
-            get(pics::handlers::get_tagged_stop_pictures),
+            get(pics::handlers::get_stop_pictures),
         )
         .route(
             "/v1/stops/:stop_id/routes",

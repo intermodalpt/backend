@@ -27,6 +27,25 @@ use crate::utils::get_exactly_one_field;
 use crate::Error;
 use crate::{auth, contrib, AppState};
 
+pub(crate) async fn get_stop_pictures(
+    State(state): State<AppState>,
+    Path(stop_id): Path<i32>,
+    claims: Option<auth::Claims>,
+) -> Result<Json<Vec<responses::PicWithStops>>, Error> {
+    let is_trusted = matches!(
+        claims,
+        Some(auth::Claims {
+            permissions: auth::Permissions { is_admin: true, .. },
+            ..
+        })
+    );
+    let uid = claims.and_then(|c| Some(c.uid));
+
+    Ok(Json(
+        sql::fetch_stop_pictures(&state.pool, stop_id, is_trusted, uid).await?,
+    ))
+}
+
 pub(crate) async fn get_public_stop_pictures(
     State(state): State<AppState>,
     Path(stop_id): Path<i32>,
@@ -34,18 +53,6 @@ pub(crate) async fn get_public_stop_pictures(
     Ok(Json(
         sql::fetch_public_stop_pictures(&state.pool, stop_id).await?,
     ))
-}
-
-pub(crate) async fn get_tagged_stop_pictures(
-    State(state): State<AppState>,
-    Path(stop_id): Path<i32>,
-    claims: Option<auth::Claims>,
-) -> Result<Json<Vec<responses::PicWithStops>>, Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-
-    Ok(Json(sql::fetch_stop_pictures(&state.pool, stop_id).await?))
 }
 
 pub(crate) async fn get_picture_stop_rels(

@@ -220,7 +220,9 @@ SELECT stop_pics.id, stop_pics.public, stop_pics.sensitive,
     array_remove(array_agg(stop_pic_stops.stop), NULL) as "stops!: Vec<i32>"
 FROM stop_pics
 LEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id
-WHERE stop_pics.uploader = $1 OR stop_pics.public = true OR $2 = true
+WHERE stop_pics.uploader = $1
+    OR (stop_pics.public = true and stop_pics.sensitive = false)
+    OR $2 = true
 GROUP BY stop_pics.id
 "#,
         uid,
@@ -299,6 +301,8 @@ ORDER BY stop_pics.capture_date DESC
 pub(crate) async fn fetch_stop_pictures(
     pool: &PgPool,
     stop_id: i32,
+    trusted: bool,
+    uid: Option<i32>,
 ) -> Result<Vec<responses::PicWithStops>> {
     Ok(sqlx::query!(
         r#"
@@ -311,10 +315,15 @@ SELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,
 FROM stop_pics
 LEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id
 WHERE stop_pic_stops.stop=$1
+    AND (stop_pics.uploader = $2
+        OR (stop_pics.public = true AND stop_pics.sensitive = false)
+        OR $3 = true)
 GROUP BY stop_pics.id
 ORDER BY quality DESC
     "#,
-        stop_id
+        stop_id,
+        uid,
+        trusted
     )
     .fetch_all(pool)
     .await
