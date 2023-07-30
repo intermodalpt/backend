@@ -654,6 +654,41 @@ ORDER BY stop ASC
     Ok(stops)
 }
 
+pub(crate) async fn fetch_unpositioned_pictures(
+    pool: &PgPool,
+    trusted: bool,
+    uid: Option<i32>,
+    skip: i64,
+    take: i64,
+) -> Result<Vec<responses::MinimalPic>> {
+    Ok(sqlx::query!(
+        r#"
+SELECT stop_pics.id, stop_pics.sha1
+FROM stop_pics
+WHERE (stop_pics.lat IS NULL OR stop_pics.lon IS NULL)
+    AND (stop_pics.uploader = $1
+        OR (stop_pics.public = true AND stop_pics.sensitive = false)
+        OR $2 = true)
+LIMIT $3 OFFSET $4
+    "#,
+        uid,
+        trusted,
+        take,
+        skip
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .into_iter()
+    .map(|r| responses::MinimalPic {
+        id: r.id,
+        url_full: get_full_path(&r.sha1),
+        url_medium: get_medium_path(&r.sha1),
+        url_thumb: get_thumb_path(&r.sha1),
+    })
+    .collect())
+}
+
 pub(crate) async fn fetch_public_picture_stop_rels(
     pool: &PgPool,
 ) -> Result<HashMap<i32, Vec<i32>>> {

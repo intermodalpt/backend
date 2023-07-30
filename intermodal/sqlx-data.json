@@ -433,63 +433,6 @@
     },
     "query": "SELECT id, source, name, official_name, osm_name, short_name, locality, street,\n    door, lat, lon, external_id, notes, updater, update_date,\n    parish, tags, accessibility_meta, refs,\n    verification_level, service_check_date, infrastructure_check_date\nFROM stops"
   },
-  "1970fb8efd1b23ee9e439dc430f109ee688c63a1165f595ce90a759d0f1d18e6": {
-    "describe": {
-      "columns": [
-        {
-          "name": "id",
-          "ordinal": 0,
-          "type_info": "Int4"
-        },
-        {
-          "name": "public",
-          "ordinal": 1,
-          "type_info": "Bool"
-        },
-        {
-          "name": "sensitive",
-          "ordinal": 2,
-          "type_info": "Bool"
-        },
-        {
-          "name": "lon",
-          "ordinal": 3,
-          "type_info": "Float8"
-        },
-        {
-          "name": "lat",
-          "ordinal": 4,
-          "type_info": "Float8"
-        },
-        {
-          "name": "tagged",
-          "ordinal": 5,
-          "type_info": "Bool"
-        },
-        {
-          "name": "stops!: Vec<i32>",
-          "ordinal": 6,
-          "type_info": "Int4Array"
-        }
-      ],
-      "nullable": [
-        false,
-        false,
-        false,
-        true,
-        true,
-        false,
-        null
-      ],
-      "parameters": {
-        "Left": [
-          "Int4",
-          "Bool"
-        ]
-      }
-    },
-    "query": "\nSELECT stop_pics.id, stop_pics.public, stop_pics.sensitive,\n    stop_pics.lon, stop_pics.lat, stop_pics.tagged,\n    array_remove(array_agg(stop_pic_stops.stop), NULL) as \"stops!: Vec<i32>\"\nFROM stop_pics\nLEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id\nWHERE stop_pics.uploader = $1 OR stop_pics.public = true OR $2 = true\nGROUP BY stop_pics.id\n"
-  },
   "1b4280e302c1508af7bd0881284e4efbd6bfe941bbb14311af0b55e91d945c26": {
     "describe": {
       "columns": [
@@ -673,6 +616,35 @@
       }
     },
     "query": "\nSELECT id, original_filename, sha1, tagged, public, sensitive, uploader,\n    upload_date, capture_date, lon, lat, quality, width,\n    height, camera_ref, tags, notes\nFROM stop_pics\nWHERE id = $1\n"
+  },
+  "260b7e4d58f5ace7dddcea4921c8daf490f9a808d86d888b3673f894353efefe": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "sha1",
+          "ordinal": 1,
+          "type_info": "Text"
+        }
+      ],
+      "nullable": [
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Bool",
+          "Int8",
+          "Int8"
+        ]
+      }
+    },
+    "query": "\nSELECT stop_pics.id, stop_pics.sha1\nFROM stop_pics\nWHERE (stop_pics.lat IS NULL OR stop_pics.lon IS NULL)\n    AND (stop_pics.uploader = $1\n        OR (stop_pics.public = true AND stop_pics.sensitive = false)\n        OR $2 = true)\nLIMIT $3 OFFSET $4\n    "
   },
   "30f7a9fb49144c702a9a89ed1372312e7f2af30a2bd6c99dceeff1fc2b88e458": {
     "describe": {
@@ -3788,6 +3760,63 @@
     },
     "query": "\nSELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,\n    stop_pics.public, stop_pics.sensitive, stop_pics.uploader,\n    stop_pics.upload_date, stop_pics.capture_date, stop_pics.quality,\n    stop_pics.width, stop_pics.height, stop_pics.lon, stop_pics.lat,\n    stop_pics.camera_ref, stop_pics.tags, stop_pics.notes, stop_pics.tagged,\n    array_remove(array_agg(stop_pic_stops.stop), NULL) as \"stops!: Vec<i32>\"\nFROM stop_pics\nLEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id\nWHERE tagged=false AND uploader=$1\nGROUP BY stop_pics.id\nORDER BY capture_date DESC, upload_date DESC\nLIMIT $2 OFFSET $3\n    "
   },
+  "b37dc2c1de8ffa001107ccec1504a9e5f277833d9c8771d4da7ca45be42f5906": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "public",
+          "ordinal": 1,
+          "type_info": "Bool"
+        },
+        {
+          "name": "sensitive",
+          "ordinal": 2,
+          "type_info": "Bool"
+        },
+        {
+          "name": "lon",
+          "ordinal": 3,
+          "type_info": "Float8"
+        },
+        {
+          "name": "lat",
+          "ordinal": 4,
+          "type_info": "Float8"
+        },
+        {
+          "name": "tagged",
+          "ordinal": 5,
+          "type_info": "Bool"
+        },
+        {
+          "name": "stops!: Vec<i32>",
+          "ordinal": 6,
+          "type_info": "Int4Array"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        true,
+        true,
+        false,
+        null
+      ],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Bool"
+        ]
+      }
+    },
+    "query": "\nSELECT stop_pics.id, stop_pics.public, stop_pics.sensitive,\n    stop_pics.lon, stop_pics.lat, stop_pics.tagged,\n    array_remove(array_agg(stop_pic_stops.stop), NULL) as \"stops!: Vec<i32>\"\nFROM stop_pics\nLEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id\nWHERE stop_pics.uploader = $1\n    OR (stop_pics.public = true and stop_pics.sensitive = false)\n    OR $2 = true\nGROUP BY stop_pics.id\n"
+  },
   "b61b6815d3df093662d35107a97cc4111a895787e34488ca7a9ae24bf0f98035": {
     "describe": {
       "columns": [],
@@ -3889,128 +3918,6 @@
       }
     },
     "query": "\nSELECT id, name, calendar\nFROM operator_calendars\nWHERE operator_id=$1\n"
-  },
-  "c0ebd81ebcaf485946daec4ea51698b4f55346176befcd365afa8209a0b2d802": {
-    "describe": {
-      "columns": [
-        {
-          "name": "id",
-          "ordinal": 0,
-          "type_info": "Int4"
-        },
-        {
-          "name": "original_filename",
-          "ordinal": 1,
-          "type_info": "Text"
-        },
-        {
-          "name": "sha1",
-          "ordinal": 2,
-          "type_info": "Text"
-        },
-        {
-          "name": "public",
-          "ordinal": 3,
-          "type_info": "Bool"
-        },
-        {
-          "name": "sensitive",
-          "ordinal": 4,
-          "type_info": "Bool"
-        },
-        {
-          "name": "uploader",
-          "ordinal": 5,
-          "type_info": "Int4"
-        },
-        {
-          "name": "upload_date",
-          "ordinal": 6,
-          "type_info": "Text"
-        },
-        {
-          "name": "capture_date",
-          "ordinal": 7,
-          "type_info": "Text"
-        },
-        {
-          "name": "quality",
-          "ordinal": 8,
-          "type_info": "Int2"
-        },
-        {
-          "name": "width",
-          "ordinal": 9,
-          "type_info": "Int4"
-        },
-        {
-          "name": "height",
-          "ordinal": 10,
-          "type_info": "Int4"
-        },
-        {
-          "name": "lon",
-          "ordinal": 11,
-          "type_info": "Float8"
-        },
-        {
-          "name": "lat",
-          "ordinal": 12,
-          "type_info": "Float8"
-        },
-        {
-          "name": "camera_ref",
-          "ordinal": 13,
-          "type_info": "Text"
-        },
-        {
-          "name": "tags",
-          "ordinal": 14,
-          "type_info": "VarcharArray"
-        },
-        {
-          "name": "notes",
-          "ordinal": 15,
-          "type_info": "Text"
-        },
-        {
-          "name": "tagged",
-          "ordinal": 16,
-          "type_info": "Bool"
-        },
-        {
-          "name": "stops!: Vec<i32>",
-          "ordinal": 17,
-          "type_info": "Int4Array"
-        }
-      ],
-      "nullable": [
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        true,
-        false,
-        false,
-        false,
-        true,
-        true,
-        true,
-        false,
-        true,
-        false,
-        null
-      ],
-      "parameters": {
-        "Left": [
-          "Int4"
-        ]
-      }
-    },
-    "query": "\nSELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,\n    stop_pics.public, stop_pics.sensitive, stop_pics.uploader,\n    stop_pics.upload_date, stop_pics.capture_date, stop_pics.quality,\n    stop_pics.width, stop_pics.height, stop_pics.lon, stop_pics.lat,\n    stop_pics.camera_ref, stop_pics.tags, stop_pics.notes, stop_pics.tagged,\n    array_remove(array_agg(stop_pic_stops.stop), NULL) as \"stops!: Vec<i32>\"\nFROM stop_pics\nLEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id\nWHERE stop_pic_stops.stop=$1\nGROUP BY stop_pics.id\nORDER BY quality DESC\n    "
   },
   "c14a53db02ed8ebbc09de37a76bb001ebfa26a2cc8c185d0c47bcf295b9fc5ad": {
     "describe": {
@@ -4127,6 +4034,130 @@
       }
     },
     "query": "\nSELECT id, operator_id, summary, content, datetime, geojson, visible\nFROM news_items\nLIMIT $1 OFFSET $2\n"
+  },
+  "c500cace3294455046ce3c145d2cb436f70591ffda4c45fef38b8a1d9a0336c9": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "original_filename",
+          "ordinal": 1,
+          "type_info": "Text"
+        },
+        {
+          "name": "sha1",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "public",
+          "ordinal": 3,
+          "type_info": "Bool"
+        },
+        {
+          "name": "sensitive",
+          "ordinal": 4,
+          "type_info": "Bool"
+        },
+        {
+          "name": "uploader",
+          "ordinal": 5,
+          "type_info": "Int4"
+        },
+        {
+          "name": "upload_date",
+          "ordinal": 6,
+          "type_info": "Text"
+        },
+        {
+          "name": "capture_date",
+          "ordinal": 7,
+          "type_info": "Text"
+        },
+        {
+          "name": "quality",
+          "ordinal": 8,
+          "type_info": "Int2"
+        },
+        {
+          "name": "width",
+          "ordinal": 9,
+          "type_info": "Int4"
+        },
+        {
+          "name": "height",
+          "ordinal": 10,
+          "type_info": "Int4"
+        },
+        {
+          "name": "lon",
+          "ordinal": 11,
+          "type_info": "Float8"
+        },
+        {
+          "name": "lat",
+          "ordinal": 12,
+          "type_info": "Float8"
+        },
+        {
+          "name": "camera_ref",
+          "ordinal": 13,
+          "type_info": "Text"
+        },
+        {
+          "name": "tags",
+          "ordinal": 14,
+          "type_info": "VarcharArray"
+        },
+        {
+          "name": "notes",
+          "ordinal": 15,
+          "type_info": "Text"
+        },
+        {
+          "name": "tagged",
+          "ordinal": 16,
+          "type_info": "Bool"
+        },
+        {
+          "name": "stops!: Vec<i32>",
+          "ordinal": 17,
+          "type_info": "Int4Array"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        false,
+        true,
+        false,
+        null
+      ],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Int4",
+          "Bool"
+        ]
+      }
+    },
+    "query": "\nSELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,\n    stop_pics.public, stop_pics.sensitive, stop_pics.uploader,\n    stop_pics.upload_date, stop_pics.capture_date, stop_pics.quality,\n    stop_pics.width, stop_pics.height, stop_pics.lon, stop_pics.lat,\n    stop_pics.camera_ref, stop_pics.tags, stop_pics.notes, stop_pics.tagged,\n    array_remove(array_agg(stop_pic_stops.stop), NULL) as \"stops!: Vec<i32>\"\nFROM stop_pics\nLEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id\nWHERE stop_pic_stops.stop=$1\n    AND (stop_pics.uploader = $2\n        OR (stop_pics.public = true AND stop_pics.sensitive = false)\n        OR $3 = true)\nGROUP BY stop_pics.id\nORDER BY quality DESC\n    "
   },
   "c6fb6550d6a383d26e584a6b461625586e1f18e2a5247cc09a2b5a0730256803": {
     "describe": {

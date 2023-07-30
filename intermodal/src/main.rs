@@ -178,6 +178,10 @@ pub(crate) fn build_paths(state: AppState) -> Router {
             get(pics::handlers::get_latest_stop_pictures)
         )
         .route(
+            "/v1/stop_pics/unpositioned",
+            get(pics::handlers::get_unpositioned_stop_pictures)
+        )
+        .route(
             "/v1/stop_pics/linked/:stop_id",
             post(pics::handlers::upload_stop_picture),
         )

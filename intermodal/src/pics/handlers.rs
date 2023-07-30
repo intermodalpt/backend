@@ -199,6 +199,35 @@ pub(crate) async fn get_latest_stop_pictures(
     ))
 }
 
+pub(crate) async fn get_unpositioned_stop_pictures(
+    State(state): State<AppState>,
+    claims: Option<auth::Claims>,
+    paginator: Query<Page>,
+) -> Result<Json<Vec<responses::MinimalPic>>, Error> {
+    let offset = i64::from(paginator.p * PAGE_SIZE);
+    let take = i64::from(PAGE_SIZE);
+
+    let is_trusted = matches!(
+        claims,
+        Some(auth::Claims {
+            permissions: auth::Permissions { is_admin: true, .. },
+            ..
+        })
+    );
+    let uid = claims.and_then(|c| Some(c.uid));
+
+    Ok(Json(
+        sql::fetch_unpositioned_pictures(
+            &state.pool,
+            is_trusted,
+            uid,
+            offset,
+            take,
+        )
+        .await?,
+    ))
+}
+
 pub(crate) async fn upload_dangling_stop_picture(
     State(state): State<AppState>,
     claims: Option<auth::Claims>,
@@ -311,10 +340,14 @@ pub(crate) async fn get_stop_picture_meta(
     claims: Option<auth::Claims>,
     Path(picture_id): Path<i32>,
 ) -> Result<Json<responses::PicWithStops>, Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
+    let is_trusted = matches!(
+        claims,
+        Some(auth::Claims {
+            permissions: auth::Permissions { is_admin: true, .. },
+            ..
+        })
+    );
+    let uid = claims.and_then(|c| Some(c.uid));
 
     let pic = sql::fetch_picture_with_stops(&state.pool, picture_id).await?;
     if pic.is_none() {
@@ -322,13 +355,14 @@ pub(crate) async fn get_stop_picture_meta(
     }
     let pic = pic.unwrap();
 
-    if !(claims.permissions.is_admin
-        || !pic.tagged && pic.uploader == claims.uid)
+    if ((pic.tagged && !pic.sensitive)
+        || Some(pic.uploader) == uid
+        || is_trusted)
     {
-        return Err(Error::Forbidden);
+        Ok(Json(pic))
+    } else {
+        Err(Error::Forbidden)
     }
-
-    Ok(Json(pic))
 }
 
 pub(crate) async fn patch_stop_picture_meta(
