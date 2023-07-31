@@ -27,6 +27,7 @@ use crate::Error;
 
 type Result<T> = std::result::Result<T, Error>;
 
+/// Fetches a picture by its id.
 pub(crate) async fn fetch_picture(
     pool: &PgPool,
     picture_id: i32,
@@ -71,6 +72,7 @@ WHERE id = $1
     })
 }
 
+/// Fetches a picture by its hash.
 pub(crate) async fn fetch_picture_by_hash(
     pool: &PgPool,
     pic_hash: &str,
@@ -115,6 +117,7 @@ WHERE sha1 = $1
     })
 }
 
+/// A specific picture and its stops
 pub(crate) async fn fetch_picture_with_stops(
     pool: &PgPool,
     picture_id: i32,
@@ -162,6 +165,7 @@ GROUP BY stop_pics.id
     }))
 }
 
+/// Every picture and its stops
 pub(crate) async fn fetch_pictures_with_stops(
     pool: &PgPool,
 ) -> Result<Vec<responses::PicWithStops>> {
@@ -208,6 +212,7 @@ GROUP BY stop_pics.id
     .collect())
 }
 
+/// Ids, URLs and stops for every picture
 pub(crate) async fn fetch_minimal_pictures_with_stops(
     pool: &PgPool,
     trusted: bool,
@@ -244,6 +249,7 @@ GROUP BY stop_pics.id
     .collect())
 }
 
+/// All of the stops that are linked to a picture
 pub(crate) async fn fetch_picture_stops(
     pool: &PgPool,
     picture_id: i32,
@@ -264,6 +270,7 @@ WHERE pic = $1
     .collect())
 }
 
+/// All of the pictures that are attached to a stop and meant to be public
 pub(crate) async fn fetch_public_stop_pictures(
     pool: &PgPool,
     stop_id: i32,
@@ -298,6 +305,7 @@ ORDER BY stop_pics.capture_date DESC
     )
 }
 
+/// All of the pictures that are attached to a stop and visible to the user
 pub(crate) async fn fetch_stop_pictures(
     pool: &PgPool,
     stop_id: i32,
@@ -355,6 +363,7 @@ ORDER BY quality DESC
     .collect())
 }
 
+/// A range of pictures that have been uploaded by a user
 pub(crate) async fn fetch_user_pictures(
     pool: &PgPool,
     user_id: i32,
@@ -410,7 +419,8 @@ LIMIT $2 OFFSET $3
     .collect())
 }
 
-pub(crate) async fn fetch_latest_pictures(
+/// A range of pictures that are meant to be public (auth-free)
+pub(crate) async fn fetch_latest_public_pictures(
     pool: &PgPool,
     skip: i64,
     take: i64,
@@ -463,9 +473,11 @@ LIMIT $1 OFFSET $2
     .collect())
 }
 
-pub(crate) async fn fetch_latest_plus_user_pictures(
+/// A range of pictures that are visible to the user
+pub(crate) async fn fetch_latest_pictures(
     pool: &PgPool,
-    user_id: i32,
+    trusted: bool,
+    uid: Option<i32>,
     skip: i64,
     take: i64,
 ) -> Result<Vec<responses::PicWithStops>> {
@@ -479,12 +491,15 @@ SELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,
     array_remove(array_agg(stop_pic_stops.stop), NULL) as "stops!: Vec<i32>"
 FROM stop_pics
 LEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id
-WHERE uploader=$1 OR public=true
+WHERE stop_pics.uploader = $1
+    OR (stop_pics.public = true AND stop_pics.sensitive = false)
+    OR $2 = true
 GROUP BY stop_pics.id
 ORDER BY capture_date DESC, upload_date DESC
-LIMIT $2 OFFSET $3
+LIMIT $3 OFFSET $4
     "#,
-        user_id,
+        uid,
+        trusted,
         take,
         skip
     )
@@ -518,9 +533,11 @@ LIMIT $2 OFFSET $3
     .collect())
 }
 
-pub(crate) async fn fetch_user_tagged_pictures(
+/// A range of pictures that are tagged and are visible to the user
+pub(crate) async fn fetch_tagged_pictures(
     pool: &PgPool,
-    user_id: i32,
+    trusted: bool,
+    uid: Option<i32>,
     skip: i64,
     take: i64,
 ) -> Result<Vec<responses::PicWithStops>> {
@@ -534,12 +551,16 @@ SELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,
     array_remove(array_agg(stop_pic_stops.stop), NULL) as "stops!: Vec<i32>"
 FROM stop_pics
 LEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id
-WHERE tagged=true AND uploader=$1
+WHERE tagged=true
+    AND (stop_pics.uploader = $1
+        OR (stop_pics.public = true AND stop_pics.sensitive = false)
+        OR $2 = true)
 GROUP BY stop_pics.id
 ORDER BY capture_date DESC, upload_date DESC
-LIMIT $2 OFFSET $3
+LIMIT $3 OFFSET $4
     "#,
-        user_id,
+        uid,
+        trusted,
         take,
         skip
     )
@@ -573,9 +594,11 @@ LIMIT $2 OFFSET $3
     .collect())
 }
 
-pub(crate) async fn fetch_user_untagged_pictures(
+/// A range of pictures that are not tagged and are visible to the user
+pub(crate) async fn fetch_untagged_pictures(
     pool: &PgPool,
-    user_id: i32,
+    trusted: bool,
+    uid: Option<i32>,
     skip: i64,
     take: i64,
 ) -> Result<Vec<responses::PicWithStops>> {
@@ -589,12 +612,16 @@ SELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,
     array_remove(array_agg(stop_pic_stops.stop), NULL) as "stops!: Vec<i32>"
 FROM stop_pics
 LEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id
-WHERE tagged=false AND uploader=$1
+WHERE tagged=false
+    AND (stop_pics.uploader = $1
+        OR (stop_pics.public = true AND stop_pics.sensitive = false)
+        OR $2 = true)
 GROUP BY stop_pics.id
 ORDER BY capture_date DESC, upload_date DESC
-LIMIT $2 OFFSET $3
+LIMIT $3 OFFSET $4
     "#,
-        user_id,
+        uid,
+        trusted,
         take,
         skip
     )
@@ -654,6 +681,7 @@ ORDER BY stop ASC
     Ok(stops)
 }
 
+/// A range of pictures that are not positioned and are visible to the user
 pub(crate) async fn fetch_unpositioned_pictures(
     pool: &PgPool,
     trusted: bool,

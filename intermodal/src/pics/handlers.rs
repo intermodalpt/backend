@@ -111,18 +111,23 @@ pub(crate) async fn get_dangling_stop_pictures(
     claims: Option<auth::Claims>,
     paginator: Query<Page>,
 ) -> Result<Json<Vec<responses::PicWithStops>>, Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
+    let is_trusted = matches!(
+        claims,
+        Some(auth::Claims {
+            permissions: auth::Permissions { is_admin: true, .. },
+            ..
+        })
+    );
+    let uid = claims.and_then(|c| Some(c.uid));
 
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
     Ok(Json(
-        sql::fetch_user_untagged_pictures(
+        sql::fetch_untagged_pictures(
             &state.pool,
-            claims.uid,
+            is_trusted,
+            uid,
             offset,
             take,
         )
@@ -145,20 +150,16 @@ pub(crate) async fn get_latest_stop_pictures(
     claims: Option<auth::Claims>,
     qs: Query<PicsPage>,
 ) -> Result<Json<Vec<responses::PicWithStops>>, Error> {
+    let is_trusted = matches!(
+        claims,
+        Some(auth::Claims {
+            permissions: auth::Permissions { is_admin: true, .. },
+            ..
+        })
+    );
+    let uid = claims.and_then(|c| Some(c.uid));
     let offset = i64::from(qs.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
-
-    if claims.is_none() {
-        if qs.untagged_only {
-            return Ok(Json(vec![]));
-        }
-
-        return Ok(Json(
-            sql::fetch_latest_pictures(&state.pool, offset, take).await?,
-        ));
-    }
-
-    let claims = claims.unwrap();
 
     if qs.tagged_only && qs.untagged_only {
         return Ok(Json(vec![]));
@@ -166,9 +167,10 @@ pub(crate) async fn get_latest_stop_pictures(
 
     if qs.untagged_only {
         return Ok(Json(
-            sql::fetch_user_untagged_pictures(
+            sql::fetch_untagged_pictures(
                 &state.pool,
-                claims.uid,
+                is_trusted,
+                uid,
                 offset,
                 take,
             )
@@ -178,9 +180,10 @@ pub(crate) async fn get_latest_stop_pictures(
 
     if qs.tagged_only {
         return Ok(Json(
-            sql::fetch_user_tagged_pictures(
+            sql::fetch_tagged_pictures(
                 &state.pool,
-                claims.uid,
+                is_trusted,
+                uid,
                 offset,
                 take,
             )
@@ -189,13 +192,8 @@ pub(crate) async fn get_latest_stop_pictures(
     }
 
     Ok(Json(
-        sql::fetch_latest_plus_user_pictures(
-            &state.pool,
-            claims.uid,
-            offset,
-            take,
-        )
-        .await?,
+        sql::fetch_latest_pictures(&state.pool, is_trusted, uid, offset, take)
+            .await?,
     ))
 }
 
