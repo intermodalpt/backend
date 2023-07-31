@@ -731,8 +731,7 @@ impl StopPatch {
         }
         if let Some(infrastructure_check_date) = &self.infrastructure_check_date
         {
-            if infrastructure_check_date == &stop.infrastructure_check_date
-            {
+            if infrastructure_check_date == &stop.infrastructure_check_date {
                 self.infrastructure_check_date = None;
             }
         }
@@ -1107,9 +1106,9 @@ pub struct IssuePatch {
     pub(crate) impact: Option<i32>,
     pub(crate) state: Option<operators::IssueState>,
     #[serde(
-    default,
-    skip_serializing_if = "Option::is_none",
-    with = "::serde_with::rust::double_option"
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "::serde_with::rust::double_option"
     )]
     pub(crate) state_justification: Option<Option<String>>,
     #[serde(
@@ -1125,9 +1124,9 @@ pub struct IssuePatch {
     )]
     pub(crate) lon: Option<Option<f64>>,
     #[serde(
-    default,
-    skip_serializing_if = "Option::is_none",
-    with = "::serde_with::rust::double_option"
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "::serde_with::rust::double_option"
     )]
     pub(crate) geojson: Option<Option<JsonValue>>,
     pub(crate) operator_ids: Option<Vec<i32>>,
@@ -1450,5 +1449,12 @@ pub(crate) mod responses {
         pub changes: Vec<Change>,
         pub datetime: DateTime<Local>,
         pub contribution_id: Option<i64>,
+    }
+
+    #[derive(Debug, Serialize)]
+    pub struct Contributor {
+        pub id: i32,
+        pub username: String,
+        pub works_for: Option<i32>,
     }
 }

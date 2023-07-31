@@ -34,6 +34,13 @@ pub(crate) struct Page {
     p: u32,
 }
 
+#[derive(Deserialize, Default)]
+pub(crate) struct PageForUser {
+    #[serde(default)]
+    p: u32,
+    uid: Option<i32>,
+}
+
 const PAGE_SIZE: u32 = 100;
 
 pub(crate) async fn get_decided_own_contributions(
@@ -163,10 +170,28 @@ pub(crate) async fn get_pending_stop_patch(
     Ok(Json(modified_stops))
 }
 
+pub(crate) async fn get_undecided_contribution_contributors(
+    State(state): State<AppState>,
+    claims: Option<auth::Claims>,
+) -> Result<Json<Vec<responses::Contributor>>, Error> {
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
+    Ok(Json(
+        sql::fetch_undecided_contribution_contributors(&state.pool).await?,
+    ))
+}
+
 pub(crate) async fn get_latest_undecided_contributions(
     State(state): State<AppState>,
     claims: Option<auth::Claims>,
-    paginator: Query<Page>,
+    paginator: Query<PageForUser>,
 ) -> Result<Json<Vec<responses::Contribution>>, Error> {
     if claims.is_none() {
         return Err(Error::Forbidden);
@@ -181,7 +206,13 @@ pub(crate) async fn get_latest_undecided_contributions(
     let take = i64::from(PAGE_SIZE);
 
     Ok(Json(
-        sql::fetch_undecided_contributions(&state.pool, offset, take).await?,
+        sql::fetch_undecided_contributions(
+            &state.pool,
+            paginator.uid,
+            offset,
+            take,
+        )
+        .await?,
     ))
 }
 

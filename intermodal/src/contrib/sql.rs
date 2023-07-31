@@ -149,9 +149,13 @@ LIMIT $2 OFFSET $3
 
 pub(crate) async fn fetch_undecided_contributions(
     pool: &PgPool,
+    filter_uid: Option<i32>,
     skip: i64,
     take: i64,
 ) -> Result<Vec<responses::Contribution>> {
+    // -1 means no filter
+    let filter_uid = filter_uid.unwrap_or(-1);
+
     sqlx::query!(
         r#"
 SELECT Contributions.id, Contributions.author_id, Contributions.change,
@@ -160,11 +164,13 @@ SELECT Contributions.id, Contributions.author_id, Contributions.change,
     Contributions.comment,
     Authors.username as author_username
 FROM Contributions
-INNER JOIN Users AS Authors ON author_id = Authors.id
-WHERE accepted IS NULL
+INNER JOIN Users AS Authors ON Contributions.author_id = Authors.id
+WHERE Contributions.accepted IS NULL
+    AND ($1 = -1 OR Contributions.author_id = $1)
 ORDER BY submission_date ASC
-LIMIT $1 OFFSET $2
+LIMIT $2 OFFSET $3
     "#,
+        filter_uid,
         take,
         skip
     )
@@ -190,6 +196,26 @@ LIMIT $1 OFFSET $2
         })
     })
     .collect::<Result<Vec<responses::Contribution>>>()
+}
+
+pub(crate) async fn fetch_undecided_contribution_contributors(
+    pool: &PgPool,
+) -> Result<Vec<responses::Contributor>> {
+    sqlx::query_as!(
+        responses::Contributor,
+        r#"
+SELECT Users.id, Users.username, Users.works_for
+FROM Users
+WHERE Users.id IN (
+    SELECT DISTINCT author_id
+    FROM Contributions
+    WHERE accepted IS NULL
+)
+    "#
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
 pub(crate) async fn fetch_decided_contributions(
@@ -264,16 +290,14 @@ RETURNING id
     Ok(res.id)
 }
 
-
-
 pub(crate) async fn update_contribution<'c, E>(
     executor: E,
     id: i64,
     change: &models::Change,
     comment: &Option<String>,
 ) -> Result<()>
-    where
-        E: sqlx::Executor<'c, Database = sqlx::Postgres>
+where
+    E: sqlx::Executor<'c, Database = sqlx::Postgres>,
 {
     // FIXME the hell?
     let comment = comment.as_ref().map(|s| s.as_str());

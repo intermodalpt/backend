@@ -136,7 +136,7 @@ fn err_only_patches_ignored_fields() {
         ..Default::default()
     };
 
-    let mut current = STOP1.clone();
+    let current = STOP1.clone();
 
     assert_eq!(current.a11y.has_shelter, Some(true));
 
