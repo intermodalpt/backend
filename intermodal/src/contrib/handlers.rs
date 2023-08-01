@@ -41,7 +41,7 @@ pub(crate) struct PageForUser {
     uid: Option<i32>,
 }
 
-const PAGE_SIZE: u32 = 100;
+const PAGE_SIZE: u32 = 25;
 
 pub(crate) async fn get_decided_own_contributions(
     State(state): State<AppState>,
@@ -174,15 +174,6 @@ pub(crate) async fn get_undecided_contribution_contributors(
     State(state): State<AppState>,
     claims: Option<auth::Claims>,
 ) -> Result<Json<Vec<responses::Contributor>>, Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-
-    let claims = claims.unwrap();
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     Ok(Json(
         sql::fetch_undecided_contribution_contributors(&state.pool).await?,
     ))
@@ -192,7 +183,7 @@ pub(crate) async fn get_latest_undecided_contributions(
     State(state): State<AppState>,
     claims: Option<auth::Claims>,
     paginator: Query<PageForUser>,
-) -> Result<Json<Vec<responses::Contribution>>, Error> {
+) -> Result<Json<responses::Page<responses::Contribution>>, Error> {
     if claims.is_none() {
         return Err(Error::Forbidden);
     }
@@ -205,22 +196,24 @@ pub(crate) async fn get_latest_undecided_contributions(
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
-    Ok(Json(
-        sql::fetch_undecided_contributions(
+    Ok(Json(responses::Page {
+        items: sql::fetch_undecided_contributions(
             &state.pool,
             paginator.uid,
             offset,
             take,
         )
         .await?,
-    ))
+        total: sql::count_undecided_contributions(&state.pool, paginator.uid)
+            .await? as usize,
+    }))
 }
 
 pub(crate) async fn get_latest_decided_contributions(
     State(state): State<AppState>,
     claims: Option<auth::Claims>,
     paginator: Query<Page>,
-) -> Result<Json<Vec<responses::Contribution>>, Error> {
+) -> Result<Json<responses::Page<responses::Contribution>>, Error> {
     if claims.is_none() {
         return Err(Error::Forbidden);
     }
@@ -233,16 +226,18 @@ pub(crate) async fn get_latest_decided_contributions(
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
-    Ok(Json(
-        sql::fetch_decided_contributions(&state.pool, offset, take).await?,
-    ))
+    Ok(Json(responses::Page {
+        items: sql::fetch_decided_contributions(&state.pool, offset, take)
+            .await?,
+        total: sql::count_decided_contributions(&state.pool).await? as usize,
+    }))
 }
 
 pub(crate) async fn get_changelog(
     State(state): State<AppState>,
     claims: Option<auth::Claims>,
     paginator: Query<Page>,
-) -> Result<Json<Vec<responses::Changeset>>, Error> {
+) -> Result<Json<responses::Page<responses::Changeset>>, Error> {
     if claims.is_none() {
         return Err(Error::Forbidden);
     }
@@ -255,9 +250,10 @@ pub(crate) async fn get_changelog(
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
-    Ok(Json(
-        sql::fetch_changeset_logs(&state.pool, offset, take).await?,
-    ))
+    Ok(Json(responses::Page {
+        items: sql::fetch_changeset_logs(&state.pool, offset, take).await?,
+        total: sql::count_changeset_logs(&state.pool).await? as usize,
+    }))
 }
 
 pub(crate) async fn post_contrib_stop_data(

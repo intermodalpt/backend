@@ -1998,6 +1998,24 @@
     },
     "query": "\nUPDATE departures\nSET time=$1, calendar_id=$2\nWHERE id=$3 AND subroute=$4\n    "
   },
+  "6897f79b23cf227c8d413474e8ae1f759cf5707fe8360f952baf0e5462cba1c2": {
+    "describe": {
+      "columns": [
+        {
+          "name": "cnt",
+          "ordinal": 0,
+          "type_info": "Int8"
+        }
+      ],
+      "nullable": [
+        null
+      ],
+      "parameters": {
+        "Left": []
+      }
+    },
+    "query": "\nSELECT count(*) as cnt\nFROM Changelog\nINNER JOIN Users ON author_id = Users.id\n    "
+  },
   "6de1310162e7b94dab6afb606cef0708d7382cd2642d16659caa879abe235bba": {
     "describe": {
       "columns": [
@@ -2892,6 +2910,54 @@
       }
     },
     "query": "\nSELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,\n    stop_pics.public, stop_pics.sensitive, stop_pics.uploader,\n    stop_pics.upload_date, stop_pics.capture_date, stop_pics.lon, stop_pics.lat,\n    stop_pics.quality, stop_pics.width, stop_pics.height, stop_pics.camera_ref,\n    stop_pics.tags, stop_pics.notes, stop_pics.tagged,\n    array_remove(array_agg(stop_pic_stops.stop), NULL) as \"stops!: Vec<i32>\"\nFROM stop_pics\nLEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id\nGROUP BY stop_pics.id\n"
+  },
+  "85be6b0d9edabb37df3bab94aef36f43e47ed343991c7950ae698c12b25c1917": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "username",
+          "ordinal": 1,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "works_for",
+          "ordinal": 2,
+          "type_info": "Int4"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        true
+      ],
+      "parameters": {
+        "Left": []
+      }
+    },
+    "query": "\nSELECT Users.id, Users.username, Users.works_for\nFROM Users\nWHERE Users.id IN (\n    SELECT DISTINCT author_id\n    FROM Contributions\n    WHERE accepted IS NULL\n)\n    "
+  },
+  "85d2a95d78ee1afdcd5b1f15504e5d6617267759212ebe756b9d9ccb81cfc034": {
+    "describe": {
+      "columns": [
+        {
+          "name": "cnt",
+          "ordinal": 0,
+          "type_info": "Int8"
+        }
+      ],
+      "nullable": [
+        null
+      ],
+      "parameters": {
+        "Left": []
+      }
+    },
+    "query": "\nSELECT count(*) as cnt\nFROM Contributions\nWHERE accepted IS NOT NULL\n    "
   },
   "874c67aeb8d9effdae3c274f65e1174318dc84c0768ff3c935948cebe6909574": {
     "describe": {
@@ -4361,6 +4427,26 @@
     },
     "query": "\nUPDATE stops\nSET parish=$1\nWHERE id=$2\n    "
   },
+  "cfcd4d600ca6bdc8d9767245a3d5fbf2fd87dd5c157d5ca2b3dc4a4ae6fcee18": {
+    "describe": {
+      "columns": [
+        {
+          "name": "cnt",
+          "ordinal": 0,
+          "type_info": "Int8"
+        }
+      ],
+      "nullable": [
+        null
+      ],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      }
+    },
+    "query": "\nSELECT count(*) as cnt\nFROM Contributions\nWHERE Contributions.accepted IS NULL\n    AND ($1 = -1 OR Contributions.author_id = $1)\n    "
+  },
   "d35381dd9483f56ed3f1080b5cd2d607a69e59e7f747ae424a5ed02a33c68a5c": {
     "describe": {
       "columns": [],
@@ -4474,6 +4560,76 @@
       }
     },
     "query": "\nDELETE FROM subroutes\nWHERE id=$1 AND route=$2\n    "
+  },
+  "e0f4cdb4850f2bd20d491c74e775524a52d533734a8b0daba54136ae65ec6649": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int8"
+        },
+        {
+          "name": "author_id",
+          "ordinal": 1,
+          "type_info": "Int4"
+        },
+        {
+          "name": "change",
+          "ordinal": 2,
+          "type_info": "Jsonb"
+        },
+        {
+          "name": "submission_date",
+          "ordinal": 3,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "accepted",
+          "ordinal": 4,
+          "type_info": "Bool"
+        },
+        {
+          "name": "evaluator_id",
+          "ordinal": 5,
+          "type_info": "Int4"
+        },
+        {
+          "name": "evaluation_date",
+          "ordinal": 6,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "comment",
+          "ordinal": 7,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "author_username",
+          "ordinal": 8,
+          "type_info": "Varchar"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Int8",
+          "Int8"
+        ]
+      }
+    },
+    "query": "\nSELECT Contributions.id, Contributions.author_id, Contributions.change,\n    Contributions.submission_date, Contributions.accepted,\n    Contributions.evaluator_id, Contributions.evaluation_date,\n    Contributions.comment,\n    Authors.username as author_username\nFROM Contributions\nINNER JOIN Users AS Authors ON Contributions.author_id = Authors.id\nWHERE Contributions.accepted IS NULL\n    AND ($1 = -1 OR Contributions.author_id = $1)\nORDER BY submission_date ASC\nLIMIT $2 OFFSET $3\n    "
   },
   "e6221bb6b1382497a5e1c1e51bd35404a8fe593235d6dac42c734907ba89b727": {
     "describe": {
@@ -4663,75 +4819,6 @@
       }
     },
     "query": "\nDELETE FROM subroute_stops\nWHERE Subroute=$1 AND idx>=$2\n    "
-  },
-  "f00215331e753789554feb61ea0c6ef746fc5c591931db87bd72b00186cbfc70": {
-    "describe": {
-      "columns": [
-        {
-          "name": "id",
-          "ordinal": 0,
-          "type_info": "Int8"
-        },
-        {
-          "name": "author_id",
-          "ordinal": 1,
-          "type_info": "Int4"
-        },
-        {
-          "name": "change",
-          "ordinal": 2,
-          "type_info": "Jsonb"
-        },
-        {
-          "name": "submission_date",
-          "ordinal": 3,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "accepted",
-          "ordinal": 4,
-          "type_info": "Bool"
-        },
-        {
-          "name": "evaluator_id",
-          "ordinal": 5,
-          "type_info": "Int4"
-        },
-        {
-          "name": "evaluation_date",
-          "ordinal": 6,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "comment",
-          "ordinal": 7,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "author_username",
-          "ordinal": 8,
-          "type_info": "Varchar"
-        }
-      ],
-      "nullable": [
-        false,
-        false,
-        false,
-        false,
-        true,
-        true,
-        true,
-        true,
-        false
-      ],
-      "parameters": {
-        "Left": [
-          "Int8",
-          "Int8"
-        ]
-      }
-    },
-    "query": "\nSELECT Contributions.id, Contributions.author_id, Contributions.change,\n    Contributions.submission_date, Contributions.accepted,\n    Contributions.evaluator_id, Contributions.evaluation_date,\n    Contributions.comment,\n    Authors.username as author_username\nFROM Contributions\nINNER JOIN Users AS Authors ON author_id = Authors.id\nWHERE accepted IS NULL\nORDER BY submission_date ASC\nLIMIT $1 OFFSET $2\n    "
   },
   "f2bb20fe7200f0084d4dc505edd3e961a60520ee7002b8b6bbfe62f96f2377e8": {
     "describe": {

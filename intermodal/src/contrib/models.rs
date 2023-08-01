@@ -1428,6 +1428,12 @@ pub(crate) mod responses {
     use super::Change;
 
     #[derive(Serialize)]
+    pub struct Page<T> {
+        pub items: Vec<T>,
+        pub total: usize,
+    }
+
+    #[derive(Serialize)]
     pub struct Contribution {
         pub id: i64,
         pub author_id: i32,

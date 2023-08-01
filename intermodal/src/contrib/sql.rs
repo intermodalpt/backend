@@ -198,6 +198,29 @@ LIMIT $2 OFFSET $3
     .collect::<Result<Vec<responses::Contribution>>>()
 }
 
+pub(crate) async fn count_undecided_contributions(
+    pool: &PgPool,
+    filter_uid: Option<i32>,
+) -> Result<i64> {
+    // -1 means no filter
+    let filter_uid = filter_uid.unwrap_or(-1);
+
+    Ok(sqlx::query!(
+        r#"
+SELECT count(*) as cnt
+FROM Contributions
+WHERE Contributions.accepted IS NULL
+    AND ($1 = -1 OR Contributions.author_id = $1)
+    "#,
+        filter_uid
+    )
+    .fetch_one(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .cnt
+    .unwrap_or(0))
+}
+
 pub(crate) async fn fetch_undecided_contribution_contributors(
     pool: &PgPool,
 ) -> Result<Vec<responses::Contributor>> {
@@ -263,6 +286,21 @@ LIMIT $1 OFFSET $2
         })
     })
     .collect::<Result<Vec<responses::Contribution>>>()
+}
+
+pub(crate) async fn count_decided_contributions(pool: &PgPool) -> Result<i64> {
+    Ok(sqlx::query!(
+        r#"
+SELECT count(*) as cnt
+FROM Contributions
+WHERE accepted IS NOT NULL
+    "#
+    )
+    .fetch_one(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .cnt
+    .unwrap_or(0))
 }
 
 pub(crate) async fn insert_new_contribution(
@@ -410,6 +448,21 @@ LIMIT $1 OFFSET $2
         })
     })
     .collect()
+}
+
+pub(crate) async fn count_changeset_logs(pool: &PgPool) -> Result<i64> {
+    Ok(sqlx::query!(
+        r#"
+SELECT count(*) as cnt
+FROM Changelog
+INNER JOIN Users ON author_id = Users.id
+    "#
+    )
+    .fetch_one(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .cnt
+    .unwrap_or(0))
 }
 
 pub(crate) async fn insert_changeset_log<'c, E>(
