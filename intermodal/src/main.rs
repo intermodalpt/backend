@@ -164,10 +164,7 @@ pub(crate) fn build_paths(state: AppState) -> Router {
             "/v1/routes/:route_id/stops/subroutes/:subroute_id",
             patch(routes::handlers::patch_subroute_stops),
         )
-        .route(
-            "/v1/stop_pics/map",
-            get(pics::handlers::get_pictures_map)
-        )
+        .route("/v1/stop_pics/map", get(pics::handlers::get_pictures_map))
         .route(
             "/v1/stop_pics/dangling",
             get(pics::handlers::get_dangling_stop_pictures)
@@ -175,11 +172,11 @@ pub(crate) fn build_paths(state: AppState) -> Router {
         )
         .route(
             "/v1/stop_pics/latest",
-            get(pics::handlers::get_latest_stop_pictures)
+            get(pics::handlers::get_latest_stop_pictures),
         )
         .route(
             "/v1/stop_pics/unpositioned",
-            get(pics::handlers::get_unpositioned_stop_pictures)
+            get(pics::handlers::get_unpositioned_stop_pictures),
         )
         .route(
             "/v1/stop_pics/linked/:stop_id",
@@ -233,12 +230,14 @@ pub(crate) fn build_paths(state: AppState) -> Router {
             "/v1/contrib/pending_stop_patch/own",
             get(contrib::handlers::get_pending_stop_patch),
         )
-        // TODO deprecate
+        .route(
+            "/v1/contrib/contributions/undecided/contributors",
+            get(contrib::handlers::get_undecided_contribution_contributors),
+        )
         .route(
             "/v1/contrib/contributions/undecided",
             get(contrib::handlers::get_latest_undecided_contributions),
         )
-        // TODO deprecate
         .route(
             "/v1/contrib/contributions/decided",
             get(contrib::handlers::get_latest_decided_contributions),
