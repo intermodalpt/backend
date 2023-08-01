@@ -172,7 +172,6 @@ pub(crate) async fn get_pending_stop_patch(
 
 pub(crate) async fn get_undecided_contribution_contributors(
     State(state): State<AppState>,
-    claims: Option<auth::Claims>,
 ) -> Result<Json<Vec<responses::Contributor>>, Error> {
     Ok(Json(
         sql::fetch_undecided_contribution_contributors(&state.pool).await?,
@@ -181,17 +180,12 @@ pub(crate) async fn get_undecided_contribution_contributors(
 
 pub(crate) async fn get_latest_undecided_contributions(
     State(state): State<AppState>,
-    claims: Option<auth::Claims>,
+    _claims: Option<auth::Claims>,
     paginator: Query<PageForUser>,
 ) -> Result<Json<responses::Page<responses::Contribution>>, Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-
-    let claims = claims.unwrap();
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
+    // FIXME use the claims to censor pictures and other possibly-sensitive data
+    // Maybe do this at worker level because the metadata itself should always
+    // be public
 
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
@@ -211,17 +205,12 @@ pub(crate) async fn get_latest_undecided_contributions(
 
 pub(crate) async fn get_latest_decided_contributions(
     State(state): State<AppState>,
-    claims: Option<auth::Claims>,
+    _claims: Option<auth::Claims>,
     paginator: Query<Page>,
 ) -> Result<Json<responses::Page<responses::Contribution>>, Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-
-    let claims = claims.unwrap();
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
+    // FIXME use the claims to censor pictures and other possibly-sensitive data
+    // Maybe do this at worker level because the metadata itself should always
+    // be public
 
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
@@ -235,17 +224,12 @@ pub(crate) async fn get_latest_decided_contributions(
 
 pub(crate) async fn get_changelog(
     State(state): State<AppState>,
-    claims: Option<auth::Claims>,
+    _claims: Option<auth::Claims>,
     paginator: Query<Page>,
 ) -> Result<Json<responses::Page<responses::Changeset>>, Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-
-    let claims = claims.unwrap();
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
+    // FIXME use the claims to censor pictures and other possibly-sensitive data
+    // Maybe do this at worker level because the metadata itself should always
+    // be public
 
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
