@@ -41,7 +41,7 @@ pub(crate) struct PageForUser {
     uid: Option<i32>,
 }
 
-const PAGE_SIZE: u32 = 25;
+const PAGE_SIZE: u32 = 20;
 
 pub(crate) async fn get_decided_own_contributions(
     State(state): State<AppState>,
