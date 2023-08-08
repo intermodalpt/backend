@@ -26,4 +26,4 @@ use once_cell::sync::OnceCell;
 
 pub(crate) static SECRET_KEY: OnceCell<&'static str> = OnceCell::new();
 
-pub(crate) use models::Claims;
+pub(crate) use models::{Claims, Permissions};

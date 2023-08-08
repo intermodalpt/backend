@@ -38,17 +38,11 @@ pub(crate) async fn login(
 ) -> Result<String, Error> {
     let user = sql::fetch_user(db_pool, &request.username).await?;
     if user.is_none() {
-        return Err(Error::NotFoundUpstream);
+        return Err(Error::Forbidden);
     }
     let user = user.unwrap();
 
-    if user.password.is_none() {
-        return Err(Error::DependenciesNotMet);
-    }
-
-    let user_password = user.password.unwrap();
-
-    let parsed_hash = PasswordHash::new(&user_password).map_err(|_err| {
+    let parsed_hash = PasswordHash::new(&user.password).map_err(|_err| {
         Error::Processing("Unable to parse existing hash".to_string())
     })?;
 
