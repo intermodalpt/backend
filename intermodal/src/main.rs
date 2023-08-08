@@ -42,8 +42,8 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use axum::extract::DefaultBodyLimit;
-use axum::http::Method;
-use axum::routing::{delete, get, patch, post};
+use axum::http::{header, Method};
+use axum::routing::{delete, get, patch, post, put};
 use axum::Router;
 use config::Config;
 use once_cell::sync::OnceCell;
@@ -205,6 +205,15 @@ pub(crate) fn build_paths(state: AppState) -> Router {
         .route(
             "/v1/operators/:operator_id/issues",
             get(operators::handlers::get_operator_issues),
+        )
+        .route(
+            "/v1/operators/:operator_id/stops",
+            get(operators::handlers::get_operator_stops),
+        )
+        .route(
+            "/v1/operators/:operator_id/stops/:stop_id",
+            put(operators::handlers::put_operator_stop)
+                .delete(operators::handlers::delete_operator_stop),
         )
         .route(
             "/v1/contrib/upload/stops",

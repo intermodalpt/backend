@@ -33,6 +33,51 @@ pub(crate) async fn get_operators(
     Ok(Json(sql::fetch_operators(&state.pool).await?))
 }
 
+pub(crate) async fn get_operator_stops(
+    State(state): State<AppState>,
+    Path(operator_id): Path<i32>,
+) -> Result<Json<Vec<responses::OperatorStop>>, Error> {
+    Ok(Json(
+        sql::fetch_operator_stops(&state.pool, operator_id).await?,
+    ))
+}
+
+pub(crate) async fn put_operator_stop(
+    State(state): State<AppState>,
+    Path((operator_id, stop_id)): Path<(i32, i32)>,
+    claims: Option<auth::Claims>,
+    Json(change): Json<requests::ChangeOperatorStop>,
+) -> Result<(), Error> {
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
+    sql::upsert_operator_stop(&state.pool, operator_id, stop_id, change)
+        .await?;
+    Ok(())
+}
+
+pub(crate) async fn delete_operator_stop(
+    State(state): State<AppState>,
+    Path((operator_id, stop_id)): Path<(i32, i32)>,
+    claims: Option<auth::Claims>,
+) -> Result<(), Error> {
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
+    sql::delete_operator_stop(&state.pool, operator_id, stop_id).await?;
+    Ok(())
+}
+
 pub(crate) async fn get_issues(
     State(state): State<AppState>,
 ) -> Result<Json<Vec<models::Issue>>, Error> {

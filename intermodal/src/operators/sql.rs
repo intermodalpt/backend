@@ -42,6 +42,154 @@ FROM Operators
     .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
+pub(crate) async fn fetch_operator_stops(
+    pool: &PgPool,
+    operator_id: i32,
+) -> Result<Vec<responses::OperatorStop>> {
+    Ok(sqlx::query_as!(
+        responses::OperatorStop,
+        r#"
+SELECT stops.id, stops.lat, stops.lon, stop_operators.official_name, stop_ref
+FROM stops
+JOIN stop_operators ON stop_operators.stop_id = stops.id
+WHERE stop_operators.operator_id = $1
+        "#,
+        operator_id
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?)
+}
+
+pub(crate) async fn upsert_operator_stop(
+    pool: &PgPool,
+    operator_id: i32,
+    stop_id: i32,
+    change: requests::ChangeOperatorStop,
+) -> Result<()> {
+    let mut transaction = pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    let existing = sqlx::query!(
+        r#"
+        SELECT official_name, stop_ref
+        FROM stop_operators
+        WHERE operator_id = $1 AND stop_id = $2
+        "#,
+        operator_id,
+        stop_id
+    )
+    .fetch_all(&mut transaction)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    match existing.len() {
+        0 => {
+            sqlx::query!(
+                r#"
+                INSERT INTO stop_operators (operator_id, stop_id, official_name, stop_ref)
+                VALUES ($1, $2, $3, $4)
+                "#,
+                operator_id,
+                stop_id,
+                change.official_name,
+                change.stop_ref
+            )
+            .execute(&mut transaction)
+            .await
+            .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+        }
+        1 => {
+            sqlx::query!(
+                r#"
+                UPDATE stop_operators
+                SET official_name = $1,
+                    stop_ref = $2
+                WHERE operator_id = $3 AND stop_id = $4
+                "#,
+                change.official_name,
+                change.stop_ref,
+                operator_id,
+                stop_id
+            )
+            .execute(&mut transaction)
+            .await
+            .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+        }
+        _ => {
+            // TODO This should never happen. Ensure that the constraints are
+            // properly set up.
+            return Err(Error::DatabaseExecution(
+                "Multiple stop_operators for the same operator_id and stop_id"
+                    .to_string(),
+            ));
+        }
+    }
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+}
+
+pub(crate) async fn delete_operator_stop(
+    pool: &PgPool,
+    operator_id: i32,
+    stop_id: i32,
+) -> Result<()> {
+    let mut transaction = pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    let existing = sqlx::query!(
+        r#"
+        SELECT official_name, stop_ref
+        FROM stop_operators
+        WHERE operator_id = $1 AND stop_id = $2
+        "#,
+        operator_id,
+        stop_id
+    )
+    .fetch_all(&mut transaction)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    match existing.len() {
+        0 => {
+            return Err(Error::NotFoundUpstream);
+        }
+        1 => {
+            sqlx::query!(
+                r#"
+                DELETE FROM stop_operators
+                WHERE operator_id = $1 AND stop_id = $2
+                "#,
+                operator_id,
+                stop_id
+            )
+            .execute(&mut transaction)
+            .await
+            .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+        }
+        _ => {
+            // TODO This should never happen. Ensure that the constraints are
+            // properly set up.
+            return Err(Error::DatabaseExecution(
+                "Multiple stop_operators for the same operator_id and stop_id"
+                    .to_string(),
+            ));
+        }
+    }
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+}
+
 pub(crate) async fn fetch_issues(pool: &PgPool) -> Result<Vec<models::Issue>> {
     sqlx::query!(
         r#"

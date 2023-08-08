@@ -216,6 +216,16 @@ pub(crate) mod responses {
 
     use super::{Calendar, IssueCategory, IssueState};
 
+    #[derive(Serialize, ToSchema)]
+    pub struct OperatorStop {
+        pub id: i32,
+        pub official_name: Option<String>,
+        pub stop_ref: Option<String>,
+        // TODO Why the option?
+        pub lat: Option<f64>,
+        pub lon: Option<f64>,
+    }
+
     #[derive(Debug, Serialize, ToSchema)]
     pub struct OperatorCalendar {
         pub id: i32,
@@ -276,6 +286,13 @@ pub(crate) mod requests {
     use utoipa::ToSchema;
 
     use super::{Calendar, IssueCategory, IssueState};
+
+
+    #[derive(Debug, Deserialize, ToSchema)]
+    pub struct ChangeOperatorStop {
+        pub official_name: Option<String>,
+        pub stop_ref: Option<String>,
+    }
 
     #[derive(Debug, Deserialize, ToSchema)]
     pub struct NewOperatorCalendar {

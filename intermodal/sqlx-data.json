@@ -501,6 +501,50 @@
     },
     "query": "\nUPDATE Contributions\nSET change=$1, comment=$2\nWHERE id=$3\n    "
   },
+  "22a1203c1b4ce31c3e08272d2864a9e661749f70f4e2f5beaba9e9ea89f6ab41": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "lat",
+          "ordinal": 1,
+          "type_info": "Float8"
+        },
+        {
+          "name": "lon",
+          "ordinal": 2,
+          "type_info": "Float8"
+        },
+        {
+          "name": "official_name",
+          "ordinal": 3,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "stop_ref",
+          "ordinal": 4,
+          "type_info": "Varchar"
+        }
+      ],
+      "nullable": [
+        false,
+        true,
+        true,
+        true,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      }
+    },
+    "query": "\nSELECT stops.id, stops.lat, stops.lon, stop_operators.official_name, stop_ref\nFROM stops\nJOIN stop_operators ON stop_operators.stop_id = stops.id\nWHERE stop_operators.operator_id = $1\n        "
+  },
   "250a22bc25aeeb4fbe68d78d00442f081ab77a4397287d5731f8fa621edd8ead": {
     "describe": {
       "columns": [
@@ -2016,6 +2060,21 @@
     },
     "query": "\nSELECT count(*) as cnt\nFROM Changelog\nINNER JOIN Users ON author_id = Users.id\n    "
   },
+  "6c61a08b80510d0db0aa01b49b7164592630e72bebb6881a3aba7af404b0b963": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Varchar",
+          "Int4",
+          "Int4"
+        ]
+      }
+    },
+    "query": "\n                UPDATE stop_operators\n                SET official_name = $1,\n                    stop_ref = $2\n                WHERE operator_id = $3 AND stop_id = $4\n                "
+  },
   "6de1310162e7b94dab6afb606cef0708d7382cd2642d16659caa879abe235bba": {
     "describe": {
       "columns": [
@@ -2298,6 +2357,19 @@
       }
     },
     "query": "\nSELECT departures.id as id,\n    subroutes.id as subroute,\n    departures.time as time,\n    departures.calendar_id as \"calendar_id!: i32\"\nFROM departures\nINNER JOIN subroutes on departures.subroute = subroutes.id\nWHERE subroutes.route=$1\nORDER BY time ASC\n    "
+  },
+  "73bdcb039fe9b3c3869c2207a6628e444d34616db35fd3893dabcea8ebbeeb40": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Int4"
+        ]
+      }
+    },
+    "query": "\n                DELETE FROM stop_operators\n                WHERE operator_id = $1 AND stop_id = $2\n                "
   },
   "75f65d308c1fc38a170c67169a1ff05dde8fbb19cf8685b9259fd337a2048533": {
     "describe": {
@@ -4112,6 +4184,21 @@
     },
     "query": "\nSELECT id, name, calendar\nFROM operator_calendars\nWHERE operator_id=$1\n"
   },
+  "bebd5e5c9e1c08d3de9ad85c568c2bf640884e07ccb4e4f18447510803826c44": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Int4",
+          "Varchar",
+          "Varchar"
+        ]
+      }
+    },
+    "query": "\n                INSERT INTO stop_operators (operator_id, stop_id, official_name, stop_ref)\n                VALUES ($1, $2, $3, $4)\n                "
+  },
   "c14a53db02ed8ebbc09de37a76bb001ebfa26a2cc8c185d0c47bcf295b9fc5ad": {
     "describe": {
       "columns": [
@@ -4227,6 +4314,33 @@
       }
     },
     "query": "\nSELECT id, operator_id, summary, content, datetime, geojson, visible\nFROM news_items\nLIMIT $1 OFFSET $2\n"
+  },
+  "c42978fc3f9aac9075da4c58173a3475f471f55c57bc541ac5a8a2bbaf0a68c2": {
+    "describe": {
+      "columns": [
+        {
+          "name": "official_name",
+          "ordinal": 0,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "stop_ref",
+          "ordinal": 1,
+          "type_info": "Varchar"
+        }
+      ],
+      "nullable": [
+        true,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Int4"
+        ]
+      }
+    },
+    "query": "\n        SELECT official_name, stop_ref\n        FROM stop_operators\n        WHERE operator_id = $1 AND stop_id = $2\n        "
   },
   "c500cace3294455046ce3c145d2cb436f70591ffda4c45fef38b8a1d9a0336c9": {
     "describe": {
