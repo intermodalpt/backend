@@ -16,9 +16,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::{fs, io};
-use std::collections::HashMap;
 
 use axum::extract::{Path, Query, State};
 use axum::Json;
@@ -169,7 +169,10 @@ pub(crate) async fn tml_gtfs_route_trips(
                 .into_iter()
                 .map(|(route_id, trips)| models::TMLRoute {
                     id: route_id.clone(),
-                    name: gtfs_route_names.get(&route_id).cloned().unwrap_or_default(),
+                    name: gtfs_route_names
+                        .get(&route_id)
+                        .cloned()
+                        .unwrap_or_default(),
                     trips: trips
                         .into_iter()
                         .map(|trip| models::TMLTrip {

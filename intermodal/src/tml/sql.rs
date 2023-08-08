@@ -33,7 +33,7 @@ SELECT id, source, name, official_name, osm_name, short_name, locality, street,
     door, lat, lon, external_id, notes, updater, update_date,
     parish, tags, accessibility_meta, refs, tml_id, tml_id_verified,
     tml_id_source, deleted_upstream,
-    verification_level, service_check_date, infrastructure_check_date
+    verification_level, service_check_date, infrastructure_check_date, verified_position
 FROM Stops
         "#,
     )
@@ -68,7 +68,7 @@ FROM Stops
                         Error::DatabaseDeserialization
                     },
                 )?,
-                verification_level: r.verification_level as u8,
+                verification_level:  if r.verified_position { r.verification_level as u8 | 0b11000000 } else { r.verification_level as u8 & 0b00111111 },
                 service_check_date: r.service_check_date,
                 infrastructure_check_date: r.infrastructure_check_date,
             },
@@ -76,6 +76,7 @@ FROM Stops
             tml_id_verified: r.tml_id_verified,
             deleted_upstream: r.deleted_upstream,
             tml_id_source: r.tml_id_source,
+            verified_position: r.verified_position,
         })
     })
     .collect()

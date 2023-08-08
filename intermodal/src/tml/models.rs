@@ -89,6 +89,7 @@ pub struct TMLStop {
     pub tml_id: Option<String>,
     pub tml_id_source: String,
     pub deleted_upstream: bool,
+    pub verified_position: bool,
 }
 
 #[derive(Deserialize, Debug)]
@@ -126,6 +127,8 @@ impl fmt::Display for MatchSource {
 mod tests {
     use super::{TMLRoute, TMLTrip};
     use itertools::Itertools;
+
+    #[test]
     fn trip_dedup() {
         let route = TMLRoute {
             id: "4308_0".to_string(),
