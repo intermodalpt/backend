@@ -1,6 +1,6 @@
 /*
     Intermodal, transportation information aggregator
-    Copyright (C) 2022  Cláudio Pereira
+    Copyright (C) 2022 - 2023  Cláudio Pereira
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -67,7 +67,7 @@ pub(crate) struct State {
 
 #[derive(Clone)]
 struct Cached {
-    gtfs_stops: OnceCell<Arc<Vec<tml::models::GTFSStop>>>,
+    gtfs_stops: OnceCell<Arc<Vec<commons::models::gtfs::GTFSStop>>>,
     tml_routes: OnceCell<Arc<Vec<tml::models::TMLRoute>>>,
 }
 
@@ -404,13 +404,14 @@ async fn main() {
         .expect("Unable to start service");
 }
 
-use calendar::models::{Calendar, Weekday};
-use geo::models::Parish;
 use misc::models::responses::Stats;
 use routes::models::responses::{
     DateDeparture, Departure, Route, Subroute, SubrouteStops,
 };
-use stops::models::Stop;
+
+use commons::models::calendar::{Calendar, Weekday};
+use commons::models::geo::Parish;
+use commons::models::stops::Stop;
 
 #[derive(OpenApi)]
 #[openapi(

@@ -1,6 +1,6 @@
 /*
     Intermodal, transportation information aggregator
-    Copyright (C) 2022  Cláudio Pereira
+    Copyright (C) 2022 - 2023  Cláudio Pereira
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -20,7 +20,9 @@ use chrono::Local;
 use serde_json::json;
 use sqlx::PgPool;
 
-use super::{models, responses};
+use commons::models::history;
+
+use super::responses;
 use crate::Error;
 
 type Result<T> = std::result::Result<T, Error>;
@@ -28,7 +30,7 @@ type Result<T> = std::result::Result<T, Error>;
 pub(crate) async fn fetch_contribution(
     pool: &PgPool,
     contribution_id: i64,
-) -> Result<Option<models::Contribution>> {
+) -> Result<Option<history::Contribution>> {
     let res = sqlx::query!(
         r#"
 SELECT id, author_id, change, submission_date, accepted,
@@ -43,7 +45,7 @@ WHERE id=$1
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     if let Some(contribution) = res {
-        Ok(Some(models::Contribution {
+        Ok(Some(history::Contribution {
             id: contribution.id,
             author_id: contribution.author_id,
             change: serde_json::from_value(contribution.change).map_err(
@@ -70,7 +72,7 @@ pub(crate) async fn fetch_decided_user_contributions(
     user_id: i32,
     skip: i64,
     take: i64,
-) -> Result<Vec<models::Contribution>> {
+) -> Result<Vec<history::Contribution>> {
     sqlx::query!(
         r#"
 SELECT id, author_id, change, submission_date, accepted,
@@ -89,7 +91,7 @@ LIMIT $2 OFFSET $3
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?
     .into_iter()
     .map(|r| {
-        Ok(models::Contribution {
+        Ok(history::Contribution {
             id: r.id,
             author_id: r.author_id,
             change: serde_json::from_value(r.change).map_err(|e| {
@@ -103,7 +105,7 @@ LIMIT $2 OFFSET $3
             comment: r.comment,
         })
     })
-    .collect::<Result<Vec<models::Contribution>>>()
+    .collect::<Result<Vec<history::Contribution>>>()
 }
 
 pub(crate) async fn fetch_undecided_user_contributions(
@@ -111,7 +113,7 @@ pub(crate) async fn fetch_undecided_user_contributions(
     user_id: i32,
     skip: i64,
     take: i64,
-) -> Result<Vec<models::Contribution>> {
+) -> Result<Vec<history::Contribution>> {
     sqlx::query!(
         r#"
 SELECT id, author_id, change, submission_date, accepted,
@@ -130,7 +132,7 @@ LIMIT $2 OFFSET $3
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?
     .into_iter()
     .map(|r| {
-        Ok(models::Contribution {
+        Ok(history::Contribution {
             id: r.id,
             author_id: r.author_id,
             change: serde_json::from_value(r.change).map_err(|e| {
@@ -144,7 +146,7 @@ LIMIT $2 OFFSET $3
             comment: r.comment,
         })
     })
-    .collect::<Result<Vec<models::Contribution>>>()
+    .collect::<Result<Vec<history::Contribution>>>()
 }
 
 pub(crate) async fn fetch_undecided_contributions(
@@ -305,7 +307,7 @@ WHERE accepted IS NOT NULL
 
 pub(crate) async fn insert_new_contribution(
     pool: &PgPool,
-    contribution: models::Contribution,
+    contribution: history::Contribution,
 ) -> Result<i64> {
     let res = sqlx::query!(
         r#"
@@ -331,7 +333,7 @@ RETURNING id
 pub(crate) async fn update_contribution<'c, E>(
     executor: E,
     id: i64,
-    change: &models::Change,
+    change: &history::Change,
     comment: &Option<String>,
 ) -> Result<()>
 where
@@ -468,7 +470,7 @@ INNER JOIN Users ON author_id = Users.id
 pub(crate) async fn insert_changeset_log<'c, E>(
     executor: E,
     author_id: i32,
-    changes: &[models::Change],
+    changes: &[history::Change],
     contribution_id: Option<i64>,
 ) -> Result<i64>
 where
@@ -494,7 +496,7 @@ RETURNING id
 pub(crate) async fn fetch_user_stop_meta_contributions(
     pool: &PgPool,
     user_id: i32,
-) -> Result<Vec<models::Contribution>> {
+) -> Result<Vec<history::Contribution>> {
     sqlx::query!(
         r#"
 SELECT id, author_id, change, submission_date, accepted,
@@ -515,7 +517,7 @@ ORDER BY submission_date ASC
             Err(_e) => return Some(Err(Error::DatabaseDeserialization)),
         };
 
-        let contribution = models::Contribution {
+        let contribution = history::Contribution {
             id: r.id,
             author_id: r.author_id,
             change,
@@ -527,8 +529,8 @@ ORDER BY submission_date ASC
         };
         if matches!(
             contribution,
-            models::Contribution {
-                change: models::Change::StopUpdate { .. },
+            history::Contribution {
+                change: history::Change::StopUpdate { .. },
                 ..
             }
         ) {
@@ -537,5 +539,5 @@ ORDER BY submission_date ASC
             None
         }
     })
-    .collect::<Result<Vec<models::Contribution>>>()
+    .collect::<Result<Vec<history::Contribution>>>()
 }

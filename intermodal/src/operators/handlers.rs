@@ -1,6 +1,6 @@
 /*
     Intermodal, transportation information aggregator
-    Copyright (C) 2022  Cláudio Pereira
+    Copyright (C) 2022 - 2023  Cláudio Pereira
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -23,13 +23,15 @@ use axum::Json;
 use chrono::NaiveDate;
 use serde::Deserialize;
 
-use super::models::{self, requests, responses};
+use super::models::{requests, responses};
 use super::sql;
 use crate::{auth, contrib, AppState, Error};
 
+use commons::models::{history, operators};
+
 pub(crate) async fn get_operators(
     State(state): State<AppState>,
-) -> Result<Json<Vec<models::Operator>>, Error> {
+) -> Result<Json<Vec<operators::Operator>>, Error> {
     Ok(Json(sql::fetch_operators(&state.pool).await?))
 }
 
@@ -80,14 +82,14 @@ pub(crate) async fn delete_operator_stop(
 
 pub(crate) async fn get_issues(
     State(state): State<AppState>,
-) -> Result<Json<Vec<models::Issue>>, Error> {
+) -> Result<Json<Vec<operators::Issue>>, Error> {
     Ok(Json(sql::fetch_issues(&state.pool).await?))
 }
 
 pub(crate) async fn get_issue(
     State(state): State<AppState>,
     Path(issue_id): Path<i32>,
-) -> Result<Json<models::Issue>, Error> {
+) -> Result<Json<operators::Issue>, Error> {
     Ok(Json(sql::fetch_issue(&state.pool, issue_id).await?))
 }
 
@@ -114,16 +116,16 @@ pub(crate) async fn post_issue(
     }
     let id = sql::insert_issue(&state.pool, &issue).await?;
 
-    let issue = models::Issue {
+    let issue = operators::Issue {
         id,
-        ..models::Issue::from(issue)
+        ..operators::Issue::from(issue)
     };
 
     // TODO transaction
     contrib::sql::insert_changeset_log(
         &state.pool,
         claims.uid,
-        &[contrib::models::Change::IssueCreation { data: issue }],
+        &[history::Change::IssueCreation { data: issue }],
         None,
     )
     .await?;
@@ -162,7 +164,7 @@ pub(crate) async fn patch_issue(
     contrib::sql::insert_changeset_log(
         &state.pool,
         claims.uid,
-        &[contrib::models::Change::IssueUpdate {
+        &[history::Change::IssueUpdate {
             original: issue,
             patch,
         }],
@@ -249,7 +251,7 @@ const PAGE_SIZE: u32 = 20;
 pub(crate) async fn get_news(
     State(state): State<AppState>,
     paginator: Query<Page>,
-) -> Result<Json<Vec<models::NewsItem>>, Error> {
+) -> Result<Json<Vec<operators::NewsItem>>, Error> {
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 

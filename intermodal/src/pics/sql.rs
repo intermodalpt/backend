@@ -1,6 +1,6 @@
 /*
     Intermodal, transportation information aggregator
-    Copyright (C) 2022  Cláudio Pereira
+    Copyright (C) 2022 - 2023  Cláudio Pereira
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -16,12 +16,15 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+use std::collections::HashMap;
+
 use chrono::Local;
 use itertools::Itertools;
 use sqlx::PgPool;
-use std::collections::HashMap;
 
-use super::{models, models::requests, models::responses};
+use commons::models::pics;
+
+use super::{models::requests, models::responses};
 use crate::pics::{get_full_path, get_medium_path, get_thumb_path};
 use crate::Error;
 
@@ -31,7 +34,7 @@ type Result<T> = std::result::Result<T, Error>;
 pub(crate) async fn fetch_picture(
     pool: &PgPool,
     picture_id: i32,
-) -> Result<Option<models::StopPic>> {
+) -> Result<Option<pics::StopPic>> {
     sqlx::query!(
         r#"
 SELECT id, original_filename, sha1, tagged, public, sensitive, uploader,
@@ -46,7 +49,7 @@ WHERE id = $1
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))
     .map(|row| {
-        row.map(|row| models::StopPic {
+        row.map(|row| pics::StopPic {
             id: row.id,
             original_filename: row.original_filename,
             sha1: row.sha1,
@@ -59,7 +62,7 @@ WHERE id = $1
             width: row.width,
             height: row.height,
             camera_ref: row.camera_ref,
-            dyn_meta: models::StopPicDynMeta {
+            dyn_meta: pics::StopPicDynMeta {
                 public: row.public,
                 sensitive: row.sensitive,
                 lon: row.lon,
@@ -76,7 +79,7 @@ WHERE id = $1
 pub(crate) async fn fetch_picture_by_hash(
     pool: &PgPool,
     pic_hash: &str,
-) -> Result<Option<models::StopPic>> {
+) -> Result<Option<pics::StopPic>> {
     sqlx::query!(
         r#"
 SELECT id, original_filename, sha1, tagged, public, sensitive, uploader,
@@ -91,7 +94,7 @@ WHERE sha1 = $1
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))
     .map(|row| {
-        row.map(|row| models::StopPic {
+        row.map(|row| pics::StopPic {
             id: row.id,
             original_filename: row.original_filename,
             sha1: row.sha1,
@@ -104,7 +107,7 @@ WHERE sha1 = $1
             width: row.width,
             height: row.height,
             camera_ref: row.camera_ref,
-            dyn_meta: models::StopPicDynMeta {
+            dyn_meta: pics::StopPicDynMeta {
                 public: row.public,
                 sensitive: row.sensitive,
                 lon: row.lon,
@@ -747,9 +750,9 @@ ORDER BY stop ASC
 
 pub(crate) async fn insert_picture(
     pool: &PgPool,
-    mut pic: models::StopPic,
+    mut pic: pics::StopPic,
     stops: &[i32],
-) -> Result<models::StopPic> {
+) -> Result<pics::StopPic> {
     let res = sqlx::query!(
         r#"
 INSERT INTO stop_pics(

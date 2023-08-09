@@ -1,6 +1,6 @@
 /*
     Intermodal, transportation information aggregator
-    Copyright (C) 2022  Cláudio Pereira
+    Copyright (C) 2022 - 2023  Cláudio Pereira
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -18,19 +18,18 @@
 
 use sqlx::PgPool;
 
-use super::models;
+use commons::models::geo;
+
 use crate::Error;
 
 type Result<T> = std::result::Result<T, Error>;
 
-pub(crate) async fn fetch_parishes(
-    pool: &PgPool,
-) -> Result<Vec<models::Parish>> {
+pub(crate) async fn fetch_parishes(pool: &PgPool) -> Result<Vec<geo::Parish>> {
     sqlx::query_as!(
-        models::Parish,
+        geo::Parish,
         r#"
-SELECT parishes.id, parishes.name, municipalities.name as municipality,
-    municipalities.zone, parishes.polygon
+SELECT parishes.id, parishes.name, parishes.short_name, municipalities.name as municipality,
+    municipalities.zone, parishes.polygon, parishes.geojson
 FROM parishes
 JOIN municipalities ON parishes.municipality = municipalities.id
     "#

@@ -1,22 +1,40 @@
+/*
+    Intermodal, transportation information aggregator
+    Copyright (C) 2022 - 2023  Cláudio Pereira
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as
+    published by the Free Software Foundation, either version 3 of the
+    License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet};
 
 use sqlx::PgPool;
 
-use crate::errors::Error;
-use crate::stops;
+use commons::models::history;
+use commons::models::stops;
 
-use super::models;
 use super::sql;
+use crate::errors::Error;
 
 pub(crate) fn summarize_stop_meta_contributions(
-    contributions: Vec<models::Contribution>,
-) -> Vec<stops::models::Stop> {
+    contributions: Vec<history::Contribution>,
+) -> Vec<stops::Stop> {
     let mut modified_stops = HashMap::new();
 
     for contribution in contributions {
         match contribution.change {
-            models::Change::StopUpdate {
+            history::Change::StopUpdate {
                 mut original,
                 patch,
             } => match modified_stops.entry(original.id) {
@@ -59,8 +77,8 @@ pub(crate) async fn accept_contribution(
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     match &mut contribution.change {
-        models::Change::StopUpdate { original, patch } => {
-            let stop = stops::sql::fetch_stop(pool, original.id).await?;
+        history::Change::StopUpdate { original, patch } => {
+            let stop = crate::stops::sql::fetch_stop(pool, original.id).await?;
             if stop.is_none() {
                 // TODO Do something about this
                 // TODO Prevent patches from reaching this state
@@ -75,7 +93,7 @@ pub(crate) async fn accept_contribution(
             // and if that conflicts with the patch
             let stop = accept_stop_contribution(stop, patch, verify, ignored)?;
 
-            stops::sql::update_stop(
+            crate::stops::sql::update_stop(
                 &mut transaction,
                 stop.id,
                 stop.into(),
@@ -83,7 +101,7 @@ pub(crate) async fn accept_contribution(
             )
             .await?;
         }
-        models::Change::StopPicUpload { .. } => {
+        history::Change::StopPicUpload { .. } => {
             todo!()
         }
         _ => {
@@ -113,11 +131,11 @@ pub(crate) async fn accept_contribution(
 }
 
 pub(crate) fn accept_stop_contribution(
-    mut current: stops::models::Stop,
-    patch: &mut models::StopPatch,
+    mut current: stops::Stop,
+    patch: &mut history::StopPatch,
     verify: bool,
     ignored: &Option<String>,
-) -> Result<stops::models::Stop, Error> {
+) -> Result<stops::Stop, Error> {
     let ignored_fields = if let Some(ignored) = ignored {
         ignored
             .split(',')

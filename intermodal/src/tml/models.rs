@@ -16,41 +16,12 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::hash::{Hash, Hasher};
 
-use crate::stops::models as stops;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct GTFSStop {
-    pub stop_id: String,
-    pub stop_name: String,
-    pub stop_lat: f64,
-    pub stop_lon: f64,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct GTFSStopTimes {
-    pub(crate) trip_id: String,
-    pub(crate) stop_id: u32,
-    pub(crate) stop_sequence: u32,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct GTFSRoute {
-    pub(crate) route_id: String,
-    pub(crate) route_short_name: String,
-    pub(crate) route_long_name: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct GTFSTrips {
-    pub(crate) route_id: String,
-    service_id: String,
-    pub(crate) trip_id: String,
-    pub(crate) trip_headsign: String,
-}
+use commons::models::stops;
 
 #[derive(Debug, Eq, Clone, Serialize, Deserialize)]
 pub struct TMLTrip {
@@ -271,14 +242,6 @@ mod tests {
                 stops: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
             }
         );
-
-        let reeee = vec![
-            vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-            vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-        ];
-
-        let reeeeeeeeeeeeeeee = reeee.into_iter().unique().collect::<Vec<_>>();
-        assert_eq!(reeeeeeeeeeeeeeee.len(), 1);
 
         let trips = vec![
             TMLTrip {

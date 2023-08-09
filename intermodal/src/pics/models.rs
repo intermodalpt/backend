@@ -1,6 +1,6 @@
 /*
     Intermodal, transportation information aggregator
-    Copyright (C) 2022  Cláudio Pereira
+    Copyright (C) 2022 - 2023  Cláudio Pereira
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -16,66 +16,11 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
-
-#[derive(Debug, Serialize, ToSchema)]
-pub struct TaggedStopPic {
-    pub id: i32,
-    pub original_filename: String,
-    pub sha1: String,
-    pub public: bool,
-    pub sensitive: bool,
-    pub uploader: i32,
-    pub upload_date: String,
-    pub capture_date: Option<String>,
-    // TODO if is tagged then this should not be optional.
-    pub lon: Option<f64>,
-    pub lat: Option<f64>,
-    pub width: i32,
-    pub height: i32,
-    pub quality: i16,
-    pub camera_ref: Option<String>,
-    pub tags: Vec<String>,
-    pub notes: Option<String>,
-    pub stops: Vec<i32>,
-    // TODO Consider this
-    pub tagged: bool,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct StopPic {
-    pub id: i32,
-    pub original_filename: String,
-    pub sha1: String,
-    pub tagged: bool,
-    pub uploader: i32,
-    pub upload_date: String,
-    pub capture_date: Option<String>,
-    pub updater: Option<i32>,
-    pub update_date: Option<String>,
-    pub width: i32,
-    pub height: i32,
-    pub camera_ref: Option<String>,
-    #[serde(flatten)]
-    pub dyn_meta: StopPicDynMeta,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct StopPicDynMeta {
-    pub public: bool,
-    pub sensitive: bool,
-    pub lon: Option<f64>,
-    pub lat: Option<f64>,
-    pub quality: i16,
-    pub tags: Vec<String>,
-    pub notes: Option<String>,
-}
-
 pub(crate) mod requests {
-    use crate::contrib;
     use serde::Deserialize;
     use utoipa::ToSchema;
+
+    use commons::models::{history, pics};
 
     #[derive(Debug, Deserialize, ToSchema)]
     pub struct ChangeStopPic {
@@ -92,9 +37,9 @@ pub(crate) mod requests {
     impl ChangeStopPic {
         pub(crate) fn derive_patch(
             &self,
-            pic: &super::StopPic,
-        ) -> contrib::models::StopPicturePatch {
-            let mut patch = contrib::models::StopPicturePatch::default();
+            pic: &pics::StopPic,
+        ) -> history::StopPicturePatch {
+            let mut patch = history::StopPicturePatch::default();
 
             if self.public != pic.dyn_meta.public {
                 patch.public = Some(self.public);
@@ -123,11 +68,14 @@ pub(crate) mod requests {
 }
 
 pub(crate) mod responses {
+    use serde::Serialize;
+    use utoipa::ToSchema;
+
+    use commons::models::pics;
+
     use crate::pics::{
         get_full_path, get_medium_path, get_original_path, get_thumb_path,
     };
-    use serde::Serialize;
-    use utoipa::ToSchema;
 
     #[derive(Debug, Serialize, ToSchema)]
     pub struct MinimalPic {
@@ -152,8 +100,8 @@ pub(crate) mod responses {
         pub url_thumb: String,
     }
 
-    impl From<super::StopPic> for PublicStopPic {
-        fn from(value: super::StopPic) -> Self {
+    impl From<pics::StopPic> for PublicStopPic {
+        fn from(value: pics::StopPic) -> Self {
             PublicStopPic {
                 id: value.id,
                 url_full: get_full_path(&value.sha1),
@@ -197,8 +145,8 @@ pub(crate) mod responses {
         pub url_thumb: String,
     }
 
-    impl From<(super::StopPic, Vec<i32>)> for PicWithStops {
-        fn from(value: (super::StopPic, Vec<i32>)) -> Self {
+    impl From<(pics::StopPic, Vec<i32>)> for PicWithStops {
+        fn from(value: (pics::StopPic, Vec<i32>)) -> Self {
             let (pic, stops) = value;
             Self {
                 id: pic.id,

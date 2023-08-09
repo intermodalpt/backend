@@ -1,6 +1,6 @@
 /*
     Intermodal, transportation information aggregator
-    Copyright (C) 2022  Cláudio Pereira
+    Copyright (C) 2022 - 2023  Cláudio Pereira
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -16,20 +16,23 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+use std::collections::{hash_map, HashMap};
+
 use chrono::Local;
 use sqlx::PgPool;
-use std::collections::{hash_map, HashMap};
+
+use commons::models::{routes, stops};
 
 use super::models;
 use crate::stops::models::responses;
-use crate::{routes, Error};
+use crate::Error;
 
 type Result<T> = std::result::Result<T, Error>;
 
 pub(crate) async fn fetch_stop(
     pool: &PgPool,
     stop_id: i32,
-) -> Result<Option<models::Stop>> {
+) -> Result<Option<stops::Stop>> {
     sqlx::query!(
         r#"
 SELECT id, source, name, official_name, osm_name, short_name, locality, street,
@@ -45,7 +48,7 @@ WHERE id = $1
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?
     .map(|r| {
-        Ok(models::Stop {
+        Ok(stops::Stop {
             id: r.id,
             source: r.source,
             name: r.name,
@@ -81,7 +84,7 @@ WHERE id = $1
 pub(crate) async fn fetch_stops(
     pool: &PgPool,
     filter_used: bool,
-) -> Result<Vec<models::Stop>> {
+) -> Result<Vec<stops::Stop>> {
     if filter_used {
         sqlx::query!(
             r#"
@@ -101,7 +104,7 @@ WHERE id IN (
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?
         .into_iter()
         .map(|r| {
-            Ok(models::Stop {
+            Ok(stops::Stop {
                 id: r.id,
                 source: r.source,
                 name: r.name,
@@ -144,7 +147,7 @@ FROM stops")
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?
         .into_iter()
         .map(|r| {
-            Ok(models::Stop {
+            Ok(stops::Stop {
                 id: r.id,
                 source: r.source,
                 name: r.name,
@@ -181,7 +184,7 @@ FROM stops")
 pub(crate) async fn fetch_bounded_stops(
     pool: &PgPool,
     (x0, y0, x1, y1): (f64, f64, f64, f64),
-) -> Result<Vec<models::Stop>> {
+) -> Result<Vec<stops::Stop>> {
     sqlx::query!(
         r#"
 SELECT id, source, name, official_name, osm_name, short_name, locality, street,
@@ -203,7 +206,7 @@ WHERE lon >= $1 AND lon <= $2 AND lat <= $3 AND lat >= $4 AND id IN (
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?
     .into_iter()
     .map(|r| {
-        Ok(models::Stop {
+        Ok(stops::Stop {
             id: r.id,
             source: r.source,
             name: r.name,
@@ -240,7 +243,7 @@ pub(crate) async fn insert_stop(
     pool: &PgPool,
     stop: models::requests::NewStop,
     user_id: i32,
-) -> Result<models::Stop> {
+) -> Result<stops::Stop> {
     let update_date = Local::now().to_string();
 
     let res = sqlx::query!(
@@ -273,7 +276,7 @@ RETURNING id
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
-    Ok(models::Stop {
+    Ok(stops::Stop {
         id: res.id,
         source: stop.source,
         name: stop.name,
@@ -348,9 +351,9 @@ WHERE id=$17
 pub(crate) async fn fetch_stop_routes(
     pool: &PgPool,
     stop_id: i32,
-) -> Result<Vec<routes::models::Route>> {
+) -> Result<Vec<routes::Route>> {
     sqlx::query_as!(
-        routes::models::Route,
+        routes::Route,
         r#"
 SELECT routes.id as id,
     routes.type as type_id,

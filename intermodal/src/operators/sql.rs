@@ -1,6 +1,6 @@
 /*
     Intermodal, transportation information aggregator
-    Copyright (C) 2022  Cláudio Pereira
+    Copyright (C) 2022 - 2023  Cláudio Pereira
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -16,22 +16,22 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use crate::calendar::Calendar;
 use chrono::{Local, NaiveDate};
 use sqlx::PgPool;
 
-use super::models::{self, requests, responses};
+use commons::models::calendar::Calendar;
+use commons::models::operators;
 
-use crate::operators::models::IssueState;
+use super::models::{requests, responses};
 use crate::Error;
 
 type Result<T> = std::result::Result<T, Error>;
 
 pub(crate) async fn fetch_operators(
     pool: &PgPool,
-) -> Result<Vec<models::Operator>> {
+) -> Result<Vec<operators::Operator>> {
     sqlx::query_as!(
-        models::Operator,
+        operators::Operator,
         r#"
 SELECT id, name, tag
 FROM Operators
@@ -190,7 +190,9 @@ pub(crate) async fn delete_operator_stop(
         .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
-pub(crate) async fn fetch_issues(pool: &PgPool) -> Result<Vec<models::Issue>> {
+pub(crate) async fn fetch_issues(
+    pool: &PgPool,
+) -> Result<Vec<operators::Issue>> {
     sqlx::query!(
         r#"
 SELECT issues.id, issues.title, issues.message, issues.geojson, issues.category, issues.lat,
@@ -212,7 +214,7 @@ GROUP BY issues.id
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?
     .into_iter()
     .map(|row| {
-        Ok(models::Issue {
+        Ok(operators::Issue {
             id: row.id,
             title: row.title,
             message: row.message,
@@ -303,7 +305,7 @@ GROUP BY issues.id
 pub(crate) async fn fetch_issue(
     pool: &PgPool,
     issue_id: i32,
-) -> Result<models::Issue> {
+) -> Result<operators::Issue> {
     sqlx::query!(
         r#"SELECT issues.id, issues.title, issues.message, issues.category, issues.impact,
         issues.creation, issues.lat, issues.lon, issues.geojson,
@@ -325,7 +327,7 @@ GROUP BY issues.id"#,
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))
     .and_then(|row| {
-        Ok(models::Issue {
+        Ok(operators::Issue {
             id: row.id,
             title: row.title,
             message: row.message,
@@ -377,7 +379,7 @@ RETURNING id
         issue.lat,
         issue.lon,
         issue.geojson,
-        &serde_json::to_string(&IssueState::Unanswered).unwrap()
+        &serde_json::to_string(&operators::IssueState::Unanswered).unwrap()
     )
         .fetch_one(&mut transaction)
         .await
@@ -730,7 +732,7 @@ pub(crate) async fn fetch_news(
     pool: &PgPool,
     skip: i64,
     take: i64,
-) -> Result<Vec<models::NewsItem>> {
+) -> Result<Vec<operators::NewsItem>> {
     sqlx::query!(
         r#"
 SELECT id, operator_id, summary, content, datetime, geojson, visible
@@ -745,7 +747,7 @@ LIMIT $1 OFFSET $2
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?
     .into_iter()
     .map(|row| {
-        Ok(models::NewsItem {
+        Ok(operators::NewsItem {
             id: row.id,
             operator_id: row.operator_id,
             summary: row.summary,

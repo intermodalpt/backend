@@ -1,6 +1,6 @@
 /*
     Intermodal, transportation information aggregator
-    Copyright (C) 2022  Cláudio Pereira
+    Copyright (C) 2022 - 2023  Cláudio Pereira
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -21,7 +21,9 @@ use std::collections::HashMap;
 use axum::extract::{Path, State};
 use axum::Json;
 
-use super::models::{self, requests, responses};
+use commons::models::{history, routes};
+
+use super::models::{requests, responses};
 use super::sql;
 use crate::{auth, contrib, AppState, Error};
 
@@ -66,7 +68,7 @@ pub(crate) async fn create_route(
     //TODO as a transaction
 
     let id = sql::insert_route(&state.pool, &route).await?;
-    let route = models::Route {
+    let route = routes::Route {
         id,
         type_id: route.type_id,
         operator_id: route.operator_id,
@@ -80,7 +82,7 @@ pub(crate) async fn create_route(
     contrib::sql::insert_changeset_log(
         &state.pool,
         user_id,
-        &[contrib::models::Change::RouteCreation { data: route }],
+        &[history::Change::RouteCreation { data: route }],
         None,
     )
     .await?;
@@ -137,7 +139,7 @@ pub(crate) async fn patch_route(
     contrib::sql::insert_changeset_log(
         &state.pool,
         user_id,
-        &[contrib::models::Change::RouteUpdate {
+        &[history::Change::RouteUpdate {
             original: route,
             patch,
         }],
@@ -172,7 +174,7 @@ pub(crate) async fn delete_route(
     contrib::sql::insert_changeset_log(
         &state.pool,
         user_id,
-        &[contrib::models::Change::RouteDeletion { data: route }],
+        &[history::Change::RouteDeletion { data: route }],
         None,
     )
     .await?;
@@ -203,7 +205,7 @@ pub(crate) async fn create_subroute(
     contrib::sql::insert_changeset_log(
         &state.pool,
         user_id,
-        &[contrib::models::Change::SubrouteCreation { data: subroute }],
+        &[history::Change::SubrouteCreation { data: subroute }],
         None,
     )
     .await?;
@@ -247,7 +249,7 @@ pub(crate) async fn patch_subroute(
     contrib::sql::insert_changeset_log(
         &state.pool,
         user_id,
-        &[contrib::models::Change::SubrouteUpdate {
+        &[history::Change::SubrouteUpdate {
             original: subroute,
             patch,
         }],
@@ -292,7 +294,7 @@ pub(crate) async fn delete_subroute(
     contrib::sql::insert_changeset_log(
         &state.pool,
         user_id,
-        &[contrib::models::Change::SubrouteDeletion { data: subroute }],
+        &[history::Change::SubrouteDeletion { data: subroute }],
         None,
     )
     .await?;
@@ -321,7 +323,7 @@ pub(crate) async fn create_subroute_departure(
     contrib::sql::insert_changeset_log(
         &state.pool,
         claims.uid,
-        &[contrib::models::Change::DepartureCreation { data: departure }],
+        &[history::Change::DepartureCreation { data: departure }],
         None,
     )
     .await?;
@@ -366,7 +368,7 @@ pub(crate) async fn patch_subroute_departure(
     contrib::sql::insert_changeset_log(
         &state.pool,
         claims.uid,
-        &[contrib::models::Change::DepartureUpdate {
+        &[history::Change::DepartureUpdate {
             original: departure,
             patch,
         }],
@@ -402,7 +404,7 @@ pub(crate) async fn delete_subroute_departure(
     contrib::sql::insert_changeset_log(
         &state.pool,
         claims.uid,
-        &[contrib::models::Change::DepartureDeletion { data: departure }],
+        &[history::Change::DepartureDeletion { data: departure }],
         None,
     )
     .await?;

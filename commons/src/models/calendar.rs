@@ -1,6 +1,6 @@
 /*
     Intermodal, transportation information aggregator
-    Copyright (C) 2022  Cláudio Pereira
+    Copyright (C) 2023  Cláudio Pereira
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -18,12 +18,13 @@
 
 use std::fmt;
 
-use crate::utils::within_dates;
 use chrono::{Datelike, NaiveDate};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use utoipa::ToSchema;
+
+use crate::utils::within_dates;
 
 pub static EVERY_DAY: [Weekday; 7] = [
     Weekday::Monday,
@@ -132,7 +133,7 @@ pub struct Calendar {
 
 impl Calendar {
     #[allow(clippy::cast_possible_truncation)]
-    pub(crate) fn includes(&self, date: NaiveDate) -> bool {
+    pub fn includes(&self, date: NaiveDate) -> bool {
         let month = date.month() as u8;
         let day = date.day() as u8;
         let weekday = date.weekday().num_days_from_monday() as u8;

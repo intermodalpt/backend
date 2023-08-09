@@ -1,6 +1,6 @@
 /*
     Intermodal, transportation information aggregator
-    Copyright (C) 2022  Cláudio Pereira
+    Copyright (C) 2022 - 2023  Cláudio Pereira
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -16,11 +16,14 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use itertools::Itertools;
-use sqlx::PgPool;
 use std::collections::HashMap;
 
-use super::models::{self, requests, responses};
+use itertools::Itertools;
+use sqlx::PgPool;
+
+use commons::models::routes;
+
+use super::models::{requests, responses};
 use crate::Error;
 
 type Result<T> = std::result::Result<T, Error>;
@@ -28,9 +31,9 @@ type Result<T> = std::result::Result<T, Error>;
 pub(crate) async fn fetch_route(
     pool: &PgPool,
     route_id: i32,
-) -> Result<Option<models::Route>> {
+) -> Result<Option<routes::Route>> {
     sqlx::query_as!(
-        models::Route,
+        routes::Route,
         r#"
 SELECT routes.id as id,
     routes.type as type_id,
@@ -53,9 +56,9 @@ WHERE routes.id = $1
 pub(crate) async fn fetch_subroute(
     pool: &PgPool,
     subroute_id: i32,
-) -> Result<Option<models::Subroute>> {
+) -> Result<Option<routes::Subroute>> {
     sqlx::query_as!(
-        models::Subroute,
+        routes::Subroute,
         r#"
 SELECT subroutes.id,
     subroutes.route as route_id,
@@ -406,7 +409,7 @@ pub(crate) async fn insert_subroute(
     pool: &PgPool,
     route_id: i32,
     subroute: requests::ChangeSubroute,
-) -> Result<models::Subroute> {
+) -> Result<routes::Subroute> {
     let res = sqlx::query!(
         r#"
 INSERT INTO subroutes(route, flag, circular, polyline)
@@ -422,7 +425,7 @@ RETURNING id
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
-    Ok(models::Subroute {
+    Ok(routes::Subroute {
         id: res.id,
         route_id,
         flag: subroute.flag,
@@ -709,12 +712,12 @@ ORDER BY time ASC
 pub(crate) async fn fetch_departure<'c, E>(
     executor: E,
     departure_id: i32,
-) -> Result<Option<models::Departure>>
+) -> Result<Option<routes::Departure>>
 where
     E: sqlx::Executor<'c, Database = sqlx::Postgres>,
 {
     sqlx::query_as!(
-        models::Departure,
+        routes::Departure,
         r#"
 SELECT departures.id as id,
     Departures.time as time,
@@ -734,7 +737,7 @@ pub(crate) async fn insert_departure<'c, E>(
     executor: E,
     subroute_id: i32,
     departure: requests::ChangeDeparture,
-) -> Result<models::Departure>
+) -> Result<routes::Departure>
 where
     E: sqlx::Executor<'c, Database = sqlx::Postgres>,
 {
@@ -752,7 +755,7 @@ RETURNING id
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
-    Ok(models::Departure {
+    Ok(routes::Departure {
         id: res.id,
         subroute_id,
         time: departure.time,

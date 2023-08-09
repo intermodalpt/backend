@@ -1,6 +1,6 @@
 /*
     Intermodal, transportation information aggregator
-    Copyright (C) 2022 - 2023  Cláudio Pereira
+    Copyright (C) 2023  Cláudio Pereira
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -16,16 +16,14 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-pub(crate) mod responses {
-    use serde::Serialize;
-    use utoipa::ToSchema;
+#![warn(
+    nonstandard_style,
+    warnings,
+    unused,
+    future_incompatible,
+    clippy::all,
+    clippy::pedantic
+)]
 
-    #[derive(Serialize, Clone, ToSchema)]
-    pub struct Stats {
-        pub stop_count: i64,
-        pub route_count: i64,
-        pub subroute_count: i64,
-        pub departure_count: i64,
-        pub picture_count: i64,
-    }
-}
+pub mod models;
+pub mod utils;

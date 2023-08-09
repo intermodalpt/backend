@@ -1,6 +1,6 @@
 /*
     Intermodal, transportation information aggregator
-    Copyright (C) 2022  Cláudio Pereira
+    Copyright (C) 2022 - 2023  Cláudio Pereira
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -16,7 +16,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use super::SECRET_KEY;
+use std::ops::Add;
+
 use chrono::Utc;
 use jsonwebtoken;
 use pbkdf2::{
@@ -27,8 +28,8 @@ use pbkdf2::{
     Pbkdf2,
 };
 use sqlx::PgPool;
-use std::ops::Add;
 
+use super::SECRET_KEY;
 use super::{models, models::requests, sql};
 use crate::errors::Error;
 

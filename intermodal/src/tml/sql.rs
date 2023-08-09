@@ -18,9 +18,10 @@
 
 use sqlx::PgPool;
 
+use commons::models::stops;
+
 use super::models;
 use crate::errors::Error;
-use crate::stops;
 
 type Result<T> = std::result::Result<T, Error>;
 
@@ -43,7 +44,7 @@ FROM Stops
     .into_iter()
     .map(|r| {
         Ok(models::TMLStop {
-            stop: stops::models::Stop {
+            stop: stops::Stop {
                 id: r.id,
                 source: r.source,
                 name: r.name,

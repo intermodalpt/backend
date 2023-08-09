@@ -1,6 +1,6 @@
 /*
     Intermodal, transportation information aggregator
-    Copyright (C) 2022  Cláudio Pereira
+    Copyright (C) 2022 - 2023  Cláudio Pereira
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -20,7 +20,9 @@ use axum::extract::State;
 use axum::Json;
 use serde::Serialize;
 
-use super::{models, osm, sql};
+use commons::models::geo;
+
+use super::{osm, sql};
 use crate::{auth, AppState, Error};
 
 #[utoipa::path(
@@ -35,7 +37,7 @@ use crate::{auth, AppState, Error};
 )]
 pub(crate) async fn get_parishes(
     State(state): State<AppState>,
-) -> Result<Json<Vec<models::Parish>>, Error> {
+) -> Result<Json<Vec<geo::Parish>>, Error> {
     Ok(Json(sql::fetch_parishes(&state.pool).await?))
 }
 

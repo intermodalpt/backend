@@ -1,6 +1,6 @@
 [workspace]
-
-members = ["intermodal"]
+members = ["intermodal", "commons"]
+resolver = "2"
 
 [profile.dev.package.sqlx-macros]
 opt-level = 3

@@ -1,6 +1,6 @@
 /*
     Intermodal, transportation information aggregator
-    Copyright (C) 2022  Cláudio Pereira
+    Copyright (C) 2022 - 2023  Cláudio Pereira
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -23,9 +23,10 @@ use chrono::Local;
 use sha1::{Digest, Sha1};
 use sqlx::PgPool;
 
-use super::models;
+use commons::models::pics;
+use commons::utils::{Exif, ExifOrientation};
+
 use super::sql;
-use crate::utils::{Exif, ExifOrientation};
 use crate::Error;
 
 const THUMBNAIL_MAX_WIDTH: u32 = 300;
@@ -43,7 +44,7 @@ pub(crate) async fn upload_stop_picture(
     db_pool: &PgPool,
     content: &Bytes,
     stops: &[i32],
-) -> Result<models::StopPic, Error> {
+) -> Result<pics::StopPic, Error> {
     let mut hasher = Sha1::new();
     hasher.update(&content);
     let hash = hasher.finalize();
@@ -63,7 +64,7 @@ pub(crate) async fn upload_stop_picture(
         original_img = image::DynamicImage::ImageRgb8(original_img.into_rgb8());
     }
 
-    let mut stop_pic_entry = models::StopPic {
+    let mut stop_pic_entry = pics::StopPic {
         id: 0,
         original_filename: name,
         sha1: hex_hash.clone(),
@@ -76,7 +77,7 @@ pub(crate) async fn upload_stop_picture(
         width: original_img.width() as i32,
         height: original_img.height() as i32,
         camera_ref: None,
-        dyn_meta: models::StopPicDynMeta {
+        dyn_meta: pics::StopPicDynMeta {
             public: false,
             sensitive: false,
             lon: None,

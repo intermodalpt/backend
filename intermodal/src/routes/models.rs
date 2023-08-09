@@ -1,6 +1,6 @@
 /*
     Intermodal, transportation information aggregator
-    Copyright (C) 2022  Cláudio Pereira
+    Copyright (C) 2022 - 2023  Cláudio Pereira
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -16,41 +16,11 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Route {
-    pub(crate) id: i32,
-    pub(crate) type_id: i32,
-    pub(crate) operator_id: i32,
-    pub(crate) code: Option<String>,
-    pub(crate) name: String,
-    pub(crate) circular: bool,
-    pub(crate) main_subroute: Option<i32>,
-    pub(crate) active: bool,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Subroute {
-    pub(crate) id: i32,
-    pub(crate) route_id: i32,
-    pub(crate) flag: String,
-    pub(crate) circular: bool,
-    pub(crate) polyline: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Departure {
-    pub id: i32,
-    pub subroute_id: i32,
-    pub time: i16,
-    pub calendar_id: i32,
-}
-
 pub(crate) mod requests {
-    use crate::contrib::models::{DeparturePatch, RoutePatch, SubroutePatch};
     use serde::Deserialize;
     use utoipa::ToSchema;
+
+    use commons::models::{history, routes};
 
     #[derive(Deserialize, ToSchema)]
     pub struct ChangeRoute {
@@ -60,11 +30,13 @@ pub(crate) mod requests {
         pub operator_id: i32,
         pub active: bool,
         pub type_id: i32,
+        // FIXME this default is temporary while we have change logs without it
+        #[serde(default)]
         pub circular: bool,
     }
 
-    impl From<super::Route> for ChangeRoute {
-        fn from(route: super::Route) -> Self {
+    impl From<routes::Route> for ChangeRoute {
+        fn from(route: routes::Route) -> Self {
             Self {
                 code: route.code,
                 name: route.name,
@@ -78,8 +50,11 @@ pub(crate) mod requests {
     }
 
     impl ChangeRoute {
-        pub fn derive_patch(&self, route: &super::Route) -> RoutePatch {
-            let mut patch = RoutePatch::default();
+        pub fn derive_patch(
+            &self,
+            route: &routes::Route,
+        ) -> history::RoutePatch {
+            let mut patch = history::RoutePatch::default();
             if self.type_id != route.type_id {
                 patch.type_id = Some(self.type_id);
             }
@@ -112,8 +87,8 @@ pub(crate) mod requests {
         pub polyline: Option<String>,
     }
 
-    impl From<super::Subroute> for ChangeSubroute {
-        fn from(subroute: super::Subroute) -> Self {
+    impl From<routes::Subroute> for ChangeSubroute {
+        fn from(subroute: routes::Subroute) -> Self {
             Self {
                 flag: subroute.flag,
                 circular: subroute.circular,
@@ -125,9 +100,9 @@ pub(crate) mod requests {
     impl ChangeSubroute {
         pub fn derive_patch(
             &self,
-            subroute: &super::Subroute,
-        ) -> SubroutePatch {
-            let mut patch = SubroutePatch::default();
+            subroute: &routes::Subroute,
+        ) -> history::SubroutePatch {
+            let mut patch = history::SubroutePatch::default();
             if self.flag != subroute.flag {
                 patch.flag = Some(self.flag.clone());
             }
@@ -162,9 +137,9 @@ pub(crate) mod requests {
     impl ChangeDeparture {
         pub fn derive_patch(
             &self,
-            departure: &super::Departure,
-        ) -> DeparturePatch {
-            let mut patch = DeparturePatch::default();
+            departure: &routes::Departure,
+        ) -> history::DeparturePatch {
+            let mut patch = history::DeparturePatch::default();
             if self.time != departure.time {
                 patch.time = Some(self.time);
             }

@@ -26,6 +26,8 @@ use itertools::Itertools;
 use once_cell::sync::Lazy;
 use regex::Regex;
 
+use commons::models::gtfs;
+
 use super::{logic, models, sql};
 use crate::{auth, AppState, Error};
 
@@ -37,7 +39,7 @@ pub(crate) async fn tml_get_stops(
 
 pub(crate) async fn tml_get_gtfs_stops(
     State(state): State<AppState>,
-) -> Result<Json<Arc<Vec<models::GTFSStop>>>, Error> {
+) -> Result<Json<Arc<Vec<gtfs::GTFSStop>>>, Error> {
     let gtfs_stops = state
         .cached
         .gtfs_stops
@@ -88,7 +90,7 @@ pub(crate) async fn tml_match_stop(
 }
 
 // Read trips from GTFS tile
-fn tml_gtfs_routes() -> Vec<models::GTFSRoute> {
+fn tml_gtfs_routes() -> Vec<gtfs::GTFSRoute> {
     let f = fs::File::open("gtfs/routes.txt").unwrap();
     let reader = io::BufReader::new(f);
 
@@ -99,11 +101,11 @@ fn tml_gtfs_routes() -> Vec<models::GTFSRoute> {
     rdr.deserialize()
         .into_iter()
         .map(|result| result.unwrap())
-        .collect::<Vec<models::GTFSRoute>>()
+        .collect::<Vec<gtfs::GTFSRoute>>()
 }
 
 // Read trips from GTFS tile
-fn tml_gtfs_trips() -> Vec<models::GTFSTrips> {
+fn tml_gtfs_trips() -> Vec<gtfs::GTFSTrips> {
     let f = fs::File::open("gtfs/trips.txt").unwrap();
     let reader = io::BufReader::new(f);
 
@@ -114,11 +116,11 @@ fn tml_gtfs_trips() -> Vec<models::GTFSTrips> {
     rdr.deserialize()
         .into_iter()
         .map(|result| result.unwrap())
-        .collect::<Vec<models::GTFSTrips>>()
+        .collect::<Vec<gtfs::GTFSTrips>>()
 }
 
 // Read stop times from GTFS tile
-fn load_gtfs_stop_times() -> Vec<models::GTFSStopTimes> {
+fn load_gtfs_stop_times() -> Vec<gtfs::GTFSStopTimes> {
     let f = fs::File::open("gtfs/stop_times.txt").unwrap();
     let reader = io::BufReader::new(f);
 
@@ -129,7 +131,7 @@ fn load_gtfs_stop_times() -> Vec<models::GTFSStopTimes> {
     rdr.deserialize()
         .into_iter()
         .map(|result| result.unwrap())
-        .collect::<Vec<models::GTFSStopTimes>>()
+        .collect::<Vec<gtfs::GTFSStopTimes>>()
 }
 
 // Have regex as a static
@@ -208,7 +210,7 @@ pub(crate) async fn tml_gtfs_stop_sliding_windows(
         .deserialize()
         .into_iter()
         .map(|result| result.unwrap())
-        .collect::<Vec<models::GTFSStopTimes>>();
+        .collect::<Vec<gtfs::GTFSStopTimes>>();
 
     let trips_stop_seq = logic::calculate_gtfs_stop_sequence(&gtfs_stop_times);
     let sliding_windows =

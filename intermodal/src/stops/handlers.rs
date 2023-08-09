@@ -1,6 +1,6 @@
 /*
     Intermodal, transportation information aggregator
-    Copyright (C) 2022  Cláudio Pereira
+    Copyright (C) 2022 - 2023  Cláudio Pereira
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -22,9 +22,11 @@ use axum::extract::{Path, Query, State};
 use axum::Json;
 use serde::Deserialize;
 
+use commons::models::{history, routes, stops};
+
 use super::{models, sql};
 use crate::stops::models::responses;
-use crate::{auth, contrib, routes, AppState, Error};
+use crate::{auth, contrib, AppState, Error};
 
 #[derive(Deserialize)]
 pub(crate) struct StopQueryParam {
@@ -42,7 +44,7 @@ pub(crate) struct StopQueryParam {
 pub(crate) async fn get_stops(
     State(state): State<AppState>,
     params: Query<StopQueryParam>,
-) -> Result<Json<Vec<models::Stop>>, Error> {
+) -> Result<Json<Vec<stops::Stop>>, Error> {
     Ok(Json(sql::fetch_stops(&state.pool, !params.all).await?))
 }
 
@@ -56,7 +58,7 @@ pub(crate) async fn get_stops(
 pub(crate) async fn get_stop(
     State(state): State<AppState>,
     Path(stop_id): Path<i32>,
-) -> Result<Json<models::Stop>, Error> {
+) -> Result<Json<stops::Stop>, Error> {
     let stop = sql::fetch_stop(&state.pool, stop_id).await?;
 
     if let Some(stop) = stop {
@@ -88,7 +90,7 @@ pub(crate) async fn create_stop(
     contrib::sql::insert_changeset_log(
         &state.pool,
         user_id,
-        &[contrib::models::Change::StopCreation { data: stop }],
+        &[history::Change::StopCreation { data: stop }],
         None,
     )
     .await?;
@@ -131,7 +133,7 @@ pub(crate) async fn patch_stop(
     contrib::sql::insert_changeset_log(
         &state.pool,
         user_id,
-        &[contrib::models::Change::StopUpdate {
+        &[history::Change::StopUpdate {
             original: stop,
             patch,
         }],
@@ -145,14 +147,14 @@ pub(crate) async fn patch_stop(
 pub(crate) async fn get_bounded_stops(
     State(state): State<AppState>,
     Path(boundary): Path<(f64, f64, f64, f64)>,
-) -> Result<Json<Vec<models::Stop>>, Error> {
+) -> Result<Json<Vec<stops::Stop>>, Error> {
     Ok(Json(sql::fetch_bounded_stops(&state.pool, boundary).await?))
 }
 
 pub(crate) async fn get_stop_routes(
     State(state): State<AppState>,
     Path(stop_id): Path<i32>,
-) -> Result<Json<Vec<routes::models::Route>>, Error> {
+) -> Result<Json<Vec<routes::Route>>, Error> {
     Ok(Json(sql::fetch_stop_routes(&state.pool, stop_id).await?))
 }
 

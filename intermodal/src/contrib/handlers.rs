@@ -1,6 +1,6 @@
 /*
     Intermodal, transportation information aggregator
-    Copyright (C) 2022  Cláudio Pereira
+    Copyright (C) 2022 - 2023  Cláudio Pereira
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -23,10 +23,12 @@ use axum::Json;
 use chrono::Local;
 use serde::Deserialize;
 
-use super::{logic, models, requests, responses, sql};
+use commons::models::{history, stops};
+
+use super::{logic, requests, responses, sql};
 use crate::errors::Error;
 use crate::utils::get_exactly_one_field;
-use crate::{auth, pics, stops, AppState};
+use crate::{auth, pics, AppState};
 
 #[derive(Deserialize, Default)]
 pub(crate) struct Page {
@@ -47,7 +49,7 @@ pub(crate) async fn get_decided_own_contributions(
     State(state): State<AppState>,
     claims: Option<auth::Claims>,
     paginator: Query<Page>,
-) -> Result<Json<Vec<models::Contribution>>, Error> {
+) -> Result<Json<Vec<history::Contribution>>, Error> {
     if claims.is_none() {
         return Err(Error::Forbidden);
     }
@@ -72,7 +74,7 @@ pub(crate) async fn get_undecided_own_contributions(
     State(state): State<AppState>,
     claims: Option<auth::Claims>,
     paginator: Query<Page>,
-) -> Result<Json<Vec<models::Contribution>>, Error> {
+) -> Result<Json<Vec<history::Contribution>>, Error> {
     if claims.is_none() {
         return Err(Error::Forbidden);
     }
@@ -98,7 +100,7 @@ pub(crate) async fn get_decided_user_contributions(
     claims: Option<auth::Claims>,
     Path(user_id): Path<i32>,
     paginator: Query<Page>,
-) -> Result<Json<Vec<models::Contribution>>, Error> {
+) -> Result<Json<Vec<history::Contribution>>, Error> {
     if claims.is_none() {
         return Err(Error::Forbidden);
     }
@@ -127,7 +129,7 @@ pub(crate) async fn get_undecided_user_contributions(
     claims: Option<auth::Claims>,
     Path(user_id): Path<i32>,
     paginator: Query<Page>,
-) -> Result<Json<Vec<models::Contribution>>, Error> {
+) -> Result<Json<Vec<history::Contribution>>, Error> {
     if claims.is_none() {
         return Err(Error::Forbidden);
     }
@@ -154,7 +156,7 @@ pub(crate) async fn get_undecided_user_contributions(
 pub(crate) async fn get_pending_stop_patch(
     State(state): State<AppState>,
     claims: Option<auth::Claims>,
-) -> Result<Json<Vec<stops::models::Stop>>, Error> {
+) -> Result<Json<Vec<stops::Stop>>, Error> {
     if claims.is_none() {
         return Err(Error::Forbidden);
     }
@@ -251,7 +253,7 @@ pub(crate) async fn post_contrib_stop_data(
     }
     let user_id = claims.unwrap().uid;
 
-    let stop = stops::sql::fetch_stop(&state.pool, stop_id).await?;
+    let stop = crate::stops::sql::fetch_stop(&state.pool, stop_id).await?;
 
     if stop.is_none() {
         return Err(Error::NotFoundUpstream);
@@ -267,10 +269,10 @@ pub(crate) async fn post_contrib_stop_data(
         }));
     }
 
-    let contribution = models::Contribution {
+    let contribution = history::Contribution {
         id: 0,
         author_id: user_id,
-        change: models::Change::StopUpdate {
+        change: history::Change::StopUpdate {
             original: stop,
             patch,
         },
@@ -324,10 +326,10 @@ pub(crate) async fn post_contrib_stop_picture(
     )
     .await?;
 
-    let contribution = models::Contribution {
+    let contribution = history::Contribution {
         id: 0,
         author_id: user_id,
-        change: models::Change::StopPicUpload { pic, stops: vec![] },
+        change: history::Change::StopPicUpload { pic, stops: vec![] },
         accepted: None,
         evaluator_id: None,
         evaluation_date: None,
@@ -360,7 +362,7 @@ pub(crate) async fn patch_contrib_stop_picture_meta(
     if contribution.is_none() {
         return Err(Error::NotFoundUpstream);
     }
-    let mut contribution: models::Contribution = contribution.unwrap();
+    let mut contribution: history::Contribution = contribution.unwrap();
 
     if contribution.author_id != claims.uid {
         return Err(Error::Forbidden);
@@ -375,7 +377,7 @@ pub(crate) async fn patch_contrib_stop_picture_meta(
     contribution.comment = contribution_meta.comment;
 
     let mut pic = match contribution.change {
-        models::Change::StopPicUpload { pic, .. } => pic,
+        history::Change::StopPicUpload { pic, .. } => pic,
         _ => {
             return Err(Error::ValidationFailure(
                 "Contribution is not a picture".to_string(),
@@ -395,7 +397,7 @@ pub(crate) async fn patch_contrib_stop_picture_meta(
         return Err(Error::DependenciesNotMet);
     }
 
-    contribution.change = models::Change::StopPicUpload {
+    contribution.change = history::Change::StopPicUpload {
         pic,
         stops: contribution_meta.stops,
     };

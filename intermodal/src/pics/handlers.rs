@@ -1,6 +1,6 @@
 /*
     Intermodal, transportation information aggregator
-    Copyright (C) 2022  Cláudio Pereira
+    Copyright (C) 2022 - 2023  Cláudio Pereira
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -22,7 +22,9 @@ use axum::extract::{Multipart, Path, Query, State};
 use axum::Json;
 use serde::Deserialize;
 
-use super::{logic, models, models::requests, models::responses, sql};
+use commons::models::{history, pics};
+
+use super::{logic, models::requests, models::responses, sql};
 use crate::utils::get_exactly_one_field;
 use crate::Error;
 use crate::{auth, contrib, AppState};
@@ -230,7 +232,7 @@ pub(crate) async fn upload_dangling_stop_picture(
     State(state): State<AppState>,
     claims: Option<auth::Claims>,
     mut multipart: Multipart,
-) -> Result<Json<models::StopPic>, Error> {
+) -> Result<Json<pics::StopPic>, Error> {
     if claims.is_none() {
         return Err(Error::Forbidden);
     }
@@ -267,7 +269,7 @@ pub(crate) async fn upload_dangling_stop_picture(
     contrib::sql::insert_changeset_log(
         &state.pool,
         claims.uid,
-        &[contrib::models::Change::StopPicUpload {
+        &[history::Change::StopPicUpload {
             pic: pic.clone(),
             stops: vec![],
         }],
@@ -320,7 +322,7 @@ pub(crate) async fn upload_stop_picture(
     contrib::sql::insert_changeset_log(
         &state.pool,
         claims.uid,
-        &[contrib::models::Change::StopPicUpload {
+        &[history::Change::StopPicUpload {
             pic: pic.clone(),
             stops: vec![stop_id],
         }],
@@ -353,9 +355,7 @@ pub(crate) async fn get_stop_picture_meta(
     }
     let pic = pic.unwrap();
 
-    if ((pic.tagged && !pic.sensitive)
-        || Some(pic.uploader) == uid
-        || is_trusted)
+    if (pic.tagged && !pic.sensitive) || Some(pic.uploader) == uid || is_trusted
     {
         Ok(Json(pic))
     } else {
@@ -397,7 +397,7 @@ pub(crate) async fn patch_stop_picture_meta(
         contrib::sql::insert_changeset_log(
             &state.pool,
             claims.uid,
-            &[contrib::models::Change::StopPicMetaUpdate {
+            &[history::Change::StopPicMetaUpdate {
                 original_meta: pic.dyn_meta,
                 original_stops: stops,
                 meta_patch: patch,
@@ -445,7 +445,7 @@ pub(crate) async fn delete_picture(
     contrib::sql::insert_changeset_log(
         &state.pool,
         claims.uid,
-        &[contrib::models::Change::StopPicDeletion { pic, stops }],
+        &[history::Change::StopPicDeletion { pic, stops }],
         None,
     )
     .await?;

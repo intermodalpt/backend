@@ -1,6 +1,6 @@
 /*
     Intermodal, transportation information aggregator
-    Copyright (C) 2022  Cláudio Pereira
+    Copyright (C) 2022 - 2023  Cláudio Pereira
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -16,14 +16,16 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use crate::{stops, Error, Stop};
-
 use std::collections::HashMap;
 
 use chrono::Local;
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgPool;
 use urlencoding::encode as urlencode;
+
+use commons::models::stops;
+
+use crate::{Error, Stop};
 
 const FLOAT_TOLERANCE: f64 = 0.000_001;
 
@@ -84,7 +86,7 @@ impl From<XmlNode> for Stop {
             external_id: node.id.to_string(),
             refs: vec![],
             notes: None,
-            a11y: stops::models::A11yMeta::default(),
+            a11y: stops::A11yMeta::default(),
             updater: -1,
             update_date: Local::now().to_string(),
             tags: vec![],
@@ -116,7 +118,7 @@ pub(crate) async fn import(db_pool: &PgPool) -> Result<(usize, usize), Error> {
     let mut new_stops = vec![];
     let mut updated_stops = vec![];
 
-    let stops = stops::sql::fetch_stops(db_pool, false).await?;
+    let stops = crate::stops::sql::fetch_stops(db_pool, false).await?;
 
     let stop_index = stops
         .into_iter()

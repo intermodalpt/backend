@@ -1,6 +1,6 @@
 /*
     Intermodal, transportation information aggregator
-    Copyright (C) 2022  Cláudio Pereira
+    Copyright (C) 2022 - 2023  Cláudio Pereira
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -16,205 +16,14 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use chrono::{DateTime, Local};
-use std::fmt;
-
-use serde::{Deserialize, Serialize};
-use serde_repr::Serialize_repr;
-use sqlx::types::JsonValue;
-use utoipa::ToSchema;
-
-use crate::calendar::Calendar;
-
-#[derive(Debug, Serialize, ToSchema)]
-pub struct Operator {
-    pub id: i32,
-    pub name: String,
-    pub tag: String,
-}
-
-#[derive(Debug, Serialize, ToSchema)]
-pub struct OperatorCalendar {
-    pub id: i32,
-    pub operator: i32,
-    pub name: String,
-    pub calendar: Calendar,
-}
-
-#[derive(Debug, Serialize, ToSchema)]
-pub struct OperatorVehicle {
-    pub id: i32,
-    pub name: String,
-    pub service_year: u16,
-    pub quantity: u16,
-    pub bench_seats: u16,
-    pub foot_seats: u16,
-    pub has_ac: bool,
-    pub has_usb_outlets: bool,
-    pub has_wifi: bool,
-    pub has_bicycle_rack: bool,
-    pub has_wheelchair_ramp: bool,
-    // TODO complete
-}
-
-#[derive(Debug, Serialize, ToSchema)]
-pub struct Reseller {
-    pub id: i32,
-    pub name: String,
-    pub service_year: u16,
-    pub quantity: u16,
-    pub bench_seats: u16,
-    pub foot_seats: u16,
-    pub has_ac: bool,
-    pub has_wifi: bool,
-    // TODO complete
-}
-
-// Abnormalities are temporary changes to the network
-// such as temporary detours
-pub struct Abnormally {
-    pub id: i32,
-    pub summary: String,
-    pub message: String,
-    pub creation: DateTime<Local>,
-    pub from_datetime: Option<DateTime<Local>>,
-    pub to_datetime: Option<DateTime<Local>>,
-    pub geojson: Option<JsonValue>,
-    pub mark_resolved: bool,
-}
-
-pub struct AbnormallyOperator {
-    pub abnormally_id: i32,
-    pub operator_id: i32,
-}
-
-pub struct AbnormallyRoute {
-    pub abnormally_id: i32,
-    pub route_id: i32,
-}
-
-pub struct AbnormallyStop {
-    pub abnormally_id: i32,
-    pub stop_id: i32,
-}
-
-// Issues are problems raised by the community in a
-// moderated fashion, that ensures issue quality and deduplication.
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-pub struct Issue {
-    pub id: i32,
-    pub title: String,
-    pub message: String,
-    pub creation: DateTime<Local>,
-    pub category: IssueCategory,
-    pub impact: i32,
-    pub geojson: Option<JsonValue>,
-    pub lat: Option<f64>,
-    pub lon: Option<f64>,
-    pub state: IssueState,
-    pub state_justification: Option<String>,
-    pub operator_ids: Vec<i32>,
-    pub route_ids: Vec<i32>,
-    pub stop_ids: Vec<i32>,
-    pub pic_ids: Vec<i32>,
-}
-
-#[derive(Debug, PartialEq, Copy, Clone, Serialize, Deserialize, sqlx::Type)]
-#[serde(rename_all = "lowercase")]
-pub enum IssueCategory {
-    StopIssue,
-    StopImprovement,
-    RouteImprovement,
-    ScheduleIssue,
-    ScheduleImprovement,
-    ServiceImprovement,
-    GTFS,
-}
-
-#[derive(Debug, PartialEq, Copy, Clone, Serialize, Deserialize, sqlx::Type)]
-#[serde(rename_all = "lowercase")]
-pub enum IssueState {
-    Unanswered,
-    Wontfix,
-    FixInProgress,
-    FixDone,
-}
-
-#[derive(Debug, PartialEq, Copy, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum NewsItemType {
-    New,
-    Campaign,
-    Information,
-    Detour,
-    Change,
-}
-
-impl fmt::Display for NewsItemType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(match self {
-            NewsItemType::New => "Novidade",
-            NewsItemType::Campaign => "Campanha",
-            NewsItemType::Information => "Informação",
-            NewsItemType::Detour => "Desvio",
-            NewsItemType::Change => "Alteração",
-        })
-    }
-}
-
-// Tickets are user submitted questions that might not meet quality standards
-pub struct Ticket {
-    pub id: i32,
-    pub title: String,
-    pub message: String,
-    pub creation: DateTime<Local>,
-    pub operator: Option<i32>,
-    pub user: Option<i32>,
-    pub public: bool,
-    pub status: TicketStatus,
-}
-
-#[repr(u8)]
-#[derive(Serialize_repr)]
-pub enum TicketReason {
-    Suggestion = 0,
-    Complaint = 1,
-    Other = 10,
-}
-
-#[repr(u8)]
-pub enum TicketStatus {
-    New = 0,
-    Unanswered = 1,
-    Answered = 2,
-}
-
-pub struct TicketComment {
-    pub id: i32,
-    pub ticket_id: i32,
-    pub message: String,
-    pub datetime: DateTime<Local>,
-    pub user_id: i32,
-}
-
-#[derive(Debug, Serialize, ToSchema)]
-pub struct NewsItem {
-    pub id: i32,
-    pub operator_id: Option<i32>,
-    pub summary: String,
-    pub content: String,
-    pub datetime: DateTime<Local>,
-    pub geojson: Option<JsonValue>,
-    pub visible: bool,
-}
-
 pub(crate) mod responses {
     use chrono::{DateTime, Local};
     use serde::Serialize;
     use sqlx::types::JsonValue;
     use utoipa::ToSchema;
 
-    use super::{Calendar, IssueCategory, IssueState};
+    use commons::models::calendar::Calendar;
+    use commons::models::operators;
 
     #[derive(Serialize, ToSchema)]
     pub struct OperatorStop {
@@ -249,13 +58,13 @@ pub(crate) mod responses {
         pub id: i32,
         pub title: String,
         pub message: String,
-        pub category: IssueCategory,
+        pub category: operators::IssueCategory,
         pub impact: i32,
         pub creation: DateTime<Local>,
         pub geojson: Option<JsonValue>,
         pub lat: Option<f64>,
         pub lon: Option<f64>,
-        pub state: IssueState,
+        pub state: operators::IssueState,
         pub state_justification: Option<String>,
         pub operator_ids: Vec<i32>,
         pub route_ids: Vec<i32>,
@@ -278,15 +87,14 @@ pub(crate) mod responses {
 }
 
 pub(crate) mod requests {
-    use crate::contrib::models::IssuePatch;
-    use crate::operators::models::Issue;
     use chrono::{DateTime, Local};
     use serde::Deserialize;
     use sqlx::types::JsonValue;
     use utoipa::ToSchema;
 
-    use super::{Calendar, IssueCategory, IssueState};
-
+    use commons::models::calendar::Calendar;
+    use commons::models::history;
+    use commons::models::operators;
 
     #[derive(Debug, Deserialize, ToSchema)]
     pub struct ChangeOperatorStop {
@@ -304,7 +112,7 @@ pub(crate) mod requests {
     pub struct NewIssue {
         pub title: String,
         pub message: String,
-        pub category: IssueCategory,
+        pub category: operators::IssueCategory,
         pub impact: i32,
         pub lat: Option<f64>,
         pub lon: Option<f64>,
@@ -315,16 +123,16 @@ pub(crate) mod requests {
         pub pic_ids: Vec<i32>,
     }
 
-    impl From<NewIssue> for Issue {
+    impl From<NewIssue> for operators::Issue {
         fn from(value: NewIssue) -> Self {
-            Issue {
+            operators::Issue {
                 id: -1,
                 title: value.title,
                 message: value.message,
                 impact: value.impact,
                 category: value.category,
                 creation: Local::now(),
-                state: IssueState::Unanswered,
+                state: operators::IssueState::Unanswered,
                 state_justification: None,
                 lat: value.lat,
                 lon: value.lon,
@@ -341,9 +149,9 @@ pub(crate) mod requests {
     pub struct ChangeIssue {
         pub title: String,
         pub message: String,
-        pub category: IssueCategory,
+        pub category: operators::IssueCategory,
         pub impact: i32,
-        pub state: IssueState,
+        pub state: operators::IssueState,
         pub state_justification: Option<String>,
         pub lat: Option<f64>,
         pub lon: Option<f64>,
@@ -355,8 +163,11 @@ pub(crate) mod requests {
     }
 
     impl ChangeIssue {
-        pub fn derive_patch(&self, issue: &Issue) -> IssuePatch {
-            let mut patch = IssuePatch::default();
+        pub fn derive_patch(
+            &self,
+            issue: &operators::Issue,
+        ) -> history::IssuePatch {
+            let mut patch = history::IssuePatch::default();
 
             if self.title != issue.title {
                 patch.title = Some(self.title.clone());
