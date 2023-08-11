@@ -1,5 +1,5 @@
 [workspace]
-members = ["intermodal", "commons"]
+members = ["intermodal", "commons", "tools"]
 resolver = "2"
 
 [profile.dev.package.sqlx-macros]

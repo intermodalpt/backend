@@ -21,6 +21,7 @@ pub mod geo;
 pub mod gtfs;
 pub mod history;
 pub mod operators;
+pub mod osm;
 pub mod pics;
 pub mod routes;
 pub mod stops;

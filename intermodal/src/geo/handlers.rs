@@ -22,7 +22,7 @@ use serde::Serialize;
 
 use commons::models::geo;
 
-use super::{osm, sql};
+use super::sql;
 use crate::{auth, AppState, Error};
 
 #[utoipa::path(
@@ -59,7 +59,9 @@ pub(crate) async fn import_osm(
         return Err(Error::Forbidden);
     }
 
-    let (inserted, updated) = osm::import(&state.pool).await?;
+    // let (inserted, updated) = osm::import(&state.pool).await?;
+
+    let (inserted, updated) = todo!("TODO reimplement or drop");
 
     Ok(Json(OsmDiff { inserted, updated }))
 }

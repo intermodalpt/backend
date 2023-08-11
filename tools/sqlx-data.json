@@ -1,0 +1,505 @@
+{
+  "db": "PostgreSQL",
+  "17aebe4612853c3b9adda5157fa95909370e2768873311089d9a3436d5495896": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "source",
+          "ordinal": 1,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "name",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "official_name",
+          "ordinal": 3,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "osm_name",
+          "ordinal": 4,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "short_name",
+          "ordinal": 5,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "locality",
+          "ordinal": 6,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "street",
+          "ordinal": 7,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "door",
+          "ordinal": 8,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "lat",
+          "ordinal": 9,
+          "type_info": "Float8"
+        },
+        {
+          "name": "lon",
+          "ordinal": 10,
+          "type_info": "Float8"
+        },
+        {
+          "name": "external_id",
+          "ordinal": 11,
+          "type_info": "Text"
+        },
+        {
+          "name": "notes",
+          "ordinal": 12,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "updater",
+          "ordinal": 13,
+          "type_info": "Int4"
+        },
+        {
+          "name": "update_date",
+          "ordinal": 14,
+          "type_info": "Text"
+        },
+        {
+          "name": "parish",
+          "ordinal": 15,
+          "type_info": "Int4"
+        },
+        {
+          "name": "tags",
+          "ordinal": 16,
+          "type_info": "VarcharArray"
+        },
+        {
+          "name": "accessibility_meta",
+          "ordinal": 17,
+          "type_info": "Jsonb"
+        },
+        {
+          "name": "refs",
+          "ordinal": 18,
+          "type_info": "VarcharArray"
+        },
+        {
+          "name": "verification_level",
+          "ordinal": 19,
+          "type_info": "Int2"
+        },
+        {
+          "name": "service_check_date",
+          "ordinal": 20,
+          "type_info": "Date"
+        },
+        {
+          "name": "infrastructure_check_date",
+          "ordinal": 21,
+          "type_info": "Date"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true
+      ],
+      "parameters": {
+        "Left": []
+      }
+    },
+    "query": "SELECT id, source, name, official_name, osm_name, short_name, locality, street,\n    door, lat, lon, external_id, notes, updater, update_date,\n    parish, tags, accessibility_meta, refs,\n    verification_level, service_check_date, infrastructure_check_date\nFROM stops"
+  },
+  "21ae4a2d3faf340630f48db0ef0683dcefb5fd350e3874898372e57ffaeecd43": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Jsonb",
+          "Varchar",
+          "Int8"
+        ]
+      }
+    },
+    "query": "\nUPDATE Contributions\nSET change=$1, comment=$2\nWHERE id=$3\n    "
+  },
+  "31d74740a9d45963a687a6c375369ae809a019370d2cebf281dce6abc3f9ea83": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "external_id",
+          "ordinal": 1,
+          "type_info": "Text"
+        },
+        {
+          "name": "verification_level",
+          "ordinal": 2,
+          "type_info": "Int2"
+        },
+        {
+          "name": "osm_history",
+          "ordinal": 3,
+          "type_info": "Jsonb"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": []
+      }
+    },
+    "query": "SELECT id, external_id, verification_level, osm_history\n         FROM stops"
+  },
+  "371c28f05949f8a3c5b47e43466cef584819f09db63a9d7d2a60de3cc896af17": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Jsonb",
+          "Bool",
+          "Bool",
+          "Text"
+        ]
+      }
+    },
+    "query": "\nUPDATE Stops\nSET osm_history=$1, deleted_upstream=$2, verified_position=$3\nWHERE external_id=$4\n    "
+  },
+  "5cd73e08fb02b01ac6849883c5e22c7ece82b4e1936e277938ede78410cecda7": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      }
+    },
+    "query": "\n    UPDATE Stops\n    SET deleted_upstream=true\n    WHERE external_id=$1\n        "
+  },
+  "6de1310162e7b94dab6afb606cef0708d7382cd2642d16659caa879abe235bba": {
+    "describe": {
+      "columns": [
+        {
+          "name": "external_id",
+          "ordinal": 0,
+          "type_info": "Text"
+        }
+      ],
+      "nullable": [
+        false
+      ],
+      "parameters": {
+        "Left": []
+      }
+    },
+    "query": "SELECT external_id FROM Stops WHERE source='osm'"
+  },
+  "770604d6d1e6a7453de44e6da2129dd1ce805b8f442fd60bacf42cb506900d7d": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Varchar",
+          "Float8",
+          "Float8",
+          "VarcharArray",
+          "Int4",
+          "Text"
+        ]
+      }
+    },
+    "query": "\nUPDATE Stops\nSET official_name=$1, osm_name=$2, lon=$3, lat=$4, refs=$5\nWHERE id=$6 AND external_id=$7\n    "
+  },
+  "7bab801c9f96536c3d5b0dfe93e45eb0a76db3e0a2d4daed26c6422dfb42759c": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Bool",
+          "Int4"
+        ]
+      }
+    },
+    "query": "\nUPDATE Stops\nSET verified_position=$1\nWHERE id=$2\n    "
+  },
+  "b61b6815d3df093662d35107a97cc4111a895787e34488ca7a9ae24bf0f98035": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Varchar",
+          "Varchar",
+          "Float8",
+          "Float8",
+          "Varchar",
+          "Text"
+        ]
+      }
+    },
+    "query": "\nINSERT INTO Stops(name, osm_name, official_name, lon, lat, source, external_id)\nVALUES ($1, $2, $3, $4, $5, $6, $7)\n    "
+  },
+  "e0f4cdb4850f2bd20d491c74e775524a52d533734a8b0daba54136ae65ec6649": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int8"
+        },
+        {
+          "name": "author_id",
+          "ordinal": 1,
+          "type_info": "Int4"
+        },
+        {
+          "name": "change",
+          "ordinal": 2,
+          "type_info": "Jsonb"
+        },
+        {
+          "name": "submission_date",
+          "ordinal": 3,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "accepted",
+          "ordinal": 4,
+          "type_info": "Bool"
+        },
+        {
+          "name": "evaluator_id",
+          "ordinal": 5,
+          "type_info": "Int4"
+        },
+        {
+          "name": "evaluation_date",
+          "ordinal": 6,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "comment",
+          "ordinal": 7,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "author_username",
+          "ordinal": 8,
+          "type_info": "Varchar"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Int8",
+          "Int8"
+        ]
+      }
+    },
+    "query": "\nSELECT Contributions.id, Contributions.author_id, Contributions.change,\n    Contributions.submission_date, Contributions.accepted,\n    Contributions.evaluator_id, Contributions.evaluation_date,\n    Contributions.comment,\n    Authors.username as author_username\nFROM Contributions\nINNER JOIN Users AS Authors ON Contributions.author_id = Authors.id\nWHERE Contributions.accepted IS NULL\n    AND ($1 = -1 OR Contributions.author_id = $1)\nORDER BY submission_date ASC\nLIMIT $2 OFFSET $3\n    "
+  },
+  "eb362a7c8870576a58dbde3caaa5635164c734d4ed5b77d63793dd56e01d90bb": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "source",
+          "ordinal": 1,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "name",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "official_name",
+          "ordinal": 3,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "osm_name",
+          "ordinal": 4,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "short_name",
+          "ordinal": 5,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "locality",
+          "ordinal": 6,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "street",
+          "ordinal": 7,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "door",
+          "ordinal": 8,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "lat",
+          "ordinal": 9,
+          "type_info": "Float8"
+        },
+        {
+          "name": "lon",
+          "ordinal": 10,
+          "type_info": "Float8"
+        },
+        {
+          "name": "external_id",
+          "ordinal": 11,
+          "type_info": "Text"
+        },
+        {
+          "name": "notes",
+          "ordinal": 12,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "updater",
+          "ordinal": 13,
+          "type_info": "Int4"
+        },
+        {
+          "name": "update_date",
+          "ordinal": 14,
+          "type_info": "Text"
+        },
+        {
+          "name": "parish",
+          "ordinal": 15,
+          "type_info": "Int4"
+        },
+        {
+          "name": "tags",
+          "ordinal": 16,
+          "type_info": "VarcharArray"
+        },
+        {
+          "name": "accessibility_meta",
+          "ordinal": 17,
+          "type_info": "Jsonb"
+        },
+        {
+          "name": "refs",
+          "ordinal": 18,
+          "type_info": "VarcharArray"
+        },
+        {
+          "name": "verification_level",
+          "ordinal": 19,
+          "type_info": "Int2"
+        },
+        {
+          "name": "service_check_date",
+          "ordinal": 20,
+          "type_info": "Date"
+        },
+        {
+          "name": "infrastructure_check_date",
+          "ordinal": 21,
+          "type_info": "Date"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true
+      ],
+      "parameters": {
+        "Left": []
+      }
+    },
+    "query": "\nSELECT id, source, name, official_name, osm_name, short_name, locality, street,\ndoor, lat, lon, external_id, notes, updater, update_date,\nparish, tags, accessibility_meta, refs,\nverification_level, service_check_date, infrastructure_check_date\nFROM Stops\nWHERE id IN (\n    SELECT DISTINCT stop\n    FROM subroute_stops\n)\n        "
+  }
+}

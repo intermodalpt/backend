@@ -1,6 +1,6 @@
 /*
     Intermodal, transportation information aggregator
-    Copyright (C) 2022 - 2023  Cláudio Pereira
+    Copyright (C) 2023  Cláudio Pereira
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -16,5 +16,19 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-pub(crate) mod handlers;
-pub(crate) mod sql;
+use serde::{Deserialize, Serialize};
+
+use commons::models::osm::StoredStopMeta;
+
+#[derive(Serialize, Deserialize, sqlx::FromRow)]
+pub struct Stop {
+    pub(crate) id: i32,
+    #[serde(default)]
+    pub(crate) external_id: String,
+    // This is a bit flag made of 4 duets.
+    // The four binary duets are for: Position, Service, Infra and [reserved]
+    // 0 => Not verified; 1 => Wrong; 2 => Likely; 3 => Verified
+    #[serde(default)]
+    pub(crate) verification_level: i16,
+    pub(crate) osm_history: StoredStopMeta,
+}
