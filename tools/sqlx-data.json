@@ -288,6 +288,60 @@
     },
     "query": "\nINSERT INTO Stops(name, osm_name, official_name, lon, lat, source, external_id)\nVALUES ($1, $2, $3, $4, $5, $6, $7)\n    "
   },
+  "da1d9a4080adfc11846fe2bf4a174bfb5fdd5be538ef82529fd445d5ec7d2632": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "name",
+          "ordinal": 1,
+          "type_info": "Text"
+        },
+        {
+          "name": "short_name",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "municipality",
+          "ordinal": 3,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "zone",
+          "ordinal": 4,
+          "type_info": "Int4"
+        },
+        {
+          "name": "polygon",
+          "ordinal": 5,
+          "type_info": "Text"
+        },
+        {
+          "name": "geojson",
+          "ordinal": 6,
+          "type_info": "Jsonb"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        false
+      ],
+      "parameters": {
+        "Left": []
+      }
+    },
+    "query": "\nSELECT parishes.id, parishes.name, parishes.short_name, municipalities.name as municipality,\n    municipalities.zone, parishes.polygon, parishes.geojson\nFROM parishes\nJOIN municipalities ON parishes.municipality = municipalities.id\n    "
+  },
   "e0f4cdb4850f2bd20d491c74e775524a52d533734a8b0daba54136ae65ec6649": {
     "describe": {
       "columns": [
@@ -357,6 +411,19 @@
       }
     },
     "query": "\nSELECT Contributions.id, Contributions.author_id, Contributions.change,\n    Contributions.submission_date, Contributions.accepted,\n    Contributions.evaluator_id, Contributions.evaluation_date,\n    Contributions.comment,\n    Authors.username as author_username\nFROM Contributions\nINNER JOIN Users AS Authors ON Contributions.author_id = Authors.id\nWHERE Contributions.accepted IS NULL\n    AND ($1 = -1 OR Contributions.author_id = $1)\nORDER BY submission_date ASC\nLIMIT $2 OFFSET $3\n    "
+  },
+  "e8228e4ab8fb623f04f30ee0abdf28b915fbef7a6dd78308994a7d462541d732": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Int4"
+        ]
+      }
+    },
+    "query": "\nUPDATE stops\nSET parish = $1\nWHERE id = $2\n        "
   },
   "eb362a7c8870576a58dbde3caaa5635164c734d4ed5b77d63793dd56e01d90bb": {
     "describe": {
