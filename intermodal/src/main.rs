@@ -26,7 +26,6 @@
 )]
 
 mod auth;
-mod calendar;
 mod contrib;
 mod errors;
 mod geo;
