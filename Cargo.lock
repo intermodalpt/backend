@@ -91,6 +91,47 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3b13c32d80ecc7ab747b80c3784bce54ee8a7a0cc4fbda9bf4cda2cf6fe90854"
 
 [[package]]
+name = "api_server"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "axum-macros",
+ "base16ct",
+ "bytes",
+ "chrono",
+ "commons",
+ "config",
+ "csv",
+ "env_logger",
+ "image",
+ "itertools 0.11.0",
+ "jsonwebtoken",
+ "kamadak-exif",
+ "log",
+ "mime_guess",
+ "once_cell",
+ "pbkdf2",
+ "rand_core",
+ "regex",
+ "reqwest",
+ "rust-s3",
+ "serde",
+ "serde-xml-rs",
+ "serde_json",
+ "serde_repr",
+ "serde_with",
+ "sha1",
+ "sqlx",
+ "thiserror",
+ "tokio",
+ "tower-http",
+ "urlencoding",
+ "utoipa",
+ "utoipa-swagger-ui",
+ "webp",
+]
+
+[[package]]
 name = "approx"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1324,47 +1365,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a5bbe824c507c5da5956355e86a746d82e0e1464f65d862cc5e71da70e94b2c"
 dependencies = [
  "cfg-if",
-]
-
-[[package]]
-name = "intermodal"
-version = "0.1.0"
-dependencies = [
- "axum",
- "axum-macros",
- "base16ct",
- "bytes",
- "chrono",
- "commons",
- "config",
- "csv",
- "env_logger",
- "image",
- "itertools 0.11.0",
- "jsonwebtoken",
- "kamadak-exif",
- "log",
- "mime_guess",
- "once_cell",
- "pbkdf2",
- "rand_core",
- "regex",
- "reqwest",
- "rust-s3",
- "serde",
- "serde-xml-rs",
- "serde_json",
- "serde_repr",
- "serde_with",
- "sha1",
- "sqlx",
- "thiserror",
- "tokio",
- "tower-http",
- "urlencoding",
- "utoipa",
- "utoipa-swagger-ui",
- "webp",
 ]
 
 [[package]]
