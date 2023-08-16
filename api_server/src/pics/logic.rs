@@ -24,7 +24,7 @@ use sha1::{Digest, Sha1};
 use sqlx::PgPool;
 
 use commons::models::pics;
-use commons::utils::{Exif, ExifOrientation};
+use commons::utils::exif::{Exif, ExifOrientation};
 
 use super::sql;
 use crate::Error;

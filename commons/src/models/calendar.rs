@@ -24,7 +24,7 @@ use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use utoipa::ToSchema;
 
-use crate::utils::within_dates;
+use crate::utils::calendar::within_dates;
 
 pub static EVERY_DAY: [Weekday; 7] = [
     Weekday::Monday,

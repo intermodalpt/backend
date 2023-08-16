@@ -18,18 +18,6 @@
 
 use chrono::NaiveDateTime;
 
-pub fn within_dates(date: (u8, u8), start: (u8, u8), end: (u8, u8)) -> bool {
-    let (from_month, from_day) = start;
-    let (to_month, to_day) = end;
-    let (month, day) = date;
-
-    if month < from_month || (month == from_month && day < from_day) {
-        false
-    } else {
-        !(month > to_month || (month == to_month && day > to_day))
-    }
-}
-
 pub fn extract_f64_gps_coord(
     repr: &[exif::Rational],
 ) -> Result<f64, &'static str> {
