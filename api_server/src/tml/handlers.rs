@@ -27,8 +27,11 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 
 use commons::models::gtfs;
+use commons::utils::gtfs::{
+    calculate_gtfs_stop_sequence, calculate_stop_sliding_windows,
+};
 
-use super::{logic, models, sql};
+use super::{models, sql};
 use crate::{auth, AppState, Error};
 
 pub(crate) async fn tml_get_stops(
@@ -162,8 +165,7 @@ pub(crate) async fn tml_gtfs_route_trips(
                 .map(|route| (route.route_id, route.route_long_name))
                 .collect::<HashMap<String, String>>();
 
-            let trips_stop_seq =
-                logic::calculate_gtfs_stop_sequence(&gtfs_stop_times);
+            let trips_stop_seq = calculate_gtfs_stop_sequence(&gtfs_stop_times);
 
             let routes = gtfs_trips
                 .into_iter()
@@ -212,9 +214,8 @@ pub(crate) async fn tml_gtfs_stop_sliding_windows(
         .map(|result| result.unwrap())
         .collect::<Vec<gtfs::GTFSStopTimes>>();
 
-    let trips_stop_seq = logic::calculate_gtfs_stop_sequence(&gtfs_stop_times);
-    let sliding_windows =
-        logic::calculate_stop_sliding_windows(&trips_stop_seq);
+    let trips_stop_seq = calculate_gtfs_stop_sequence(&gtfs_stop_times);
+    let sliding_windows = calculate_stop_sliding_windows(&trips_stop_seq);
 
     Ok(Json(sliding_windows))
 }
