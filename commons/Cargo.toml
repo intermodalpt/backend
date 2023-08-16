@@ -18,3 +18,5 @@ utoipa = { version = "3.1", features = ["axum_extras"] }
 chrono = { version = "0.4", features = ["serde"] }
 
 kamadak-exif = "0.5"
+git2 = "0.17"
+zip = "0.6"
