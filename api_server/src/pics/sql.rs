@@ -830,7 +830,7 @@ WHERE id=$9
         update_date,
         stop_picture_id
     )
-    .execute(&mut transaction)
+    .execute(&mut *transaction)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
@@ -845,7 +845,7 @@ WHERE id=$9
         "#
         ))
         .bind(stop_picture_id)
-        .execute(&mut transaction)
+        .execute(&mut *transaction)
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
@@ -859,7 +859,7 @@ ON CONFLICT DO NOTHING
                 stop_picture_id,
                 stop_id
             )
-            .execute(&mut transaction)
+            .execute(&mut *transaction)
             .await
             .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
         }
@@ -885,7 +885,7 @@ DELETE FROM stop_pic_stops
 WHERE pic=$1"#,
         pic_id
     )
-    .execute(&mut transaction)
+    .execute(&mut *transaction)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
@@ -896,7 +896,7 @@ WHERE id=$1
         "#,
         pic_id
     )
-    .execute(&mut transaction)
+    .execute(&mut *transaction)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 

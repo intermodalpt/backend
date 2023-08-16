@@ -1,0 +1,124 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,\n    stop_pics.public, stop_pics.sensitive, stop_pics.uploader,\n    stop_pics.upload_date, stop_pics.capture_date, stop_pics.lon, stop_pics.lat,\n    stop_pics.quality, stop_pics.width, stop_pics.height, stop_pics.camera_ref,\n    stop_pics.tags, stop_pics.notes, stop_pics.tagged,\n    array_remove(array_agg(stop_pic_stops.stop), NULL) as \"stops!: Vec<i32>\"\nFROM stop_pics\nLEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id\nWHERE stop_pics.id = $1\nGROUP BY stop_pics.id\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "original_filename",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "sha1",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "public",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 4,
+        "name": "sensitive",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 5,
+        "name": "uploader",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 6,
+        "name": "upload_date",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "capture_date",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "lon",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 9,
+        "name": "lat",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 10,
+        "name": "quality",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 11,
+        "name": "width",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 12,
+        "name": "height",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 13,
+        "name": "camera_ref",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 14,
+        "name": "tags",
+        "type_info": "VarcharArray"
+      },
+      {
+        "ordinal": 15,
+        "name": "notes",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 16,
+        "name": "tagged",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 17,
+        "name": "stops!: Vec<i32>",
+        "type_info": "Int4Array"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      false,
+      null
+    ]
+  },
+  "hash": "9b4523cbf10f1c79d07875c61a270641a39da1d8ffecddae427527bb8a14f99f"
+}

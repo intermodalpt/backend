@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nDELETE FROM subroute_stops\nWHERE Subroute=$1 AND idx>=$2\n    ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int2"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ee3016c5a0a944198896c7b44da886c7dec3744c843dc02565b5016c91d21642"
+}

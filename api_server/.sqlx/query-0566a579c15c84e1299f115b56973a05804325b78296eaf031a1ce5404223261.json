@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE Contributions\nSET accepted=true, evaluator_id=$1, evaluation_date=$2\nWHERE id=$3\n    ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Timestamptz",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "0566a579c15c84e1299f115b56973a05804325b78296eaf031a1ce5404223261"
+}

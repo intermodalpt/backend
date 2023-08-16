@@ -1,0 +1,76 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT Routes.id as route_id,\n    routes.code as \"route_code!: Option<String>\",\n    routes.name as route_name,\n    routes.circular as route_circular,\n    subroutes.id as subroute_id,\n    subroutes.flag as subroute_flag,\n    subroute_stops.stop as stop_id,\n    stops.name as stop_name,\n    stops.lon as lon,\n    stops.lat as lat\nFROM routes\nJOIN subroutes ON routes.id = subroutes.route\nJOIN subroute_stops ON subroutes.id = subroute_stops.subroute\nJOIN stops ON stops.id = subroute_stops.stop\nWHERE subroutes.id IN (\n    SELECT subroutes.id\n    FROM subroutes\n    JOIN subroute_stops ON subroutes.id = subroute_stops.subroute\n    WHERE subroute_stops.stop = ANY($1)\n)\nORDER BY subroute_stops.idx",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "route_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "route_code!: Option<String>",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "route_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "route_circular",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 4,
+        "name": "subroute_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 5,
+        "name": "subroute_flag",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 6,
+        "name": "stop_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 7,
+        "name": "stop_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 8,
+        "name": "lon",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 9,
+        "name": "lat",
+        "type_info": "Float8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4Array"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "3d6e62621b2db4e3d989214045fc16dd8cb9131d3e071078bd8c1fda2ad53d53"
+}

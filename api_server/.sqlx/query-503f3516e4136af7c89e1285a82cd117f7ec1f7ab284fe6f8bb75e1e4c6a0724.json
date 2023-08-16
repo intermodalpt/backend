@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT stop, pic\nFROM stop_pic_stops\nORDER BY stop ASC\n    ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "stop",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "pic",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "503f3516e4136af7c89e1285a82cd117f7ec1f7ab284fe6f8bb75e1e4c6a0724"
+}

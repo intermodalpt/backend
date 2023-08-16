@@ -1,0 +1,77 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT Contributions.id, Contributions.author_id, Contributions.change,\n    Contributions.submission_date, Contributions.accepted,\n    Contributions.evaluator_id, Contributions.evaluation_date,\n    Contributions.comment,\n    Authors.username as author_username,\n    Evaluators.username as evaluator_username\nFROM Contributions\nINNER JOIN Users AS Authors ON author_id = Authors.id\nLEFT JOIN Users AS Evaluators ON evaluator_id = Evaluators.id\nWHERE accepted IS NOT NULL\nORDER BY evaluation_date DESC\nLIMIT $1 OFFSET $2\n    ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "author_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "change",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 3,
+        "name": "submission_date",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "accepted",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 5,
+        "name": "evaluator_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 6,
+        "name": "evaluation_date",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 7,
+        "name": "comment",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 8,
+        "name": "author_username",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 9,
+        "name": "evaluator_username",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "89352ecd32e398616e438688193d4a1b5e82e5f4f045d4ceb4f5f685f635c5ef"
+}

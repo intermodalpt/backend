@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE Stops\nSET verified_position=$1\nWHERE id=$2\n    ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Bool",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7bab801c9f96536c3d5b0dfe93e45eb0a76db3e0a2d4daed26c6422dfb42759c"
+}

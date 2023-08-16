@@ -1,0 +1,56 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT parishes.id, parishes.name, parishes.short_name, municipalities.name as municipality,\n    municipalities.zone, parishes.polygon, parishes.geojson\nFROM parishes\nJOIN municipalities ON parishes.municipality = municipalities.id\n    ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "short_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "municipality",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "zone",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 5,
+        "name": "polygon",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "geojson",
+        "type_info": "Jsonb"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "da1d9a4080adfc11846fe2bf4a174bfb5fdd5be538ef82529fd445d5ec7d2632"
+}

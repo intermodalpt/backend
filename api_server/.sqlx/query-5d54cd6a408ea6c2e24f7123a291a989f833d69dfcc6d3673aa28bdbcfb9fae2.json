@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE stop_pics\nSET public=$1, sensitive=$2, lon=$3, lat=$4, tags=$5, quality=$6, updater=$7,\n    update_date=$8, tagged=true\nWHERE id=$9\n    ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Bool",
+        "Bool",
+        "Float8",
+        "Float8",
+        "VarcharArray",
+        "Int2",
+        "Int4",
+        "Text",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "5d54cd6a408ea6c2e24f7123a291a989f833d69dfcc6d3673aa28bdbcfb9fae2"
+}

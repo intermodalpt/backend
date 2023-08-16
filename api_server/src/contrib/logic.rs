@@ -94,7 +94,7 @@ pub(crate) async fn accept_contribution(
             let stop = accept_stop_contribution(stop, patch, verify, ignored)?;
 
             crate::stops::sql::update_stop(
-                &mut transaction,
+                &mut *transaction,
                 stop.id,
                 stop.into(),
                 user_id,
@@ -110,7 +110,7 @@ pub(crate) async fn accept_contribution(
     }
 
     sql::insert_changeset_log(
-        &mut transaction,
+        &mut *transaction,
         contribution.author_id,
         &vec![contribution.change],
         Some(contribution_id),
@@ -118,7 +118,7 @@ pub(crate) async fn accept_contribution(
     .await?;
 
     sql::update_guest_contribution_to_accept(
-        &mut transaction,
+        &mut *transaction,
         contribution_id,
         user_id,
     )

@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT stop_pic_stops.stop, stop_pic_stops.pic\nFROM stop_pic_stops\nJOIN stop_pics ON stop_pic_stops.pic = stop_pics.id\nWHERE stop_pics.public = true\nORDER BY stop ASC\n    ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "stop",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "pic",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "8fe598b6141855c0289e228d88120f5983d58b60400833d2c1f3ef5b322b47b9"
+}

@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT count(*) as cnt\nFROM stop_pics\n    ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "cnt",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "a075eb4ea62da249d898e96cb7c0da5de8a7e167033d1b6b5746bf3f1eac0b4d"
+}

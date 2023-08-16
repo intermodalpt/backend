@@ -1,0 +1,46 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT stops.id, stops.lat, stops.lon, stop_operators.official_name, stop_ref\nFROM stops\nJOIN stop_operators ON stop_operators.stop_id = stops.id\nWHERE stop_operators.operator_id = $1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "lat",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 2,
+        "name": "lon",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 3,
+        "name": "official_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "stop_ref",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "22a1203c1b4ce31c3e08272d2864a9e661749f70f4e2f5beaba9e9ea89f6ab41"
+}

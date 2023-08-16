@@ -1,0 +1,106 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT routes.id as route,\n    routes.code as code,\n    routes.name as name,\n    routes.operator as operator,\n    routes.type as service_type,\n    routes.circular as circular,\n    routes.main_subroute as main_subroute,\n    routes.active as active,\n    routes.parishes as parishes,\n    route_types.badge_text_color as text_color,\n    route_types.badge_bg_color as bg_color,\n    subroutes.id as \"subroute!: Option<i32>\",\n    subroutes.flag as \"subroute_flag!: Option<String>\",\n    subroutes.circular as \"subroute_circular!: Option<bool>\",\n    subroutes.polyline as \"subroute_polyline!: Option<String>\"\nFROM routes\nJOIN route_types on routes.type = route_types.id\nLEFT JOIN subroutes ON routes.id = subroutes.route\nJOIN operators ON routes.operator = operators.id\nWHERE routes.operator = $1\nORDER BY routes.id asc\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "route",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "code",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "operator",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "service_type",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 5,
+        "name": "circular",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 6,
+        "name": "main_subroute",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 7,
+        "name": "active",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 8,
+        "name": "parishes",
+        "type_info": "Int2Array"
+      },
+      {
+        "ordinal": 9,
+        "name": "text_color",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 10,
+        "name": "bg_color",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 11,
+        "name": "subroute!: Option<i32>",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 12,
+        "name": "subroute_flag!: Option<String>",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 13,
+        "name": "subroute_circular!: Option<bool>",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 14,
+        "name": "subroute_polyline!: Option<String>",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "75f65d308c1fc38a170c67169a1ff05dde8fbb19cf8685b9259fd337a2048533"
+}

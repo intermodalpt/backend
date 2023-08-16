@@ -1,0 +1,38 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, external_id, verification_level, osm_history\n         FROM stops",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "external_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "verification_level",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 3,
+        "name": "osm_history",
+        "type_info": "Jsonb"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "31d74740a9d45963a687a6c375369ae809a019370d2cebf281dce6abc3f9ea83"
+}

@@ -16,7 +16,7 @@ commons = { path = "../commons" }
 
 tokio = { version = "1", features = ["full"] }
 
-sqlx = { version = "0.6", features = ["runtime-tokio-native-tls", "postgres", "json", "macros", "chrono", "offline"] }
+sqlx = { version = "0.7.1", features = ["runtime-tokio-native-tls", "postgres", "json", "macros", "chrono"] }
 
 axum = { version = "0.6", features = ["multipart", "headers", "macros"] }
 axum-macros = "0.3"

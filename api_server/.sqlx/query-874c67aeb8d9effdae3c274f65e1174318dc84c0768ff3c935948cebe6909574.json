@@ -1,0 +1,64 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT id, author_id, change, submission_date, accepted,\n    evaluator_id, evaluation_date, comment\nFROM Contributions\nWHERE id=$1\n    ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "author_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "change",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 3,
+        "name": "submission_date",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "accepted",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 5,
+        "name": "evaluator_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 6,
+        "name": "evaluation_date",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 7,
+        "name": "comment",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "874c67aeb8d9effdae3c274f65e1174318dc84c0768ff3c935948cebe6909574"
+}

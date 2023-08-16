@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT count(*) as cnt\nFROM Contributions\nWHERE accepted IS NOT NULL\n    ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "cnt",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "85d2a95d78ee1afdcd5b1f15504e5d6617267759212ebe756b9d9ccb81cfc034"
+}

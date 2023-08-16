@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        DELETE FROM issue_pics\n        WHERE issue_id = $1\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "76a4dc59694e1d7a0c7a1b3e895107690b5be0089670331058b089f52404e32e"
+}

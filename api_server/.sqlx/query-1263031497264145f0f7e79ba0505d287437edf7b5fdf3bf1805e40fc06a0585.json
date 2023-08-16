@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE subroute_stops\nSET stop=$1\nWHERE stop=$2\n    ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "1263031497264145f0f7e79ba0505d287437edf7b5fdf3bf1805e40fc06a0585"
+}

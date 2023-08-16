@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                UPDATE stop_operators\n                SET official_name = $1,\n                    stop_ref = $2\n                WHERE operator_id = $3 AND stop_id = $4\n                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Varchar",
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6c61a08b80510d0db0aa01b49b7164592630e72bebb6881a3aba7af404b0b963"
+}

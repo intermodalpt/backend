@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE Contributions\nSET change=$1, comment=$2\nWHERE id=$3\n    ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Jsonb",
+        "Varchar",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "21ae4a2d3faf340630f48db0ef0683dcefb5fd350e3874898372e57ffaeecd43"
+}

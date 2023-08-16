@@ -81,7 +81,7 @@ pub(crate) async fn upsert_operator_stop(
         operator_id,
         stop_id
     )
-    .fetch_all(&mut transaction)
+    .fetch_all(&mut *transaction)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
@@ -97,7 +97,7 @@ pub(crate) async fn upsert_operator_stop(
                 change.official_name,
                 change.stop_ref
             )
-            .execute(&mut transaction)
+            .execute(&mut *transaction)
             .await
             .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
         }
@@ -114,7 +114,7 @@ pub(crate) async fn upsert_operator_stop(
                 operator_id,
                 stop_id
             )
-            .execute(&mut transaction)
+            .execute(&mut *transaction)
             .await
             .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
         }
@@ -153,7 +153,7 @@ pub(crate) async fn delete_operator_stop(
         operator_id,
         stop_id
     )
-    .fetch_all(&mut transaction)
+    .fetch_all(&mut *transaction)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
@@ -170,7 +170,7 @@ pub(crate) async fn delete_operator_stop(
                 operator_id,
                 stop_id
             )
-            .execute(&mut transaction)
+            .execute(&mut *transaction)
             .await
             .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
         }
@@ -381,7 +381,7 @@ RETURNING id
         issue.geojson,
         &serde_json::to_string(&operators::IssueState::Unanswered).unwrap()
     )
-        .fetch_one(&mut transaction)
+        .fetch_one(&mut *transaction)
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
@@ -396,7 +396,7 @@ RETURNING id
             operator_id,
             id
         )
-        .execute(&mut transaction)
+        .execute(&mut *transaction)
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
     }
@@ -410,7 +410,7 @@ RETURNING id
             route_id,
             id
         )
-        .execute(&mut transaction)
+        .execute(&mut *transaction)
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
     }
@@ -424,7 +424,7 @@ RETURNING id
             stop_id,
             id
         )
-        .execute(&mut transaction)
+        .execute(&mut *transaction)
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
     }
@@ -438,7 +438,7 @@ RETURNING id
             pic_id,
             id
         )
-        .execute(&mut transaction)
+        .execute(&mut *transaction)
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
     }
@@ -484,7 +484,7 @@ pub(crate) async fn update_issue(
         issue.state_justification,
         issue_id
     )
-    .execute(&mut transaction)
+    .execute(&mut *transaction)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
@@ -495,7 +495,7 @@ pub(crate) async fn update_issue(
         "#,
         issue_id
     )
-    .execute(&mut transaction)
+    .execute(&mut *transaction)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
@@ -506,7 +506,7 @@ pub(crate) async fn update_issue(
         "#,
         issue_id
     )
-    .execute(&mut transaction)
+    .execute(&mut *transaction)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
@@ -517,7 +517,7 @@ pub(crate) async fn update_issue(
         "#,
         issue_id
     )
-    .execute(&mut transaction)
+    .execute(&mut *transaction)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
@@ -528,7 +528,7 @@ pub(crate) async fn update_issue(
         "#,
         issue_id
     )
-    .execute(&mut transaction)
+    .execute(&mut *transaction)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
@@ -541,7 +541,7 @@ pub(crate) async fn update_issue(
             operator_id,
             issue_id
         )
-        .execute(&mut transaction)
+        .execute(&mut *transaction)
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
     }
@@ -555,7 +555,7 @@ pub(crate) async fn update_issue(
             route_id,
             issue_id
         )
-        .execute(&mut transaction)
+        .execute(&mut *transaction)
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
     }
@@ -569,7 +569,7 @@ pub(crate) async fn update_issue(
             stop_id,
             issue_id
         )
-        .execute(&mut transaction)
+        .execute(&mut *transaction)
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
     }
@@ -583,7 +583,7 @@ pub(crate) async fn update_issue(
             pic_id,
             issue_id
         )
-        .execute(&mut transaction)
+        .execute(&mut *transaction)
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
     }

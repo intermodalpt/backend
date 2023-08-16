@@ -1,0 +1,46 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT subroutes.id,\n    subroutes.route as route_id,\n    subroutes.flag,\n    subroutes.circular,\n    subroutes.polyline\nFROM Subroutes\nWHERE subroutes.id = $1\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "route_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "flag",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "circular",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 4,
+        "name": "polyline",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "c79842ae583b122400fc9e75b03b84883bec3cf2920df78bdedcb49b536f17a9"
+}

@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO Stops(name, osm_name, official_name, lon, lat, source, external_id)\nVALUES ($1, $2, $3, $4, $5, $6, $7)\n    ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Float8",
+        "Float8",
+        "Varchar",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b61b6815d3df093662d35107a97cc4111a895787e34488ca7a9ae24bf0f98035"
+}

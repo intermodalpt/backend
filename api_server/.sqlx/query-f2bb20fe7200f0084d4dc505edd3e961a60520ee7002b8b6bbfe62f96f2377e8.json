@@ -1,0 +1,53 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT Changelog.id, Changelog.author_id, Changelog.changes, Changelog.datetime,\n    Changelog.contribution_id, Users.username as author_username\nFROM Changelog\nINNER JOIN Users ON author_id = Users.id\nORDER BY datetime DESC\nLIMIT $1 OFFSET $2\n    ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "author_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "changes",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 3,
+        "name": "datetime",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "contribution_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 5,
+        "name": "author_username",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "f2bb20fe7200f0084d4dc505edd3e961a60520ee7002b8b6bbfe62f96f2377e8"
+}

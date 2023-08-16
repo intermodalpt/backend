@@ -1,0 +1,66 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT id, author_id, change, submission_date, accepted,\n    evaluator_id, evaluation_date, comment\nFROM Contributions\nWHERE accepted IS NOT NULL AND author_id=$1\nORDER BY submission_date DESC\nLIMIT $2 OFFSET $3\n    ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "author_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "change",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 3,
+        "name": "submission_date",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "accepted",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 5,
+        "name": "evaluator_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 6,
+        "name": "evaluation_date",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 7,
+        "name": "comment",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "8bf741665db0772a48f7ecb8ce0b6ab911afc8baae2c38d925e46cad8a3712bd"
+}

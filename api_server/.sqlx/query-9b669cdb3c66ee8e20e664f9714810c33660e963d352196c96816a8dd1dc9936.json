@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO Changelog(author_id, changes, contribution_id)\nVALUES ($1, $2, $3)\nRETURNING id\n    ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Jsonb",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "9b669cdb3c66ee8e20e664f9714810c33660e963d352196c96816a8dd1dc9936"
+}

@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO subroute_stops(subroute, stop, idx)\nVALUES ($1, $2, $3)\n    ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int4",
+        "Int2"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e68d42f8a746c735535f0bb85d2cba31c0211983c07748350d808e6599c4b0b3"
+}

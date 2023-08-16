@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nDELETE FROM operator_calendars\nWHERE operator_id=$1 AND id=$2\n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "bdbc53ba1e09d9c9fde9746c4200c769c3d37e5645a1f5ae76fa9ca250236a53"
+}

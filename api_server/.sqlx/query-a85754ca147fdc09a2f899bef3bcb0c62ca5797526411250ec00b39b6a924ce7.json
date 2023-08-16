@@ -1,0 +1,64 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT routes.id as id,\n    routes.type as type_id,\n    routes.operator as operator_id,\n    routes.code as code,\n    routes.name as name,\n    routes.circular as circular,\n    routes.main_subroute as main_subroute,\n    routes.active as active\nFROM routes\nJOIN subroutes ON routes.id = subroutes.route\nJOIN subroute_stops ON subroutes.id = subroute_stops.subroute\nWHERE subroute_stops.stop = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "type_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "operator_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 3,
+        "name": "code",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "circular",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 6,
+        "name": "main_subroute",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 7,
+        "name": "active",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "a85754ca147fdc09a2f899bef3bcb0c62ca5797526411250ec00b39b6a924ce7"
+}

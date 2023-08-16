@@ -1,0 +1,32 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT Users.id, Users.username, Users.works_for\nFROM Users\nWHERE Users.id IN (\n    SELECT DISTINCT author_id\n    FROM Contributions\n    WHERE accepted IS NULL\n)\n    ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "username",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "works_for",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "85be6b0d9edabb37df3bab94aef36f43e47ed343991c7950ae698c12b25c1917"
+}

@@ -1,0 +1,126 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,\n    stop_pics.public, stop_pics.sensitive, stop_pics.uploader,\n    stop_pics.upload_date, stop_pics.capture_date, stop_pics.quality,\n    stop_pics.width, stop_pics.height, stop_pics.lon, stop_pics.lat,\n    stop_pics.camera_ref, stop_pics.tags, stop_pics.notes, stop_pics.tagged,\n    array_remove(array_agg(stop_pic_stops.stop), NULL) as \"stops!: Vec<i32>\"\nFROM stop_pics\nLEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id\nWHERE stop_pic_stops.stop=$1\n    AND (stop_pics.uploader = $2\n        OR (stop_pics.public = true AND stop_pics.sensitive = false)\n        OR $3 = true)\nGROUP BY stop_pics.id\nORDER BY quality DESC\n    ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "original_filename",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "sha1",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "public",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 4,
+        "name": "sensitive",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 5,
+        "name": "uploader",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 6,
+        "name": "upload_date",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "capture_date",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "quality",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 9,
+        "name": "width",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 10,
+        "name": "height",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 11,
+        "name": "lon",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 12,
+        "name": "lat",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 13,
+        "name": "camera_ref",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 14,
+        "name": "tags",
+        "type_info": "VarcharArray"
+      },
+      {
+        "ordinal": 15,
+        "name": "notes",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 16,
+        "name": "tagged",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 17,
+        "name": "stops!: Vec<i32>",
+        "type_info": "Int4Array"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int4",
+        "Bool"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      true,
+      false,
+      null
+    ]
+  },
+  "hash": "c500cace3294455046ce3c145d2cb436f70591ffda4c45fef38b8a1d9a0336c9"
+}

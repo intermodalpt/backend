@@ -1,0 +1,64 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT routes.id as id,\n    routes.type as type_id,\n    routes.operator as operator_id,\n    routes.code as code,\n    routes.name as name,\n    routes.main_subroute as main_subroute,\n    routes.circular as circular,\n    routes.active as active\nFROM routes\nWHERE routes.id = $1\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "type_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "operator_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 3,
+        "name": "code",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "main_subroute",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 6,
+        "name": "circular",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 7,
+        "name": "active",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "43049cc31fbb09e8bbd6776e98482a13557f3a0d39feed06625be456d8c597a7"
+}

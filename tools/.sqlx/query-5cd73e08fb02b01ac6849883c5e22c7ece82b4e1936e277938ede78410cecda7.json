@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n    UPDATE Stops\n    SET deleted_upstream=true\n    WHERE external_id=$1\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "5cd73e08fb02b01ac6849883c5e22c7ece82b4e1936e277938ede78410cecda7"
+}

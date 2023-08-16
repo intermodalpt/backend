@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT subroutes.id as subroute, subroute_stops.stop as stop\nFROM subroutes\nJOIN subroute_stops ON subroute_stops.subroute = subroutes.id\nWHERE subroutes.route=$1\nORDER BY subroutes.id ASC, subroute_stops.idx ASC\n    ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "subroute",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "stop",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "bb9c5a4f045ca06cecac748ba80cd6e23c43e2e553e4b5de8ed75cb908fe0725"
+}

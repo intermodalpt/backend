@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE departures\nSET time=$1, calendar_id=$2\nWHERE id=$3 AND subroute=$4\n    ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int2",
+        "Int4",
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "64ef9dd703f958674c44c68d0fc4d3178f02f95d99d18848ca4f73abd28d62df"
+}

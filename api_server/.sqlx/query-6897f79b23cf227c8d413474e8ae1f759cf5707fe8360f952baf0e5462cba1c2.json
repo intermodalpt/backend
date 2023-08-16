@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT count(*) as cnt\nFROM Changelog\nINNER JOIN Users ON author_id = Users.id\n    ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "cnt",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "6897f79b23cf227c8d413474e8ae1f759cf5707fe8360f952baf0e5462cba1c2"
+}

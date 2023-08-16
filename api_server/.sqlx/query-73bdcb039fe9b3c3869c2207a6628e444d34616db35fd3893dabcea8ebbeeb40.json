@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                DELETE FROM stop_operators\n                WHERE operator_id = $1 AND stop_id = $2\n                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "73bdcb039fe9b3c3869c2207a6628e444d34616db35fd3893dabcea8ebbeeb40"
+}

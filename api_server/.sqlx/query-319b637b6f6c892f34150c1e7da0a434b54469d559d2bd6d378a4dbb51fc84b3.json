@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO departures(subroute, time, calendar_id)\nVALUES($1, $2, $3)\nRETURNING id\n    ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int2",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "319b637b6f6c892f34150c1e7da0a434b54469d559d2bd6d378a4dbb51fc84b3"
+}

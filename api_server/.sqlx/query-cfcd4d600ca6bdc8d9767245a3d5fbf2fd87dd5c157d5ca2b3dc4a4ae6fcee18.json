@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT count(*) as cnt\nFROM Contributions\nWHERE Contributions.accepted IS NULL\n    AND ($1 = -1 OR Contributions.author_id = $1)\n    ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "cnt",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "cfcd4d600ca6bdc8d9767245a3d5fbf2fd87dd5c157d5ca2b3dc4a4ae6fcee18"
+}

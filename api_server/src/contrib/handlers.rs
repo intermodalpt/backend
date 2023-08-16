@@ -476,7 +476,7 @@ pub(crate) async fn post_decline_contrib_data(
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     sql::update_guest_contribution_to_decline(
-        &mut transaction,
+        &mut *transaction,
         contribution_id,
         user_id,
     )

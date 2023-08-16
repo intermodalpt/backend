@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nDELETE FROM stop_pic_stops\nWHERE pic=$1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7bf3f867ae6aeaf66804fe80c9a689231a3a7ddefa20e69f2aa8f6affc219666"
+}

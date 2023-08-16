@@ -1,0 +1,72 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT Contributions.id, Contributions.author_id, Contributions.change,\n    Contributions.submission_date, Contributions.accepted,\n    Contributions.evaluator_id, Contributions.evaluation_date,\n    Contributions.comment,\n    Authors.username as author_username\nFROM Contributions\nINNER JOIN Users AS Authors ON Contributions.author_id = Authors.id\nWHERE Contributions.accepted IS NULL\n    AND ($1 = -1 OR Contributions.author_id = $1)\nORDER BY submission_date ASC\nLIMIT $2 OFFSET $3\n    ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "author_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "change",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 3,
+        "name": "submission_date",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "accepted",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 5,
+        "name": "evaluator_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 6,
+        "name": "evaluation_date",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 7,
+        "name": "comment",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 8,
+        "name": "author_username",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "e0f4cdb4850f2bd20d491c74e775524a52d533734a8b0daba54136ae65ec6649"
+}
