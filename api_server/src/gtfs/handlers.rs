@@ -16,28 +16,73 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-
 use std::sync::Arc;
 use std::{fs, io};
 
 use axum::extract::{Path, Query, State};
 use axum::Json;
 
-use commons::models::gtfs::{GtfsFile};
-use commons::models::{gtfs};
+use commons::models::gtfs;
+use commons::models::gtfs::GtfsFile;
 use commons::utils::gtfs::{
     calculate_gtfs_stop_sequence, calculate_stop_sliding_windows,
 };
+use commons::utils::{git, gtfs as gtfs_utils};
 
 use super::{loaders, models, sql};
 use crate::operators::import::OperatorData;
 use crate::operators::sql as operators_sql;
-use crate::{auth, AppState, Error};
+use crate::{auth, operators, AppState, Error};
 
 pub(crate) async fn tml_get_stops(
     State(state): State<AppState>,
 ) -> Result<Json<Vec<models::TMLStop>>, Error> {
     Ok(Json(sql::fetch_gtfs_stops(&state.pool).await?))
+}
+
+pub(crate) async fn get_operator_gtfs(
+    Path(operator_id): Path<i32>,
+    claims: Option<auth::Claims>,
+) -> Result<(), Error> {
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
+    match operator_id {
+        1 => {
+            operators::import::update_operator_meta(operator_id, |meta| {
+                let path = "./data/operators/1/gtfsrepo";
+                let url = "https://github.com/carrismetropolitana/gtfs";
+                let remote_name = "origin";
+                let remote_branch = "live";
+
+                let version_date =
+                    git::update_repo(url, path, remote_name, remote_branch)
+                        .map_err(|e| Error::Processing(e))?;
+
+                meta.last_gtfs = Some(version_date);
+                if meta.last_gtfs != Some(version_date) {
+                    gtfs_utils::extract_gtfs(
+                        "./data/operators/1/gtfsrepo/CarrisMetropolitana.zip",
+                        "./data/operators/1/gtfs",
+                    );
+                    Ok(true)
+                } else {
+                    Ok(false)
+                }
+            })?;
+        }
+        _ => {
+            return Err(Error::NotFoundUpstream);
+        }
+    }
+
+    Ok(())
 }
 
 pub(crate) async fn tml_get_gtfs_stops(

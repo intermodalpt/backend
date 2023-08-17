@@ -29,12 +29,12 @@ mod auth;
 mod contrib;
 mod errors;
 mod geo;
+mod gtfs;
 mod misc;
 mod operators;
 mod pics;
 mod routes;
 mod stops;
-mod tml;
 mod utils;
 
 use std::collections::HashMap;
@@ -65,7 +65,7 @@ pub(crate) struct State {
 
 struct Cached {
     gtfs_stops: RwLock<HashMap<i32, Arc<Vec<commons::models::gtfs::GTFSStop>>>>,
-    tml_routes: RwLock<HashMap<i32, Arc<Vec<tml::models::TMLRoute>>>>,
+    tml_routes: RwLock<HashMap<i32, Arc<Vec<gtfs::models::TMLRoute>>>>,
 }
 
 pub(crate) fn build_paths(state: AppState) -> Router {
@@ -88,6 +88,7 @@ pub(crate) fn build_paths(state: AppState) -> Router {
         )
         .route("/v1/parishes", get(geo::handlers::get_parishes))
         .route("/v1/stops", get(stops::handlers::get_stops))
+        .route("/v1/stops/full", get(gtfs::handlers::tml_get_stops))
         .route("/v1/stops/:stop_id", get(stops::handlers::get_stop))
         .route("/v1/stops/create", post(stops::handlers::create_stop))
         .route(
@@ -293,6 +294,22 @@ pub(crate) fn build_paths(state: AppState) -> Router {
             get(operators::handlers::get_operator_news),
         )
         .route(
+            "/v1/operators/:operator_id/gtfs/stops",
+            get(gtfs::handlers::tml_get_gtfs_stops),
+        )
+        .route(
+            "/v1/operators/:operator_id/gtfs/stops/sliding",
+            get(gtfs::handlers::tml_gtfs_stop_sliding_windows),
+        )
+        .route(
+            "/v1/operators/:operator_id/gtfs/routes",
+            get(gtfs::handlers::tml_gtfs_route_trips),
+        )
+        .route(
+            "/v1/operators/:operator_id/gtfs/update",
+            post(gtfs::handlers::get_operator_gtfs),
+        )
+        .route(
             "/v1/operators/:operator_id/routes",
             get(routes::handlers::get_operator_routes),
         )
@@ -305,19 +322,9 @@ pub(crate) fn build_paths(state: AppState) -> Router {
         .route("/v1/auth/register", post(auth::handlers::post_register))
         .route("/v1/auth/check", get(auth::handlers::check_auth))
         .route("/v1/stats", get(misc::handlers::get_stats))
-        .route("/v1/tml/stops", get(tml::handlers::tml_get_stops))
-        .route("/v1/tml/gtfs_stops", get(tml::handlers::tml_get_gtfs_stops))
         .route(
             "/v1/tml/match/:stop_id/:gtfs_id",
-            post(tml::handlers::tml_match_stop),
-        )
-        .route(
-            "/v1/tml/gtfs_routes",
-            get(tml::handlers::tml_gtfs_route_trips),
-        )
-        .route(
-            "/v1/tml/stops/sliding",
-            get(tml::handlers::tml_gtfs_stop_sliding_windows),
+            post(gtfs::handlers::tml_match_stop),
         )
         .with_state(state)
         .layer(DefaultBodyLimit::disable())

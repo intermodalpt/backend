@@ -24,11 +24,9 @@ use chrono::NaiveDate;
 use serde::Deserialize;
 
 use commons::models::{history, operators};
-use commons::utils::{git, gtfs};
 
 use super::models::{requests, responses};
 use super::sql;
-use crate::operators::import;
 use crate::{auth, contrib, AppState, Error};
 
 pub(crate) async fn get_operators(
@@ -272,49 +270,4 @@ pub(crate) async fn get_operator_news(
         sql::fetch_operator_news(&state.pool, operator_id, take, offset)
             .await?,
     ))
-}
-
-pub(crate) async fn get_operator_gtfs(
-    Path(operator_id): Path<i32>,
-    claims: Option<auth::Claims>,
-) -> Result<(), Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-
-    let claims = claims.unwrap();
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
-    match operator_id {
-        1 => {
-            import::update_operator_meta(operator_id, |meta| {
-                let path = "./data/operators/1/gtfsrepo";
-                let url = "https://github.com/carrismetropolitana/gtfs";
-                let remote_name = "origin";
-                let remote_branch = "live";
-
-                let version_date =
-                    git::update_repo(url, path, remote_name, remote_branch)
-                        .map_err(|e| Error::Processing(e))?;
-
-                meta.last_gtfs = Some(version_date);
-                if meta.last_gtfs != Some(version_date) {
-                    gtfs::extract_gtfs(
-                        "./data/operators/1/gtfsrepo/CarrisMetropolitana.zip",
-                        "./data/operators/1/gtfs",
-                    );
-                    Ok(true)
-                } else {
-                    Ok(false)
-                }
-            })?;
-        }
-        _ => {
-            return Err(Error::NotFoundUpstream);
-        }
-    }
-
-    Ok(())
 }

@@ -49,21 +49,6 @@ pub struct GTFSTrips {
     pub trip_headsign: String,
 }
 
-const GTFS_FILES: [&'static str; 13] = [
-    "agency.txt",
-    "calendar_dates.txt",
-    "facilities.txt",
-    "fare_attributes.txt",
-    "fare_rules.txt",
-    "feed_info.txt",
-    "helpdesks.txt",
-    "municipalities.txt",
-    "routes.txt",
-    "shapes.txt",
-    "stops.txt",
-    "stop_times.txt",
-    "trips.txt",
-];
 pub enum GtfsFile {
     Agency,
     CalendarDates,

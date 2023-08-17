@@ -28,8 +28,8 @@ use commons::models::{gtfs, operators};
 use commons::utils::gtfs::calculate_gtfs_stop_sequence;
 
 use super::models;
+use crate::gtfs::models::TMLRoute;
 use crate::operators::import::OperatorData;
-use crate::tml::models::TMLRoute;
 use crate::Error;
 
 pub(crate) fn gtfs_stops(
