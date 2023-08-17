@@ -17,6 +17,7 @@
 */
 
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GTFSStop {
@@ -46,4 +47,59 @@ pub struct GTFSTrips {
     pub service_id: String,
     pub trip_id: String,
     pub trip_headsign: String,
+}
+
+const GTFS_FILES: [&'static str; 13] = [
+    "agency.txt",
+    "calendar_dates.txt",
+    "facilities.txt",
+    "fare_attributes.txt",
+    "fare_rules.txt",
+    "feed_info.txt",
+    "helpdesks.txt",
+    "municipalities.txt",
+    "routes.txt",
+    "shapes.txt",
+    "stops.txt",
+    "stop_times.txt",
+    "trips.txt",
+];
+pub enum GtfsFile {
+    Agency,
+    CalendarDates,
+    Facilities,
+    FareAttributes,
+    FareRules,
+    FeedInfo,
+    Helpdesks,
+    Municipalities,
+    Routes,
+    Shapes,
+    Stops,
+    StopTimes,
+    Trips,
+}
+
+impl GtfsFile {
+    pub fn filename(&self) -> &'static str {
+        match self {
+            GtfsFile::Agency => "agency.txt",
+            GtfsFile::CalendarDates => "calendar_dates.txt",
+            GtfsFile::Facilities => "facilities.txt",
+            GtfsFile::FareAttributes => "fare_attributes.txt",
+            GtfsFile::FareRules => "fare_rules.txt",
+            GtfsFile::FeedInfo => "feed_info.txt",
+            GtfsFile::Helpdesks => "helpdesks.txt",
+            GtfsFile::Municipalities => "municipalities.txt",
+            GtfsFile::Routes => "routes.txt",
+            GtfsFile::Shapes => "shapes.txt",
+            GtfsFile::Stops => "stops.txt",
+            GtfsFile::StopTimes => "stop_times.txt",
+            GtfsFile::Trips => "trips.txt",
+        }
+    }
+
+    pub fn prepend_root(&self, root: &PathBuf) -> PathBuf {
+        root.join(self.filename())
+    }
 }

@@ -41,7 +41,6 @@ const GTFS_FILES: [&'static str; 13] = [
     "trips.txt",
 ];
 
-
 // Calculate the GTFS stop id sequence vec for each trip_id when presented with
 // a vector of GTFSStopTimes.
 pub fn calculate_gtfs_stop_sequence(

@@ -19,3 +19,4 @@
 pub(crate) mod handlers;
 pub(crate) mod models;
 mod sql;
+mod loaders;

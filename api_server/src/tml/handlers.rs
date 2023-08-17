@@ -16,22 +16,22 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use std::collections::HashMap;
+
 use std::sync::Arc;
 use std::{fs, io};
 
 use axum::extract::{Path, Query, State};
 use axum::Json;
-use itertools::Itertools;
-use once_cell::sync::Lazy;
-use regex::Regex;
 
-use commons::models::gtfs;
+use commons::models::gtfs::{GtfsFile};
+use commons::models::{gtfs};
 use commons::utils::gtfs::{
     calculate_gtfs_stop_sequence, calculate_stop_sliding_windows,
 };
 
-use super::{models, sql};
+use super::{loaders, models, sql};
+use crate::operators::import::OperatorData;
+use crate::operators::sql as operators_sql;
 use crate::{auth, AppState, Error};
 
 pub(crate) async fn tml_get_stops(
@@ -42,28 +42,32 @@ pub(crate) async fn tml_get_stops(
 
 pub(crate) async fn tml_get_gtfs_stops(
     State(state): State<AppState>,
+    Path(operator_id): Path<i32>,
 ) -> Result<Json<Arc<Vec<gtfs::GTFSStop>>>, Error> {
-    let gtfs_stops = state
-        .cached
-        .gtfs_stops
-        .get_or_init(|| {
-            let f = fs::File::open("gtfs/stops.txt").unwrap();
-            let reader = io::BufReader::new(f);
+    let operator =
+        operators_sql::fetch_operator(&state.pool, operator_id).await?;
+    if operator.is_none() {
+        return Err(Error::NotFoundUpstream);
+    }
+    let operator = operator.unwrap();
 
-            let csv_reader = csv::ReaderBuilder::new()
-                // .trim(csv::Trim::All)
-                .from_reader(reader);
-            let mut rdr = csv_reader;
+    let meta = operator.get_storage_meta()?;
 
-            let gtfs_stops = rdr
-                .deserialize()
-                .into_iter()
-                .map(|result| result.unwrap())
-                .collect();
+    if meta.last_gtfs.is_none() {
+        return Err(Error::NotFoundUpstream);
+    }
 
-            Arc::new(gtfs_stops)
-        })
-        .clone();
+    let gtfs_stops_read_guard = state.cached.gtfs_stops.read().unwrap();
+    if let Some(gtfs_stops) = gtfs_stops_read_guard.get(&operator_id) {
+        return Ok(Json(gtfs_stops.clone()));
+    }
+
+    // Calc data
+    let gtfs_stops = loaders::gtfs_stops(&operator)?;
+    let gtfs_stops = Arc::new(gtfs_stops);
+    // Cache it
+    let mut gtfs_stops_write_guard = state.cached.gtfs_stops.write().unwrap();
+    gtfs_stops_write_guard.insert(operator_id, gtfs_stops.clone());
 
     Ok(Json(gtfs_stops))
 }
@@ -92,116 +96,58 @@ pub(crate) async fn tml_match_stop(
     .await?)
 }
 
-// Read trips from GTFS tile
-fn tml_gtfs_routes() -> Vec<gtfs::GTFSRoute> {
-    let f = fs::File::open("gtfs/routes.txt").unwrap();
-    let reader = io::BufReader::new(f);
-
-    let mut rdr = csv::ReaderBuilder::new()
-        // .trim(csv::Trim::All)
-        .from_reader(reader);
-
-    rdr.deserialize()
-        .into_iter()
-        .map(|result| result.unwrap())
-        .collect::<Vec<gtfs::GTFSRoute>>()
-}
-
-// Read trips from GTFS tile
-fn tml_gtfs_trips() -> Vec<gtfs::GTFSTrips> {
-    let f = fs::File::open("gtfs/trips.txt").unwrap();
-    let reader = io::BufReader::new(f);
-
-    let mut rdr = csv::ReaderBuilder::new()
-        // .trim(csv::Trim::All)
-        .from_reader(reader);
-
-    rdr.deserialize()
-        .into_iter()
-        .map(|result| result.unwrap())
-        .collect::<Vec<gtfs::GTFSTrips>>()
-}
-
-// Read stop times from GTFS tile
-fn load_gtfs_stop_times() -> Vec<gtfs::GTFSStopTimes> {
-    let f = fs::File::open("gtfs/stop_times.txt").unwrap();
-    let reader = io::BufReader::new(f);
-
-    let mut rdr = csv::ReaderBuilder::new()
-        // .trim(csv::Trim::All)
-        .from_reader(reader);
-
-    rdr.deserialize()
-        .into_iter()
-        .map(|result| result.unwrap())
-        .collect::<Vec<gtfs::GTFSStopTimes>>()
-}
-
-// Have regex as a static
-static SUBROUTE_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"^[\w\d]*_(?P<subroute>\d{4}_\d_\d)_").unwrap());
-
-fn simplified_trip_id(trip_id: &str) -> String {
-    if let Some(caps) = SUBROUTE_RE.captures(trip_id) {
-        caps.name("subroute").unwrap().as_str().to_string()
-    } else {
-        trip_id.to_string()
-    }
-}
-
 pub(crate) async fn tml_gtfs_route_trips(
     State(state): State<AppState>,
-) -> Json<Arc<Vec<models::TMLRoute>>> {
-    let tml_routes = state
-        .cached
-        .tml_routes
-        .get_or_init(|| {
-            let gtfs_stop_times = load_gtfs_stop_times();
-            let gtfs_trips = tml_gtfs_trips();
-            let gtfs_routes = tml_gtfs_routes();
+    Path(operator_id): Path<i32>,
+) -> Result<Json<Arc<Vec<models::TMLRoute>>>, Error> {
+    let operator =
+        operators_sql::fetch_operator(&state.pool, operator_id).await?;
+    if operator.is_none() {
+        return Err(Error::NotFoundUpstream);
+    }
+    let operator = operator.unwrap();
 
-            let gtfs_route_names = gtfs_routes
-                .into_iter()
-                .map(|route| (route.route_id, route.route_long_name))
-                .collect::<HashMap<String, String>>();
+    let meta = operator.get_storage_meta()?;
 
-            let trips_stop_seq = calculate_gtfs_stop_sequence(&gtfs_stop_times);
+    if meta.last_gtfs.is_none() {
+        return Err(Error::NotFoundUpstream);
+    }
 
-            let routes = gtfs_trips
-                .into_iter()
-                .into_group_map_by(|trip| trip.route_id.clone())
-                .into_iter()
-                .map(|(route_id, trips)| models::TMLRoute {
-                    id: route_id.clone(),
-                    name: gtfs_route_names
-                        .get(&route_id)
-                        .cloned()
-                        .unwrap_or_default(),
-                    trips: trips
-                        .into_iter()
-                        .map(|trip| models::TMLTrip {
-                            headsign: trip.trip_headsign,
-                            stops: trips_stop_seq
-                                .get(&trip.trip_id)
-                                .cloned()
-                                .unwrap_or_default(),
-                            id: simplified_trip_id(&trip.trip_id),
-                        })
-                        .unique()
-                        .collect(),
-                })
-                .collect::<Vec<models::TMLRoute>>();
+    let routes_read_guard = state.cached.tml_routes.read().unwrap();
+    if let Some(routes) = routes_read_guard.get(&operator_id) {
+        return Ok(Json(routes.clone()));
+    }
+    // Calc data
+    let routes = loaders::simplified_gtfs_routes(&operator)?;
+    let tml_routes = Arc::new(routes);
+    // Cache it
+    let mut routes_write_guard = state.cached.tml_routes.write().unwrap();
+    routes_write_guard.insert(operator_id, tml_routes.clone());
 
-            Arc::new(routes)
-        })
-        .clone();
-
-    Json(tml_routes)
+    Ok(Json(tml_routes))
 }
 
 pub(crate) async fn tml_gtfs_stop_sliding_windows(
+    State(state): State<AppState>,
+    Path(operator_id): Path<i32>,
 ) -> Result<Json<Vec<Vec<u32>>>, Error> {
-    let f = fs::File::open("gtfs/stop_times.txt").unwrap();
+    let operator =
+        operators_sql::fetch_operator(&state.pool, operator_id).await?;
+    if operator.is_none() {
+        return Err(Error::NotFoundUpstream);
+    }
+    let operator = operator.unwrap();
+
+    let meta = operator.get_storage_meta()?;
+
+    if meta.last_gtfs.is_none() {
+        return Err(Error::NotFoundUpstream);
+    }
+
+    let gtfs_root = operator.get_gtfs_root();
+    let stop_times_path = GtfsFile::StopTimes.prepend_root(&gtfs_root);
+
+    let f = fs::File::open(stop_times_path).unwrap();
     let reader = io::BufReader::new(f);
 
     let mut rdr = csv::ReaderBuilder::new()

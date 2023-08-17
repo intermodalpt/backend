@@ -22,7 +22,27 @@ use std::path::PathBuf;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+use commons::models::operators;
+
 use crate::errors::Error;
+
+pub(crate) trait OperatorData {
+    fn get_data_root(&self) -> PathBuf;
+    fn get_gtfs_root(&self) -> PathBuf;
+    fn get_storage_meta(&self) -> Result<OperatorStorageMeta, Error>;
+}
+impl OperatorData for operators::Operator {
+    fn get_data_root(&self) -> PathBuf {
+        PathBuf::from(format!("./data/operators/{}/", self.id))
+    }
+    fn get_gtfs_root(&self) -> PathBuf {
+        PathBuf::from(format!("./data/operators/{}/gtfs/", self.id))
+    }
+
+    fn get_storage_meta(&self) -> Result<OperatorStorageMeta, Error> {
+        Ok(get_operator_storage_meta(self.id)?)
+    }
+}
 #[derive(Deserialize, Serialize)]
 pub struct OperatorStorageMeta {
     pub(crate) last_update: Option<DateTime<Utc>>,

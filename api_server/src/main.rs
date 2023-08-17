@@ -37,15 +37,15 @@ mod stops;
 mod tml;
 mod utils;
 
+use std::collections::HashMap;
 use std::net::SocketAddr;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 use axum::extract::DefaultBodyLimit;
-use axum::http::{header, Method};
+use axum::http::Method;
 use axum::routing::{delete, get, patch, post, put};
 use axum::Router;
 use config::Config;
-use once_cell::sync::OnceCell;
 use sqlx::postgres::PgPool;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::limit::RequestBodyLimitLayer;
@@ -56,7 +56,6 @@ use errors::Error;
 
 pub(crate) type AppState = Arc<State>;
 
-#[derive(Clone)]
 pub(crate) struct State {
     pub(crate) bucket: s3::Bucket,
     pub(crate) pool: PgPool,
@@ -64,10 +63,9 @@ pub(crate) struct State {
     pub(crate) cached: Cached,
 }
 
-#[derive(Clone)]
 struct Cached {
-    gtfs_stops: OnceCell<Arc<Vec<commons::models::gtfs::GTFSStop>>>,
-    tml_routes: OnceCell<Arc<Vec<tml::models::TMLRoute>>>,
+    gtfs_stops: RwLock<HashMap<i32, Arc<Vec<commons::models::gtfs::GTFSStop>>>>,
+    tml_routes: RwLock<HashMap<i32, Arc<Vec<tml::models::TMLRoute>>>>,
 }
 
 pub(crate) fn build_paths(state: AppState) -> Router {
@@ -387,8 +385,8 @@ async fn main() {
         pool,
         stats,
         cached: Cached {
-            gtfs_stops: Default::default(),
-            tml_routes: Default::default(),
+            gtfs_stops: RwLock::new(HashMap::new()),
+            tml_routes: RwLock::new(HashMap::new()),
         },
     });
 

@@ -27,6 +27,24 @@ use crate::Error;
 
 type Result<T> = std::result::Result<T, Error>;
 
+pub(crate) async fn fetch_operator(
+    pool: &PgPool,
+    operator_id: i32,
+) -> Result<Option<operators::Operator>> {
+    sqlx::query_as!(
+        operators::Operator,
+        r#"
+SELECT id, name, tag
+FROM Operators
+WHERE id = $1
+"#,
+        operator_id
+    )
+    .fetch_optional(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+}
+
 pub(crate) async fn fetch_operators(
     pool: &PgPool,
 ) -> Result<Vec<operators::Operator>> {
