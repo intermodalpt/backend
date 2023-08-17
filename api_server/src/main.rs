@@ -295,19 +295,19 @@ pub(crate) fn build_paths(state: AppState) -> Router {
         )
         .route(
             "/v1/operators/:operator_id/gtfs/stops",
-            get(gtfs::handlers::tml_get_gtfs_stops),
+            get(gtfs::handlers::get_gtfs_stops),
         )
         .route(
             "/v1/operators/:operator_id/gtfs/stops/sliding",
-            get(gtfs::handlers::tml_gtfs_stop_sliding_windows),
+            get(gtfs::handlers::get_gtfs_stop_sliding_windows),
         )
         .route(
             "/v1/operators/:operator_id/gtfs/routes",
-            get(gtfs::handlers::tml_gtfs_route_trips),
+            get(gtfs::handlers::get_gtfs_route_trips),
         )
         .route(
             "/v1/operators/:operator_id/gtfs/update",
-            post(gtfs::handlers::get_operator_gtfs),
+            post(gtfs::handlers::post_update_operator_gtfs),
         )
         .route(
             "/v1/operators/:operator_id/routes",

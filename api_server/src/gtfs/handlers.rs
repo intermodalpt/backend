@@ -40,7 +40,8 @@ pub(crate) async fn tml_get_stops(
     Ok(Json(sql::fetch_gtfs_stops(&state.pool).await?))
 }
 
-pub(crate) async fn get_operator_gtfs(
+pub(crate) async fn post_update_operator_gtfs(
+    State(state): State<AppState>,
     Path(operator_id): Path<i32>,
     claims: Option<auth::Claims>,
 ) -> Result<(), Error> {
@@ -53,23 +54,30 @@ pub(crate) async fn get_operator_gtfs(
         return Err(Error::Forbidden);
     }
 
-    match operator_id {
-        1 => {
+    let operator =
+        operators_sql::fetch_operator(&state.pool, operator_id).await?;
+    if operator.is_none() {
+        return Err(Error::NotFoundUpstream);
+    }
+    let operator = operator.unwrap();
+
+    match operator.tag.as_str() {
+        "cmet" => {
             operators::import::update_operator_meta(operator_id, |meta| {
-                let path = "./data/operators/1/gtfsrepo";
+                let path = format!("./data/operators/{}/gtfsrepo", operator_id);
                 let url = "https://github.com/carrismetropolitana/gtfs";
                 let remote_name = "origin";
                 let remote_branch = "live";
 
                 let version_date =
-                    git::update_repo(url, path, remote_name, remote_branch)
+                    git::update_repo(url, &path, remote_name, remote_branch)
                         .map_err(|e| Error::Processing(e))?;
 
                 meta.last_gtfs = Some(version_date);
                 if meta.last_gtfs != Some(version_date) {
                     gtfs_utils::extract_gtfs(
-                        "./data/operators/1/gtfsrepo/CarrisMetropolitana.zip",
-                        "./data/operators/1/gtfs",
+                        &format!("./data/operators/{}/gtfsrepo/CarrisMetropolitana.zip", operator_id),
+                        &format!("./data/operators/{}/gtfs", operator_id),
                     );
                     Ok(true)
                 } else {
@@ -85,7 +93,7 @@ pub(crate) async fn get_operator_gtfs(
     Ok(())
 }
 
-pub(crate) async fn tml_get_gtfs_stops(
+pub(crate) async fn get_gtfs_stops(
     State(state): State<AppState>,
     Path(operator_id): Path<i32>,
 ) -> Result<Json<Arc<Vec<gtfs::GTFSStop>>>, Error> {
@@ -141,7 +149,7 @@ pub(crate) async fn tml_match_stop(
     .await?)
 }
 
-pub(crate) async fn tml_gtfs_route_trips(
+pub(crate) async fn get_gtfs_route_trips(
     State(state): State<AppState>,
     Path(operator_id): Path<i32>,
 ) -> Result<Json<Arc<Vec<models::TMLRoute>>>, Error> {
@@ -172,7 +180,7 @@ pub(crate) async fn tml_gtfs_route_trips(
     Ok(Json(tml_routes))
 }
 
-pub(crate) async fn tml_gtfs_stop_sliding_windows(
+pub(crate) async fn get_gtfs_stop_sliding_windows(
     State(state): State<AppState>,
     Path(operator_id): Path<i32>,
 ) -> Result<Json<Vec<Vec<u32>>>, Error> {
