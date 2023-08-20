@@ -67,7 +67,7 @@ pub(crate) async fn fetch_operator_stops(
     Ok(sqlx::query_as!(
         responses::OperatorStop,
         r#"
-SELECT stops.id, stops.lat, stops.lon, stop_operators.official_name, stop_ref
+SELECT stops.id, stops.lat, stops.lon, stop_operators.official_name, stop_ref, stop_operators.source
 FROM stops
 JOIN stop_operators ON stop_operators.stop_id = stops.id
 WHERE stop_operators.operator_id = $1
@@ -107,13 +107,14 @@ pub(crate) async fn upsert_operator_stop(
         0 => {
             sqlx::query!(
                 r#"
-                INSERT INTO stop_operators (operator_id, stop_id, official_name, stop_ref)
-                VALUES ($1, $2, $3, $4)
+                INSERT INTO stop_operators (operator_id, stop_id, official_name, stop_ref, source)
+                VALUES ($1, $2, $3, $4, $5)
                 "#,
                 operator_id,
                 stop_id,
                 change.official_name,
-                change.stop_ref
+                change.stop_ref,
+                change.source
             )
             .execute(&mut *transaction)
             .await
@@ -124,11 +125,13 @@ pub(crate) async fn upsert_operator_stop(
                 r#"
                 UPDATE stop_operators
                 SET official_name = $1,
-                    stop_ref = $2
-                WHERE operator_id = $3 AND stop_id = $4
+                    stop_ref = $2,
+                    source = $3
+                WHERE operator_id = $4 AND stop_id = $5
                 "#,
                 change.official_name,
                 change.stop_ref,
+                change.source,
                 operator_id,
                 stop_id
             )

@@ -52,17 +52,6 @@ pub struct TMLRoute {
     pub(crate) trips: Vec<TMLTrip>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, sqlx::FromRow)]
-pub struct TMLStop {
-    #[serde(flatten)]
-    pub stop: stops::Stop,
-    pub tml_id_verified: bool,
-    pub tml_id: Option<String>,
-    pub tml_id_source: String,
-    pub deleted_upstream: bool,
-    pub verified_position: bool,
-}
-
 #[derive(Deserialize, Debug)]
 pub(crate) struct MatchVerification {
     #[serde(default)]

@@ -88,7 +88,7 @@ pub(crate) fn build_paths(state: AppState) -> Router {
         )
         .route("/v1/parishes", get(geo::handlers::get_parishes))
         .route("/v1/stops", get(stops::handlers::get_stops))
-        .route("/v1/stops/full", get(gtfs::handlers::tml_get_stops))
+        .route("/v1/stops/full", get(stops::handlers::get_full_stops))
         .route("/v1/stops/:stop_id", get(stops::handlers::get_stop))
         .route("/v1/stops/create", post(stops::handlers::create_stop))
         .route(

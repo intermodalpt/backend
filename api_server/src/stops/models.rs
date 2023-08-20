@@ -25,7 +25,6 @@ pub(crate) mod requests {
 
     #[derive(Deserialize, ToSchema)]
     pub struct NewStop {
-        pub source: String,
         pub lon: f64,
         pub lat: f64,
         pub name: Option<String>,
@@ -260,8 +259,28 @@ pub(crate) mod requests {
 pub(crate) mod responses {
     use std::collections::HashMap;
 
-    use serde::Serialize;
+    use commons::models::stops;
+    use serde::{Deserialize, Serialize};
     use utoipa::ToSchema;
+
+    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+    pub struct OperatorStop {
+        pub operator_id: i32,
+        pub name: Option<String>,
+        pub stop_ref: Option<String>,
+        pub source: String,
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+    pub struct FullStop {
+        #[serde(flatten)]
+        pub stop: stops::Stop,
+        pub updater: i32,
+        pub external_id: String,
+        pub operators: Vec<OperatorStop>,
+        pub deleted_upstream: bool,
+        pub verified_position: bool,
+    }
 
     #[derive(Serialize, ToSchema)]
     pub struct SpiderRoute {

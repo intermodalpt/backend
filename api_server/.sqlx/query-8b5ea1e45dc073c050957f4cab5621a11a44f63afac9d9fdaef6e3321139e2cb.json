@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT id, source, name, official_name, osm_name, short_name, locality, street,\n    door, lat, lon, external_id, notes, updater, update_date,\n    parish, tags, accessibility_meta, refs,\n    verification_level, service_check_date, infrastructure_check_date\nFROM Stops\nWHERE lon >= $1 AND lon <= $2 AND lat <= $3 AND lat >= $4 AND id IN (\n    SELECT DISTINCT stop FROM subroute_stops\n)\n        ",
+  "query": "\nSELECT id, name, official_name, osm_name, short_name, locality, street,\n    door, lat, lon, external_id, notes, updater, update_date, parish,\n    tags, accessibility_meta, deleted_upstream, verification_level,\n    service_check_date, infrastructure_check_date, verified_position\nFROM Stops\n        ",
   "describe": {
     "columns": [
       {
@@ -10,121 +10,115 @@
       },
       {
         "ordinal": 1,
-        "name": "source",
-        "type_info": "Varchar"
-      },
-      {
-        "ordinal": 2,
         "name": "name",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 3,
+        "ordinal": 2,
         "name": "official_name",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 4,
+        "ordinal": 3,
         "name": "osm_name",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 5,
+        "ordinal": 4,
         "name": "short_name",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 6,
+        "ordinal": 5,
         "name": "locality",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 7,
+        "ordinal": 6,
         "name": "street",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 8,
+        "ordinal": 7,
         "name": "door",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 9,
+        "ordinal": 8,
         "name": "lat",
         "type_info": "Float8"
       },
       {
-        "ordinal": 10,
+        "ordinal": 9,
         "name": "lon",
         "type_info": "Float8"
       },
       {
-        "ordinal": 11,
+        "ordinal": 10,
         "name": "external_id",
         "type_info": "Text"
       },
       {
-        "ordinal": 12,
+        "ordinal": 11,
         "name": "notes",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 13,
+        "ordinal": 12,
         "name": "updater",
         "type_info": "Int4"
       },
       {
-        "ordinal": 14,
+        "ordinal": 13,
         "name": "update_date",
         "type_info": "Text"
       },
       {
-        "ordinal": 15,
+        "ordinal": 14,
         "name": "parish",
         "type_info": "Int4"
       },
       {
-        "ordinal": 16,
+        "ordinal": 15,
         "name": "tags",
         "type_info": "VarcharArray"
       },
       {
-        "ordinal": 17,
+        "ordinal": 16,
         "name": "accessibility_meta",
         "type_info": "Jsonb"
       },
       {
-        "ordinal": 18,
-        "name": "refs",
-        "type_info": "VarcharArray"
+        "ordinal": 17,
+        "name": "deleted_upstream",
+        "type_info": "Bool"
       },
       {
-        "ordinal": 19,
+        "ordinal": 18,
         "name": "verification_level",
         "type_info": "Int2"
       },
       {
-        "ordinal": 20,
+        "ordinal": 19,
         "name": "service_check_date",
         "type_info": "Date"
       },
       {
-        "ordinal": 21,
+        "ordinal": 20,
         "name": "infrastructure_check_date",
         "type_info": "Date"
+      },
+      {
+        "ordinal": 21,
+        "name": "verified_position",
+        "type_info": "Bool"
       }
     ],
     "parameters": {
-      "Left": [
-        "Float8",
-        "Float8",
-        "Float8",
-        "Float8"
-      ]
+      "Left": []
     },
     "nullable": [
       false,
-      false,
       true,
       true,
       true,
@@ -144,8 +138,9 @@
       false,
       false,
       true,
-      true
+      true,
+      false
     ]
   },
-  "hash": "46d18eb91d17a0b9554a2d4608412c7c86121073113ae5efa9826a2d0c97e585"
+  "hash": "8b5ea1e45dc073c050957f4cab5621a11a44f63afac9d9fdaef6e3321139e2cb"
 }

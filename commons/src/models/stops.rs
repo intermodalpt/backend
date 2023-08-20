@@ -77,8 +77,6 @@ pub enum AreaParkingLimitation {
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, PartialEq)]
 pub struct Stop {
     pub id: i32,
-    #[schema(example = "cmet")]
-    pub source: String,
     #[schema(example = "Setúbal (ITS)")]
     pub name: Option<String>,
     #[schema(example = "Setúbal (ITS)")]
@@ -98,14 +96,8 @@ pub struct Stop {
     pub lat: Option<f64>,
     #[schema(example = -9.654_321)]
     pub lon: Option<f64>,
-    // TODO Drop default
-    #[serde(default)]
-    pub external_id: String,
-    #[serde(default)]
-    pub refs: Vec<String>,
     #[serde(default)]
     pub notes: Option<String>,
-    pub updater: i32,
     pub update_date: String,
     #[serde(default)]
     pub tags: Vec<String>,

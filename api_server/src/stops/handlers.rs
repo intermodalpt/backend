@@ -48,6 +48,12 @@ pub(crate) async fn get_stops(
     Ok(Json(sql::fetch_stops(&state.pool, !params.all).await?))
 }
 
+pub(crate) async fn get_full_stops(
+    State(state): State<AppState>,
+) -> Result<Json<Vec<responses::FullStop>>, Error> {
+    Ok(Json(sql::fetch_full_stops(&state.pool).await?))
+}
+
 #[utoipa::path(
     get,
     path = "/v1/stop/{id}",

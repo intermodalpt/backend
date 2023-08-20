@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT id, source, name, official_name, osm_name, short_name, locality, street,\n    door, lat, lon, external_id, notes, updater, update_date,\n    parish, tags, accessibility_meta, refs, tml_id, tml_id_verified,\n    tml_id_source, deleted_upstream,\n    verification_level, service_check_date, infrastructure_check_date, verified_position\nFROM Stops\n        ",
+  "query": "SELECT id, name, official_name, osm_name, short_name, locality, street, door,\n    lat, lon, external_id, notes, update_date, parish, tags, accessibility_meta,\n    verification_level, service_check_date, infrastructure_check_date\nFROM stops",
   "describe": {
     "columns": [
       {
@@ -10,133 +10,93 @@
       },
       {
         "ordinal": 1,
-        "name": "source",
-        "type_info": "Varchar"
-      },
-      {
-        "ordinal": 2,
         "name": "name",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 3,
+        "ordinal": 2,
         "name": "official_name",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 4,
+        "ordinal": 3,
         "name": "osm_name",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 5,
+        "ordinal": 4,
         "name": "short_name",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 6,
+        "ordinal": 5,
         "name": "locality",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 7,
+        "ordinal": 6,
         "name": "street",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 8,
+        "ordinal": 7,
         "name": "door",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 9,
+        "ordinal": 8,
         "name": "lat",
         "type_info": "Float8"
       },
       {
-        "ordinal": 10,
+        "ordinal": 9,
         "name": "lon",
         "type_info": "Float8"
       },
       {
-        "ordinal": 11,
+        "ordinal": 10,
         "name": "external_id",
         "type_info": "Text"
       },
       {
-        "ordinal": 12,
+        "ordinal": 11,
         "name": "notes",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 13,
-        "name": "updater",
-        "type_info": "Int4"
-      },
-      {
-        "ordinal": 14,
+        "ordinal": 12,
         "name": "update_date",
         "type_info": "Text"
       },
       {
-        "ordinal": 15,
+        "ordinal": 13,
         "name": "parish",
         "type_info": "Int4"
       },
       {
-        "ordinal": 16,
+        "ordinal": 14,
         "name": "tags",
         "type_info": "VarcharArray"
       },
       {
-        "ordinal": 17,
+        "ordinal": 15,
         "name": "accessibility_meta",
         "type_info": "Jsonb"
       },
       {
-        "ordinal": 18,
-        "name": "refs",
-        "type_info": "VarcharArray"
-      },
-      {
-        "ordinal": 19,
-        "name": "tml_id",
-        "type_info": "Varchar"
-      },
-      {
-        "ordinal": 20,
-        "name": "tml_id_verified",
-        "type_info": "Bool"
-      },
-      {
-        "ordinal": 21,
-        "name": "tml_id_source",
-        "type_info": "Text"
-      },
-      {
-        "ordinal": 22,
-        "name": "deleted_upstream",
-        "type_info": "Bool"
-      },
-      {
-        "ordinal": 23,
+        "ordinal": 16,
         "name": "verification_level",
         "type_info": "Int2"
       },
       {
-        "ordinal": 24,
+        "ordinal": 17,
         "name": "service_check_date",
         "type_info": "Date"
       },
       {
-        "ordinal": 25,
+        "ordinal": 18,
         "name": "infrastructure_check_date",
         "type_info": "Date"
-      },
-      {
-        "ordinal": 26,
-        "name": "verified_position",
-        "type_info": "Bool"
       }
     ],
     "parameters": {
@@ -144,7 +104,6 @@
     },
     "nullable": [
       false,
-      false,
       true,
       true,
       true,
@@ -157,20 +116,13 @@
       false,
       true,
       false,
-      false,
       true,
       false,
       false,
       false,
       true,
-      false,
-      false,
-      false,
-      false,
-      true,
-      true,
-      false
+      true
     ]
   },
-  "hash": "5580b7bb3a541f3a38d2d451223eb69de364ea1a8b93e8c0a73b51fbd87eda52"
+  "hash": "878de4bcb108f8ca22b41716f55f47bd293ae41202413b6af449a3d15f99bf49"
 }

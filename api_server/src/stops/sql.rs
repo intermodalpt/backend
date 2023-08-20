@@ -35,10 +35,10 @@ pub(crate) async fn fetch_stop(
 ) -> Result<Option<stops::Stop>> {
     sqlx::query!(
         r#"
-SELECT id, source, name, official_name, osm_name, short_name, locality, street,
-    door, lat, lon, external_id, notes, updater, update_date,
-    parish, tags, accessibility_meta, refs,
-    verification_level, service_check_date, infrastructure_check_date
+SELECT id, name, official_name, osm_name, short_name, locality, street, door,
+    lat, lon, external_id, notes, updater, update_date, parish, tags,
+    accessibility_meta, verification_level,
+    service_check_date, infrastructure_check_date
 FROM Stops
 WHERE id = $1
     "#,
@@ -50,7 +50,6 @@ WHERE id = $1
     .map(|r| {
         Ok(stops::Stop {
             id: r.id,
-            source: r.source,
             name: r.name,
             official_name: r.official_name,
             osm_name: r.osm_name,
@@ -60,10 +59,7 @@ WHERE id = $1
             door: r.door,
             lat: r.lat,
             lon: r.lon,
-            external_id: r.external_id,
-            refs: r.refs,
             notes: r.notes,
-            updater: r.updater,
             update_date: r.update_date,
             parish: r.parish,
             tags: r.tags,
@@ -88,10 +84,10 @@ pub(crate) async fn fetch_stops(
     if filter_used {
         sqlx::query!(
             r#"
-SELECT id, source, name, official_name, osm_name, short_name, locality, street,
-door, lat, lon, external_id, notes, updater, update_date,
-parish, tags, accessibility_meta, refs,
-verification_level, service_check_date, infrastructure_check_date
+SELECT id, name, official_name, osm_name, short_name, locality, street, door,
+    lat, lon, external_id, notes, updater, update_date, parish, tags,
+    accessibility_meta, verification_level,
+    service_check_date, infrastructure_check_date
 FROM Stops
 WHERE id IN (
     SELECT DISTINCT stop
@@ -106,7 +102,6 @@ WHERE id IN (
         .map(|r| {
             Ok(stops::Stop {
                 id: r.id,
-                source: r.source,
                 name: r.name,
                 official_name: r.official_name,
                 osm_name: r.osm_name,
@@ -116,10 +111,7 @@ WHERE id IN (
                 door: r.door,
                 lat: r.lat,
                 lon: r.lon,
-                external_id: r.external_id,
-                refs: r.refs,
                 notes: r.notes,
-                updater: r.updater,
                 update_date: r.update_date,
                 parish: r.parish,
                 tags: r.tags,
@@ -137,9 +129,8 @@ WHERE id IN (
         .collect()
     } else {
         sqlx::query!(
-"SELECT id, source, name, official_name, osm_name, short_name, locality, street,
-    door, lat, lon, external_id, notes, updater, update_date,
-    parish, tags, accessibility_meta, refs,
+"SELECT id, name, official_name, osm_name, short_name, locality, street, door,
+    lat, lon, external_id, notes, update_date, parish, tags, accessibility_meta,
     verification_level, service_check_date, infrastructure_check_date
 FROM stops")
         .fetch_all(pool)
@@ -149,7 +140,6 @@ FROM stops")
         .map(|r| {
             Ok(stops::Stop {
                 id: r.id,
-                source: r.source,
                 name: r.name,
                 official_name: r.official_name,
                 osm_name: r.osm_name,
@@ -159,10 +149,7 @@ FROM stops")
                 door: r.door,
                 lat: r.lat,
                 lon: r.lon,
-                external_id: r.external_id,
-                refs: r.refs,
                 notes: r.notes,
-                updater: r.updater,
                 update_date: r.update_date,
                 parish: r.parish,
                 tags: r.tags,
@@ -181,15 +168,100 @@ FROM stops")
     }
 }
 
+pub(crate) async fn fetch_full_stops(
+    pool: &PgPool,
+) -> Result<Vec<responses::FullStop>> {
+    let stops = sqlx::query!(
+        r#"
+SELECT id, name, official_name, osm_name, short_name, locality, street,
+    door, lat, lon, external_id, notes, updater, update_date, parish,
+    tags, accessibility_meta, deleted_upstream, verification_level,
+    service_check_date, infrastructure_check_date, verified_position
+FROM Stops
+        "#,
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .into_iter()
+    .map(|r| {
+        Ok(responses::FullStop {
+            stop: stops::Stop {
+                id: r.id,
+                name: r.name,
+                official_name: r.official_name,
+                osm_name: r.osm_name,
+                short_name: r.short_name,
+                locality: r.locality,
+                street: r.street,
+                door: r.door,
+                lat: r.lat,
+                lon: r.lon,
+                notes: r.notes,
+                update_date: r.update_date,
+                parish: r.parish,
+                tags: r.tags,
+                a11y: serde_json::from_value(r.accessibility_meta).map_err(
+                    |e| {
+                        log::error!("Error deserializing: {}", e);
+                        Error::DatabaseDeserialization
+                    },
+                )?,
+                verification_level: if r.verified_position {
+                    r.verification_level as u8 | 0b11000000
+                } else {
+                    r.verification_level as u8 & 0b00111111
+                },
+                service_check_date: r.service_check_date,
+                infrastructure_check_date: r.infrastructure_check_date,
+            },
+            external_id: r.external_id,
+            updater: r.updater,
+            deleted_upstream: r.deleted_upstream,
+            verified_position: r.verified_position,
+            operators: vec![],
+        })
+    })
+    .collect::<Result<Vec<responses::FullStop>>>()?;
+
+    // Into a map
+    let mut stops = stops
+        .into_iter()
+        .map(|stop| (stop.stop.id, stop))
+        .collect::<HashMap<i32, responses::FullStop>>();
+
+    sqlx::query!(
+        r#"
+SELECT operator_id, stop_id, stop_ref, official_name as name, source
+FROM stop_operators
+        "#,
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .into_iter()
+    .for_each(|r| {
+        stops.get_mut(&r.stop_id).unwrap().operators.push(
+            responses::OperatorStop {
+                operator_id: r.operator_id,
+                stop_ref: r.stop_ref,
+                name: r.name,
+                source: r.source,
+            },
+        );
+    });
+
+    Ok(stops.into_values().collect())
+}
+
 pub(crate) async fn fetch_bounded_stops(
     pool: &PgPool,
     (x0, y0, x1, y1): (f64, f64, f64, f64),
 ) -> Result<Vec<stops::Stop>> {
     sqlx::query!(
         r#"
-SELECT id, source, name, official_name, osm_name, short_name, locality, street,
-    door, lat, lon, external_id, notes, updater, update_date,
-    parish, tags, accessibility_meta, refs,
+SELECT id, name, official_name, osm_name, short_name, locality, street, door,
+    lat, lon, notes, update_date, parish, tags, accessibility_meta,
     verification_level, service_check_date, infrastructure_check_date
 FROM Stops
 WHERE lon >= $1 AND lon <= $2 AND lat <= $3 AND lat >= $4 AND id IN (
@@ -208,7 +280,6 @@ WHERE lon >= $1 AND lon <= $2 AND lat <= $3 AND lat >= $4 AND id IN (
     .map(|r| {
         Ok(stops::Stop {
             id: r.id,
-            source: r.source,
             name: r.name,
             official_name: r.official_name,
             osm_name: r.osm_name,
@@ -218,10 +289,7 @@ WHERE lon >= $1 AND lon <= $2 AND lat <= $3 AND lat >= $4 AND id IN (
             door: r.door,
             lat: r.lat,
             lon: r.lon,
-            external_id: r.external_id,
-            refs: r.refs,
             notes: r.notes,
-            updater: r.updater,
             update_date: r.update_date,
             parish: r.parish,
             tags: r.tags,
@@ -249,9 +317,9 @@ pub(crate) async fn insert_stop(
     let res = sqlx::query!(
         r#"
 INSERT INTO Stops(name, short_name, official_name, locality, street, door,
-    lon, lat, notes, tags, accessibility_meta, updater, update_date, source,
+    lon, lat, notes, tags, accessibility_meta, updater, update_date,
     verification_level, service_check_date, infrastructure_check_date)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
 RETURNING id
     "#,
         stop.name,
@@ -267,18 +335,16 @@ RETURNING id
         &serde_json::to_value(&stop.a11y).unwrap(),
         user_id,
         update_date,
-        stop.source,
         stop.verification_level as i16,
         stop.service_check_date,
         stop.infrastructure_check_date
     )
-        .fetch_one(pool)
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .fetch_one(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     Ok(stops::Stop {
         id: res.id,
-        source: stop.source,
         name: stop.name,
         official_name: stop.official_name,
         osm_name: None,
@@ -288,10 +354,7 @@ RETURNING id
         door: stop.door,
         lat: Some(stop.lat),
         lon: Some(stop.lon),
-        external_id: "".to_string(),
-        refs: vec![],
         notes: stop.notes,
-        updater: user_id,
         update_date,
         parish: None,
         tags: stop.tags,

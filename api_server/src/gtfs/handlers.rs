@@ -34,12 +34,6 @@ use crate::operators::import::OperatorData;
 use crate::operators::sql as operators_sql;
 use crate::{auth, operators, AppState, Error};
 
-pub(crate) async fn tml_get_stops(
-    State(state): State<AppState>,
-) -> Result<Json<Vec<models::TMLStop>>, Error> {
-    Ok(Json(sql::fetch_gtfs_stops(&state.pool).await?))
-}
-
 pub(crate) async fn post_update_operator_gtfs(
     State(state): State<AppState>,
     Path(operator_id): Path<i32>,

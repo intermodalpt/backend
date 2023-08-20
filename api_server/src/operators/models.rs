@@ -30,6 +30,7 @@ pub(crate) mod responses {
         pub id: i32,
         pub official_name: Option<String>,
         pub stop_ref: Option<String>,
+        pub source: String,
         // TODO Why the option?
         pub lat: Option<f64>,
         pub lon: Option<f64>,
@@ -96,10 +97,16 @@ pub(crate) mod requests {
     use commons::models::history;
     use commons::models::operators;
 
+    fn default_stop_operator_source() -> String {
+        "unknown".to_string()
+    }
+
     #[derive(Debug, Deserialize, ToSchema)]
     pub struct ChangeOperatorStop {
         pub official_name: Option<String>,
         pub stop_ref: Option<String>,
+        #[serde(default = "default_stop_operator_source")]
+        pub source: String,
     }
 
     #[derive(Debug, Deserialize, ToSchema)]
