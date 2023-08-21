@@ -104,9 +104,11 @@ pub(crate) async fn get_gtfs_stops(
         return Err(Error::NotFoundUpstream);
     }
 
-    let gtfs_stops_read_guard = state.cached.gtfs_stops.read().unwrap();
-    if let Some(gtfs_stops) = gtfs_stops_read_guard.get(&operator_id) {
-        return Ok(Json(gtfs_stops.clone()));
+    {
+        let gtfs_stops_read_guard = state.cached.gtfs_stops.read().unwrap();
+        if let Some(gtfs_stops) = gtfs_stops_read_guard.get(&operator_id) {
+            return Ok(Json(gtfs_stops.clone()));
+        }
     }
 
     // Calc data
@@ -160,10 +162,13 @@ pub(crate) async fn get_gtfs_route_trips(
         return Err(Error::NotFoundUpstream);
     }
 
-    let routes_read_guard = state.cached.tml_routes.read().unwrap();
-    if let Some(routes) = routes_read_guard.get(&operator_id) {
-        return Ok(Json(routes.clone()));
+    {
+        let routes_read_guard = state.cached.tml_routes.read().unwrap();
+        if let Some(routes) = routes_read_guard.get(&operator_id) {
+            return Ok(Json(routes.clone()));
+        }
     }
+
     // Calc data
     let routes = loaders::simplified_gtfs_routes(&operator)?;
     let tml_routes = Arc::new(routes);
