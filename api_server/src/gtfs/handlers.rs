@@ -67,8 +67,8 @@ pub(crate) async fn post_update_operator_gtfs(
                     git::update_repo(url, &path, remote_name, remote_branch)
                         .map_err(|e| Error::Processing(e))?;
 
-                meta.last_gtfs = Some(version_date);
                 if meta.last_gtfs != Some(version_date) {
+                    meta.last_gtfs = Some(version_date);
                     gtfs_utils::extract_gtfs(
                         &format!("./data/operators/{}/gtfsrepo/CarrisMetropolitana.zip", operator_id),
                         &format!("./data/operators/{}/gtfs", operator_id),
