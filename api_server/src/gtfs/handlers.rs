@@ -182,7 +182,7 @@ pub(crate) async fn get_gtfs_route_trips(
 pub(crate) async fn get_gtfs_stop_sliding_windows(
     State(state): State<AppState>,
     Path(operator_id): Path<i32>,
-) -> Result<Json<Vec<Vec<u32>>>, Error> {
+) -> Result<Json<Vec<Vec<String>>>, Error> {
     let operator =
         operators_sql::fetch_operator(&state.pool, operator_id).await?;
     if operator.is_none() {

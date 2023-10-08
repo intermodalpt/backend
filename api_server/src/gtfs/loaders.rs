@@ -33,9 +33,9 @@ use crate::operators::import::OperatorData;
 use crate::Error;
 
 pub(crate) fn gtfs_stops(
-    operators: &operators::Operator,
+    operator: &operators::Operator,
 ) -> Result<Vec<gtfs::GTFSStop>, Error> {
-    let gtfs_root = operators.get_gtfs_root();
+    let gtfs_root = operator.get_gtfs_root();
     let stops_path = GtfsFile::Stops.prepend_root(&gtfs_root);
 
     if !stops_path.exists() {

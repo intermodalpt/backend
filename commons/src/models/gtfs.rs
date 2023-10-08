@@ -30,7 +30,7 @@ pub struct GTFSStop {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GTFSStopTimes {
     pub trip_id: String,
-    pub stop_id: u32,
+    pub stop_id: String,
     pub stop_sequence: u32,
 }
 

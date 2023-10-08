@@ -45,7 +45,7 @@ const GTFS_FILES: [&'static str; 13] = [
 // a vector of GTFSStopTimes.
 pub fn calculate_gtfs_stop_sequence(
     gtfs_stop_times: &Vec<gtfs::GTFSStopTimes>,
-) -> HashMap<String, Vec<u32>> {
+) -> HashMap<String, Vec<String>> {
     gtfs_stop_times
         .into_iter()
         .into_group_map_by(|x| &x.trip_id)
@@ -54,7 +54,7 @@ pub fn calculate_gtfs_stop_sequence(
             let stop_ids = stop_times
                 .into_iter()
                 .sorted_by_key(|stop_time| stop_time.stop_sequence)
-                .map(|stop_time| stop_time.stop_id)
+                .map(|stop_time| stop_time.stop_id.clone())
                 .collect::<Vec<_>>();
 
             (trip_id.clone(), stop_ids)
@@ -63,8 +63,8 @@ pub fn calculate_gtfs_stop_sequence(
 }
 
 pub fn calculate_stop_sliding_windows(
-    gtfs_stop_sequence: &HashMap<String, Vec<u32>>,
-) -> Vec<Vec<u32>> {
+    gtfs_stop_sequence: &HashMap<String, Vec<String>>,
+) -> Vec<Vec<String>> {
     let mut stop_sequences = vec![];
     for gtfs_stop_sequence in gtfs_stop_sequence.values() {
         for window in gtfs_stop_sequence.windows(3) {
