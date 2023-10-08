@@ -74,6 +74,7 @@ pub(crate) fn build_paths(state: AppState) -> Router {
             Method::HEAD,
             Method::GET,
             Method::POST,
+            Method::PUT,
             Method::PATCH,
             Method::DELETE,
         ])
@@ -201,19 +202,6 @@ pub(crate) fn build_paths(state: AppState) -> Router {
                 .patch(operators::handlers::patch_issue),
         )
         .route(
-            "/v1/operators/:operator_id/issues",
-            get(operators::handlers::get_operator_issues),
-        )
-        .route(
-            "/v1/operators/:operator_id/stops",
-            get(operators::handlers::get_operator_stops),
-        )
-        .route(
-            "/v1/operators/:operator_id/stops/:stop_id",
-            put(operators::handlers::put_operator_stop)
-                .delete(operators::handlers::delete_operator_stop),
-        )
-        .route(
             "/v1/contrib/upload/stops",
             post(pics::handlers::upload_dangling_stop_picture),
         )
@@ -290,8 +278,17 @@ pub(crate) fn build_paths(state: AppState) -> Router {
             delete(operators::handlers::delete_operator_calendar),
         )
         .route(
-            "/v1/operators/:operator_id/news",
-            get(operators::handlers::get_operator_news),
+            "/v1/operators/:operator_id/issues",
+            get(operators::handlers::get_operator_issues),
+        )
+        .route(
+            "/v1/operators/:operator_id/stops",
+            get(operators::handlers::get_operator_stops),
+        )
+        .route(
+            "/v1/operators/:operator_id/stops/:stop_id",
+            put(operators::handlers::put_operator_stop)
+                .delete(operators::handlers::delete_operator_stop),
         )
         .route(
             "/v1/operators/:operator_id/gtfs/stops",
@@ -312,6 +309,10 @@ pub(crate) fn build_paths(state: AppState) -> Router {
         .route(
             "/v1/operators/:operator_id/routes",
             get(routes::handlers::get_operator_routes),
+        )
+        .route(
+            "/v1/operators/:operator_id/news",
+            get(operators::handlers::get_operator_news),
         )
         .route("/v1/actions/import_osm", get(geo::handlers::import_osm))
         .route(
