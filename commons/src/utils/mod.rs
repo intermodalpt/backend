@@ -20,3 +20,4 @@ pub mod calendar;
 pub mod exif;
 pub mod git;
 pub mod gtfs;
+pub mod http;

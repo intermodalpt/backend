@@ -23,6 +23,7 @@ use std::path::PathBuf;
 
 use itertools::Itertools;
 
+use crate::errors::Error;
 use crate::models::gtfs;
 
 const GTFS_FILES: [&'static str; 13] = [
@@ -79,13 +80,23 @@ pub fn calculate_stop_sliding_windows(
         .collect::<Vec<_>>()
 }
 
-pub fn extract_gtfs(zip_file: &str, output_dir: &str) {
-    let file = fs::File::open(zip_file).unwrap();
+pub fn extract_gtfs(
+    zip_file: &str,
+    output_dir: &str,
+) -> Result<chrono::DateTime<chrono::Utc>, Error> {
+    let file = fs::File::open(zip_file)
+        .map_err(|e| Error::FilesystemFailure(e.to_string()))?;
 
-    let mut archive = zip::ZipArchive::new(file).unwrap();
+    let mut archive = zip::ZipArchive::new(file)
+        .map_err(|e| Error::ExtractionFailure(e.to_string()))?;
+
+    let mut last_modification_date = chrono::DateTime::default();
 
     for i in 0..archive.len() {
-        let mut file = archive.by_index(i).unwrap();
+        let mut file = archive
+            .by_index(i)
+            .map_err(|e| Error::ExtractionFailure(e.to_string()))?;
+
         let file_path = match file.enclosed_name() {
             Some(path) => path.to_owned(),
             None => continue,
@@ -97,13 +108,19 @@ pub fn extract_gtfs(zip_file: &str, output_dir: &str) {
             continue;
         }
 
+        let modification_date = zip_datetime_to_chrono(file.last_modified())?;
+        if modification_date > last_modification_date {
+            last_modification_date = modification_date;
+        }
+
         let mut output_dir = PathBuf::from(output_dir);
         output_dir.push(file_path);
         println!("{:?}", output_dir);
 
         if (*file.name()).ends_with('/') {
             println!("File {} extracted to \"{}\"", i, output_dir.display());
-            fs::create_dir_all(&output_dir).unwrap();
+            fs::create_dir_all(&output_dir)
+                .map_err(|e| Error::FilesystemFailure(e.to_string()))?;
         } else {
             println!(
                 "File {} extracted to \"{}\" ({} bytes)",
@@ -113,11 +130,39 @@ pub fn extract_gtfs(zip_file: &str, output_dir: &str) {
             );
             if let Some(p) = output_dir.parent() {
                 if !p.exists() {
-                    fs::create_dir_all(p).unwrap();
+                    fs::create_dir_all(p)
+                        .map_err(|e| Error::FilesystemFailure(e.to_string()))?;
                 }
             }
-            let mut outfile = fs::File::create(&output_dir).unwrap();
-            io::copy(&mut file, &mut outfile).unwrap();
+            let mut outfile = fs::File::create(&output_dir)
+                .map_err(|e| Error::FilesystemFailure(e.to_string()))?;
+            io::copy(&mut file, &mut outfile)
+                .map_err(|e| Error::FilesystemFailure(e.to_string()))?;
         }
     }
+    Ok(last_modification_date)
+}
+
+fn zip_datetime_to_chrono(
+    datetime: zip::DateTime,
+) -> Result<chrono::DateTime<chrono::Utc>, Error> {
+    let date = chrono::NaiveDate::from_ymd_opt(
+        datetime.year() as i32,
+        datetime.month() as u32,
+        datetime.day() as u32,
+    );
+    let time = chrono::NaiveTime::from_hms_opt(
+        datetime.hour() as u32,
+        datetime.minute() as u32,
+        datetime.second() as u32,
+    );
+
+    if date.is_none() || time.is_none() {
+        return Err(Error::ExtractionFailure("Bad date".to_string()));
+    }
+
+    let date = date.unwrap();
+    let time = time.unwrap();
+
+    Ok(chrono::NaiveDateTime::new(date, time).and_utc())
 }

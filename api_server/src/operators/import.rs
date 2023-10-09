@@ -23,6 +23,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use commons::models::operators;
+use commons::utils::{git, gtfs as gtfs_utils, http};
 
 use crate::errors::Error;
 
@@ -43,7 +44,7 @@ impl OperatorData for operators::Operator {
         Ok(get_operator_storage_meta(self.id)?)
     }
 }
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Debug)]
 pub struct OperatorStorageMeta {
     pub(crate) last_update: Option<DateTime<Utc>>,
     pub(crate) last_gtfs: Option<DateTime<Utc>>,
@@ -111,16 +112,51 @@ pub(crate) fn set_operator_storage_meta(
     Ok(())
 }
 
-pub(crate) fn update_operator_meta<U>(
-    operator_id: i32,
-    updater: U,
-) -> Result<(), Error>
-where
-    U: FnOnce(&mut OperatorStorageMeta) -> Result<bool, Error>,
-{
+pub(crate) async fn update_operator_gtfs(
+    operator: &operators::Operator,
+) -> Result<(), Error> {
+    let operator_id = operator.id;
     let mut meta = get_operator_storage_meta(operator_id)?;
+    match operator.tag.as_str() {
+        "cmet" => {
+            let path = format!("./data/operators/{}/gtfsrepo", operator_id);
+            let url = "https://github.com/carrismetropolitana/gtfs";
+            let remote_name = "origin";
+            let remote_branch = "live";
 
-    updater(&mut meta)?;
+            let version_date =
+                git::update_repo(url, &path, remote_name, remote_branch)
+                    .map_err(|e| Error::Processing(e))?;
+
+            if meta.last_gtfs != Some(version_date) {
+                meta.last_gtfs = Some(version_date);
+                let _ = gtfs_utils::extract_gtfs(
+                    &format!(
+                        "./data/operators/{}/gtfsrepo/CarrisMetropolitana.zip",
+                        operator_id
+                    ),
+                    &format!("./data/operators/{}/gtfs", operator_id),
+                );
+            }
+        }
+        // Add other cases as needed
+        "tcb" => {
+            let path = format!("./data/operators/{}/gtfs.zip", operator_id);
+            std::path::Path::new(&path);
+            let url = "https://www.transporlis.pt/desktopmodules/trp_opendata/ajax/downloadFile.ashx?op=41&u=web";
+
+            http::download_file(url, &path, None).await?;
+
+            let newest_file = gtfs_utils::extract_gtfs(
+                &format!("./data/operators/{}/gtfs.zip", operator_id),
+                &format!("./data/operators/{}/gtfs", operator_id),
+            )?;
+            meta.last_gtfs = Some(newest_file);
+        }
+        _ => {
+            eprintln!("Unknown operator tag: {}", operator.tag);
+        }
+    }
 
     meta.last_update = Some(Utc::now());
     set_operator_storage_meta(operator_id, meta)

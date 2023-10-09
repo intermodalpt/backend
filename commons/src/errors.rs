@@ -16,15 +16,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#![warn(
-    nonstandard_style,
-    warnings,
-    unused,
-    future_incompatible,
-    clippy::all,
-    clippy::pedantic
-)]
-
-pub mod models;
-pub mod utils;
-pub mod errors;
+#[derive(Debug)]
+pub enum Error {
+    DownloadFailure(String),
+    FilesystemFailure(String),
+    ExtractionFailure(String),
+}
