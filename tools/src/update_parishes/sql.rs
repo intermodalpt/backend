@@ -39,7 +39,6 @@ FROM stops")
     .map(|r| {
         Ok(stops::Stop {
             id: r.id,
-            source: r.source,
             name: r.name,
             official_name: r.official_name,
             osm_name: r.osm_name,
@@ -49,10 +48,7 @@ FROM stops")
             door: r.door,
             lat: r.lat,
             lon: r.lon,
-            external_id: r.external_id,
-            refs: r.refs,
             notes: r.notes,
-            updater: r.updater,
             update_date: r.update_date,
             parish: r.parish,
             tags: r.tags,

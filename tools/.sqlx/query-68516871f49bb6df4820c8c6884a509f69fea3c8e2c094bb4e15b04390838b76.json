@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT external_id FROM Stops WHERE source='osm'",
+  "query": "SELECT external_id FROM Stops",
   "describe": {
     "columns": [
       {
@@ -16,5 +16,5 @@
       false
     ]
   },
-  "hash": "6de1310162e7b94dab6afb606cef0708d7382cd2642d16659caa879abe235bba"
+  "hash": "68516871f49bb6df4820c8c6884a509f69fea3c8e2c094bb4e15b04390838b76"
 }

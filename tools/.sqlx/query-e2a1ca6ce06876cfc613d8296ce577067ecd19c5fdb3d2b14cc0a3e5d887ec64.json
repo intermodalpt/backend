@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nINSERT INTO Stops(name, osm_name, official_name, lon, lat, source, external_id)\nVALUES ($1, $2, $3, $4, $5, $6, $7)\n    ",
+  "query": "\nINSERT INTO Stops(name, osm_name, official_name, lon, lat, external_id)\nVALUES ($1, $2, $3, $4, $5, $6)\n    ",
   "describe": {
     "columns": [],
     "parameters": {
@@ -10,11 +10,10 @@
         "Varchar",
         "Float8",
         "Float8",
-        "Varchar",
         "Text"
       ]
     },
     "nullable": []
   },
-  "hash": "b61b6815d3df093662d35107a97cc4111a895787e34488ca7a9ae24bf0f98035"
+  "hash": "e2a1ca6ce06876cfc613d8296ce577067ecd19c5fdb3d2b14cc0a3e5d887ec64"
 }

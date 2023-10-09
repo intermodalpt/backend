@@ -16,10 +16,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use chrono::Local;
 use serde::{Deserialize, Serialize};
 
-use commons::models::stops;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub(crate) struct XmlOsm {
@@ -60,31 +58,29 @@ pub(crate) struct XMLTag {
     v: String,
 }
 
-impl From<XmlNode> for stops::Stop {
+pub(crate) struct Stop {
+    pub id: i32,
+    pub name: Option<String>,
+    pub official_name: Option<String>,
+    pub lat: Option<f64>,
+    pub lon: Option<f64>,
+
+    pub osm_name: Option<String>,
+    pub external_id: String,
+    pub refs: Vec<String>,
+}
+
+impl From<XmlNode> for Stop {
     fn from(node: XmlNode) -> Self {
         let mut res = Self {
             id: -1,
-            source: "osm".to_string(),
             name: None,
             official_name: None,
             osm_name: None,
-            short_name: None,
-            locality: None,
-            street: None,
-            door: None,
-            parish: None,
             lat: Some(node.lat),
             lon: Some(node.lon),
             external_id: node.id.to_string(),
             refs: vec![],
-            notes: None,
-            a11y: stops::A11yMeta::default(),
-            updater: -1,
-            update_date: Local::now().to_string(),
-            tags: vec![],
-            verification_level: 0,
-            service_check_date: None,
-            infrastructure_check_date: None,
         };
 
         for tag in node.tags {

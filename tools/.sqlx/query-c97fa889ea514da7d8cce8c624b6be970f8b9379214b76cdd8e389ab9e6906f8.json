@@ -1,0 +1,62 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, name, official_name, osm_name, lat, lon, external_id, refs FROM stops",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "official_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "osm_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "lat",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 5,
+        "name": "lon",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 6,
+        "name": "external_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "refs",
+        "type_info": "VarcharArray"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "c97fa889ea514da7d8cce8c624b6be970f8b9379214b76cdd8e389ab9e6906f8"
+}

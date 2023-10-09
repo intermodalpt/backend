@@ -21,8 +21,6 @@ use std::collections::HashMap;
 use config::Config;
 use sqlx::PgPool;
 
-use commons::models::stops;
-
 mod api;
 mod models;
 mod sql;
@@ -41,7 +39,10 @@ async fn main() {
         .await
         .expect("Unable to connect to the database");
 
-    let _ = import(&pool).await;
+    let counts = import(&pool).await.unwrap();
+
+    println!("New stops: {}", counts.0);
+    println!("Updated stops: {}", counts.1);
 }
 
 pub(crate) async fn import(
@@ -50,12 +51,12 @@ pub(crate) async fn import(
     let mut new_stops = vec![];
     let mut updated_stops = vec![];
 
-    let stops = sql::fetch_stops(db_pool, false).await?;
+    let stops = sql::fetch_stops(db_pool).await?;
 
     let stop_index = stops
         .into_iter()
         .map(|stop| (stop.external_id.clone(), stop))
-        .collect::<HashMap<String, stops::Stop>>();
+        .collect::<HashMap<String, models::Stop>>();
 
     let mut osm_stop_ids = vec![];
     api::fetch_osm_stops()
@@ -64,7 +65,7 @@ pub(crate) async fn import(
         .into_iter()
         .filter_map(|node| {
             if let models::XmlNodeTypes::Node(node) = node {
-                Some(stops::Stop::from(node))
+                Some(models::Stop::from(node))
             } else {
                 None
             }
