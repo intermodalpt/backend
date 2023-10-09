@@ -39,6 +39,8 @@ pub enum Error {
     ObjectStorageFailure(String),
     #[error("Unable to execute database transaction: `{0}`")]
     DatabaseExecution(String),
+    #[error("Unable to download file: `{0}`")]
+    DownloadFailure(String),
 }
 
 impl IntoResponse for Error {
@@ -60,12 +62,28 @@ impl IntoResponse for Error {
             Error::ValidationFailure(_) => {
                 (StatusCode::BAD_REQUEST, format!("{}", &self)).into_response()
             }
-            Error::Processing(_) | Error::ObjectStorageFailure(_) | Error::DatabaseExecution(_) => {
+            Error::Processing(_) | Error::ObjectStorageFailure(_) | Error::DatabaseExecution(_) | Error::DownloadFailure(_) => {
                 eprintln!("{:?}", &self);
                 (StatusCode::INTERNAL_SERVER_ERROR, "The server had an internal error").into_response()
             }
             // _ => (StatusCode::INTERNAL_SERVER_ERROR, format!("{}", &self))
             //     .into_response(),
+        }
+    }
+}
+
+impl From<commons::errors::Error> for Error {
+    fn from(e: commons::errors::Error) -> Self {
+        match e {
+            commons::errors::Error::DownloadFailure(msg) => {
+                Error::DownloadFailure(msg)
+            }
+            commons::errors::Error::ExtractionFailure(msg) => {
+                Error::Processing(format!("Extraction failure: {}", msg))
+            }
+            commons::errors::Error::FilesystemFailure(msg) => {
+                Error::Processing(msg)
+            }
         }
     }
 }

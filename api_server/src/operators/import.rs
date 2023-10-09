@@ -139,10 +139,20 @@ pub(crate) async fn update_operator_gtfs(
                 );
             }
         }
-        // Add other cases as needed
+        "carris" => {
+            let path = format!("./data/operators/{}/gtfs.zip", operator_id);
+            let url = "https://gateway.carris.pt/gateway/gtfs/api/v2.11/GTFS";
+
+            http::download_file(url, &path, None).await?;
+
+            let newest_file = gtfs_utils::extract_gtfs(
+                &format!("./data/operators/{}/gtfs.zip", operator_id),
+                &format!("./data/operators/{}/gtfs", operator_id),
+            )?;
+            meta.last_gtfs = Some(newest_file);
+        }
         "tcb" => {
             let path = format!("./data/operators/{}/gtfs.zip", operator_id);
-            std::path::Path::new(&path);
             let url = "https://www.transporlis.pt/desktopmodules/trp_opendata/ajax/downloadFile.ashx?op=41&u=web";
 
             http::download_file(url, &path, None).await?;
