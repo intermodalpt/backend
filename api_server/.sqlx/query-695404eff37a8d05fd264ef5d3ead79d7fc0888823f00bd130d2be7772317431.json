@@ -1,0 +1,30 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO panoramas(\n    original_filename, sha1, stop_id, lat, lon, uploader, upload_date, capture_date, sensitive\n)\nVALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)\nRETURNING id\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Varchar",
+        "Int4",
+        "Float8",
+        "Float8",
+        "Int4",
+        "Timestamptz",
+        "Timestamptz",
+        "Bool"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "695404eff37a8d05fd264ef5d3ead79d7fc0888823f00bd130d2be7772317431"
+}

@@ -1,0 +1,53 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT id, sha1, lon, lat, capture_date, sensitive\nFROM panoramas\nWHERE stop_id = $1 AND (sensitive = false OR $2 = true)\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "sha1",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "lon",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 3,
+        "name": "lat",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 4,
+        "name": "capture_date",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
+        "name": "sensitive",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Bool"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "358ef25265200b6473e1418f5030e78d0f3cb9449810512b129dfcd80be0395a"
+}

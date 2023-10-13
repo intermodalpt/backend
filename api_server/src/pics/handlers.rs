@@ -458,3 +458,86 @@ pub(crate) async fn get_picture_count_by_stop(
 ) -> Result<Json<HashMap<i32, i32>>, Error> {
     Ok(Json(sql::fetch_picture_count_by_stop(&state.pool).await?))
 }
+
+pub(crate) async fn get_panos(
+    State(state): State<AppState>,
+    claims: Option<auth::Claims>,
+) -> Result<Json<Vec<responses::FullPanoPic>>, Error> {
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+
+    if !(claims.permissions.is_admin) {
+        return Err(Error::Forbidden);
+    }
+
+    Ok(Json(sql::fetch_panos(&state.pool, true).await?))
+}
+pub(crate) async fn upload_pano_picture(
+    State(state): State<AppState>,
+    claims: Option<auth::Claims>,
+    mut multipart: Multipart,
+) -> Result<Json<pics::PanoPic>, Error> {
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+
+    if !(claims.permissions.is_admin) {
+        return Err(Error::Forbidden);
+    }
+
+    let field = get_exactly_one_field(&mut multipart).await?;
+
+    let filename = field
+        .file_name()
+        .ok_or_else(|| {
+            Error::ValidationFailure("File without a filename".to_string())
+        })?
+        .to_string();
+    let content = field
+        .bytes()
+        .await
+        .map_err(|err| Error::ValidationFailure(err.to_string()))?;
+
+    let pic = logic::upload_pano_picture(
+        claims.uid,
+        filename.clone(),
+        &state.bucket,
+        &state.pool,
+        &content,
+    )
+    .await?;
+
+    /*contrib::sql::insert_changeset_log(
+        &state.pool,
+        claims.uid,
+        &[history::Change::StopPicUpload {
+            pic: pic.clone(),
+            stops: vec![stop_id],
+        }],
+        None,
+    )
+    .await?;*/
+
+    Ok(Json(pic))
+}
+
+pub(crate) async fn get_stop_pano(
+    State(state): State<AppState>,
+    Path(stop_id): Path<i32>,
+    claims: Option<auth::Claims>,
+) -> Result<Json<Option<responses::PanoPic>>, Error> {
+    let is_trusted = matches!(
+        claims,
+        Some(auth::Claims {
+            permissions: auth::Permissions { is_admin: true, .. },
+            ..
+        })
+    );
+
+    Ok(Json(
+        sql::fetch_stop_pano(&state.pool, stop_id, is_trusted).await?,
+    ))
+}

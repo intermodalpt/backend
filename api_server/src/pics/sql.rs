@@ -927,3 +927,116 @@ GROUP BY stop_pic_stops.stop
 
     Ok(res)
 }
+
+/// Every panoramic picture
+pub(crate) async fn fetch_panos(
+    pool: &PgPool,
+    allow_sensitive: bool,
+) -> Result<Vec<responses::FullPanoPic>> {
+    sqlx::query_as!(
+        responses::FullPanoPic,
+        r#"
+SELECT id, original_filename, sha1, lon, lat, stop_id,
+    uploader, upload_date, capture_date, sensitive
+FROM panoramas
+WHERE sensitive = false OR $1 = true
+"#,
+        allow_sensitive
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+}
+
+/// Fetches a pano picture by its hash.
+pub(crate) async fn fetch_pano_by_hash(
+    pool: &PgPool,
+    pic_hash: &str,
+) -> Result<Option<pics::PanoPic>> {
+    sqlx::query!(
+        r#"
+SELECT id, original_filename, sha1, lon, lat, uploader, upload_date, capture_date, sensitive
+FROM panoramas
+WHERE sha1 = $1
+"#,
+        pic_hash
+    )
+        .fetch_optional(pool)
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+        .map(|row| {
+            row.map(|row| pics::PanoPic {
+                id: row.id,
+                original_filename: row.original_filename,
+                sha1: row.sha1,
+                uploader: row.uploader,
+                upload_date: row.upload_date,
+                capture_date: row.capture_date,
+                stop_id: None,
+                lon: row.lon,
+                lat: row.lat,
+                sensitive: row.sensitive,
+            })
+        })
+}
+
+/// Fetches a pano picture by its attached stop.
+pub(crate) async fn fetch_stop_pano(
+    pool: &PgPool,
+    stop_id: i32,
+    allow_sensitive: bool,
+) -> Result<Option<responses::PanoPic>> {
+    sqlx::query!(
+        r#"
+SELECT id, sha1, lon, lat, capture_date, sensitive
+FROM panoramas
+WHERE stop_id = $1 AND (sensitive = false OR $2 = true)
+"#,
+        stop_id,
+        allow_sensitive
+    )
+    .fetch_optional(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    .map(|row| {
+        row.map(|row| responses::PanoPic {
+            id: row.id,
+            sha1: row.sha1,
+            capture_date: row.capture_date,
+            stop_id: None,
+            lon: row.lon,
+            lat: row.lat,
+        })
+    })
+}
+
+pub(crate) async fn insert_pano(
+    pool: &PgPool,
+    mut pic: pics::PanoPic,
+) -> Result<pics::PanoPic> {
+    let res = sqlx::query!(
+        r#"
+INSERT INTO panoramas(
+    original_filename, sha1, stop_id, lat, lon, uploader, upload_date, capture_date, sensitive
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+RETURNING id
+        "#,
+        pic.original_filename,
+        pic.sha1,
+        pic.stop_id,
+        pic.lat,
+        pic.lon,
+        pic.uploader,
+        pic.upload_date,
+        pic.capture_date,
+        pic.sensitive
+    )
+    .fetch_one(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    pic.id = res.id;
+
+    Ok(pic)
+}

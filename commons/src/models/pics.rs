@@ -16,6 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
@@ -102,4 +103,18 @@ impl StopPicDynMeta {
         }
         patch
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct PanoPic {
+    pub id: i32,
+    pub original_filename: String,
+    pub sha1: String,
+    pub stop_id: Option<i32>,
+    pub lon: Option<f64>,
+    pub lat: Option<f64>,
+    pub uploader: i32,
+    pub upload_date: DateTime<Utc>,
+    pub capture_date: Option<DateTime<Utc>>,
+    pub sensitive: bool,
 }

@@ -68,6 +68,7 @@ pub(crate) mod requests {
 }
 
 pub(crate) mod responses {
+    use chrono::{DateTime, Utc};
     use serde::Serialize;
     use utoipa::ToSchema;
 
@@ -206,5 +207,29 @@ pub(crate) mod responses {
         pub stops: Vec<i32>,
         // TODO Consider this
         pub tagged: bool,
+    }
+
+    #[derive(Debug, Clone, Serialize, ToSchema)]
+    pub struct FullPanoPic {
+        pub id: i32,
+        pub original_filename: String,
+        pub sha1: String,
+        pub stop_id: Option<i32>,
+        pub lon: Option<f64>,
+        pub lat: Option<f64>,
+        pub uploader: i32,
+        pub upload_date: DateTime<Utc>,
+        pub capture_date: Option<DateTime<Utc>>,
+        pub sensitive: bool,
+    }
+
+    #[derive(Debug, Clone, Serialize, ToSchema)]
+    pub struct PanoPic {
+        pub id: i32,
+        pub sha1: String,
+        pub stop_id: Option<i32>,
+        pub lon: Option<f64>,
+        pub lat: Option<f64>,
+        pub capture_date: Option<DateTime<Utc>>,
     }
 }
