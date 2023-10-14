@@ -109,6 +109,10 @@ pub(crate) fn build_paths(state: AppState) -> Router {
             get(pics::handlers::get_stop_pictures),
         )
         .route(
+            "/v1/stops/:stop_id/pano",
+            get(pics::handlers::get_stop_pano),
+        )
+        .route(
             "/v1/stops/:stop_id/routes",
             get(stops::handlers::get_stop_routes),
         )
@@ -180,6 +184,15 @@ pub(crate) fn build_paths(state: AppState) -> Router {
         .route(
             "/v1/stop_pics/linked/:stop_id",
             post(pics::handlers::upload_stop_picture),
+        )
+        .route("/v1/stop_pics/pano/all", post(pics::handlers::get_panos))
+        .route(
+            "/v1/stop_pics/pano",
+            post(pics::handlers::upload_pano_picture),
+        )
+        .route(
+            "/v1/stop_pics/pano/:picture_id/:pano_id/onion",
+            post(pics::handlers::get_onion_skin),
         )
         .route(
             "/v1/stop_pics/:picture_id",

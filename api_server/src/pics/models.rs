@@ -232,4 +232,10 @@ pub(crate) mod responses {
         pub lat: Option<f64>,
         pub capture_date: Option<DateTime<Utc>>,
     }
+
+    #[derive(Debug, Serialize, ToSchema)]
+    pub struct PanoOnion {
+        pub predecessors: Vec<MinimalPicWithStops>,
+        pub successors: Vec<MinimalPicWithStops>,
+    }
 }

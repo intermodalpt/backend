@@ -541,3 +541,23 @@ pub(crate) async fn get_stop_pano(
         sql::fetch_stop_pano(&state.pool, stop_id, is_trusted).await?,
     ))
 }
+
+pub(crate) async fn get_onion_skin(
+    State(state): State<AppState>,
+    Path(pano_id): Path<i32>,
+    claims: Option<auth::Claims>,
+) -> Result<Json<responses::PanoOnion>, Error> {
+    let is_trusted = matches!(
+        claims,
+        Some(auth::Claims {
+            permissions: auth::Permissions { is_admin: true, .. },
+            ..
+        })
+    );
+
+    if !is_trusted {
+        return Err(Error::Forbidden);
+    }
+
+    Ok(Json(sql::fetch_pano_onion(&state.pool, pano_id).await?))
+}

@@ -1,0 +1,58 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT stop_pics.id, stop_pics.public, stop_pics.sensitive,\n    stop_pics.lon, stop_pics.lat, stop_pics.tagged,\n    array_remove(array_agg(stop_pic_stops.stop), NULL) as \"stops!: Vec<i32>\"\nFROM stop_pics\nLEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id\nWHERE stop_pics.capture_date >= (\n    SELECT capture_date\n    FROM panoramas\n    WHERE id = $1\n)\nGROUP BY stop_pics.id\nORDER BY stop_pics.capture_date ASC\nLIMIT 10\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "public",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 2,
+        "name": "sensitive",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 3,
+        "name": "lon",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 4,
+        "name": "lat",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 5,
+        "name": "tagged",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 6,
+        "name": "stops!: Vec<i32>",
+        "type_info": "Int4Array"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      null
+    ]
+  },
+  "hash": "65917cd4553798117199eb760f6ddba3174827fc10de60a6807a5ff9e3dee176"
+}

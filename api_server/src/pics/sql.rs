@@ -1040,3 +1040,82 @@ RETURNING id
 
     Ok(pic)
 }
+
+/// Fetches the onion skin for a pano picture.
+/// The onion skin is going to be composed from the 10 regular pictures
+/// before and after the pano picture.
+pub(crate) async fn fetch_pano_onion(
+    pool: &PgPool,
+    pano_id: i32,
+) -> Result<responses::PanoOnion> {
+    let predecessors = sqlx::query!(
+        r#"
+SELECT stop_pics.id, stop_pics.public, stop_pics.sensitive,
+    stop_pics.lon, stop_pics.lat, stop_pics.tagged,
+    array_remove(array_agg(stop_pic_stops.stop), NULL) as "stops!: Vec<i32>"
+FROM stop_pics
+LEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id
+WHERE stop_pics.capture_date < (
+    SELECT capture_date
+    FROM panoramas
+    WHERE id = $1
+)
+GROUP BY stop_pics.id
+ORDER BY stop_pics.capture_date DESC
+LIMIT 10
+"#,
+        pano_id
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .into_iter()
+    .map(|r| responses::MinimalPicWithStops {
+        id: r.id,
+        tagged: r.tagged,
+        public: r.public,
+        sensitive: r.sensitive,
+        lon: r.lon,
+        lat: r.lat,
+        stops: r.stops,
+    })
+    .collect();
+
+    let successors = sqlx::query!(
+        r#"
+SELECT stop_pics.id, stop_pics.public, stop_pics.sensitive,
+    stop_pics.lon, stop_pics.lat, stop_pics.tagged,
+    array_remove(array_agg(stop_pic_stops.stop), NULL) as "stops!: Vec<i32>"
+FROM stop_pics
+LEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id
+WHERE stop_pics.capture_date >= (
+    SELECT capture_date
+    FROM panoramas
+    WHERE id = $1
+)
+GROUP BY stop_pics.id
+ORDER BY stop_pics.capture_date ASC
+LIMIT 10
+"#,
+        pano_id
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .into_iter()
+    .map(|r| responses::MinimalPicWithStops {
+        id: r.id,
+        tagged: r.tagged,
+        public: r.public,
+        sensitive: r.sensitive,
+        lon: r.lon,
+        lat: r.lat,
+        stops: r.stops,
+    })
+    .collect();
+
+    Ok(responses::PanoOnion {
+        predecessors,
+        successors,
+    })
+}
