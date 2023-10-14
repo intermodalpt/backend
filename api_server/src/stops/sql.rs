@@ -18,7 +18,7 @@
 
 use std::collections::{hash_map, HashMap};
 
-use chrono::Local;
+use chrono::Utc;
 use sqlx::PgPool;
 
 use commons::models::{routes, stops};
@@ -312,7 +312,7 @@ pub(crate) async fn insert_stop(
     stop: models::requests::NewStop,
     user_id: i32,
 ) -> Result<stops::Stop> {
-    let update_date = Local::now().to_string();
+    let update_date = Utc::now();
 
     let res = sqlx::query!(
         r#"
@@ -374,7 +374,7 @@ pub(crate) async fn update_stop<'c, E>(
 where
     E: sqlx::Executor<'c, Database = sqlx::Postgres>,
 {
-    let update_date = Local::now().to_string();
+    let update_date = Utc::now();
 
     let _res = sqlx::query!(
         r#"

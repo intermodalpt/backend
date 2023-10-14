@@ -25,6 +25,6 @@
     clippy::pedantic
 )]
 
+pub mod errors;
 pub mod models;
 pub mod utils;
-pub mod errors;

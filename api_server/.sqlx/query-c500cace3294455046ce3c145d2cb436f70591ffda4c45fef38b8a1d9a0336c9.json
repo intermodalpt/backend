@@ -36,12 +36,12 @@
       {
         "ordinal": 6,
         "name": "upload_date",
-        "type_info": "Text"
+        "type_info": "Timestamptz"
       },
       {
         "ordinal": 7,
         "name": "capture_date",
-        "type_info": "Text"
+        "type_info": "Timestamptz"
       },
       {
         "ordinal": 8,

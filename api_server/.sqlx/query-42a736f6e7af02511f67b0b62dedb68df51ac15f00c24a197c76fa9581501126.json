@@ -16,7 +16,7 @@
       {
         "ordinal": 2,
         "name": "capture_date",
-        "type_info": "Text"
+        "type_info": "Timestamptz"
       },
       {
         "ordinal": 3,

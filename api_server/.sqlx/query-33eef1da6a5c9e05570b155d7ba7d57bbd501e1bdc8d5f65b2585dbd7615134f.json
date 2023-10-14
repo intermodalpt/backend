@@ -16,7 +16,7 @@
         "Varchar",
         "Jsonb",
         "Int4",
-        "Text",
+        "Timestamptz",
         "VarcharArray",
         "Int2",
         "Date",

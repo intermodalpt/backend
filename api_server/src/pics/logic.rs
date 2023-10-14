@@ -19,7 +19,7 @@
 use std::io::{BufReader, Cursor};
 
 use bytes::Bytes;
-use chrono::{Local, Utc};
+use chrono::Utc;
 use sha1::{Digest, Sha1};
 use sqlx::PgPool;
 
@@ -70,7 +70,7 @@ pub(crate) async fn upload_stop_picture(
         sha1: hex_hash.clone(),
         tagged: false,
         uploader: user_id,
-        upload_date: Local::now().to_string(),
+        upload_date: Utc::now(),
         capture_date: None,
         updater: None,
         update_date: None,
@@ -127,7 +127,7 @@ pub(crate) async fn upload_stop_picture(
         stop_pic_entry.dyn_meta.lat = exif_data.lat;
         stop_pic_entry.camera_ref = exif_data.camera;
         stop_pic_entry.capture_date =
-            exif_data.capture.map(|date| date.to_string());
+            exif_data.capture.map(|date| date.and_utc());
     };
 
     upload_picture_to_storage(
@@ -248,7 +248,7 @@ async fn delete_picture_from_storage(
 
 pub(crate) async fn upload_pano_picture(
     user_id: i32,
-    name: String,
+    mut name: String,
     bucket: &s3::Bucket,
     db_pool: &PgPool,
     content: &Bytes,

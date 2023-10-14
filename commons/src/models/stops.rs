@@ -16,7 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use chrono::NaiveDate;
+use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use utoipa::ToSchema;
@@ -98,7 +98,7 @@ pub struct Stop {
     pub lon: Option<f64>,
     #[serde(default)]
     pub notes: Option<String>,
-    pub update_date: String,
+    pub update_date: DateTime<Utc>,
     #[serde(default)]
     pub tags: Vec<String>,
     #[serde(flatten)]

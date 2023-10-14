@@ -41,12 +41,12 @@
       {
         "ordinal": 7,
         "name": "upload_date",
-        "type_info": "Text"
+        "type_info": "Timestamptz"
       },
       {
         "ordinal": 8,
         "name": "capture_date",
-        "type_info": "Text"
+        "type_info": "Timestamptz"
       },
       {
         "ordinal": 9,
