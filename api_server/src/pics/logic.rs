@@ -20,6 +20,7 @@ use std::io::{BufReader, Cursor};
 
 use bytes::Bytes;
 use chrono::Utc;
+use mime_guess::mime;
 use sha1::{Digest, Sha1};
 use sqlx::PgPool;
 
@@ -253,6 +254,10 @@ pub(crate) async fn upload_pano_picture(
     db_pool: &PgPool,
     content: &Bytes,
 ) -> Result<pics::PanoPic, Error> {
+    if !name.ends_with(".insp") {
+        return Err(Error::DependenciesNotMet);
+    }
+
     let mut hasher = Sha1::new();
     hasher.update(&content);
     let hash = hasher.finalize();
@@ -264,13 +269,8 @@ pub(crate) async fn upload_pano_picture(
         return Ok(pic);
     }
 
-    let mut original_img = image::load_from_memory(content.as_ref())
+    let _ = image::load_from_memory(content.as_ref())
         .map_err(|err| Error::ValidationFailure(err.to_string()))?;
-    let original_img_mime = mime_guess::from_path(&name);
-
-    if !matches!(original_img, image::DynamicImage::ImageRgb8(_)) {
-        original_img = image::DynamicImage::ImageRgb8(original_img.into_rgb8());
-    }
 
     let mut source_buffer = BufReader::new(Cursor::new(content.as_ref()));
 
@@ -285,7 +285,7 @@ pub(crate) async fn upload_pano_picture(
             })?,
     );
 
-    let mut stop_pic_entry = pics::PanoPic {
+    let stop_pic_entry = pics::PanoPic {
         id: 0,
         original_filename: name,
         sha1: hex_hash.clone(),
@@ -298,42 +298,25 @@ pub(crate) async fn upload_pano_picture(
         sensitive: true,
     };
 
-    upload_picture_to_storage(
-        bucket,
-        content,
-        &original_img,
-        original_img_mime,
-        &hex_hash,
-    )
-    .await?;
+    upload_pano_to_storage(bucket, content, &hex_hash).await?;
 
     // TODO Delete if insertion fails
     sql::insert_pano(db_pool, stop_pic_entry).await
 }
 
-
 async fn upload_pano_to_storage(
     bucket: &s3::Bucket,
     content: &Bytes,
-    original_img: &image::DynamicImage,
-    original_img_mime: mime_guess::MimeGuess,
     hex_hash: &str,
 ) -> Result<(), Error> {
-    let _status_code = if let Some(mime) = original_img_mime.first() {
-        bucket
-            .put_object_with_content_type(
-                format!("/pano/{}", hex_hash),
-                content.as_ref(),
-                mime.as_ref(),
-            )
-            .await
-            .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?
-    } else {
-        bucket
-            .put_object(format!("/pano/{}", hex_hash), content.as_ref())
-            .await
-            .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?
-    };
+    bucket
+        .put_object_with_content_type(
+            format!("/pano/{}", hex_hash),
+            content.as_ref(),
+            mime::IMAGE_JPEG.as_ref(),
+        )
+        .await
+        .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?;
 
     Ok(())
 }
