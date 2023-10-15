@@ -152,16 +152,19 @@ pub(crate) async fn update_operator_gtfs(
             meta.last_gtfs = Some(newest_file);
         }
         "tcb" => {
-            let path = format!("./data/operators/{}/gtfs.zip", operator_id);
-            let url = "https://www.transporlis.pt/desktopmodules/trp_opendata/ajax/downloadFile.ashx?op=41&u=web";
-
-            http::download_file(url, &path, None).await?;
-
-            let newest_file = gtfs_utils::extract_gtfs(
-                &format!("./data/operators/{}/gtfs.zip", operator_id),
-                &format!("./data/operators/{}/gtfs", operator_id),
-            )?;
-            meta.last_gtfs = Some(newest_file);
+            fetch_transporlis_feed(&mut meta, operator_id, 41).await?;
+        }
+        "ttsl" => {
+            fetch_transporlis_feed(&mut meta, operator_id, 4).await?;
+        }
+        "ml" => {
+            fetch_transporlis_feed(&mut meta, operator_id, 2).await?;
+        }
+        "cp" => {
+            fetch_transporlis_feed(&mut meta, operator_id, 3).await?;
+        }
+        "fert" => {
+            fetch_transporlis_feed(&mut meta, operator_id, 13).await?;
         }
         _ => {
             eprintln!("Unknown operator tag: {}", operator.tag);
@@ -170,4 +173,25 @@ pub(crate) async fn update_operator_gtfs(
 
     meta.last_update = Some(Utc::now());
     set_operator_storage_meta(operator_id, meta)
+}
+
+async fn fetch_transporlis_feed(
+    meta: &mut OperatorStorageMeta,
+    operator_id: i32,
+    transporlis_id: i32,
+) -> Result<(), Error>{
+    let path = format!("./data/operators/{}/gtfs.zip", operator_id);
+    let url = format!(
+        "https://www.transporlis.pt/desktopmodules/\
+            trp_opendata/ajax/downloadFile.ashx?op={transporlis_id}&u=web"
+    );
+
+    http::download_file(&url, &path, None).await?;
+
+    let newest_file = gtfs_utils::extract_gtfs(
+        &format!("./data/operators/{}/gtfs.zip", operator_id),
+        &format!("./data/operators/{}/gtfs", operator_id),
+    )?;
+    meta.last_gtfs = Some(newest_file);
+    Ok(())
 }
