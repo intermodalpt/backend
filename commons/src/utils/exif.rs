@@ -130,7 +130,9 @@ impl From<exif::Exif> for Exif {
         {
             if let exif::Value::Rational(val) = &field.value {
                 if let Ok(coord) = extract_f64_gps_coord(val) {
-                    result.lat = Some(coord);
+                    if !coord.is_nan() {
+                        result.lat = Some(coord);
+                    }
                 } else {
                     println!("Invalid value for GPS Lat");
                 }
@@ -144,7 +146,9 @@ impl From<exif::Exif> for Exif {
         {
             if let exif::Value::Rational(val) = &field.value {
                 if let Ok(coord) = extract_f64_gps_coord(val) {
-                    result.lon = Some(-coord);
+                    if !coord.is_nan() {
+                        result.lon = Some(-coord);
+                    }
                 } else {
                     println!("Invalid value for GPS Lon");
                 }
