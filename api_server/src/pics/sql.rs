@@ -39,7 +39,7 @@ pub(crate) async fn fetch_picture(
         r#"
 SELECT id, original_filename, sha1, tagged, public, sensitive, uploader,
     upload_date, capture_date, lon, lat, quality, width,
-    height, camera_ref, tags, notes
+    height, camera_ref, tags, attrs, notes
 FROM stop_pics
 WHERE id = $1
 "#,
@@ -69,6 +69,7 @@ WHERE id = $1
                 lat: row.lat,
                 quality: row.quality,
                 tags: row.tags,
+                attrs: row.attrs,
                 notes: row.notes,
             },
         })
@@ -84,7 +85,7 @@ pub(crate) async fn fetch_picture_by_hash(
         r#"
 SELECT id, original_filename, sha1, tagged, public, sensitive, uploader,
     upload_date, capture_date, lon, lat, quality, width,
-    height, camera_ref, tags, notes
+    height, camera_ref, tags, attrs, notes
 FROM stop_pics
 WHERE sha1 = $1
 "#,
@@ -114,6 +115,7 @@ WHERE sha1 = $1
                 lat: row.lat,
                 quality: row.quality,
                 tags: row.tags,
+                attrs: row.attrs,
                 notes: row.notes,
             },
         })
@@ -131,7 +133,7 @@ SELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,
     stop_pics.public, stop_pics.sensitive, stop_pics.uploader,
     stop_pics.upload_date, stop_pics.capture_date, stop_pics.lon, stop_pics.lat,
     stop_pics.quality, stop_pics.width, stop_pics.height, stop_pics.camera_ref,
-    stop_pics.tags, stop_pics.notes, stop_pics.tagged,
+    stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,
     array_remove(array_agg(stop_pic_stops.stop), NULL) as "stops!: Vec<i32>"
 FROM stop_pics
 LEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id
@@ -163,6 +165,7 @@ GROUP BY stop_pics.id
         lat: r.lat,
         quality: r.quality,
         tags: r.tags,
+        attrs: r.attrs,
         notes: r.notes,
         stops: r.stops,
     }))
@@ -178,7 +181,7 @@ SELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,
     stop_pics.public, stop_pics.sensitive, stop_pics.uploader,
     stop_pics.upload_date, stop_pics.capture_date, stop_pics.lon, stop_pics.lat,
     stop_pics.quality, stop_pics.width, stop_pics.height, stop_pics.camera_ref,
-    stop_pics.tags, stop_pics.notes, stop_pics.tagged,
+    stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,
     array_remove(array_agg(stop_pic_stops.stop), NULL) as "stops!: Vec<i32>"
 FROM stop_pics
 LEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id
@@ -209,6 +212,7 @@ GROUP BY stop_pics.id
         lat: r.lat,
         quality: r.quality,
         tags: r.tags,
+        attrs: r.attrs,
         notes: r.notes,
         stops: r.stops,
     })
@@ -280,7 +284,8 @@ pub(crate) async fn fetch_public_stop_pictures(
 ) -> Result<Vec<responses::PublicStopPic>> {
     Ok(sqlx::query!(
         r#"
-SELECT stop_pics.id, stop_pics.sha1, stop_pics.capture_date, stop_pics.lon, stop_pics.lat, stop_pics.tags, stop_pics.quality
+SELECT stop_pics.id, stop_pics.sha1, stop_pics.capture_date, stop_pics.lon, stop_pics.lat,
+    stop_pics.tags, stop_pics.attrs, stop_pics.quality
 FROM stop_pics
 JOIN stop_pic_stops on stop_pic_stops.pic = stop_pics.id
 WHERE stop_pics.tagged = true AND stop_pics.sensitive = false
@@ -303,6 +308,7 @@ ORDER BY stop_pics.capture_date DESC
             lon: r.lon,
             lat: r.lat,
             tags: r.tags,
+            attrs: r.attrs,
             quality: r.quality,
         }).collect()
     )
@@ -321,7 +327,7 @@ SELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,
     stop_pics.public, stop_pics.sensitive, stop_pics.uploader,
     stop_pics.upload_date, stop_pics.capture_date, stop_pics.quality,
     stop_pics.width, stop_pics.height, stop_pics.lon, stop_pics.lat,
-    stop_pics.camera_ref, stop_pics.tags, stop_pics.notes, stop_pics.tagged,
+    stop_pics.camera_ref, stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,
     array_remove(array_agg(stop_pic_stops.stop), NULL) as "stops!: Vec<i32>"
 FROM stop_pics
 LEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id
@@ -360,6 +366,7 @@ ORDER BY quality DESC
         lat: r.lat,
         quality: r.quality,
         tags: r.tags,
+        attrs: r.attrs,
         notes: r.notes,
         stops: r.stops,
     })
@@ -379,7 +386,7 @@ SELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,
     stop_pics.public, stop_pics.sensitive, stop_pics.uploader,
     stop_pics.upload_date, stop_pics.capture_date, stop_pics.quality,
     stop_pics.width, stop_pics.height, stop_pics.lon, stop_pics.lat,
-    stop_pics.camera_ref, stop_pics.tags, stop_pics.notes, stop_pics.tagged,
+    stop_pics.camera_ref, stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,
     array_remove(array_agg(stop_pic_stops.stop), NULL) as "stops!: Vec<i32>"
 FROM stop_pics
 LEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id
@@ -416,6 +423,7 @@ LIMIT $2 OFFSET $3
         lat: r.lat,
         quality: r.quality,
         tags: r.tags,
+        attrs: r.attrs,
         notes: r.notes,
         stops: r.stops,
     })
@@ -434,7 +442,7 @@ SELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,
     stop_pics.public, stop_pics.sensitive, stop_pics.uploader,
     stop_pics.upload_date, stop_pics.capture_date, stop_pics.quality,
     stop_pics.width, stop_pics.height, stop_pics.lon, stop_pics.lat,
-    stop_pics.camera_ref, stop_pics.tags, stop_pics.notes, stop_pics.tagged,
+    stop_pics.camera_ref, stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,
     array_remove(array_agg(stop_pic_stops.stop), NULL) as "stops!: Vec<i32>"
 FROM stop_pics
 LEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id
@@ -470,6 +478,7 @@ LIMIT $1 OFFSET $2
         lat: r.lat,
         quality: r.quality,
         tags: r.tags,
+        attrs: r.attrs,
         notes: r.notes,
         stops: r.stops,
     })
@@ -490,7 +499,7 @@ SELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,
     stop_pics.public, stop_pics.sensitive, stop_pics.uploader,
     stop_pics.upload_date, stop_pics.capture_date, stop_pics.quality,
     stop_pics.width, stop_pics.height, stop_pics.lon, stop_pics.lat,
-    stop_pics.camera_ref, stop_pics.tags, stop_pics.notes, stop_pics.tagged,
+    stop_pics.camera_ref, stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,
     array_remove(array_agg(stop_pic_stops.stop), NULL) as "stops!: Vec<i32>"
 FROM stop_pics
 LEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id
@@ -530,6 +539,7 @@ LIMIT $3 OFFSET $4
         lat: r.lat,
         quality: r.quality,
         tags: r.tags,
+        attrs: r.attrs,
         notes: r.notes,
         stops: r.stops,
     })
@@ -550,7 +560,7 @@ SELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,
     stop_pics.public, stop_pics.sensitive, stop_pics.uploader,
     stop_pics.upload_date, stop_pics.capture_date, stop_pics.quality,
     stop_pics.width, stop_pics.height, stop_pics.lon, stop_pics.lat,
-    stop_pics.camera_ref, stop_pics.tags, stop_pics.notes, stop_pics.tagged,
+    stop_pics.camera_ref, stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,
     array_remove(array_agg(stop_pic_stops.stop), NULL) as "stops!: Vec<i32>"
 FROM stop_pics
 LEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id
@@ -591,6 +601,7 @@ LIMIT $3 OFFSET $4
         lat: r.lat,
         quality: r.quality,
         tags: r.tags,
+        attrs: r.attrs,
         notes: r.notes,
         stops: r.stops,
     })
@@ -611,7 +622,7 @@ SELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,
     stop_pics.public, stop_pics.sensitive, stop_pics.uploader,
     stop_pics.upload_date, stop_pics.capture_date, stop_pics.quality,
     stop_pics.width, stop_pics.height, stop_pics.lon, stop_pics.lat,
-    stop_pics.camera_ref, stop_pics.tags, stop_pics.notes, stop_pics.tagged,
+    stop_pics.camera_ref, stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,
     array_remove(array_agg(stop_pic_stops.stop), NULL) as "stops!: Vec<i32>"
 FROM stop_pics
 LEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id
@@ -652,6 +663,7 @@ LIMIT $3 OFFSET $4
         lat: r.lat,
         quality: r.quality,
         tags: r.tags,
+        attrs: r.attrs,
         notes: r.notes,
         stops: r.stops,
     })
@@ -816,15 +828,16 @@ pub(crate) async fn update_picture_meta(
     let _res = sqlx::query!(
         r#"
 UPDATE stop_pics
-SET public=$1, sensitive=$2, lon=$3, lat=$4, tags=$5, quality=$6, updater=$7,
-    update_date=$8, tagged=true
-WHERE id=$9
+SET public=$1, sensitive=$2, lon=$3, lat=$4, tags=$5, attrs=$6, quality=$7, updater=$8,
+    update_date=$9, tagged=true
+WHERE id=$10
     "#,
         stop_pic_meta.public,
         stop_pic_meta.sensitive,
         stop_pic_meta.lon,
         stop_pic_meta.lat,
         &stop_pic_meta.tags,
+        &stop_pic_meta.attrs,
         stop_pic_meta.quality,
         user_id,
         update_date,

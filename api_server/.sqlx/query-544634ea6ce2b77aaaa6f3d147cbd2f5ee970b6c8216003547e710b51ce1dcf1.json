@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,\n    stop_pics.public, stop_pics.sensitive, stop_pics.uploader,\n    stop_pics.upload_date, stop_pics.capture_date, stop_pics.quality,\n    stop_pics.width, stop_pics.height, stop_pics.lon, stop_pics.lat,\n    stop_pics.camera_ref, stop_pics.tags, stop_pics.notes, stop_pics.tagged,\n    array_remove(array_agg(stop_pic_stops.stop), NULL) as \"stops!: Vec<i32>\"\nFROM stop_pics\nLEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id\nWHERE tagged=true\n    AND (stop_pics.uploader = $1\n        OR (stop_pics.public = true AND stop_pics.sensitive = false)\n        OR $2 = true)\nGROUP BY stop_pics.id\nORDER BY capture_date DESC, upload_date DESC\nLIMIT $3 OFFSET $4\n    ",
+  "query": "\nSELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,\n    stop_pics.public, stop_pics.sensitive, stop_pics.uploader,\n    stop_pics.upload_date, stop_pics.capture_date, stop_pics.quality,\n    stop_pics.width, stop_pics.height, stop_pics.lon, stop_pics.lat,\n    stop_pics.camera_ref, stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,\n    array_remove(array_agg(stop_pic_stops.stop), NULL) as \"stops!: Vec<i32>\"\nFROM stop_pics\nLEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id\nWHERE tagged=true\n    AND (stop_pics.uploader = $1\n        OR (stop_pics.public = true AND stop_pics.sensitive = false)\n        OR $2 = true)\nGROUP BY stop_pics.id\nORDER BY capture_date DESC, upload_date DESC\nLIMIT $3 OFFSET $4\n    ",
   "describe": {
     "columns": [
       {
@@ -76,20 +76,25 @@
       {
         "ordinal": 14,
         "name": "tags",
-        "type_info": "VarcharArray"
+        "type_info": "TextArray"
       },
       {
         "ordinal": 15,
+        "name": "attrs",
+        "type_info": "TextArray"
+      },
+      {
+        "ordinal": 16,
         "name": "notes",
         "type_info": "Text"
       },
       {
-        "ordinal": 16,
+        "ordinal": 17,
         "name": "tagged",
         "type_info": "Bool"
       },
       {
-        "ordinal": 17,
+        "ordinal": 18,
         "name": "stops!: Vec<i32>",
         "type_info": "Int4Array"
       }
@@ -118,10 +123,11 @@
       true,
       true,
       false,
+      false,
       true,
       false,
       null
     ]
   },
-  "hash": "6f1262e50c3723b7984a67bd3d5fea71e085e626ff30c9ee52213de3c3bc9220"
+  "hash": "544634ea6ce2b77aaaa6f3d147cbd2f5ee970b6c8216003547e710b51ce1dcf1"
 }

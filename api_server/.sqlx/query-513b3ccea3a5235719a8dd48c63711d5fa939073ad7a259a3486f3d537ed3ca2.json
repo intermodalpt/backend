@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT id, original_filename, sha1, tagged, public, sensitive, uploader,\n    upload_date, capture_date, lon, lat, quality, width,\n    height, camera_ref, tags, notes\nFROM stop_pics\nWHERE sha1 = $1\n",
+  "query": "\nSELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,\n    stop_pics.public, stop_pics.sensitive, stop_pics.uploader,\n    stop_pics.upload_date, stop_pics.capture_date, stop_pics.lon, stop_pics.lat,\n    stop_pics.quality, stop_pics.width, stop_pics.height, stop_pics.camera_ref,\n    stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,\n    array_remove(array_agg(stop_pic_stops.stop), NULL) as \"stops!: Vec<i32>\"\nFROM stop_pics\nLEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id\nGROUP BY stop_pics.id\n",
   "describe": {
     "columns": [
       {
@@ -20,79 +20,87 @@
       },
       {
         "ordinal": 3,
-        "name": "tagged",
-        "type_info": "Bool"
-      },
-      {
-        "ordinal": 4,
         "name": "public",
         "type_info": "Bool"
       },
       {
-        "ordinal": 5,
+        "ordinal": 4,
         "name": "sensitive",
         "type_info": "Bool"
       },
       {
-        "ordinal": 6,
+        "ordinal": 5,
         "name": "uploader",
         "type_info": "Int4"
       },
       {
-        "ordinal": 7,
+        "ordinal": 6,
         "name": "upload_date",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 8,
+        "ordinal": 7,
         "name": "capture_date",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 9,
+        "ordinal": 8,
         "name": "lon",
         "type_info": "Float8"
       },
       {
-        "ordinal": 10,
+        "ordinal": 9,
         "name": "lat",
         "type_info": "Float8"
       },
       {
-        "ordinal": 11,
+        "ordinal": 10,
         "name": "quality",
         "type_info": "Int2"
       },
       {
-        "ordinal": 12,
+        "ordinal": 11,
         "name": "width",
         "type_info": "Int4"
       },
       {
-        "ordinal": 13,
+        "ordinal": 12,
         "name": "height",
         "type_info": "Int4"
       },
       {
-        "ordinal": 14,
+        "ordinal": 13,
         "name": "camera_ref",
         "type_info": "Text"
       },
       {
-        "ordinal": 15,
+        "ordinal": 14,
         "name": "tags",
-        "type_info": "VarcharArray"
+        "type_info": "TextArray"
+      },
+      {
+        "ordinal": 15,
+        "name": "attrs",
+        "type_info": "TextArray"
       },
       {
         "ordinal": 16,
         "name": "notes",
         "type_info": "Text"
+      },
+      {
+        "ordinal": 17,
+        "name": "tagged",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 18,
+        "name": "stops!: Vec<i32>",
+        "type_info": "Int4Array"
       }
     ],
     "parameters": {
-      "Left": [
-        "Text"
-      ]
+      "Left": []
     },
     "nullable": [
       false,
@@ -102,7 +110,6 @@
       false,
       false,
       false,
-      false,
       true,
       true,
       true,
@@ -111,8 +118,11 @@
       false,
       true,
       false,
-      true
+      false,
+      true,
+      false,
+      null
     ]
   },
-  "hash": "0722e7beab0ba2831c348b4d86fe514ab1e5ac4f8b1ed9ddbbe7c956648e3abb"
+  "hash": "513b3ccea3a5235719a8dd48c63711d5fa939073ad7a259a3486f3d537ed3ca2"
 }

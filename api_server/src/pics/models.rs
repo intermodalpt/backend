@@ -29,6 +29,7 @@ pub(crate) mod requests {
         pub lon: Option<f64>,
         pub lat: Option<f64>,
         pub tags: Vec<String>,
+        pub attrs: Vec<String>,
         pub stops: Vec<i32>,
         pub notes: Option<String>,
         pub quality: i16,
@@ -58,6 +59,9 @@ pub(crate) mod requests {
             }
             if self.tags != pic.dyn_meta.tags {
                 patch.tags = Some(self.tags.clone());
+            }
+            if self.attrs != pic.dyn_meta.attrs {
+                patch.attrs = Some(self.attrs.clone());
             }
             if self.notes != pic.dyn_meta.notes {
                 patch.notes = Some(self.notes.clone());
@@ -96,6 +100,7 @@ pub(crate) mod responses {
         pub lat: Option<f64>,
         pub quality: i16,
         pub tags: Vec<String>,
+        pub attrs: Vec<String>,
         pub url_full: String,
         pub url_medium: String,
         pub url_thumb: String,
@@ -114,6 +119,7 @@ pub(crate) mod responses {
                 lat: value.dyn_meta.lat,
                 quality: value.dyn_meta.quality,
                 tags: value.dyn_meta.tags,
+                attrs: value.dyn_meta.attrs,
             }
         }
     }
@@ -137,6 +143,7 @@ pub(crate) mod responses {
         pub quality: i16,
         pub camera_ref: Option<String>,
         pub tags: Vec<String>,
+        pub attrs: Vec<String>,
         pub notes: Option<String>,
         pub stops: Vec<i32>,
         // TODO Consider this
@@ -168,6 +175,7 @@ pub(crate) mod responses {
                 quality: pic.dyn_meta.quality,
                 camera_ref: pic.camera_ref,
                 tags: pic.dyn_meta.tags,
+                attrs: pic.dyn_meta.attrs,
                 notes: pic.dyn_meta.notes,
                 tagged: pic.tagged,
                 stops,
@@ -191,6 +199,7 @@ pub(crate) mod responses {
         pub height: i32,
         pub camera_ref: Option<String>,
         pub tags: Vec<String>,
+        pub attrs: Vec<String>,
         pub notes: Option<String>,
         pub url_full: String,
         pub url_medium: String,

@@ -1049,6 +1049,7 @@ pub struct StopPicturePatch {
     pub lat: Option<Option<f64>>,
     pub quality: Option<i16>,
     pub tags: Option<Vec<String>>,
+    pub attrs: Option<Vec<String>>,
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",

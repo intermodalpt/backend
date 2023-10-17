@@ -70,39 +70,8 @@ pub struct StopPicDynMeta {
     pub lat: Option<f64>,
     pub quality: i16,
     pub tags: Vec<String>,
+    pub attrs: Vec<String>,
     pub notes: Option<String>,
-}
-
-impl StopPicDynMeta {
-    pub(crate) fn derive_patch(
-        self,
-        pic: &StopPic,
-    ) -> crate::models::history::StopPicturePatch {
-        let mut patch = crate::models::history::StopPicturePatch::default();
-
-        if self.public != pic.dyn_meta.public {
-            patch.public = Some(self.public);
-        }
-        if self.sensitive != pic.dyn_meta.sensitive {
-            patch.sensitive = Some(self.sensitive);
-        }
-        if self.lon != pic.dyn_meta.lon {
-            patch.lon = Some(self.lon);
-        }
-        if self.lat != pic.dyn_meta.lat {
-            patch.lat = Some(self.lat);
-        }
-        if self.quality != pic.dyn_meta.quality {
-            patch.quality = Some(self.quality);
-        }
-        if self.tags != pic.dyn_meta.tags {
-            patch.tags = Some(self.tags);
-        }
-        if self.notes != pic.dyn_meta.notes {
-            patch.notes = Some(self.notes);
-        }
-        patch
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]

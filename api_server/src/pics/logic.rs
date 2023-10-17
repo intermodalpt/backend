@@ -85,6 +85,7 @@ pub(crate) async fn upload_stop_picture(
             lat: None,
             quality: 0,
             tags: vec![],
+            attrs: vec![],
             notes: None,
         },
     };
@@ -249,7 +250,7 @@ async fn delete_picture_from_storage(
 
 pub(crate) async fn upload_pano_picture(
     user_id: i32,
-    mut name: String,
+    name: String,
     bucket: &s3::Bucket,
     db_pool: &PgPool,
     content: &Bytes,
