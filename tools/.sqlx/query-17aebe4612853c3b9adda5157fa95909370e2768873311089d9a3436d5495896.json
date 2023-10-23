@@ -76,7 +76,7 @@
       {
         "ordinal": 14,
         "name": "update_date",
-        "type_info": "Text"
+        "type_info": "Timestamptz"
       },
       {
         "ordinal": 15,
