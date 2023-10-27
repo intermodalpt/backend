@@ -20,13 +20,13 @@ use std::cmp::Ordering;
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct OSMAuthor {
     pub uid: i32,
     pub username: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub struct StoredStopMeta {
     pub pos_author_uid: i32,
     pub pos_author_uname: String,
@@ -35,13 +35,13 @@ pub struct StoredStopMeta {
     pub versions: Vec<NodeVersion>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub struct StopNode {
     pub id: i64,
     pub versions: Vec<NodeVersion>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct NodeVersion {
     pub version: i32,
     pub author: i32,

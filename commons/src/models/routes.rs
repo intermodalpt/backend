@@ -18,7 +18,7 @@
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Route {
     pub id: i32,
     pub type_id: i32,
@@ -32,7 +32,7 @@ pub struct Route {
     pub active: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Subroute {
     pub id: i32,
     pub route_id: i32,
@@ -41,7 +41,7 @@ pub struct Subroute {
     pub polyline: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Departure {
     pub id: i32,
     pub subroute_id: i32,

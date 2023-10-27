@@ -99,7 +99,7 @@ pub struct AbnormallyStop {
 
 // Issues are problems raised by the community in a
 // moderated fashion, that ensures issue quality and deduplication.
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct Issue {
     pub id: i32,
     pub title: String,

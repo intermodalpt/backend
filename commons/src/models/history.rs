@@ -26,7 +26,7 @@ use super::pics;
 use super::routes;
 use super::stops;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Contribution {
     pub id: i64,
     pub author_id: i32,
@@ -38,7 +38,7 @@ pub struct Contribution {
     pub comment: Option<String>,
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub struct Changeset {
     pub id: i64,
     pub author_id: i32,
@@ -47,7 +47,7 @@ pub struct Changeset {
     pub contribution_id: Option<i64>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum Change {
     // Hint: Do not to change these names without a corresponding migration
     // as they'll be stored as strings in the database
@@ -114,7 +114,7 @@ pub enum Change {
     },
 }
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct StopPatch {
     #[serde(
         default,
@@ -917,7 +917,7 @@ impl StopPatch {
     }
 }
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct RoutePatch {
     pub type_id: Option<i32>,
     pub operator_id: Option<i32>,
@@ -975,7 +975,7 @@ impl RoutePatch {
     }
 }
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct SubroutePatch {
     pub flag: Option<String>,
     pub circular: Option<bool>,
@@ -1003,7 +1003,7 @@ impl SubroutePatch {
     }
 }
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct DeparturePatch {
     pub time: Option<i16>,
     pub subroute_id: Option<i32>,
@@ -1031,7 +1031,7 @@ impl DeparturePatch {
     }
 }
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct StopPicturePatch {
     pub public: Option<bool>,
     pub sensitive: Option<bool>,
@@ -1095,7 +1095,7 @@ impl StopPicturePatch {
     }
 }
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct IssuePatch {
     pub title: Option<String>,
     pub message: Option<String>,
