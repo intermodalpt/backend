@@ -128,8 +128,7 @@ pub(crate) async fn upload_stop_picture(
         stop_pic_entry.dyn_meta.lon = exif_data.lon;
         stop_pic_entry.dyn_meta.lat = exif_data.lat;
         stop_pic_entry.camera_ref = exif_data.camera;
-        stop_pic_entry.capture_date =
-            exif_data.capture.map(|date| date.and_utc());
+        stop_pic_entry.capture_date = exif_data.capture;
     };
 
     upload_picture_to_storage(
@@ -292,7 +291,7 @@ pub(crate) async fn upload_pano_picture(
         sha1: hex_hash.clone(),
         uploader: user_id,
         upload_date: Utc::now(),
-        capture_date: exif.capture.map(|dt| dt.and_utc()),
+        capture_date: exif.capture,
         stop_id: None,
         lon: exif.lon,
         lat: exif.lat,

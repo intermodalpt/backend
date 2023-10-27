@@ -16,7 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
@@ -29,7 +29,7 @@ pub struct TaggedStopPic {
     pub sensitive: bool,
     pub uploader: i32,
     pub upload_date: DateTime<Utc>,
-    pub capture_date: Option<DateTime<Utc>>,
+    pub capture_date: Option<NaiveDateTime>,
     // TODO if is tagged then this should not be optional.
     pub lon: Option<f64>,
     pub lat: Option<f64>,
@@ -52,7 +52,7 @@ pub struct StopPic {
     pub tagged: bool,
     pub uploader: i32,
     pub upload_date: DateTime<Utc>,
-    pub capture_date: Option<DateTime<Utc>>,
+    pub capture_date: Option<NaiveDateTime>,
     pub updater: Option<i32>,
     pub update_date: Option<DateTime<Utc>>,
     pub width: i32,
@@ -61,7 +61,6 @@ pub struct StopPic {
     #[serde(flatten)]
     pub dyn_meta: StopPicDynMeta,
 }
-
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct StopPicDynMeta {
     pub public: bool,
@@ -97,6 +96,6 @@ pub struct PanoPic {
     pub lat: Option<f64>,
     pub uploader: i32,
     pub upload_date: DateTime<Utc>,
-    pub capture_date: Option<DateTime<Utc>>,
+    pub capture_date: Option<NaiveDateTime>,
     pub sensitive: bool,
 }

@@ -72,7 +72,7 @@ pub(crate) mod requests {
 }
 
 pub(crate) mod responses {
-    use chrono::{DateTime, Utc};
+    use chrono::{DateTime, NaiveDateTime, Utc};
     use serde::Serialize;
     use utoipa::ToSchema;
 
@@ -95,7 +95,7 @@ pub(crate) mod responses {
         pub id: i32,
         // TODO deprecate
         pub sha1: String,
-        pub capture_date: Option<DateTime<Utc>>,
+        pub capture_date: Option<NaiveDateTime>,
         pub lon: Option<f64>,
         pub lat: Option<f64>,
         pub quality: i16,
@@ -134,7 +134,7 @@ pub(crate) mod responses {
         pub sensitive: bool,
         pub uploader: i32,
         pub upload_date: DateTime<Utc>,
-        pub capture_date: Option<DateTime<Utc>>,
+        pub capture_date: Option<NaiveDateTime>,
         // TODO if is tagged then this should not be optional.
         pub lon: Option<f64>,
         pub lat: Option<f64>,
@@ -192,7 +192,7 @@ pub(crate) mod responses {
         pub sensitive: bool,
         pub uploader: i32,
         pub upload_date: DateTime<Utc>,
-        pub capture_date: Option<DateTime<Utc>>,
+        pub capture_date: Option<NaiveDateTime>,
         pub lon: Option<f64>,
         pub lat: Option<f64>,
         pub width: i32,
@@ -228,7 +228,7 @@ pub(crate) mod responses {
         pub lat: Option<f64>,
         pub uploader: i32,
         pub upload_date: DateTime<Utc>,
-        pub capture_date: Option<DateTime<Utc>>,
+        pub capture_date: Option<NaiveDateTime>,
         pub sensitive: bool,
     }
 
@@ -239,7 +239,7 @@ pub(crate) mod responses {
         pub stop_id: Option<i32>,
         pub lon: Option<f64>,
         pub lat: Option<f64>,
-        pub capture_date: Option<DateTime<Utc>>,
+        pub capture_date: Option<NaiveDateTime>,
     }
 
     #[derive(Debug, Serialize, ToSchema)]
