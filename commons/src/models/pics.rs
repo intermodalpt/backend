@@ -70,8 +70,21 @@ pub struct StopPicDynMeta {
     pub lat: Option<f64>,
     pub quality: i16,
     pub tags: Vec<String>,
+    #[serde(default)]
     pub attrs: Vec<String>,
     pub notes: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct StopAttrs {
+    pub id: i32,
+    pub attrs: Vec<String>,
+}
+
+impl From<(i32, Vec<String>)> for StopAttrs {
+    fn from((id, attrs): (i32, Vec<String>)) -> Self {
+        StopAttrs { id, attrs }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]

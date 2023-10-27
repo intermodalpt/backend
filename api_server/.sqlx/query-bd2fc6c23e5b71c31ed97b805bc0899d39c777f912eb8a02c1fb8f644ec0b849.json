@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT stop, attrs\nFROM stop_pic_stops\nWHERE pic = $1\nORDER BY stop ASC\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "stop",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "attrs",
+        "type_info": "TextArray"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "bd2fc6c23e5b71c31ed97b805bc0899d39c777f912eb8a02c1fb8f644ec0b849"
+}

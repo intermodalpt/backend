@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,\n    stop_pics.public, stop_pics.sensitive, stop_pics.uploader,\n    stop_pics.upload_date, stop_pics.capture_date, stop_pics.quality,\n    stop_pics.width, stop_pics.height, stop_pics.lon, stop_pics.lat,\n    stop_pics.camera_ref, stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,\n    array_remove(array_agg(stop_pic_stops.stop), NULL) as \"stops!: Vec<i32>\"\nFROM stop_pics\nLEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id\nWHERE uploader=$1\nGROUP BY stop_pics.id\nORDER BY capture_date DESC, upload_date DESC\nLIMIT $2 OFFSET $3\n    ",
+  "query": "\nSELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,\n    stop_pics.public, stop_pics.sensitive, stop_pics.uploader,\n    stop_pics.upload_date, stop_pics.capture_date, stop_pics.quality,\n    stop_pics.width, stop_pics.height, stop_pics.lon, stop_pics.lat,\n    stop_pics.camera_ref, stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,\n    array_remove(array_agg(ROW(stop_pic_stops.stop, stop_pic_stops.attrs)), NULL) as \"rels!: Vec<(i32, Vec<String>)>\"\nFROM stop_pics\nLEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id\nWHERE stop_pic_stops.stop=$1\n    AND (stop_pics.uploader = $2\n        OR (stop_pics.public = true AND stop_pics.sensitive = false)\n        OR $3 = true)\nGROUP BY stop_pics.id\nORDER BY quality DESC\n    ",
   "describe": {
     "columns": [
       {
@@ -41,7 +41,7 @@
       {
         "ordinal": 7,
         "name": "capture_date",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamp"
       },
       {
         "ordinal": 8,
@@ -95,15 +95,15 @@
       },
       {
         "ordinal": 18,
-        "name": "stops!: Vec<i32>",
-        "type_info": "Int4Array"
+        "name": "rels!: Vec<(i32, Vec<String>)>",
+        "type_info": "RecordArray"
       }
     ],
     "parameters": {
       "Left": [
         "Int4",
-        "Int8",
-        "Int8"
+        "Int4",
+        "Bool"
       ]
     },
     "nullable": [
@@ -128,5 +128,5 @@
       null
     ]
   },
-  "hash": "7e7815b9eff31e551f221534a338357c9b6ef0fba157b45edd3c8aee8c9f2ef2"
+  "hash": "5d36b788780852c542ab5b48d70b7cbc6671789647bf74dd42c83364a344212f"
 }

@@ -324,13 +324,22 @@ pub(crate) async fn upload_stop_picture(
         claims.uid,
         &[history::Change::StopPicUpload {
             pic: pic.clone(),
-            stops: vec![stop_id],
+            stops: vec![pics::StopAttrs {
+                id: stop_id,
+                attrs: vec![],
+            }],
         }],
         None,
     )
     .await?;
 
-    let pic = responses::PicWithStops::from((pic, vec![stop_id]));
+    let pic = responses::PicWithStops::from((
+        pic,
+        vec![pics::StopAttrs {
+            id: stop_id,
+            attrs: vec![],
+        }],
+    ));
 
     Ok(Json(pic))
 }
@@ -387,11 +396,32 @@ pub(crate) async fn patch_stop_picture_meta(
     }
 
     //TODO as a transaction
-    let stops = sql::fetch_picture_stops(&state.pool, pic.id).await?;
+    let original_rels =
+        sql::fetch_picture_stops_rel_attrs(&state.pool, pic.id).await?;
+
+    let new_stop_attrs = stop_pic_meta
+        .stops
+        .iter()
+        .map(|rel| (rel.id, &rel.attrs))
+        .collect::<HashMap<i32, &Vec<String>>>();
+
+    if new_stop_attrs.len() != stop_pic_meta.stops.len() {
+        return Err(Error::ValidationFailure(
+            "Duplicate stop ids in the request".to_string(),
+        ));
+    }
+
+    let attrs_changed = !(original_rels.len() == new_stop_attrs.len()
+        && original_rels.iter().all(|stop_rel| {
+            new_stop_attrs
+                .get(&stop_rel.id)
+                .map(|new_attrs| stop_rel.attrs == **new_attrs)
+                .unwrap_or(false)
+        }));
 
     let patch = stop_pic_meta.derive_patch(&pic);
 
-    let changed = !(patch.is_empty() && stops == stop_pic_meta.stops);
+    let changed = !(patch.is_empty() && attrs_changed);
 
     if changed {
         contrib::sql::insert_changeset_log(
@@ -399,7 +429,7 @@ pub(crate) async fn patch_stop_picture_meta(
             claims.uid,
             &[history::Change::StopPicMetaUpdate {
                 original_meta: pic.dyn_meta,
-                original_stops: stops,
+                original_stops: original_rels,
                 meta_patch: patch,
                 stops: stop_pic_meta.stops.clone(),
             }],
@@ -438,14 +468,18 @@ pub(crate) async fn delete_picture(
         return Err(Error::Forbidden);
     }
 
-    let stops = sql::fetch_picture_stops(&state.pool, pic.id).await?;
+    let stop_rels =
+        sql::fetch_picture_stops_rel_attrs(&state.pool, pic.id).await?;
 
     logic::delete_picture(picture_id, &state.bucket, &state.pool).await?;
 
     contrib::sql::insert_changeset_log(
         &state.pool,
         claims.uid,
-        &[history::Change::StopPicDeletion { pic, stops }],
+        &[history::Change::StopPicDeletion {
+            pic,
+            stops: stop_rels,
+        }],
         None,
     )
     .await?;

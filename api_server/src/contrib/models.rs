@@ -199,7 +199,7 @@ pub(crate) mod requests {
     #[derive(Deserialize)]
     pub struct NewPictureContribution {
         pub contribution: pics::StopPicDynMeta,
-        pub stops: Vec<i32>,
+        pub stops: Vec<pics::StopAttrs>,
         pub comment: Option<String>,
     }
 }

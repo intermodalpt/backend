@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO stop_pic_stops(pic, stop, attrs)\nVALUES ($1, $2, $3)\nON CONFLICT (pic, stop)\nDO UPDATE SET attrs = EXCLUDED.attrs\n    ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int4",
+        "TextArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d0c390d0ff14e8eae7c323dae170ed9eeb25785299c4a9313bc04de37a02ab60"
+}

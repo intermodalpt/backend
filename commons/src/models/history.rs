@@ -93,17 +93,17 @@ pub enum Change {
     },
     StopPicUpload {
         pic: pics::StopPic,
-        stops: Vec<i32>,
+        stops: Vec<pics::StopAttrs>,
     },
     StopPicMetaUpdate {
         original_meta: pics::StopPicDynMeta,
-        original_stops: Vec<i32>,
+        original_stops: Vec<pics::StopAttrs>,
         meta_patch: StopPicturePatch,
-        stops: Vec<i32>,
+        stops: Vec<pics::StopAttrs>,
     },
     StopPicDeletion {
         pic: pics::StopPic,
-        stops: Vec<i32>,
+        stops: Vec<pics::StopAttrs>,
     },
     IssueCreation {
         data: operators::Issue,

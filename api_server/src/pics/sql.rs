@@ -134,7 +134,7 @@ SELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,
     stop_pics.upload_date, stop_pics.capture_date, stop_pics.lon, stop_pics.lat,
     stop_pics.quality, stop_pics.width, stop_pics.height, stop_pics.camera_ref,
     stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,
-    array_remove(array_agg(stop_pic_stops.stop), NULL) as "stops!: Vec<i32>"
+	array_remove(array_agg(ROW(stop_pic_stops.stop, stop_pic_stops.attrs)), NULL) as "rels!: Vec<(i32, Vec<String>)>"
 FROM stop_pics
 LEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id
 WHERE stop_pics.id = $1
@@ -167,7 +167,7 @@ GROUP BY stop_pics.id
         tags: r.tags,
         attrs: r.attrs,
         notes: r.notes,
-        stops: r.stops,
+        stops: r.rels.into_iter().map(|rel| rel.into()).collect()
     }))
 }
 
@@ -182,7 +182,7 @@ SELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,
     stop_pics.upload_date, stop_pics.capture_date, stop_pics.lon, stop_pics.lat,
     stop_pics.quality, stop_pics.width, stop_pics.height, stop_pics.camera_ref,
     stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,
-    array_remove(array_agg(stop_pic_stops.stop), NULL) as "stops!: Vec<i32>"
+    array_remove(array_agg(ROW(stop_pic_stops.stop, stop_pic_stops.attrs)), NULL) as "rels!: Vec<(i32, Vec<String>)>"
 FROM stop_pics
 LEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id
 GROUP BY stop_pics.id
@@ -214,7 +214,7 @@ GROUP BY stop_pics.id
         tags: r.tags,
         attrs: r.attrs,
         notes: r.notes,
-        stops: r.stops,
+        stops: r.rels.into_iter().map(|rel| rel.into()).collect(),
     })
     .collect())
 }
@@ -257,15 +257,16 @@ GROUP BY stop_pics.id
 }
 
 /// All of the stops that are linked to a picture
-pub(crate) async fn fetch_picture_stops(
+pub(crate) async fn fetch_picture_stops_rel_attrs(
     pool: &PgPool,
     picture_id: i32,
-) -> Result<Vec<i32>> {
+) -> Result<Vec<pics::StopAttrs>> {
     Ok(sqlx::query!(
         r#"
-SELECT stop
+SELECT stop, attrs
 FROM stop_pic_stops
 WHERE pic = $1
+ORDER BY stop ASC
 "#,
         picture_id
     )
@@ -273,7 +274,10 @@ WHERE pic = $1
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?
     .into_iter()
-    .map(|r| r.stop)
+    .map(|r| pics::StopAttrs {
+        id: r.stop,
+        attrs: r.attrs,
+    })
     .collect())
 }
 
@@ -328,7 +332,7 @@ SELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,
     stop_pics.upload_date, stop_pics.capture_date, stop_pics.quality,
     stop_pics.width, stop_pics.height, stop_pics.lon, stop_pics.lat,
     stop_pics.camera_ref, stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,
-    array_remove(array_agg(stop_pic_stops.stop), NULL) as "stops!: Vec<i32>"
+    array_remove(array_agg(ROW(stop_pic_stops.stop, stop_pic_stops.attrs)), NULL) as "rels!: Vec<(i32, Vec<String>)>"
 FROM stop_pics
 LEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id
 WHERE stop_pic_stops.stop=$1
@@ -368,7 +372,7 @@ ORDER BY quality DESC
         tags: r.tags,
         attrs: r.attrs,
         notes: r.notes,
-        stops: r.stops,
+        stops: r.rels.into_iter().map(|rel| rel.into()).collect()
     })
     .collect())
 }
@@ -387,7 +391,7 @@ SELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,
     stop_pics.upload_date, stop_pics.capture_date, stop_pics.quality,
     stop_pics.width, stop_pics.height, stop_pics.lon, stop_pics.lat,
     stop_pics.camera_ref, stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,
-    array_remove(array_agg(stop_pic_stops.stop), NULL) as "stops!: Vec<i32>"
+    array_remove(array_agg(ROW(stop_pic_stops.stop, stop_pic_stops.attrs)), NULL) as "rels!: Vec<(i32, Vec<String>)>"
 FROM stop_pics
 LEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id
 WHERE uploader=$1
@@ -425,7 +429,7 @@ LIMIT $2 OFFSET $3
         tags: r.tags,
         attrs: r.attrs,
         notes: r.notes,
-        stops: r.stops,
+        stops: r.rels.into_iter().map(|rel| rel.into()).collect()
     })
     .collect())
 }
@@ -443,7 +447,7 @@ SELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,
     stop_pics.upload_date, stop_pics.capture_date, stop_pics.quality,
     stop_pics.width, stop_pics.height, stop_pics.lon, stop_pics.lat,
     stop_pics.camera_ref, stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,
-    array_remove(array_agg(stop_pic_stops.stop), NULL) as "stops!: Vec<i32>"
+    array_remove(array_agg(ROW(stop_pic_stops.stop, stop_pic_stops.attrs)), NULL) as "rels!: Vec<(i32, Vec<String>)>"
 FROM stop_pics
 LEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id
 WHERE public=true AND sensitive=false
@@ -480,7 +484,7 @@ LIMIT $1 OFFSET $2
         tags: r.tags,
         attrs: r.attrs,
         notes: r.notes,
-        stops: r.stops,
+        stops: r.rels.into_iter().map(|rel| rel.into()).collect()
     })
     .collect())
 }
@@ -500,7 +504,7 @@ SELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,
     stop_pics.upload_date, stop_pics.capture_date, stop_pics.quality,
     stop_pics.width, stop_pics.height, stop_pics.lon, stop_pics.lat,
     stop_pics.camera_ref, stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,
-    array_remove(array_agg(stop_pic_stops.stop), NULL) as "stops!: Vec<i32>"
+    array_remove(array_agg(ROW(stop_pic_stops.stop, stop_pic_stops.attrs)), NULL) as "rels!: Vec<(i32, Vec<String>)>"
 FROM stop_pics
 LEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id
 WHERE stop_pics.uploader = $1
@@ -541,7 +545,7 @@ LIMIT $3 OFFSET $4
         tags: r.tags,
         attrs: r.attrs,
         notes: r.notes,
-        stops: r.stops,
+        stops: r.rels.into_iter().map(|rel| rel.into()).collect()
     })
     .collect())
 }
@@ -561,7 +565,7 @@ SELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,
     stop_pics.upload_date, stop_pics.capture_date, stop_pics.quality,
     stop_pics.width, stop_pics.height, stop_pics.lon, stop_pics.lat,
     stop_pics.camera_ref, stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,
-    array_remove(array_agg(stop_pic_stops.stop), NULL) as "stops!: Vec<i32>"
+    array_remove(array_agg(ROW(stop_pic_stops.stop, stop_pic_stops.attrs)), NULL) as "rels!: Vec<(i32, Vec<String>)>"
 FROM stop_pics
 LEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id
 WHERE tagged=true
@@ -603,7 +607,7 @@ LIMIT $3 OFFSET $4
         tags: r.tags,
         attrs: r.attrs,
         notes: r.notes,
-        stops: r.stops,
+        stops: r.rels.into_iter().map(|rel| rel.into()).collect()
     })
     .collect())
 }
@@ -623,7 +627,7 @@ SELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,
     stop_pics.upload_date, stop_pics.capture_date, stop_pics.quality,
     stop_pics.width, stop_pics.height, stop_pics.lon, stop_pics.lat,
     stop_pics.camera_ref, stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,
-    array_remove(array_agg(stop_pic_stops.stop), NULL) as "stops!: Vec<i32>"
+    array_remove(array_agg(ROW(stop_pic_stops.stop, stop_pic_stops.attrs)), NULL) as "rels!: Vec<(i32, Vec<String>)>"
 FROM stop_pics
 LEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id
 WHERE tagged=false
@@ -665,7 +669,7 @@ LIMIT $3 OFFSET $4
         tags: r.tags,
         attrs: r.attrs,
         notes: r.notes,
-        stops: r.stops,
+        stops: r.rels.into_iter().map(|rel| rel.into()).collect()
     })
     .collect())
 }
@@ -849,7 +853,7 @@ WHERE id=$10
 
     if !stop_pic_meta.stops.is_empty() {
         // TODO add updater and update date
-        let stop_ids = stop_pic_meta.stops.iter().join(",");
+        let stop_ids = stop_pic_meta.stops.iter().map(|rel| rel.id).join(",");
 
         let _res = sqlx::query(&format!(
             r#"
@@ -862,15 +866,17 @@ WHERE id=$10
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
-        for stop_id in stop_pic_meta.stops {
+        for stop_rel in stop_pic_meta.stops {
             let _res = sqlx::query!(
                 r#"
-INSERT INTO stop_pic_stops(pic, stop)
-VALUES ($1, $2)
-ON CONFLICT DO NOTHING
+INSERT INTO stop_pic_stops(pic, stop, attrs)
+VALUES ($1, $2, $3)
+ON CONFLICT (pic, stop)
+DO UPDATE SET attrs = EXCLUDED.attrs
     "#,
                 stop_picture_id,
-                stop_id
+                stop_rel.id,
+                &stop_rel.attrs
             )
             .execute(&mut *transaction)
             .await

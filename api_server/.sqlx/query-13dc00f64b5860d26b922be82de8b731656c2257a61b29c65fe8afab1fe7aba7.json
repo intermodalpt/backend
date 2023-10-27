@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,\n    stop_pics.public, stop_pics.sensitive, stop_pics.uploader,\n    stop_pics.upload_date, stop_pics.capture_date, stop_pics.lon, stop_pics.lat,\n    stop_pics.quality, stop_pics.width, stop_pics.height, stop_pics.camera_ref,\n    stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,\n    array_remove(array_agg(stop_pic_stops.stop), NULL) as \"stops!: Vec<i32>\"\nFROM stop_pics\nLEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id\nGROUP BY stop_pics.id\n",
+  "query": "\nSELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,\n    stop_pics.public, stop_pics.sensitive, stop_pics.uploader,\n    stop_pics.upload_date, stop_pics.capture_date, stop_pics.quality,\n    stop_pics.width, stop_pics.height, stop_pics.lon, stop_pics.lat,\n    stop_pics.camera_ref, stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,\n    array_remove(array_agg(ROW(stop_pic_stops.stop, stop_pic_stops.attrs)), NULL) as \"rels!: Vec<(i32, Vec<String>)>\"\nFROM stop_pics\nLEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id\nWHERE public=true AND sensitive=false\nGROUP BY stop_pics.id\nORDER BY capture_date DESC, upload_date DESC\nLIMIT $1 OFFSET $2\n    ",
   "describe": {
     "columns": [
       {
@@ -41,32 +41,32 @@
       {
         "ordinal": 7,
         "name": "capture_date",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamp"
       },
       {
         "ordinal": 8,
-        "name": "lon",
-        "type_info": "Float8"
-      },
-      {
-        "ordinal": 9,
-        "name": "lat",
-        "type_info": "Float8"
-      },
-      {
-        "ordinal": 10,
         "name": "quality",
         "type_info": "Int2"
       },
       {
-        "ordinal": 11,
+        "ordinal": 9,
         "name": "width",
         "type_info": "Int4"
       },
       {
-        "ordinal": 12,
+        "ordinal": 10,
         "name": "height",
         "type_info": "Int4"
+      },
+      {
+        "ordinal": 11,
+        "name": "lon",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 12,
+        "name": "lat",
+        "type_info": "Float8"
       },
       {
         "ordinal": 13,
@@ -95,12 +95,15 @@
       },
       {
         "ordinal": 18,
-        "name": "stops!: Vec<i32>",
-        "type_info": "Int4Array"
+        "name": "rels!: Vec<(i32, Vec<String>)>",
+        "type_info": "RecordArray"
       }
     ],
     "parameters": {
-      "Left": []
+      "Left": [
+        "Int8",
+        "Int8"
+      ]
     },
     "nullable": [
       false,
@@ -111,11 +114,11 @@
       false,
       false,
       true,
+      false,
+      false,
+      false,
       true,
       true,
-      false,
-      false,
-      false,
       true,
       false,
       false,
@@ -124,5 +127,5 @@
       null
     ]
   },
-  "hash": "513b3ccea3a5235719a8dd48c63711d5fa939073ad7a259a3486f3d537ed3ca2"
+  "hash": "13dc00f64b5860d26b922be82de8b731656c2257a61b29c65fe8afab1fe7aba7"
 }

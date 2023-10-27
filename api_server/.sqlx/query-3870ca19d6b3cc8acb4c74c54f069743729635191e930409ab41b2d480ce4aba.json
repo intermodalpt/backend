@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,\n    stop_pics.public, stop_pics.sensitive, stop_pics.uploader,\n    stop_pics.upload_date, stop_pics.capture_date, stop_pics.quality,\n    stop_pics.width, stop_pics.height, stop_pics.lon, stop_pics.lat,\n    stop_pics.camera_ref, stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,\n    array_remove(array_agg(stop_pic_stops.stop), NULL) as \"stops!: Vec<i32>\"\nFROM stop_pics\nLEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id\nWHERE stop_pic_stops.stop=$1\n    AND (stop_pics.uploader = $2\n        OR (stop_pics.public = true AND stop_pics.sensitive = false)\n        OR $3 = true)\nGROUP BY stop_pics.id\nORDER BY quality DESC\n    ",
+  "query": "\nSELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,\n    stop_pics.public, stop_pics.sensitive, stop_pics.uploader,\n    stop_pics.upload_date, stop_pics.capture_date, stop_pics.quality,\n    stop_pics.width, stop_pics.height, stop_pics.lon, stop_pics.lat,\n    stop_pics.camera_ref, stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,\n    array_remove(array_agg(ROW(stop_pic_stops.stop, stop_pic_stops.attrs)), NULL) as \"rels!: Vec<(i32, Vec<String>)>\"\nFROM stop_pics\nLEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id\nWHERE tagged=false\n    AND (stop_pics.uploader = $1\n        OR (stop_pics.public = true AND stop_pics.sensitive = false)\n        OR $2 = true)\nGROUP BY stop_pics.id\nORDER BY capture_date DESC, upload_date DESC\nLIMIT $3 OFFSET $4\n    ",
   "describe": {
     "columns": [
       {
@@ -41,7 +41,7 @@
       {
         "ordinal": 7,
         "name": "capture_date",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamp"
       },
       {
         "ordinal": 8,
@@ -95,15 +95,16 @@
       },
       {
         "ordinal": 18,
-        "name": "stops!: Vec<i32>",
-        "type_info": "Int4Array"
+        "name": "rels!: Vec<(i32, Vec<String>)>",
+        "type_info": "RecordArray"
       }
     ],
     "parameters": {
       "Left": [
         "Int4",
-        "Int4",
-        "Bool"
+        "Bool",
+        "Int8",
+        "Int8"
       ]
     },
     "nullable": [
@@ -128,5 +129,5 @@
       null
     ]
   },
-  "hash": "e08427071e09eca3820c86446df202ebeb38c0f1b62e8b0c0905446f7e6af0b7"
+  "hash": "3870ca19d6b3cc8acb4c74c54f069743729635191e930409ab41b2d480ce4aba"
 }

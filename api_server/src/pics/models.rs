@@ -30,7 +30,7 @@ pub(crate) mod requests {
         pub lat: Option<f64>,
         pub tags: Vec<String>,
         pub attrs: Vec<String>,
-        pub stops: Vec<i32>,
+        pub stops: Vec<pics::StopAttrs>,
         pub notes: Option<String>,
         pub quality: i16,
     }
@@ -145,7 +145,7 @@ pub(crate) mod responses {
         pub tags: Vec<String>,
         pub attrs: Vec<String>,
         pub notes: Option<String>,
-        pub stops: Vec<i32>,
+        pub stops: Vec<pics::StopAttrs>,
         // TODO Consider this
         pub tagged: bool,
         pub url_full: String,
@@ -153,8 +153,8 @@ pub(crate) mod responses {
         pub url_thumb: String,
     }
 
-    impl From<(pics::StopPic, Vec<i32>)> for PicWithStops {
-        fn from(value: (pics::StopPic, Vec<i32>)) -> Self {
+    impl From<(pics::StopPic, Vec<pics::StopAttrs>)> for PicWithStops {
+        fn from(value: (pics::StopPic, Vec<pics::StopAttrs>)) -> Self {
             let (pic, stops) = value;
             Self {
                 id: pic.id,
