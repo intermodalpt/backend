@@ -185,14 +185,14 @@ pub(crate) fn build_paths(state: AppState) -> Router {
             "/v1/stop_pics/linked/:stop_id",
             post(pics::handlers::upload_stop_picture),
         )
-        .route("/v1/stop_pics/pano/all", post(pics::handlers::get_panos))
+        .route("/v1/stop_pics/pano/all", get(pics::handlers::get_panos))
         .route(
             "/v1/stop_pics/pano",
             post(pics::handlers::upload_pano_picture),
         )
         .route(
-            "/v1/stop_pics/pano/:picture_id/:pano_id/onion",
-            post(pics::handlers::get_onion_skin),
+            "/v1/stop_pics/pano/:pano_id/onion",
+            get(pics::handlers::get_onion_skin),
         )
         .route(
             "/v1/stop_pics/:picture_id",
