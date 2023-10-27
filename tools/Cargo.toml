@@ -22,6 +22,10 @@ path = "src/linter/main.rs"
 name = "update_parishes"
 path = "src/update_parishes/main.rs"
 
+[[bin]]
+name = "db_integrity"
+path = "src/db_integrity/main.rs"
+
 [dependencies]
 commons = { path = "../commons" }
 

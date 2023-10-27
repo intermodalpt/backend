@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE Changelog\nSET changes=$1\nWHERE id=$2\n    ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Jsonb",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b072977a1cf2f1d853e5fd432827d3eaeaafce19e435885e92a943815aecb021"
+}
