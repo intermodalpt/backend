@@ -1,5 +1,5 @@
-use crate::contrib::models::StopPatch;
-use crate::stops::models as stops;
+use commons::models::history::StopPatch;
+use commons::models::stops;
 
 #[test]
 fn stop_patch_drop_verification_level() {

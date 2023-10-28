@@ -1,13 +1,14 @@
-use crate::contrib::logic;
-use crate::contrib::models::StopPatch;
-use crate::errors::Error;
-use crate::stops::models as stops;
-use chrono::NaiveDate;
+use chrono::{NaiveDate, Utc};
 use once_cell::sync::Lazy;
+
+use commons::models::history::StopPatch;
+use commons::models::stops;
+
+use crate::contrib::logic;
+use crate::errors::Error;
 
 static STOP1: Lazy<stops::Stop> = Lazy::new(|| stops::Stop {
     id: 1,
-    source: "osm".to_string(),
     name: Some("name".to_string()),
     official_name: Some("official_name".to_string()),
     osm_name: Some("osm_name".to_string()),
@@ -20,7 +21,6 @@ static STOP1: Lazy<stops::Stop> = Lazy::new(|| stops::Stop {
     parish: None,
     lat: Some(1.0),
     lon: Some(2.0),
-    external_id: "".to_string(),
     a11y: stops::A11yMeta {
         schedules: Some(vec![]),
         flags: Some(vec![]),
@@ -69,10 +69,8 @@ static STOP1: Lazy<stops::Stop> = Lazy::new(|| stops::Stop {
     ),
     tags: vec!["tags".to_string()],
     notes: Some("notes".to_string()),
-    updater: 0,
-    refs: vec!["refs".to_string()],
     // TODO Deprecate
-    update_date: "".to_string(),
+    update_date: Utc::now(),
 });
 
 #[test]

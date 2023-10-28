@@ -1,8 +1,8 @@
-use chrono::NaiveDate;
+use chrono::{ NaiveDate, Utc};
 use once_cell::sync::Lazy;
 
-use crate::contrib::models::StopPatch;
-use crate::stops::models::{
+use commons::models::history::StopPatch;
+use commons::models::stops::{
     A11yMeta, AdvertisementQuantification, AreaParkingLimitation,
     IlluminationPos, IlluminationStrength, LocalParkingLimitation,
     ParkingVisualLimitation, Stop,
@@ -10,7 +10,6 @@ use crate::stops::models::{
 
 static STOP1: Lazy<Stop> = Lazy::new(|| Stop {
     id: 1,
-    source: "osm".to_string(),
     name: Some("name".to_string()),
     official_name: Some("official_name".to_string()),
     osm_name: Some("osm_name".to_string()),
@@ -23,7 +22,6 @@ static STOP1: Lazy<Stop> = Lazy::new(|| Stop {
     parish: None,
     lat: Some(1.0),
     lon: Some(2.0),
-    external_id: "".to_string(),
     a11y: A11yMeta {
         schedules: Some(vec![]),
         flags: Some(vec![]),
@@ -68,10 +66,8 @@ static STOP1: Lazy<Stop> = Lazy::new(|| Stop {
     ),
     tags: vec!["tags".to_string()],
     notes: Some("notes".to_string()),
-    updater: 0,
-    refs: vec!["refs".to_string()],
     // TODO Deprecate
-    update_date: "".to_string(),
+    update_date: Utc::now(),
 });
 
 #[test]

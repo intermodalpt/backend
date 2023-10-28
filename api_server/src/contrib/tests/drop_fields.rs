@@ -1,7 +1,7 @@
-use crate::contrib::models::StopPatch;
-use crate::stops::models as stops;
 use chrono::NaiveDate;
 
+use commons::models::history::StopPatch;
+use commons::models::stops;
 #[test]
 fn stop_patch_drop_name() {
     let mut patch = StopPatch {

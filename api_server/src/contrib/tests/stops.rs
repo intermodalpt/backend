@@ -1,17 +1,17 @@
-use chrono::NaiveDate;
+use chrono::{NaiveDate, Utc};
 use once_cell::sync::Lazy;
 
-use crate::contrib::models::StopPatch;
-use crate::stops::models::requests::ChangeStop;
-use crate::stops::models::{
+use commons::models::history::StopPatch;
+use commons::models::stops::{
     A11yMeta, AdvertisementQuantification, AreaParkingLimitation, Flag,
     IlluminationPos, IlluminationStrength, LocalParkingLimitation,
     ParkingVisualLimitation, Schedule, ScheduleType, Stop,
 };
 
+use crate::stops::models::requests::ChangeStop;
+
 static STOP1: Lazy<Stop> = Lazy::new(|| Stop {
     id: 1,
-    source: "osm".to_string(),
     name: Some("Original".to_string()),
     official_name: Some("Original official".to_string()),
     osm_name: Some("Original osm".to_string()),
@@ -22,7 +22,6 @@ static STOP1: Lazy<Stop> = Lazy::new(|| Stop {
     parish: None,
     lat: Some(1.0),
     lon: Some(2.0),
-    external_id: "".to_string(),
     a11y: A11yMeta {
         schedules: Some(vec![Schedule {
             code: Some("123".to_string()),
@@ -75,10 +74,8 @@ static STOP1: Lazy<Stop> = Lazy::new(|| Stop {
     ),
     tags: vec!["tag1".to_string()],
     notes: Some("foo note".to_string()),
-    updater: 0,
-    refs: vec!["12345".to_string()],
     // TODO Deprecate
-    update_date: "".to_string(),
+    update_date: Utc::now(),
 });
 
 static STOP1_NOOP_CHANGE: Lazy<ChangeStop> = Lazy::new(|| ChangeStop {
