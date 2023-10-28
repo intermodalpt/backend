@@ -28,7 +28,7 @@ use crate::AppState;
 pub(crate) async fn check_auth(
     claims: Option<models::Claims>,
 ) -> Result<impl IntoResponse, Error> {
-    println!("{:?}", claims);
+    println!("{claims:?}");
     if claims.is_some() {
         Ok(StatusCode::OK)
     } else {

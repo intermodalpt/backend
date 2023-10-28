@@ -25,7 +25,7 @@ use geo::{Contains, LineString, MultiPolygon, Polygon};
 use rayon::prelude::*;
 use sqlx::postgres::PgPool;
 
-use commons::models::geo::{GeoJson, GeoJsonGeometry, Parish};
+use commons::models::geo::{Geojson, GeojsonGeometry};
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
@@ -57,17 +57,17 @@ async fn update_parishes(pool: &PgPool) -> Result<()> {
     let polygons = parishes
         .into_iter()
         .map(|p| {
-            let geojson: GeoJson = serde_json::from_value(p.geojson)
+            let geojson: Geojson = serde_json::from_value(p.geojson)
                 .map_err(|err| {
                     eprintln!("Error parsing parish {}: {}", p.id, err);
                 })
                 .unwrap();
 
             let multipoly = match geojson.geometry {
-                GeoJsonGeometry::Polygon { coordinates } => {
+                GeojsonGeometry::Polygon { coordinates } => {
                     MultiPolygon::from(vec![poly_from_coords(coordinates)])
                 }
-                GeoJsonGeometry::MultiPolygon { coordinates } => {
+                GeojsonGeometry::MultiPolygon { coordinates } => {
                     MultiPolygon::from(
                         coordinates
                             .into_iter()
@@ -81,7 +81,7 @@ async fn update_parishes(pool: &PgPool) -> Result<()> {
         })
         .collect::<Vec<_>>();
 
-    let stops = sql::fetch_stops(pool, false).await?;
+    let stops = sql::fetch_stops(pool).await?;
 
     let stop_parish_pairs = Mutex::new(vec![]);
 
@@ -119,7 +119,7 @@ async fn update_parishes(pool: &PgPool) -> Result<()> {
         let point = geo::Point::new(stop.lon.unwrap(), stop.lat.unwrap());
         for (id, name, multipoly) in &polygons {
             if multipoly.contains(&point) {
-                sql::update_stop_parish(&pool, stop.id, *id).await?;
+                sql::update_stop_parish(pool, stop.id, *id).await?;
                 println!(
                     "Stop {} ({}) is in parish {}",
                     stop.name.unwrap_or(

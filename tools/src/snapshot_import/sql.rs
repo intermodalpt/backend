@@ -107,7 +107,7 @@ pub(crate) async fn tag_missing_stops(
     let missing_ids: Vec<String> = db_ids
         .iter()
         .filter(|id| !osm_ids.contains(id))
-        .map(|id| id.clone())
+        .cloned()
         .collect();
 
     for missing_id in missing_ids {

@@ -340,7 +340,7 @@ where
     E: sqlx::Executor<'c, Database = sqlx::Postgres>,
 {
     // FIXME the hell?
-    let comment = comment.as_ref().map(|s| s.as_str());
+    let comment = comment.as_ref().map(String::as_str);
 
     sqlx::query!(
         r#"

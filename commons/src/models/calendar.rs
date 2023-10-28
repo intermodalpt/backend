@@ -133,6 +133,7 @@ pub struct Calendar {
 
 impl Calendar {
     #[allow(clippy::cast_possible_truncation)]
+    #[must_use]
     pub fn includes(&self, date: NaiveDate) -> bool {
         let month = date.month() as u8;
         let day = date.day() as u8;
@@ -308,7 +309,7 @@ impl fmt::Display for Condition {
             Condition::Summer => f.write_str("verão"),
             Condition::School => f.write_str("período escolar"),
             Condition::Nth { nth } => {
-                f.write_fmt(format_args!("{}º do mês", nth))
+                f.write_fmt(format_args!("{nth}º do mês"))
             }
             Condition::Range {
                 start: (start_month, start_day),

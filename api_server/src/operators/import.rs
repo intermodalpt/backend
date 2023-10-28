@@ -41,29 +41,20 @@ impl OperatorData for operators::Operator {
     }
 
     fn get_storage_meta(&self) -> Result<OperatorStorageMeta, Error> {
-        Ok(get_operator_storage_meta(self.id)?)
+        get_operator_storage_meta(self.id)
     }
 }
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Default)]
 pub struct OperatorStorageMeta {
     pub(crate) last_update: Option<DateTime<Utc>>,
     pub(crate) last_gtfs: Option<DateTime<Utc>>,
-}
-
-impl Default for OperatorStorageMeta {
-    fn default() -> Self {
-        Self {
-            last_update: None,
-            last_gtfs: None,
-        }
-    }
 }
 
 pub(crate) fn get_operator_storage_meta(
     operator_id: i32,
 ) -> Result<OperatorStorageMeta, Error> {
     let meta_path =
-        PathBuf::from(format!("./data/operators/{}/meta.json", operator_id));
+        PathBuf::from(format!("./data/operators/{operator_id}/meta.json"));
 
     let meta = if meta_path.exists() {
         let meta: OperatorStorageMeta = serde_json::from_reader(
@@ -93,10 +84,10 @@ pub(crate) fn get_operator_storage_meta(
 
 pub(crate) fn set_operator_storage_meta(
     operator_id: i32,
-    meta: OperatorStorageMeta,
+    meta: &OperatorStorageMeta,
 ) -> Result<(), Error> {
     let meta_path =
-        PathBuf::from(format!("./data/operators/{}/meta.json", operator_id));
+        PathBuf::from(format!("./data/operators/{operator_id}/meta.json"));
 
     if let Some(p) = meta_path.parent() {
         if !p.exists() {
@@ -119,35 +110,34 @@ pub(crate) async fn update_operator_gtfs(
     let mut meta = get_operator_storage_meta(operator_id)?;
     match operator.tag.as_str() {
         "cmet" => {
-            let path = format!("./data/operators/{}/gtfsrepo", operator_id);
+            let path = format!("./data/operators/{operator_id}/gtfsrepo");
             let url = "https://github.com/carrismetropolitana/gtfs";
             let remote_name = "origin";
             let remote_branch = "live";
 
             let version_date =
                 git::update_repo(url, &path, remote_name, remote_branch)
-                    .map_err(|e| Error::Processing(e))?;
+                    .map_err(Error::Processing)?;
 
             if meta.last_gtfs != Some(version_date) {
                 meta.last_gtfs = Some(version_date);
                 let _ = gtfs_utils::extract_gtfs(
                     &format!(
-                        "./data/operators/{}/gtfsrepo/CarrisMetropolitana.zip",
-                        operator_id
+                        "./data/operators/{operator_id}/gtfsrepo/CarrisMetropolitana.zip"
                     ),
-                    &format!("./data/operators/{}/gtfs", operator_id),
+                    &format!("./data/operators/{operator_id}/gtfs"),
                 );
             }
         }
         "carris" => {
-            let path = format!("./data/operators/{}/gtfs.zip", operator_id);
+            let path = format!("./data/operators/{operator_id}/gtfs.zip");
             let url = "https://gateway.carris.pt/gateway/gtfs/api/v2.11/GTFS";
 
             http::download_file(url, &path, None).await?;
 
             let newest_file = gtfs_utils::extract_gtfs(
-                &format!("./data/operators/{}/gtfs.zip", operator_id),
-                &format!("./data/operators/{}/gtfs", operator_id),
+                &format!("./data/operators/{operator_id}/gtfs.zip"),
+                &format!("./data/operators/{operator_id}/gtfs"),
             )?;
             meta.last_gtfs = Some(newest_file);
         }
@@ -172,15 +162,15 @@ pub(crate) async fn update_operator_gtfs(
     }
 
     meta.last_update = Some(Utc::now());
-    set_operator_storage_meta(operator_id, meta)
+    set_operator_storage_meta(operator_id, &meta)
 }
 
 async fn fetch_transporlis_feed(
     meta: &mut OperatorStorageMeta,
     operator_id: i32,
     transporlis_id: i32,
-) -> Result<(), Error>{
-    let path = format!("./data/operators/{}/gtfs.zip", operator_id);
+) -> Result<(), Error> {
+    let path = format!("./data/operators/{operator_id}/gtfs.zip");
     let url = format!(
         "https://www.transporlis.pt/desktopmodules/\
             trp_opendata/ajax/downloadFile.ashx?op={transporlis_id}&u=web"
@@ -189,8 +179,8 @@ async fn fetch_transporlis_feed(
     http::download_file(&url, &path, None).await?;
 
     let newest_file = gtfs_utils::extract_gtfs(
-        &format!("./data/operators/{}/gtfs.zip", operator_id),
-        &format!("./data/operators/{}/gtfs", operator_id),
+        &format!("./data/operators/{operator_id}/gtfs.zip"),
+        &format!("./data/operators/{operator_id}/gtfs"),
     )?;
     meta.last_gtfs = Some(newest_file);
     Ok(())

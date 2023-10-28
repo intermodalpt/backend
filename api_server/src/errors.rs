@@ -79,7 +79,7 @@ impl From<commons::errors::Error> for Error {
                 Error::DownloadFailure(msg)
             }
             commons::errors::Error::ExtractionFailure(msg) => {
-                Error::Processing(format!("Extraction failure: {}", msg))
+                Error::Processing(format!("Extraction failure: {msg}"))
             }
             commons::errors::Error::FilesystemFailure(msg) => {
                 Error::Processing(msg)

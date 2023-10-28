@@ -17,7 +17,7 @@
 */
 
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GTFSStop {
@@ -49,7 +49,7 @@ pub struct GTFSTrips {
     pub trip_headsign: String,
 }
 
-pub enum GtfsFile {
+pub enum File {
     Agency,
     CalendarDates,
     Facilities,
@@ -65,26 +65,28 @@ pub enum GtfsFile {
     Trips,
 }
 
-impl GtfsFile {
+impl File {
+    #[must_use]
     pub fn filename(&self) -> &'static str {
         match self {
-            GtfsFile::Agency => "agency.txt",
-            GtfsFile::CalendarDates => "calendar_dates.txt",
-            GtfsFile::Facilities => "facilities.txt",
-            GtfsFile::FareAttributes => "fare_attributes.txt",
-            GtfsFile::FareRules => "fare_rules.txt",
-            GtfsFile::FeedInfo => "feed_info.txt",
-            GtfsFile::Helpdesks => "helpdesks.txt",
-            GtfsFile::Municipalities => "municipalities.txt",
-            GtfsFile::Routes => "routes.txt",
-            GtfsFile::Shapes => "shapes.txt",
-            GtfsFile::Stops => "stops.txt",
-            GtfsFile::StopTimes => "stop_times.txt",
-            GtfsFile::Trips => "trips.txt",
+            File::Agency => "agency.txt",
+            File::CalendarDates => "calendar_dates.txt",
+            File::Facilities => "facilities.txt",
+            File::FareAttributes => "fare_attributes.txt",
+            File::FareRules => "fare_rules.txt",
+            File::FeedInfo => "feed_info.txt",
+            File::Helpdesks => "helpdesks.txt",
+            File::Municipalities => "municipalities.txt",
+            File::Routes => "routes.txt",
+            File::Shapes => "shapes.txt",
+            File::Stops => "stops.txt",
+            File::StopTimes => "stop_times.txt",
+            File::Trips => "trips.txt",
         }
     }
 
-    pub fn prepend_root(&self, root: &PathBuf) -> PathBuf {
+    #[must_use]
+    pub fn prepend_root(&self, root: &Path) -> PathBuf {
         root.join(self.filename())
     }
 }

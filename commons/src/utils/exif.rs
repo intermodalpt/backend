@@ -18,9 +18,7 @@
 
 use chrono::NaiveDateTime;
 
-pub fn extract_f64_gps_coord(
-    repr: &[exif::Rational],
-) -> Result<f64, &'static str> {
+pub fn decode_gps_coord(repr: &[exif::Rational]) -> Result<f64, &'static str> {
     if repr.len() != 3 {
         return Err("Invalid EXIF coord");
     }
@@ -32,9 +30,7 @@ pub fn extract_f64_gps_coord(
     Ok(res)
 }
 
-pub fn string_from_exif_ascii(
-    repr: &[Vec<u8>],
-) -> Result<String, &'static str> {
+pub fn decode_ascii(repr: &[Vec<u8>]) -> Result<String, &'static str> {
     if repr.len() != 1 {
         return Err("Invalid EXIF String");
     }
@@ -45,7 +41,7 @@ pub fn string_from_exif_ascii(
     Ok(string)
 }
 
-pub fn datetime_from_exif_ascii(
+pub fn decode_datetime(
     repr: &[Vec<u8>],
 ) -> Result<NaiveDateTime, &'static str> {
     if repr.len() != 1 {
@@ -59,7 +55,7 @@ pub fn datetime_from_exif_ascii(
     Ok(datetime)
 }
 
-pub fn u16_from_exif(repr: &[u16]) -> Result<u16, &'static str> {
+pub fn decode_u16(repr: &[u16]) -> Result<u16, &'static str> {
     if repr.len() != 1 {
         return Err("Invalid EXIF u16");
     }
@@ -68,7 +64,7 @@ pub fn u16_from_exif(repr: &[u16]) -> Result<u16, &'static str> {
 }
 
 #[derive(Debug, Copy, Clone)]
-pub enum ExifOrientation {
+pub enum Orientation {
     Horizontal = 1,
     Mirror = 2,
     Rotate180 = 3,
@@ -79,22 +75,21 @@ pub enum ExifOrientation {
     Rotate270 = 8,
 }
 
-fn orientation_from_u16(orientation: u16) -> ExifOrientation {
+fn orientation_from_u16(orientation: u16) -> Orientation {
     match orientation {
-        1 => ExifOrientation::Horizontal,
-        2 => ExifOrientation::Mirror,
-        3 => ExifOrientation::Rotate180,
-        4 => ExifOrientation::MirrorVertical,
-        5 => ExifOrientation::MirrorHorizontalRotate270,
-        6 => ExifOrientation::Rotate90,
-        7 => ExifOrientation::MirrorHorizontalRotate90,
-        8 => ExifOrientation::Rotate270,
+        1 => Orientation::Horizontal,
+        2 => Orientation::Mirror,
+        3 => Orientation::Rotate180,
+        4 => Orientation::MirrorVertical,
+        5 => Orientation::MirrorHorizontalRotate270,
+        6 => Orientation::Rotate90,
+        7 => Orientation::MirrorHorizontalRotate90,
+        8 => Orientation::Rotate270,
         _ => {
             eprintln!(
-                "Invalid EXIF orientation: {}. Proceeding with horizontal.",
-                orientation
+                "Invalid EXIF orientation: {orientation}. Proceeding with horizontal."
             );
-            ExifOrientation::Horizontal
+            Orientation::Horizontal
         }
     }
 }
@@ -105,7 +100,7 @@ pub struct Exif {
     pub lon: Option<f64>,
     pub capture: Option<NaiveDateTime>,
     pub camera: Option<String>,
-    pub orientation: Option<ExifOrientation>,
+    pub orientation: Option<Orientation>,
 }
 
 impl From<exif::Exif> for Exif {
@@ -116,7 +111,7 @@ impl From<exif::Exif> for Exif {
             data.get_field(exif::Tag::Orientation, exif::In::PRIMARY)
         {
             if let exif::Value::Short(val) = &field.value {
-                if let Ok(orientation) = u16_from_exif(&val) {
+                if let Ok(orientation) = decode_u16(val) {
                     result.orientation =
                         Some(orientation_from_u16(orientation));
                 }
@@ -129,7 +124,7 @@ impl From<exif::Exif> for Exif {
             data.get_field(exif::Tag::GPSLatitude, exif::In::PRIMARY)
         {
             if let exif::Value::Rational(val) = &field.value {
-                if let Ok(coord) = extract_f64_gps_coord(val) {
+                if let Ok(coord) = decode_gps_coord(val) {
                     if !coord.is_nan() {
                         result.lat = Some(coord);
                     }
@@ -145,7 +140,7 @@ impl From<exif::Exif> for Exif {
             data.get_field(exif::Tag::GPSLongitude, exif::In::PRIMARY)
         {
             if let exif::Value::Rational(val) = &field.value {
-                if let Ok(coord) = extract_f64_gps_coord(val) {
+                if let Ok(coord) = decode_gps_coord(val) {
                     if !coord.is_nan() {
                         result.lon = Some(-coord);
                     }
@@ -161,7 +156,7 @@ impl From<exif::Exif> for Exif {
             data.get_field(exif::Tag::DateTimeOriginal, exif::In::PRIMARY)
         {
             if let exif::Value::Ascii(val) = &field.value {
-                if let Ok(datetime) = datetime_from_exif_ascii(val) {
+                if let Ok(datetime) = decode_datetime(val) {
                     result.capture = Some(datetime);
                 }
             } else {
@@ -174,7 +169,7 @@ impl From<exif::Exif> for Exif {
                 data.get_field(exif::Tag::DateTimeDigitized, exif::In::PRIMARY)
             {
                 if let exif::Value::Ascii(val) = &field.value {
-                    if let Ok(datetime) = datetime_from_exif_ascii(val) {
+                    if let Ok(datetime) = decode_datetime(val) {
                         result.capture = Some(datetime);
                     }
                 } else {
@@ -186,7 +181,7 @@ impl From<exif::Exif> for Exif {
         if let Some(field) = data.get_field(exif::Tag::Model, exif::In::PRIMARY)
         {
             if let exif::Value::Ascii(val) = &field.value {
-                if let Ok(datetime) = string_from_exif_ascii(val) {
+                if let Ok(datetime) = decode_ascii(val) {
                     result.camera = Some(datetime);
                 }
             } else {

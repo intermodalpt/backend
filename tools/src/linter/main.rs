@@ -80,7 +80,7 @@ pub async fn fix_duplicated_schedules(
                     let mut merged = false;
 
                     let schedules = seen_routes.into_iter()
-                        .map(|(code, schedules)| {
+                        .flat_map(|(code, schedules)| {
                             let time_based = schedules.iter().all(|schedule| {
                                 if let Some(discriminator) =
                                     &schedule.discriminator
@@ -129,7 +129,6 @@ pub async fn fix_duplicated_schedules(
                                 schedules
                             }
                         })
-                        .flatten()
                         .collect();
 
                     if merged {

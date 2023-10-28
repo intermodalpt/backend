@@ -23,7 +23,7 @@ use axum::extract::{Path, Query, State};
 use axum::Json;
 
 use commons::models::gtfs;
-use commons::models::gtfs::GtfsFile;
+use commons::models::gtfs::File;
 use commons::utils::gtfs::{
     calculate_gtfs_stop_sequence, calculate_stop_sliding_windows,
 };
@@ -105,14 +105,14 @@ pub(crate) async fn tml_match_stop(
         return Err(Error::Forbidden);
     }
 
-    Ok(sql::gtfs_match(
+    sql::gtfs_match(
         &state.pool,
         stop_id,
         gtfs_id,
         params.verified,
         &params.source.to_string(),
     )
-    .await?)
+    .await
 }
 
 pub(crate) async fn get_gtfs_route_trips(
@@ -167,7 +167,7 @@ pub(crate) async fn get_gtfs_stop_sliding_windows(
     }
 
     let gtfs_root = operator.get_gtfs_root();
-    let stop_times_path = GtfsFile::StopTimes.prepend_root(&gtfs_root);
+    let stop_times_path = File::StopTimes.prepend_root(&gtfs_root);
 
     let f = fs::File::open(stop_times_path).unwrap();
     let reader = io::BufReader::new(f);
@@ -178,8 +178,7 @@ pub(crate) async fn get_gtfs_stop_sliding_windows(
 
     let gtfs_stop_times = rdr
         .deserialize()
-        .into_iter()
-        .map(|result| result.unwrap())
+        .map(Result::unwrap)
         .collect::<Vec<gtfs::GTFSStopTimes>>();
 
     let trips_stop_seq = calculate_gtfs_stop_sequence(&gtfs_stop_times);

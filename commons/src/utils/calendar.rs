@@ -16,6 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#[must_use]
 pub fn within_dates(date: (u8, u8), start: (u8, u8), end: (u8, u8)) -> bool {
     let (from_month, from_day) = start;
     let (to_month, to_day) = end;

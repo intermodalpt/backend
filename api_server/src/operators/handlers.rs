@@ -225,7 +225,7 @@ pub(crate) async fn delete_operator_calendar(
     }
     // TODO do not allow deletion of calendars that are in use
 
-    Ok(sql::delete_calendar(&state.pool, operator_id, calendar_id).await?)
+    sql::delete_calendar(&state.pool, operator_id, calendar_id).await
 }
 
 pub(crate) async fn get_operator_calendars_for_date(

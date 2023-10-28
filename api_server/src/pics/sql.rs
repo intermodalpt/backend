@@ -167,7 +167,7 @@ GROUP BY stop_pics.id
         tags: r.tags,
         attrs: r.attrs,
         notes: r.notes,
-        stops: r.rels.into_iter().map(|rel| rel.into()).collect()
+        stops: r.rels.into_iter().map(std::convert::Into::into).collect()
     }))
 }
 
@@ -214,7 +214,7 @@ GROUP BY stop_pics.id
         tags: r.tags,
         attrs: r.attrs,
         notes: r.notes,
-        stops: r.rels.into_iter().map(|rel| rel.into()).collect(),
+        stops: r.rels.into_iter().map(std::convert::Into::into).collect(),
     })
     .collect())
 }
@@ -372,7 +372,7 @@ ORDER BY quality DESC
         tags: r.tags,
         attrs: r.attrs,
         notes: r.notes,
-        stops: r.rels.into_iter().map(|rel| rel.into()).collect()
+        stops: r.rels.into_iter().map(std::convert::Into::into).collect()
     })
     .collect())
 }
@@ -429,7 +429,7 @@ LIMIT $2 OFFSET $3
         tags: r.tags,
         attrs: r.attrs,
         notes: r.notes,
-        stops: r.rels.into_iter().map(|rel| rel.into()).collect()
+        stops: r.rels.into_iter().map(std::convert::Into::into).collect()
     })
     .collect())
 }
@@ -484,7 +484,7 @@ LIMIT $1 OFFSET $2
         tags: r.tags,
         attrs: r.attrs,
         notes: r.notes,
-        stops: r.rels.into_iter().map(|rel| rel.into()).collect()
+        stops: r.rels.into_iter().map(std::convert::Into::into).collect()
     })
     .collect())
 }
@@ -545,7 +545,7 @@ LIMIT $3 OFFSET $4
         tags: r.tags,
         attrs: r.attrs,
         notes: r.notes,
-        stops: r.rels.into_iter().map(|rel| rel.into()).collect()
+        stops: r.rels.into_iter().map(std::convert::Into::into).collect()
     })
     .collect())
 }
@@ -607,7 +607,7 @@ LIMIT $3 OFFSET $4
         tags: r.tags,
         attrs: r.attrs,
         notes: r.notes,
-        stops: r.rels.into_iter().map(|rel| rel.into()).collect()
+        stops: r.rels.into_iter().map(std::convert::Into::into).collect()
     })
     .collect())
 }
@@ -669,7 +669,7 @@ LIMIT $3 OFFSET $4
         tags: r.tags,
         attrs: r.attrs,
         notes: r.notes,
-        stops: r.rels.into_iter().map(|rel| rel.into()).collect()
+        stops: r.rels.into_iter().map(std::convert::Into::into).collect()
     })
     .collect())
 }

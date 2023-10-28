@@ -454,10 +454,8 @@ pub(crate) async fn patch_subroute_stops(
         return Err(Error::Forbidden);
     }
 
-    Ok(
-        sql::update_subroute_stops(&state.pool, route_id, subroute_id, request)
-            .await?,
-    )
+    sql::update_subroute_stops(&state.pool, route_id, subroute_id, request)
+        .await
 }
 
 #[utoipa::path(

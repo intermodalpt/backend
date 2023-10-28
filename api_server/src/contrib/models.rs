@@ -177,10 +177,10 @@ pub(crate) mod requests {
                 patch.tmp_issues = Some(self.a11y.tmp_issues.clone());
             }
             if self.tags != stop.tags {
-                patch.tags = Some(self.tags)
+                patch.tags = Some(self.tags);
             }
             if self.notes != stop.notes {
-                patch.notes = Some(self.notes)
+                patch.notes = Some(self.notes);
             }
 
             if self.service_check_date != stop.service_check_date {

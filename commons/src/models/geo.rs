@@ -36,15 +36,15 @@ pub struct Parish {
 }
 
 #[derive(Deserialize, Debug)]
-pub struct GeoJson {
+pub struct Geojson {
     pub id: String,
-    pub geometry: GeoJsonGeometry,
+    pub geometry: GeojsonGeometry,
     // pub properties: HashMap<String, JsonValue>,
 }
 
 #[derive(Deserialize, Debug)]
 #[serde(tag = "type")]
-pub enum GeoJsonGeometry {
+pub enum GeojsonGeometry {
     Polygon {
         coordinates: Vec<Vec<Vec<f64>>>,
     },

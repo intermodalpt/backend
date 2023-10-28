@@ -116,6 +116,7 @@ pub struct Stop {
 }
 
 impl Stop {
+    #[must_use]
     pub fn verification(&self) -> StopVerification {
         StopVerification::from(self.verification_level)
     }
@@ -247,12 +248,14 @@ pub struct StopVerification {
 }
 
 impl StopVerification {
+    #[must_use]
     pub fn is_fully_verified(&self) -> bool {
         self.position == Verification::Verified
             && self.service == Verification::Verified
             && self.infrastructure == Verification::Verified
     }
 
+    #[must_use]
     pub fn verified() -> Self {
         StopVerification {
             position: Verification::Verified,
@@ -261,6 +264,7 @@ impl StopVerification {
         }
     }
 
+    #[must_use]
     pub fn unverified() -> Self {
         StopVerification {
             position: Verification::NotVerified,

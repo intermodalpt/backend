@@ -19,7 +19,7 @@
 use std::ops::Add;
 
 use chrono::Utc;
-use jsonwebtoken;
+
 use pbkdf2::{
     password_hash::{
         rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier,
@@ -100,7 +100,7 @@ pub(crate) fn encode_claims(claims: models::Claims) -> Result<String, Error> {
 
 pub(crate) fn decode_claims(jwt: &str) -> Result<models::Claims, Error> {
     let decoded_token = jsonwebtoken::decode::<models::Claims>(
-        &jwt,
+        jwt,
         &jsonwebtoken::DecodingKey::from_secret(
             SECRET_KEY.get().unwrap().as_ref(),
         ),

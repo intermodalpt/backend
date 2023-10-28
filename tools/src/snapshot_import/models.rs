@@ -18,7 +18,6 @@
 
 use serde::{Deserialize, Serialize};
 
-
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub(crate) struct XmlOsm {
     #[serde(rename = "$value")]

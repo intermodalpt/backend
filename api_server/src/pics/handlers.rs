@@ -41,7 +41,7 @@ pub(crate) async fn get_stop_pictures(
             ..
         })
     );
-    let uid = claims.and_then(|c| Some(c.uid));
+    let uid = claims.map(|c| c.uid);
 
     Ok(Json(
         sql::fetch_stop_pictures(&state.pool, stop_id, is_trusted, uid).await?,
@@ -91,7 +91,7 @@ pub(crate) async fn get_pictures_map(
             ..
         })
     );
-    let uid = claims.and_then(|c| Some(c.uid));
+    let uid = claims.map(|c| c.uid);
 
     Ok(Json(
         sql::fetch_minimal_pictures_with_stops(&state.pool, is_trusted, uid)
@@ -120,7 +120,7 @@ pub(crate) async fn get_dangling_stop_pictures(
             ..
         })
     );
-    let uid = claims.and_then(|c| Some(c.uid));
+    let uid = claims.map(|c| c.uid);
 
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
@@ -159,7 +159,7 @@ pub(crate) async fn get_latest_stop_pictures(
             ..
         })
     );
-    let uid = claims.and_then(|c| Some(c.uid));
+    let uid = claims.map(|c| c.uid);
     let offset = i64::from(qs.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
@@ -214,7 +214,7 @@ pub(crate) async fn get_unpositioned_stop_pictures(
             ..
         })
     );
-    let uid = claims.and_then(|c| Some(c.uid));
+    let uid = claims.map(|c| c.uid);
 
     Ok(Json(
         sql::fetch_unpositioned_pictures(
@@ -277,7 +277,7 @@ pub(crate) async fn upload_dangling_stop_picture(
     )
     .await?;
 
-    Ok(Json(pic.into()))
+    Ok(Json(pic))
 }
 
 pub(crate) async fn upload_stop_picture(
@@ -356,7 +356,7 @@ pub(crate) async fn get_stop_picture_meta(
             ..
         })
     );
-    let uid = claims.and_then(|c| Some(c.uid));
+    let uid = claims.map(|c| c.uid);
 
     let pic = sql::fetch_picture_with_stops(&state.pool, picture_id).await?;
     if pic.is_none() {
@@ -415,8 +415,7 @@ pub(crate) async fn patch_stop_picture_meta(
         && original_rels.iter().all(|stop_rel| {
             new_stop_attrs
                 .get(&stop_rel.id)
-                .map(|new_attrs| stop_rel.attrs == **new_attrs)
-                .unwrap_or(false)
+                .is_some_and(|new_attrs| stop_rel.attrs == **new_attrs)
         }));
 
     let patch = stop_pic_meta.derive_patch(&pic);

@@ -20,7 +20,6 @@ use chrono::Local;
 
 use commons::models::history;
 
-
 pub(crate) enum JsonParseResult<OkData, ErrData> {
     Ok(OkData),
     Err {

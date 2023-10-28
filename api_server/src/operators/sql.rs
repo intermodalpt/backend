@@ -64,7 +64,7 @@ pub(crate) async fn fetch_operator_stops(
     pool: &PgPool,
     operator_id: i32,
 ) -> Result<Vec<responses::OperatorStop>> {
-    Ok(sqlx::query_as!(
+    sqlx::query_as!(
         responses::OperatorStop,
         r#"
 SELECT stops.id, stops.lat, stops.lon, stop_operators.official_name, stop_ref, stop_operators.source
@@ -76,7 +76,7 @@ WHERE stop_operators.operator_id = $1
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?)
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
 pub(crate) async fn upsert_operator_stop(

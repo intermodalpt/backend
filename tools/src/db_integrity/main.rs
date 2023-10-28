@@ -19,7 +19,6 @@
 mod sql;
 
 use config::Config;
-use itertools::Itertools;
 use sqlx::PgPool;
 
 use crate::sql::{fetch_faulty_changeset_logs, JsonParseResult};
@@ -44,7 +43,7 @@ async fn main() {
     let mut nok_count = 0;
     for log in logs {
         match log {
-            JsonParseResult::Ok(changeset) => {
+            JsonParseResult::Ok(_changeset) => {
                 ok_count += 1;
             }
             JsonParseResult::Err { raw, error, data } => {

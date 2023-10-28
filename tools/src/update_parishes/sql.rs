@@ -23,10 +23,7 @@ use commons::models::stops;
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
-pub(crate) async fn fetch_stops(
-    pool: &PgPool,
-    filter_used: bool,
-) -> Result<Vec<stops::Stop>> {
+pub(crate) async fn fetch_stops(pool: &PgPool) -> Result<Vec<stops::Stop>> {
     sqlx::query!(
 "SELECT id, source, name, official_name, osm_name, short_name, locality, street,
     door, lat, lon, external_id, notes, updater, update_date,

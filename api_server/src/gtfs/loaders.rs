@@ -23,7 +23,7 @@ use itertools::Itertools;
 use once_cell::sync::Lazy;
 use regex::Regex;
 
-use commons::models::gtfs::GtfsFile;
+use commons::models::gtfs::File;
 use commons::models::{gtfs, operators};
 use commons::utils::gtfs::calculate_gtfs_stop_sequence;
 
@@ -36,7 +36,7 @@ pub(crate) fn gtfs_stops(
     operator: &operators::Operator,
 ) -> Result<Vec<gtfs::GTFSStop>, Error> {
     let gtfs_root = operator.get_gtfs_root();
-    let stops_path = GtfsFile::Stops.prepend_root(&gtfs_root);
+    let stops_path = File::Stops.prepend_root(&gtfs_root);
 
     if !stops_path.exists() {
         return Err(Error::NotFoundUpstream);
@@ -51,8 +51,7 @@ pub(crate) fn gtfs_stops(
 
     Ok(rdr
         .deserialize()
-        .into_iter()
-        .map(|result| result.unwrap())
+        .map(Result::unwrap)
         .collect::<Vec<gtfs::GTFSStop>>())
 }
 
@@ -61,7 +60,7 @@ pub(crate) fn gtfs_routes(
     operator: &operators::Operator,
 ) -> Result<Vec<gtfs::GTFSRoute>, Error> {
     let gtfs_root = operator.get_gtfs_root();
-    let routes_path = GtfsFile::Routes.prepend_root(&gtfs_root);
+    let routes_path = File::Routes.prepend_root(&gtfs_root);
 
     if !routes_path.exists() {
         return Err(Error::NotFoundUpstream);
@@ -75,8 +74,7 @@ pub(crate) fn gtfs_routes(
 
     Ok(rdr
         .deserialize()
-        .into_iter()
-        .map(|result| result.unwrap())
+        .map(Result::unwrap)
         .collect::<Vec<gtfs::GTFSRoute>>())
 }
 
@@ -85,7 +83,7 @@ pub(crate) fn gtfs_trips(
     operator: &operators::Operator,
 ) -> Result<Vec<gtfs::GTFSTrips>, Error> {
     let gtfs_root = operator.get_gtfs_root();
-    let trips_path = GtfsFile::Trips.prepend_root(&gtfs_root);
+    let trips_path = File::Trips.prepend_root(&gtfs_root);
 
     if !trips_path.exists() {
         return Err(Error::NotFoundUpstream);
@@ -100,8 +98,7 @@ pub(crate) fn gtfs_trips(
 
     Ok(rdr
         .deserialize()
-        .into_iter()
-        .map(|result| result.unwrap())
+        .map(Result::unwrap)
         .collect::<Vec<gtfs::GTFSTrips>>())
 }
 
@@ -110,7 +107,7 @@ pub(crate) fn gtfs_stop_times(
     operator: &operators::Operator,
 ) -> Result<Vec<gtfs::GTFSStopTimes>, Error> {
     let gtfs_root = operator.get_gtfs_root();
-    let stop_times_path = GtfsFile::StopTimes.prepend_root(&gtfs_root);
+    let stop_times_path = File::StopTimes.prepend_root(&gtfs_root);
 
     if !stop_times_path.exists() {
         return Err(Error::NotFoundUpstream);
@@ -125,8 +122,7 @@ pub(crate) fn gtfs_stop_times(
 
     Ok(rdr
         .deserialize()
-        .into_iter()
-        .map(|result| result.unwrap())
+        .map(Result::unwrap)
         .collect::<Vec<gtfs::GTFSStopTimes>>())
 }
 
@@ -145,9 +141,9 @@ fn simplified_trip_id(trip_id: &str) -> String {
 pub(crate) fn simplified_gtfs_routes(
     operator: &operators::Operator,
 ) -> Result<Vec<TMLRoute>, Error> {
-    let gtfs_stop_times = gtfs_stop_times(&operator)?;
-    let gtfs_trips = gtfs_trips(&operator)?;
-    let gtfs_routes = gtfs_routes(&operator)?;
+    let gtfs_stop_times = gtfs_stop_times(operator)?;
+    let gtfs_trips = gtfs_trips(operator)?;
+    let gtfs_routes = gtfs_routes(operator)?;
 
     let gtfs_route_names = gtfs_routes
         .into_iter()

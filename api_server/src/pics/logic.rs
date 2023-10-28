@@ -25,7 +25,7 @@ use sha1::{Digest, Sha1};
 use sqlx::PgPool;
 
 use commons::models::pics;
-use commons::utils::exif::{Exif, ExifOrientation};
+use commons::utils::exif::{Exif, Orientation};
 
 use super::sql;
 use crate::Error;
@@ -47,7 +47,7 @@ pub(crate) async fn upload_stop_picture(
     stops: &[i32],
 ) -> Result<pics::StopPic, Error> {
     let mut hasher = Sha1::new();
-    hasher.update(&content);
+    hasher.update(content);
     let hash = hasher.finalize();
     let hex_hash = base16ct::lower::encode_string(&hash);
 
@@ -98,30 +98,30 @@ pub(crate) async fn upload_stop_picture(
 
         if let Some(orientation) = exif_data.orientation {
             match orientation {
-                ExifOrientation::Mirror => {
+                Orientation::Mirror => {
                     original_img = original_img.fliph();
                 }
-                ExifOrientation::Rotate180 => {
+                Orientation::Rotate180 => {
                     original_img = original_img.rotate180();
                 }
-                ExifOrientation::MirrorVertical => {
+                Orientation::MirrorVertical => {
                     original_img = original_img.flipv();
                 }
-                ExifOrientation::MirrorHorizontalRotate270 => {
+                Orientation::MirrorHorizontalRotate270 => {
                     // FIXME This is broken
                     original_img = original_img.fliph().rotate270();
                 }
-                ExifOrientation::Rotate90 => {
+                Orientation::Rotate90 => {
                     original_img = original_img.rotate90();
                 }
-                ExifOrientation::MirrorHorizontalRotate90 => {
+                Orientation::MirrorHorizontalRotate90 => {
                     // FIXME This is broken
                     original_img = original_img.fliph().rotate90();
                 }
-                ExifOrientation::Rotate270 => {
+                Orientation::Rotate270 => {
                     original_img = original_img.rotate270();
                 }
-                _ => {}
+                Orientation::Horizontal => {}
             }
         }
 
@@ -183,7 +183,7 @@ async fn upload_picture_to_storage(
     // TODO handle status codes
     let _status_code = bucket
         .put_object_with_content_type(
-            format!("/medium/{}", hex_hash),
+            format!("/medium/{hex_hash}"),
             &medium_img_webp,
             "image/webp",
         )
@@ -201,7 +201,7 @@ async fn upload_picture_to_storage(
         .to_vec();
     let _status_code = bucket
         .put_object_with_content_type(
-            format!("/thumb/{}", hex_hash),
+            format!("/thumb/{hex_hash}"),
             &thumbnail_img_webp,
             "image/webp",
         )
@@ -211,7 +211,7 @@ async fn upload_picture_to_storage(
     let _status_code = if let Some(mime) = original_img_mime.first() {
         bucket
             .put_object_with_content_type(
-                format!("/ori/{}", hex_hash),
+                format!("/ori/{hex_hash}"),
                 content.as_ref(),
                 mime.as_ref(),
             )
@@ -219,7 +219,7 @@ async fn upload_picture_to_storage(
             .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?
     } else {
         bucket
-            .put_object(format!("/ori/{}", hex_hash), content.as_ref())
+            .put_object(format!("/ori/{hex_hash}"), content.as_ref())
             .await
             .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?
     };
@@ -232,15 +232,15 @@ async fn delete_picture_from_storage(
     bucket: &s3::Bucket,
 ) -> Result<(), Error> {
     bucket
-        .delete_object(format!("/thumb/{}", hex_hash))
+        .delete_object(format!("/thumb/{hex_hash}"))
         .await
         .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?;
     bucket
-        .delete_object(format!("/medium/{}", hex_hash))
+        .delete_object(format!("/medium/{hex_hash}"))
         .await
         .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?;
     bucket
-        .delete_object(format!("/ori/{}", hex_hash))
+        .delete_object(format!("/ori/{hex_hash}"))
         .await
         .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?;
 
@@ -254,12 +254,15 @@ pub(crate) async fn upload_pano_picture(
     db_pool: &PgPool,
     content: &Bytes,
 ) -> Result<pics::PanoPic, Error> {
-    if !name.ends_with(".insp") {
+    if !std::path::Path::new(&name)
+        .extension()
+        .map_or(false, |ext| ext.eq_ignore_ascii_case("insp"))
+    {
         return Err(Error::DependenciesNotMet);
     }
 
     let mut hasher = Sha1::new();
-    hasher.update(&content);
+    hasher.update(content);
     let hash = hasher.finalize();
     let hex_hash = base16ct::lower::encode_string(&hash);
 
@@ -278,10 +281,7 @@ pub(crate) async fn upload_pano_picture(
         exif::Reader::new()
             .read_from_container(&mut source_buffer)
             .map_err(|e| {
-                Error::Processing(format!(
-                    "Panorama exif error: {}",
-                    e.to_string()
-                ))
+                Error::Processing(format!("Panorama exif error: {e}"))
             })?,
     );
 
@@ -311,7 +311,7 @@ async fn upload_pano_to_storage(
 ) -> Result<(), Error> {
     bucket
         .put_object_with_content_type(
-            format!("/pano/{}", hex_hash),
+            format!("/pano/{hex_hash}"),
             content.as_ref(),
             mime::IMAGE_JPEG.as_ref(),
         )

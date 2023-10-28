@@ -26,7 +26,7 @@ use itertools::Itertools;
 use crate::errors::Error;
 use crate::models::gtfs;
 
-const GTFS_FILES: [&'static str; 13] = [
+const GTFS_FILES: [&str; 13] = [
     "agency.txt",
     "calendar_dates.txt",
     "facilities.txt",
@@ -44,11 +44,12 @@ const GTFS_FILES: [&'static str; 13] = [
 
 // Calculate the GTFS stop id sequence vec for each trip_id when presented with
 // a vector of GTFSStopTimes.
+#[must_use]
 pub fn calculate_gtfs_stop_sequence(
-    gtfs_stop_times: &Vec<gtfs::GTFSStopTimes>,
+    gtfs_stop_times: &[gtfs::GTFSStopTimes],
 ) -> HashMap<String, Vec<String>> {
     gtfs_stop_times
-        .into_iter()
+        .iter()
         .into_group_map_by(|x| &x.trip_id)
         .into_iter()
         .map(|(trip_id, stop_times)| {
@@ -63,6 +64,7 @@ pub fn calculate_gtfs_stop_sequence(
         .collect::<HashMap<_, _>>()
 }
 
+#[must_use]
 pub fn calculate_stop_sliding_windows(
     gtfs_stop_sequence: &HashMap<String, Vec<String>>,
 ) -> Vec<Vec<String>> {
@@ -76,7 +78,7 @@ pub fn calculate_stop_sliding_windows(
     stop_sequences
         .into_iter()
         .unique()
-        .map(|seq| seq.to_owned())
+        .map(std::borrow::ToOwned::to_owned)
         .collect::<Vec<_>>()
 }
 
@@ -102,7 +104,7 @@ pub fn extract_gtfs(
             None => continue,
         };
 
-        println!("{:?}", file_path);
+        println!("{file_path:?}");
 
         if !GTFS_FILES.contains(&file.name()) {
             continue;
@@ -115,7 +117,7 @@ pub fn extract_gtfs(
 
         let mut output_dir = PathBuf::from(output_dir);
         output_dir.push(file_path);
-        println!("{:?}", output_dir);
+        println!("{output_dir:?}");
 
         if (*file.name()).ends_with('/') {
             println!("File {} extracted to \"{}\"", i, output_dir.display());
@@ -147,14 +149,14 @@ fn zip_datetime_to_chrono(
     datetime: zip::DateTime,
 ) -> Result<chrono::DateTime<chrono::Utc>, Error> {
     let date = chrono::NaiveDate::from_ymd_opt(
-        datetime.year() as i32,
-        datetime.month() as u32,
-        datetime.day() as u32,
+        i32::from(datetime.year()),
+        u32::from(datetime.month()),
+        u32::from(datetime.day()),
     );
     let time = chrono::NaiveTime::from_hms_opt(
-        datetime.hour() as u32,
-        datetime.minute() as u32,
-        datetime.second() as u32,
+        u32::from(datetime.hour()),
+        u32::from(datetime.minute()),
+        u32::from(datetime.second()),
     );
 
     if date.is_none() || time.is_none() {

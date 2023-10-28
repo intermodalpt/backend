@@ -60,7 +60,7 @@ pub(crate) async fn accept_contribution(
     verify: bool,
     ignored: &Option<String>,
 ) -> Result<(), Error> {
-    let contribution = sql::fetch_contribution(&pool, contribution_id).await?;
+    let contribution = sql::fetch_contribution(pool, contribution_id).await?;
 
     if contribution.is_none() {
         return Err(Error::NotFoundUpstream);
@@ -139,15 +139,7 @@ pub(crate) fn accept_stop_contribution(
     let ignored_fields = if let Some(ignored) = ignored {
         ignored
             .split(',')
-            .map(|s| s)
-            .filter_map(|s| {
-                // Remove whitespace strings
-                if s.trim().is_empty() {
-                    None
-                } else {
-                    Some(s)
-                }
-            })
+            .filter(|s| !s.trim().is_empty())
             .collect()
     } else {
         HashSet::new()

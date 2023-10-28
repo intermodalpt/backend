@@ -19,9 +19,9 @@
 use crate::Error;
 use axum::extract::multipart::{Field, Multipart};
 
-pub(crate) async fn get_exactly_one_field<'d>(
-    multipart: &'d mut Multipart,
-) -> Result<Field<'d>, Error> {
+pub(crate) async fn get_exactly_one_field(
+    multipart: &mut Multipart,
+) -> Result<Field, Error> {
     let field = multipart
         .next_field()
         .await

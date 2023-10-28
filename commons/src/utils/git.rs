@@ -75,7 +75,7 @@ fn do_fetch<'a>(
     }
 
     let fetch_head = repo.find_reference("FETCH_HEAD")?;
-    Ok(repo.reference_to_annotated_commit(&fetch_head)?)
+    repo.reference_to_annotated_commit(&fetch_head)
 }
 
 fn fast_forward(
@@ -88,7 +88,7 @@ fn fast_forward(
         None => String::from_utf8_lossy(lb.name_bytes()).to_string(),
     };
     let msg = format!("Fast-Forward: Setting {} to id: {}", name, rc.id());
-    println!("{}", msg);
+    println!("{msg}");
     lb.set_target(rc.id(), &msg)?;
     repo.set_head(&name)?;
     repo.checkout_head(Some(
@@ -142,7 +142,7 @@ fn normal_merge(
 fn do_merge<'a>(
     repo: &'a Repository,
     remote_branch: &str,
-    fetch_commit: git2::AnnotatedCommit<'a>,
+    fetch_commit: &git2::AnnotatedCommit<'a>,
 ) -> Result<(), git2::Error> {
     // 1. do a merge analysis
     let analysis = repo.merge_analysis(&[&fetch_commit])?;
@@ -151,38 +151,31 @@ fn do_merge<'a>(
     if analysis.0.is_fast_forward() {
         println!("Doing a fast forward");
         // do a fast forward
-        let refname = format!("refs/heads/{}", remote_branch);
-        match repo.find_reference(&refname) {
-            Ok(mut r) => {
-                fast_forward(repo, &mut r, &fetch_commit)?;
-            }
-            Err(_) => {
-                // The branch doesn't exist so just set the reference to the
-                // commit directly. Usually this is because you are pulling
-                // into an empty repository.
-                repo.reference(
-                    &refname,
-                    fetch_commit.id(),
-                    true,
-                    &format!(
-                        "Setting {} to {}",
-                        remote_branch,
-                        fetch_commit.id()
-                    ),
-                )?;
-                repo.set_head(&refname)?;
-                repo.checkout_head(Some(
-                    git2::build::CheckoutBuilder::default()
-                        .allow_conflicts(true)
-                        .conflict_style_merge(true)
-                        .force(),
-                ))?;
-            }
+        let refname = format!("refs/heads/{remote_branch}");
+        if let Ok(mut r) = repo.find_reference(&refname) {
+            fast_forward(repo, &mut r, &fetch_commit)?;
+        } else {
+            // The branch doesn't exist so just set the reference to the
+            // commit directly. Usually this is because you are pulling
+            // into an empty repository.
+            repo.reference(
+                &refname,
+                fetch_commit.id(),
+                true,
+                &format!("Setting {} to {}", remote_branch, fetch_commit.id()),
+            )?;
+            repo.set_head(&refname)?;
+            repo.checkout_head(Some(
+                git2::build::CheckoutBuilder::default()
+                    .allow_conflicts(true)
+                    .conflict_style_merge(true)
+                    .force(),
+            ))?;
         };
     } else if analysis.0.is_normal() {
         // do a normal merge
         let head_commit = repo.reference_to_annotated_commit(&repo.head()?)?;
-        normal_merge(&repo, &head_commit, &fetch_commit)?;
+        normal_merge(repo, &head_commit, &fetch_commit)?;
     } else {
         println!("Nothing to do...");
     }
@@ -196,11 +189,11 @@ pub fn pull(
 ) -> Result<(), String> {
     let mut remote = repo
         .find_remote(remote_name)
-        .map_err(|e| format!("Failed to find remote: {:?}", e))?;
-    let fetch_commit = do_fetch(&repo, &[remote_branch], &mut remote)
-        .map_err(|e| format!("Failed fetch remote: {:?}", e))?;
-    do_merge(&repo, &remote_branch, fetch_commit)
-        .map_err(|e| format!("Failed to merge: {:?}", e))
+        .map_err(|e| format!("Failed to find remote: {e:?}"))?;
+    let fetch_commit = do_fetch(repo, &[remote_branch], &mut remote)
+        .map_err(|e| format!("Failed fetch remote: {e:?}"))?;
+    do_merge(repo, remote_branch, &fetch_commit)
+        .map_err(|e| format!("Failed to merge: {e:?}"))
 }
 
 pub fn head_date(repo: &Repository) -> Result<DateTime<Utc>, git2::Error> {
@@ -225,19 +218,19 @@ pub fn update_repo(
 ) -> Result<DateTime<Utc>, String> {
     match Repository::open(path) {
         Ok(repo) => {
-            println!("Pulling {} into {}...", url, path);
+            println!("Pulling {url} into {path}...");
             pull(&repo, remote_name, remote_branch)?;
 
             let commit_date = head_date(&repo).map_err(|e| e.to_string())?;
-            println!("Last commit date: {}", commit_date);
+            println!("Last commit date: {commit_date}");
             Ok(commit_date)
         }
         Err(e) => match e.class() {
             git2::ErrorClass::Os => {
-                println!("Cloning {} into {}...", url, path);
+                println!("Cloning {url} into {path}...");
                 let repo = match Repository::clone(url, path) {
                     Ok(repo) => repo,
-                    Err(e) => panic!("failed to clone: {}", e),
+                    Err(e) => panic!("failed to clone: {e}"),
                 };
 
                 let commit_date =
@@ -245,7 +238,7 @@ pub fn update_repo(
                 Ok(commit_date)
             }
             _ => {
-                println!("failed to open: {}", e);
+                println!("failed to open: {e}");
                 Err(e.to_string())
             }
         },

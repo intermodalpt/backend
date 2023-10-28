@@ -586,7 +586,7 @@ WHERE Subroute=$1 AND idx>=$2
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?
         .rows_affected();
 
-        if deleted_rows != stored_changes.unsigned_abs() as u64 {
+        if deleted_rows != u64::from(stored_changes.unsigned_abs()) {
             return Err(Error::Processing(
                 "Detected an unexpected amount of rows".to_string(),
             ));

@@ -114,6 +114,7 @@ pub enum Change {
     },
 }
 
+#[allow(clippy::option_option)]
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct StopPatch {
     #[serde(
@@ -339,6 +340,7 @@ pub struct StopPatch {
 }
 
 impl StopPatch {
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.name.is_none()
             && self.short_name.is_none()
@@ -389,151 +391,151 @@ impl StopPatch {
 
     pub fn apply(&self, stop: &mut stops::Stop) {
         if let Some(name) = self.name.clone() {
-            stop.name = name
+            stop.name = name;
         }
         if let Some(short_name) = self.short_name.clone() {
-            stop.short_name = short_name
+            stop.short_name = short_name;
         }
         if let Some(locality) = self.locality.clone() {
-            stop.locality = locality
+            stop.locality = locality;
         }
         if let Some(street) = self.street.clone() {
-            stop.street = street
+            stop.street = street;
         }
         if let Some(door) = self.door.clone() {
-            stop.door = door
+            stop.door = door;
         }
         if let Some(schedules) = self.schedules.clone() {
-            stop.a11y.schedules = schedules
+            stop.a11y.schedules = schedules;
         }
         if let Some(flags) = self.flags.clone() {
-            stop.a11y.flags = flags
+            stop.a11y.flags = flags;
         }
 
         if let Some(has_sidewalk) = self.has_sidewalk {
-            stop.a11y.has_sidewalk = has_sidewalk
+            stop.a11y.has_sidewalk = has_sidewalk;
         }
         if let Some(has_sidewalked_path) = self.has_sidewalked_path {
-            stop.a11y.has_sidewalked_path = has_sidewalked_path
+            stop.a11y.has_sidewalked_path = has_sidewalked_path;
         }
         if let Some(has_shelter) = self.has_shelter {
-            stop.a11y.has_shelter = has_shelter
+            stop.a11y.has_shelter = has_shelter;
         }
         if let Some(has_cover) = self.has_cover {
-            stop.a11y.has_cover = has_cover
+            stop.a11y.has_cover = has_cover;
         }
         if let Some(has_bench) = self.has_bench {
-            stop.a11y.has_bench = has_bench
+            stop.a11y.has_bench = has_bench;
         }
         if let Some(has_trash_can) = self.has_trash_can {
-            stop.a11y.has_trash_can = has_trash_can
+            stop.a11y.has_trash_can = has_trash_can;
         }
         if let Some(has_waiting_times) = self.has_waiting_times {
-            stop.a11y.has_waiting_times = has_waiting_times
+            stop.a11y.has_waiting_times = has_waiting_times;
         }
         if let Some(has_ticket_seller) = self.has_ticket_seller {
-            stop.a11y.has_ticket_seller = has_ticket_seller
+            stop.a11y.has_ticket_seller = has_ticket_seller;
         }
         if let Some(has_costumer_support) = self.has_costumer_support {
-            stop.a11y.has_costumer_support = has_costumer_support
+            stop.a11y.has_costumer_support = has_costumer_support;
         }
         if let Some(advertisement_qty) = self.advertisement_qty {
-            stop.a11y.advertisement_qty = advertisement_qty
+            stop.a11y.advertisement_qty = advertisement_qty;
         }
         if let Some(has_crossing) = self.has_crossing {
-            stop.a11y.has_crossing = has_crossing
+            stop.a11y.has_crossing = has_crossing;
         }
         if let Some(has_wide_access) = self.has_wide_access {
-            stop.a11y.has_wide_access = has_wide_access
+            stop.a11y.has_wide_access = has_wide_access;
         }
         if let Some(has_flat_access) = self.has_flat_access {
-            stop.a11y.has_flat_access = has_flat_access
+            stop.a11y.has_flat_access = has_flat_access;
         }
         if let Some(has_tactile_access) = self.has_tactile_access {
-            stop.a11y.has_tactile_access = has_tactile_access
+            stop.a11y.has_tactile_access = has_tactile_access;
         }
         if let Some(illumination_strength) = self.illumination_strength {
-            stop.a11y.illumination_strength = illumination_strength
+            stop.a11y.illumination_strength = illumination_strength;
         }
         if let Some(illumination_position) = self.illumination_position {
-            stop.a11y.illumination_position = illumination_position
+            stop.a11y.illumination_position = illumination_position;
         }
         if let Some(is_illumination_working) = self.is_illumination_working {
-            stop.a11y.is_illumination_working = is_illumination_working
+            stop.a11y.is_illumination_working = is_illumination_working;
         }
         if let Some(has_illuminated_path) = self.has_illuminated_path {
-            stop.a11y.has_illuminated_path = has_illuminated_path
+            stop.a11y.has_illuminated_path = has_illuminated_path;
         }
         if let Some(has_visibility_from_within) =
             self.has_visibility_from_within
         {
-            stop.a11y.has_visibility_from_within = has_visibility_from_within
+            stop.a11y.has_visibility_from_within = has_visibility_from_within;
         }
         if let Some(has_visibility_from_area) = self.has_visibility_from_area {
-            stop.a11y.has_visibility_from_area = has_visibility_from_area
+            stop.a11y.has_visibility_from_area = has_visibility_from_area;
         }
         if let Some(is_visible_from_outside) = self.is_visible_from_outside {
-            stop.a11y.is_visible_from_outside = is_visible_from_outside
+            stop.a11y.is_visible_from_outside = is_visible_from_outside;
         }
         if let Some(parking_visibility_impairment) =
             self.parking_visibility_impairment
         {
             stop.a11y.parking_visibility_impairment =
-                parking_visibility_impairment
+                parking_visibility_impairment;
         }
         if let Some(parking_local_access_impairment) =
             self.parking_local_access_impairment
         {
             stop.a11y.parking_local_access_impairment =
-                parking_local_access_impairment
+                parking_local_access_impairment;
         }
         if let Some(parking_area_access_impairment) =
             self.parking_area_access_impairment
         {
             stop.a11y.parking_area_access_impairment =
-                parking_area_access_impairment
+                parking_area_access_impairment;
         }
         if let Some(tmp_issues) = self.tmp_issues.clone() {
-            stop.a11y.tmp_issues = tmp_issues
+            stop.a11y.tmp_issues = tmp_issues;
         }
         if let Some(tags) = self.tags.clone() {
-            stop.tags = tags
+            stop.tags = tags;
         }
         if let Some(notes) = self.notes.clone() {
-            stop.notes = notes
+            stop.notes = notes;
         }
         if let Some(verification_level) = self.verification_level {
-            stop.verification_level = verification_level
+            stop.verification_level = verification_level;
         }
         if let Some(service_check_date) = self.service_check_date {
-            stop.service_check_date = service_check_date
+            stop.service_check_date = service_check_date;
         }
         if let Some(infrastructure_check_date) = self.infrastructure_check_date
         {
-            stop.infrastructure_check_date = infrastructure_check_date
+            stop.infrastructure_check_date = infrastructure_check_date;
         }
 
         // FIXME deprecated
         if let Some(has_accessibility) = self.has_accessibility {
-            stop.a11y.has_accessibility = has_accessibility
+            stop.a11y.has_accessibility = has_accessibility;
         }
         if let Some(has_abusive_parking) = self.has_abusive_parking {
-            stop.a11y.has_abusive_parking = has_abusive_parking
+            stop.a11y.has_abusive_parking = has_abusive_parking;
         }
         if let Some(has_outdated_info) = self.has_outdated_info {
-            stop.a11y.has_outdated_info = has_outdated_info
+            stop.a11y.has_outdated_info = has_outdated_info;
         }
         if let Some(is_damaged) = self.is_damaged {
-            stop.a11y.is_damaged = is_damaged
+            stop.a11y.is_damaged = is_damaged;
         }
         if let Some(is_vandalized) = self.is_vandalized {
-            stop.a11y.is_vandalized = is_vandalized
+            stop.a11y.is_vandalized = is_vandalized;
         }
         if let Some(has_flag) = self.has_flag {
-            stop.a11y.has_flag = has_flag
+            stop.a11y.has_flag = has_flag;
         }
         if let Some(has_schedules) = self.has_schedules {
-            stop.a11y.has_schedules = has_schedules
+            stop.a11y.has_schedules = has_schedules;
         }
     }
 
@@ -894,18 +896,18 @@ impl StopPatch {
                 stops::StopVerification::from(patch_verification);
 
             if patch_verification.service == stops::Verification::NotVerified {
-                new_verification.service = stops::Verification::NotVerified
+                new_verification.service = stops::Verification::NotVerified;
             };
 
             if patch_verification.infrastructure
                 == stops::Verification::NotVerified
             {
                 new_verification.infrastructure =
-                    stops::Verification::NotVerified
+                    stops::Verification::NotVerified;
             };
 
             if patch_verification.position == stops::Verification::NotVerified {
-                new_verification.position = stops::Verification::NotVerified
+                new_verification.position = stops::Verification::NotVerified;
             };
         }
 
@@ -939,6 +941,7 @@ pub struct RoutePatch {
 }
 
 impl RoutePatch {
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.type_id.is_none()
             && self.operator_id.is_none()
@@ -952,25 +955,25 @@ impl RoutePatch {
     #[allow(unused)]
     pub fn apply(self, route: &mut routes::Route) {
         if let Some(type_id) = self.type_id {
-            route.type_id = type_id
+            route.type_id = type_id;
         }
         if let Some(operator) = self.operator_id {
-            route.operator_id = operator
+            route.operator_id = operator;
         }
         if let Some(code) = self.code {
-            route.code = code
+            route.code = code;
         }
         if let Some(name) = self.name {
-            route.name = name
+            route.name = name;
         }
         if let Some(main_subroute) = self.main_subroute {
-            route.main_subroute = main_subroute
+            route.main_subroute = main_subroute;
         }
         if let Some(active) = self.active {
-            route.active = active
+            route.active = active;
         }
         if let Some(circular) = self.circular {
-            route.circular = circular
+            route.circular = circular;
         }
     }
 }
@@ -983,6 +986,7 @@ pub struct SubroutePatch {
 }
 
 impl SubroutePatch {
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.flag.is_none()
             && self.circular.is_none()
@@ -992,13 +996,13 @@ impl SubroutePatch {
     #[allow(unused)]
     pub fn apply(self, subroute: &mut routes::Subroute) {
         if let Some(flag) = self.flag {
-            subroute.flag = flag
+            subroute.flag = flag;
         }
         if let Some(circular) = self.circular {
-            subroute.circular = circular
+            subroute.circular = circular;
         }
         if let Some(polyline) = self.polyline {
-            subroute.polyline = Some(polyline)
+            subroute.polyline = Some(polyline);
         }
     }
 }
@@ -1011,6 +1015,7 @@ pub struct DeparturePatch {
 }
 
 impl DeparturePatch {
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.time.is_none()
             && self.subroute_id.is_none()
@@ -1020,13 +1025,13 @@ impl DeparturePatch {
     #[allow(unused)]
     pub fn apply(self, departure: &mut routes::Departure) {
         if let Some(time) = self.time {
-            departure.time = time
+            departure.time = time;
         }
         if let Some(subroute_id) = self.subroute_id {
-            departure.subroute_id = subroute_id
+            departure.subroute_id = subroute_id;
         }
         if let Some(calendar_id) = self.calendar_id {
-            departure.calendar_id = calendar_id
+            departure.calendar_id = calendar_id;
         }
     }
 }
@@ -1059,6 +1064,7 @@ pub struct StopPicturePatch {
 }
 
 impl StopPicturePatch {
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.public.is_none()
             && self.sensitive.is_none()
@@ -1072,25 +1078,25 @@ impl StopPicturePatch {
     #[allow(unused)]
     pub fn apply(self, pic: &mut pics::StopPic) {
         if let Some(public) = self.public {
-            pic.dyn_meta.public = public
+            pic.dyn_meta.public = public;
         }
         if let Some(sensitive) = self.sensitive {
-            pic.dyn_meta.sensitive = sensitive
+            pic.dyn_meta.sensitive = sensitive;
         }
         if let Some(lon) = self.lon {
-            pic.dyn_meta.lon = lon
+            pic.dyn_meta.lon = lon;
         }
         if let Some(lat) = self.lat {
-            pic.dyn_meta.lat = lat
+            pic.dyn_meta.lat = lat;
         }
         if let Some(quality) = self.quality {
-            pic.dyn_meta.quality = quality
+            pic.dyn_meta.quality = quality;
         }
         if let Some(tags) = self.tags {
-            pic.dyn_meta.tags = tags
+            pic.dyn_meta.tags = tags;
         }
         if let Some(notes) = self.notes {
-            pic.dyn_meta.notes = notes
+            pic.dyn_meta.notes = notes;
         }
     }
 }
@@ -1134,6 +1140,7 @@ pub struct IssuePatch {
 }
 
 impl IssuePatch {
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.title.is_none()
             && self.message.is_none()
@@ -1154,46 +1161,46 @@ impl IssuePatch {
     #[allow(unused)]
     pub fn apply(self, issue: &mut operators::Issue) {
         if let Some(title) = self.title {
-            issue.title = title
+            issue.title = title;
         }
         if let Some(message) = self.message {
-            issue.message = message
+            issue.message = message;
         }
         if let Some(creation) = self.creation {
-            issue.creation = creation
+            issue.creation = creation;
         }
         if let Some(category) = self.category {
-            issue.category = category
+            issue.category = category;
         }
         if let Some(impact) = self.impact {
-            issue.impact = impact
+            issue.impact = impact;
         }
         if let Some(state) = self.state {
-            issue.state = state
+            issue.state = state;
         }
         if let Some(state_justification) = self.state_justification {
-            issue.state_justification = state_justification
+            issue.state_justification = state_justification;
         }
         if let Some(lat) = self.lat {
-            issue.lat = lat
+            issue.lat = lat;
         }
         if let Some(lon) = self.lon {
-            issue.lon = lon
+            issue.lon = lon;
         }
         if let Some(geojson) = self.geojson {
-            issue.geojson = geojson
+            issue.geojson = geojson;
         }
         if let Some(operator_ids) = self.operator_ids {
-            issue.operator_ids = operator_ids
+            issue.operator_ids = operator_ids;
         }
         if let Some(route_ids) = self.route_ids {
-            issue.route_ids = route_ids
+            issue.route_ids = route_ids;
         }
         if let Some(stop_ids) = self.stop_ids {
-            issue.stop_ids = stop_ids
+            issue.stop_ids = stop_ids;
         }
         if let Some(pic_ids) = self.pic_ids {
-            issue.pic_ids = pic_ids
+            issue.pic_ids = pic_ids;
         }
     }
 }

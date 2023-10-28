@@ -208,9 +208,9 @@ FROM Stops
                     },
                 )?,
                 verification_level: if r.verified_position {
-                    r.verification_level as u8 | 0b11000000
+                    r.verification_level as u8 | 0b1100_0000
                 } else {
-                    r.verification_level as u8 & 0b00111111
+                    r.verification_level as u8 & 0b0011_1111
                 },
                 service_check_date: r.service_check_date,
                 infrastructure_check_date: r.infrastructure_check_date,
@@ -335,7 +335,7 @@ RETURNING id
         &serde_json::to_value(&stop.a11y).unwrap(),
         user_id,
         update_date,
-        stop.verification_level as i16,
+        i16::from(stop.verification_level),
         stop.service_check_date,
         stop.infrastructure_check_date
     )
@@ -399,7 +399,7 @@ WHERE id=$17
         user_id,
         update_date,
         &changes.tags,
-        changes.verification_level as i16,
+        i16::from(changes.verification_level),
         changes.service_check_date,
         changes.infrastructure_check_date,
         stop_id
