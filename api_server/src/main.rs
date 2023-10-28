@@ -53,6 +53,7 @@ use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
 use errors::Error;
+use misc::models::responses::Stats;
 
 pub(crate) type AppState = Arc<State>;
 
@@ -422,35 +423,6 @@ async fn main() {
         .expect("Unable to start service");
 }
 
-use misc::models::responses::Stats;
-use routes::models::responses::{
-    DateDeparture, Departure, Route, Subroute, SubrouteStops,
-};
-
-use commons::models::calendar::{Calendar, Weekday};
-use commons::models::geo::Parish;
-use commons::models::stops::Stop;
-
 #[derive(OpenApi)]
-#[openapi(
-    paths(
-        geo::handlers::get_parishes,
-        stops::handlers::get_stops,
-        routes::handlers::get_routes,
-        routes::handlers::get_schedule,
-        routes::handlers::get_route_stops,
-    ),
-    components(schemas(
-        Stop,
-        Calendar,
-        Weekday,
-        DateDeparture,
-        Departure,
-        Parish,
-        Route,
-        Subroute,
-        SubrouteStops,
-    )),
-    tags()
-)]
+#[openapi(paths(), components(schemas()), tags())]
 struct ApiDoc;
