@@ -23,7 +23,7 @@ use serde::Serialize;
 use commons::models::geo;
 
 use super::sql;
-use crate::{auth, AppState, Error};
+use crate::{AppState, Error};
 
 #[utoipa::path(
     get,
@@ -45,23 +45,4 @@ pub(crate) async fn get_parishes(
 pub(crate) struct OsmDiff {
     inserted: usize,
     updated: usize,
-}
-
-pub(crate) async fn import_osm(
-    State(state): State<AppState>,
-    claims: Option<auth::Claims>,
-) -> Result<Json<OsmDiff>, Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
-    // let (inserted, updated) = osm::import(&state.pool).await?;
-
-    let (inserted, updated) = todo!("TODO reimplement or drop");
-
-    Ok(Json(OsmDiff { inserted, updated }))
 }
