@@ -185,24 +185,6 @@ pub struct A11yMeta {
 
     #[serde(default)]
     pub tmp_issues: Vec<String>,
-
-    // FIXME Everything below is deprecated
-    #[serde(default)]
-    pub has_accessibility: Option<bool>,
-    #[serde(default)]
-    pub has_abusive_parking: Option<bool>,
-    #[serde(default)]
-    pub has_outdated_info: Option<bool>,
-    #[serde(default)]
-    pub is_damaged: Option<bool>,
-    #[serde(default)]
-    pub is_vandalized: Option<bool>,
-    #[serde(default)]
-    pub has_flag: Option<bool>,
-    #[serde(default)]
-    pub has_schedules: Option<bool>,
-    #[serde(default)]
-    pub is_illumination_working: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, PartialEq)]
@@ -351,13 +333,6 @@ mod test {
             has_crossing: Some(false),
             has_wide_access: None,
             has_flat_access: Some(true),
-            has_accessibility: Some(true),
-            has_abusive_parking: Some(true),
-            has_outdated_info: Some(true),
-            is_damaged: Some(true),
-            is_vandalized: Some(true),
-            has_flag: Some(true),
-            has_schedules: Some(true),
             has_sidewalk: Some(true),
             has_sidewalked_path: Some(true),
             has_shelter: Some(true),
@@ -369,7 +344,6 @@ mod test {
             has_costumer_support: Some(true),
             illumination_strength: Some(IlluminationStrength::High),
             illumination_position: Some(IlluminationPos::Own),
-            is_illumination_working: Some(true),
             has_illuminated_path: Some(true),
             has_visibility_from_within: Some(true),
             has_visibility_from_area: Some(true),
@@ -460,7 +434,6 @@ mod test {
             has_costumer_support: Some(true),
             illumination_strength: Some(IlluminationStrength::High),
             illumination_position: Some(IlluminationPos::Own),
-            is_illumination_working: Some(true),
             has_illuminated_path: Some(true),
             has_visibility_from_within: Some(true),
             has_visibility_from_area: Some(true),
@@ -475,14 +448,6 @@ mod test {
             advertisement_qty: Some(AdvertisementQuantification::Many),
             has_tactile_access: Some(true),
             tmp_issues: vec![],
-            // TODO Deprecated
-            has_flag: None,
-            has_schedules: None,
-            has_accessibility: None,
-            has_abusive_parking: None,
-            has_outdated_info: None,
-            is_damaged: None,
-            is_vandalized: None,
         };
 
         assert_eq!(a11y, a11y2);
@@ -515,13 +480,6 @@ mod test {
                 has_crossing: Some(false),
                 has_wide_access: None,
                 has_flat_access: Some(true),
-                has_accessibility: Some(true),
-                has_abusive_parking: Some(true),
-                has_outdated_info: Some(true),
-                is_damaged: Some(true),
-                is_vandalized: Some(true),
-                has_flag: Some(true),
-                has_schedules: Some(true),
                 has_sidewalk: Some(true),
                 has_sidewalked_path: Some(true),
                 has_shelter: Some(true),
@@ -533,7 +491,6 @@ mod test {
                 has_costumer_support: Some(true),
                 illumination_strength: Some(IlluminationStrength::High),
                 illumination_position: Some(IlluminationPos::Own),
-                is_illumination_working: Some(true),
                 has_illuminated_path: Some(true),
                 has_visibility_from_within: Some(true),
                 has_visibility_from_area: Some(true),

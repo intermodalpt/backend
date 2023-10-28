@@ -327,16 +327,6 @@ pub struct StopPatch {
     )]
     pub infrastructure_check_date: Option<Option<NaiveDate>>,
     pub verification_level: Option<u8>,
-
-    // FIXME Deprecated
-    pub has_schedules: Option<Option<bool>>,
-    pub has_accessibility: Option<Option<bool>>,
-    pub has_abusive_parking: Option<Option<bool>>,
-    pub has_outdated_info: Option<Option<bool>>,
-    pub is_damaged: Option<Option<bool>>,
-    pub is_vandalized: Option<Option<bool>>,
-    pub has_flag: Option<Option<bool>>,
-    pub is_illumination_working: Option<Option<bool>>,
 }
 
 impl StopPatch {
@@ -378,15 +368,6 @@ impl StopPatch {
             && self.service_check_date.is_none()
             && self.infrastructure_check_date.is_none()
             && self.verification_level.is_none()
-            // TODO deprecate
-            && self.has_flag.is_none()
-            && self.has_schedules.is_none()
-            && self.has_accessibility.is_none()
-            && self.has_abusive_parking.is_none()
-            && self.has_outdated_info.is_none()
-            && self.is_damaged.is_none()
-            && self.is_vandalized.is_none()
-            && self.is_illumination_working.is_none()
     }
 
     pub fn apply(&self, stop: &mut stops::Stop) {
@@ -460,9 +441,6 @@ impl StopPatch {
         if let Some(illumination_position) = self.illumination_position {
             stop.a11y.illumination_position = illumination_position;
         }
-        if let Some(is_illumination_working) = self.is_illumination_working {
-            stop.a11y.is_illumination_working = is_illumination_working;
-        }
         if let Some(has_illuminated_path) = self.has_illuminated_path {
             stop.a11y.has_illuminated_path = has_illuminated_path;
         }
@@ -513,29 +491,6 @@ impl StopPatch {
         if let Some(infrastructure_check_date) = self.infrastructure_check_date
         {
             stop.infrastructure_check_date = infrastructure_check_date;
-        }
-
-        // FIXME deprecated
-        if let Some(has_accessibility) = self.has_accessibility {
-            stop.a11y.has_accessibility = has_accessibility;
-        }
-        if let Some(has_abusive_parking) = self.has_abusive_parking {
-            stop.a11y.has_abusive_parking = has_abusive_parking;
-        }
-        if let Some(has_outdated_info) = self.has_outdated_info {
-            stop.a11y.has_outdated_info = has_outdated_info;
-        }
-        if let Some(is_damaged) = self.is_damaged {
-            stop.a11y.is_damaged = is_damaged;
-        }
-        if let Some(is_vandalized) = self.is_vandalized {
-            stop.a11y.is_vandalized = is_vandalized;
-        }
-        if let Some(has_flag) = self.has_flag {
-            stop.a11y.has_flag = has_flag;
-        }
-        if let Some(has_schedules) = self.has_schedules {
-            stop.a11y.has_schedules = has_schedules;
         }
     }
 

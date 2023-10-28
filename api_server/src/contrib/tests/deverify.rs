@@ -144,15 +144,6 @@ fn stop_patch_deverify_full_patch() {
         service_check_date: Some(None),
         infrastructure_check_date: Some(None),
         verification_level: None,
-        // TODO deprecate
-        has_schedules: None,
-        has_accessibility: None,
-        has_abusive_parking: None,
-        has_outdated_info: None,
-        is_damaged: None,
-        is_vandalized: None,
-        has_flag: None,
-        is_illumination_working: None,
     };
 
     patch.deverify(stops::StopVerification::verified().into());
