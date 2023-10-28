@@ -79,7 +79,6 @@ pub(crate) async fn import(
                     || (stop.lon.unwrap() - osm_stop.lon.unwrap()).abs()
                         > FLOAT_TOLERANCE
                     || stop.osm_name != osm_stop.osm_name
-                    || (stop.refs != osm_stop.refs)
                 {
                     updated_stops.push(osm_stop);
                 }

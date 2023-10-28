@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nUPDATE Stops\nSET osm_name=$1, lon=$2, lat=$3, refs=$4\nWHERE id=$5 AND external_id=$6\n    ",
+  "query": "\nUPDATE Stops\nSET osm_name=$1, lon=$2, lat=$3\nWHERE id=$4 AND external_id=$5\n    ",
   "describe": {
     "columns": [],
     "parameters": {
@@ -8,12 +8,11 @@
         "Varchar",
         "Float8",
         "Float8",
-        "VarcharArray",
         "Int4",
         "Text"
       ]
     },
     "nullable": []
   },
-  "hash": "eaef909761533a08cf5b2923d5646b6c791e1a94883417e332146d92549ac435"
+  "hash": "c74efdc033e6b7848c7636669e1314b7bb31ab1874c2e7764522ec02cb02ad06"
 }

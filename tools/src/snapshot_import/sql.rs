@@ -23,24 +23,21 @@ use crate::models;
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 pub(crate) async fn fetch_stops(pool: &PgPool) -> Result<Vec<models::Stop>> {
-    sqlx::query!(
-        "SELECT id, name, official_name, osm_name, lat, lon, external_id, refs FROM stops"
-    )
-    .fetch_all(pool)
-    .await?
-    .into_iter()
-    .map(|r| {
-        Ok(models::Stop {
-            id: r.id,
-            name: r.name,
-            osm_name: r.osm_name,
-            lat: r.lat,
-            lon: r.lon,
-            external_id: r.external_id,
-            refs: r.refs,
+    sqlx::query!("SELECT id, name, osm_name, lat, lon, external_id FROM stops")
+        .fetch_all(pool)
+        .await?
+        .into_iter()
+        .map(|r| {
+            Ok(models::Stop {
+                id: r.id,
+                name: r.name,
+                osm_name: r.osm_name,
+                lat: r.lat,
+                lon: r.lon,
+                external_id: r.external_id,
+            })
         })
-    })
-    .collect()
+        .collect()
 }
 
 pub(crate) async fn insert_stops(
@@ -73,13 +70,12 @@ pub(crate) async fn update_stops(
         let _res = sqlx::query!(
             r#"
 UPDATE Stops
-SET osm_name=$1, lon=$2, lat=$3, refs=$4
-WHERE id=$5 AND external_id=$6
+SET osm_name=$1, lon=$2, lat=$3
+WHERE id=$4 AND external_id=$5
     "#,
             stop.osm_name,
             stop.lon,
             stop.lat,
-            &stop.refs,
             stop.id,
             stop.external_id,
         )

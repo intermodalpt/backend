@@ -65,7 +65,6 @@ pub(crate) struct Stop {
 
     pub osm_name: Option<String>,
     pub external_id: String,
-    pub refs: Vec<String>,
 }
 
 impl From<XmlNode> for Stop {
@@ -77,19 +76,11 @@ impl From<XmlNode> for Stop {
             lat: Some(node.lat),
             lon: Some(node.lon),
             external_id: node.id.to_string(),
-            refs: vec![],
         };
 
         for tag in node.tags {
             match tag.k.as_str() {
                 "name" => res.osm_name = Some(tag.v),
-                "ref" => {
-                    res.refs = tag
-                        .v
-                        .split(';')
-                        .map(|s| s.trim().to_string())
-                        .collect::<Vec<String>>()
-                }
                 _ => {}
             }
         }

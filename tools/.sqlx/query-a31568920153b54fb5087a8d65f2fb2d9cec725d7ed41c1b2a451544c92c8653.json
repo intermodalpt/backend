@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, name, official_name, osm_name, lat, lon, external_id, refs FROM stops",
+  "query": "SELECT id, name, osm_name, lat, lon, external_id FROM stops",
   "describe": {
     "columns": [
       {
@@ -15,33 +15,23 @@
       },
       {
         "ordinal": 2,
-        "name": "official_name",
-        "type_info": "Varchar"
-      },
-      {
-        "ordinal": 3,
         "name": "osm_name",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 4,
+        "ordinal": 3,
         "name": "lat",
         "type_info": "Float8"
       },
       {
-        "ordinal": 5,
+        "ordinal": 4,
         "name": "lon",
         "type_info": "Float8"
       },
       {
-        "ordinal": 6,
+        "ordinal": 5,
         "name": "external_id",
         "type_info": "Text"
-      },
-      {
-        "ordinal": 7,
-        "name": "refs",
-        "type_info": "VarcharArray"
       }
     ],
     "parameters": {
@@ -53,10 +43,8 @@
       true,
       true,
       true,
-      true,
-      false,
       false
     ]
   },
-  "hash": "c97fa889ea514da7d8cce8c624b6be970f8b9379214b76cdd8e389ab9e6906f8"
+  "hash": "a31568920153b54fb5087a8d65f2fb2d9cec725d7ed41c1b2a451544c92c8653"
 }
