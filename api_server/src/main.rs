@@ -336,10 +336,6 @@ pub(crate) fn build_paths(state: AppState) -> Router {
         .route("/v1/auth/register", post(auth::handlers::post_register))
         .route("/v1/auth/check", get(auth::handlers::check_auth))
         .route("/v1/stats", get(misc::handlers::get_stats))
-        .route(
-            "/v1/tml/match/:stop_id/:gtfs_id",
-            post(gtfs::handlers::tml_match_stop),
-        )
         .with_state(state)
         .layer(DefaultBodyLimit::disable())
         .layer(RequestBodyLimitLayer::new(30 * 1024 * 1024 /* 30mb */))

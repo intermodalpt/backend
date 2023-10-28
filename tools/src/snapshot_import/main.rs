@@ -79,16 +79,8 @@ pub(crate) async fn import(
                     || (stop.lon.unwrap() - osm_stop.lon.unwrap()).abs()
                         > FLOAT_TOLERANCE
                     || stop.osm_name != osm_stop.osm_name
-                    || (stop.official_name.is_none()
-                        && stop.official_name != osm_stop.official_name)
                     || (stop.refs != osm_stop.refs)
                 {
-                    // Prevent OSM from overriding some of the meta fields
-                    if stop.official_name.is_some()
-                        && stop.official_name != osm_stop.official_name
-                    {
-                        osm_stop.official_name = stop.official_name.clone();
-                    }
                     updated_stops.push(osm_stop);
                 }
             } else {

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT count(*) as cnt\nFROM Stops\nWHERE Stops.source = 'osm'\n    ",
+  "query": "\nSELECT count(*) as cnt\nFROM Stops\n    ",
   "describe": {
     "columns": [
       {
@@ -16,5 +16,5 @@
       null
     ]
   },
-  "hash": "e6221bb6b1382497a5e1c1e51bd35404a8fe593235d6dac42c734907ba89b727"
+  "hash": "e35a85b075c9c05785b285fc25abf8a927b6b906fc9e313ba8ec5418f8667017"
 }

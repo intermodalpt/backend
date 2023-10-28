@@ -25,9 +25,8 @@ type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 pub(crate) async fn fetch_stops(pool: &PgPool) -> Result<Vec<stops::Stop>> {
     sqlx::query!(
-"SELECT id, source, name, official_name, osm_name, short_name, locality, street,
-    door, lat, lon, external_id, notes, updater, update_date,
-    parish, tags, accessibility_meta, refs,
+"SELECT id, source, name, osm_name, short_name, locality, street, door, lat, lon, external_id,
+    notes, updater, update_date, parish, tags, accessibility_meta,
     verification_level, service_check_date, infrastructure_check_date
 FROM stops")
     .fetch_all(pool)
@@ -37,7 +36,6 @@ FROM stops")
         Ok(stops::Stop {
             id: r.id,
             name: r.name,
-            official_name: r.official_name,
             osm_name: r.osm_name,
             short_name: r.short_name,
             locality: r.locality,

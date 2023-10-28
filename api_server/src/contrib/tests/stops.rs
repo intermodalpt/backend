@@ -13,7 +13,6 @@ use crate::stops::models::requests::ChangeStop;
 static STOP1: Lazy<Stop> = Lazy::new(|| Stop {
     id: 1,
     name: Some("Original".to_string()),
-    official_name: Some("Original official".to_string()),
     osm_name: Some("Original osm".to_string()),
     short_name: Some("Original short".to_string()),
     locality: Some("Fooland".to_string()),
@@ -83,7 +82,6 @@ static STOP1_NOOP_CHANGE: Lazy<ChangeStop> = Lazy::new(|| ChangeStop {
     lat: STOP1.lat.clone(),
     name: STOP1.name.clone(),
     short_name: STOP1.short_name.clone(),
-    official_name: STOP1.official_name.clone(),
     locality: STOP1.locality.clone(),
     street: STOP1.street.clone(),
     door: STOP1.door.clone(),

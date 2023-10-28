@@ -35,9 +35,8 @@ pub(crate) async fn fetch_stop(
 ) -> Result<Option<stops::Stop>> {
     sqlx::query!(
         r#"
-SELECT id, name, official_name, osm_name, short_name, locality, street, door,
-    lat, lon, external_id, notes, updater, update_date, parish, tags,
-    accessibility_meta, verification_level,
+SELECT id, name, osm_name, short_name, locality, street, door, lat, lon, external_id, notes,
+    updater, update_date, parish, tags, accessibility_meta, verification_level,
     service_check_date, infrastructure_check_date
 FROM Stops
 WHERE id = $1
@@ -51,7 +50,6 @@ WHERE id = $1
         Ok(stops::Stop {
             id: r.id,
             name: r.name,
-            official_name: r.official_name,
             osm_name: r.osm_name,
             short_name: r.short_name,
             locality: r.locality,
@@ -84,9 +82,8 @@ pub(crate) async fn fetch_stops(
     if filter_used {
         sqlx::query!(
             r#"
-SELECT id, name, official_name, osm_name, short_name, locality, street, door,
-    lat, lon, external_id, notes, updater, update_date, parish, tags,
-    accessibility_meta, verification_level,
+SELECT id, name, osm_name, short_name, locality, street, door, lat, lon, external_id, notes,
+    updater, update_date, parish, tags, accessibility_meta, verification_level,
     service_check_date, infrastructure_check_date
 FROM Stops
 WHERE id IN (
@@ -103,7 +100,6 @@ WHERE id IN (
             Ok(stops::Stop {
                 id: r.id,
                 name: r.name,
-                official_name: r.official_name,
                 osm_name: r.osm_name,
                 short_name: r.short_name,
                 locality: r.locality,
@@ -129,8 +125,8 @@ WHERE id IN (
         .collect()
     } else {
         sqlx::query!(
-"SELECT id, name, official_name, osm_name, short_name, locality, street, door,
-    lat, lon, external_id, notes, update_date, parish, tags, accessibility_meta,
+"SELECT id, name, osm_name, short_name, locality, street, door, lat, lon, external_id, notes,
+    update_date, parish, tags, accessibility_meta,
     verification_level, service_check_date, infrastructure_check_date
 FROM stops")
         .fetch_all(pool)
@@ -141,7 +137,6 @@ FROM stops")
             Ok(stops::Stop {
                 id: r.id,
                 name: r.name,
-                official_name: r.official_name,
                 osm_name: r.osm_name,
                 short_name: r.short_name,
                 locality: r.locality,
@@ -173,9 +168,8 @@ pub(crate) async fn fetch_full_stops(
 ) -> Result<Vec<responses::FullStop>> {
     let stops = sqlx::query!(
         r#"
-SELECT id, name, official_name, osm_name, short_name, locality, street,
-    door, lat, lon, external_id, notes, updater, update_date, parish,
-    tags, accessibility_meta, deleted_upstream, verification_level,
+SELECT id, name, osm_name, short_name, locality, street, door, lat, lon, external_id, notes,
+    updater, update_date, parish, tags, accessibility_meta, deleted_upstream, verification_level,
     service_check_date, infrastructure_check_date, verified_position
 FROM Stops
         "#,
@@ -189,7 +183,6 @@ FROM Stops
             stop: stops::Stop {
                 id: r.id,
                 name: r.name,
-                official_name: r.official_name,
                 osm_name: r.osm_name,
                 short_name: r.short_name,
                 locality: r.locality,
@@ -260,9 +253,8 @@ pub(crate) async fn fetch_bounded_stops(
 ) -> Result<Vec<stops::Stop>> {
     sqlx::query!(
         r#"
-SELECT id, name, official_name, osm_name, short_name, locality, street, door,
-    lat, lon, notes, update_date, parish, tags, accessibility_meta,
-    verification_level, service_check_date, infrastructure_check_date
+SELECT id, name, osm_name, short_name, locality, street, door, lat, lon, notes, update_date, parish,
+    tags, accessibility_meta, verification_level, service_check_date, infrastructure_check_date
 FROM Stops
 WHERE lon >= $1 AND lon <= $2 AND lat <= $3 AND lat >= $4 AND id IN (
     SELECT DISTINCT stop FROM subroute_stops
@@ -281,7 +273,6 @@ WHERE lon >= $1 AND lon <= $2 AND lat <= $3 AND lat >= $4 AND id IN (
         Ok(stops::Stop {
             id: r.id,
             name: r.name,
-            official_name: r.official_name,
             osm_name: r.osm_name,
             short_name: r.short_name,
             locality: r.locality,
@@ -316,15 +307,14 @@ pub(crate) async fn insert_stop(
 
     let res = sqlx::query!(
         r#"
-INSERT INTO Stops(name, short_name, official_name, locality, street, door,
-    lon, lat, notes, tags, accessibility_meta, updater, update_date,
-    verification_level, service_check_date, infrastructure_check_date)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+INSERT INTO Stops(name, short_name, locality, street, door, lon, lat, notes, tags,
+    accessibility_meta, updater, update_date, verification_level, service_check_date,
+    infrastructure_check_date)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 RETURNING id
     "#,
         stop.name,
         stop.short_name,
-        stop.official_name,
         stop.locality,
         stop.street,
         stop.door,
@@ -346,7 +336,6 @@ RETURNING id
     Ok(stops::Stop {
         id: res.id,
         name: stop.name,
-        official_name: stop.official_name,
         osm_name: None,
         short_name: stop.short_name,
         locality: stop.locality,
@@ -379,16 +368,13 @@ where
     let _res = sqlx::query!(
         r#"
 UPDATE Stops
-SET name=$1, short_name=$2, official_name=$3, locality=$4, street=$5, door=$6,
-    lon=$7, lat=$8, notes=$9, accessibility_meta=$10 , updater=$11,
-    update_date=$12, tags=$13, verification_level=$14,
-    service_check_date=$15, infrastructure_check_date=$16
-
-WHERE id=$17
+SET name=$1, short_name=$2, locality=$3, street=$4, door=$5, lon=$6, lat=$7, notes=$8,
+    accessibility_meta=$9 , updater=$10, update_date=$11, tags=$12, verification_level=$13,
+    service_check_date=$14, infrastructure_check_date=$15
+WHERE id=$16
     "#,
         changes.name,
         changes.short_name,
-        changes.official_name,
         changes.locality,
         changes.street,
         changes.door,

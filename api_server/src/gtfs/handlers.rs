@@ -19,7 +19,7 @@
 use std::sync::Arc;
 use std::{fs, io};
 
-use axum::extract::{Path, Query, State};
+use axum::extract::{Path, State};
 use axum::Json;
 
 use commons::models::gtfs;
@@ -28,7 +28,7 @@ use commons::utils::gtfs::{
     calculate_gtfs_stop_sequence, calculate_stop_sliding_windows,
 };
 
-use super::{loaders, models, sql};
+use super::{loaders, models};
 use crate::operators::import::{update_operator_gtfs, OperatorData};
 use crate::operators::sql as operators_sql;
 use crate::{auth, AppState, Error};
@@ -89,30 +89,6 @@ pub(crate) async fn get_gtfs_stops(
     gtfs_stops_write_guard.insert(operator_id, gtfs_stops.clone());
 
     Ok(Json(gtfs_stops))
-}
-
-pub(crate) async fn tml_match_stop(
-    State(state): State<AppState>,
-    claims: Option<auth::Claims>,
-    params: Query<models::MatchVerification>,
-    Path((stop_id, gtfs_id)): Path<(i64, String)>,
-) -> Result<(), Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
-    sql::gtfs_match(
-        &state.pool,
-        stop_id,
-        gtfs_id,
-        params.verified,
-        &params.source.to_string(),
-    )
-    .await
 }
 
 pub(crate) async fn get_gtfs_route_trips(

@@ -16,7 +16,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use std::fmt;
 use std::hash::{Hash, Hasher};
 
 use serde::{Deserialize, Serialize};
@@ -48,37 +47,6 @@ pub struct TMLRoute {
     pub(crate) id: String,
     pub(crate) name: String,
     pub(crate) trips: Vec<TMLTrip>,
-}
-
-#[derive(Deserialize, Debug)]
-pub(crate) struct MatchVerification {
-    #[serde(default)]
-    pub(crate) verified: bool,
-    pub(crate) source: MatchSource,
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "lowercase")]
-pub(crate) enum MatchSource {
-    Unknown,
-    Tml,
-    Manual,
-    OSM,
-    Flags,
-    H1,
-}
-
-impl fmt::Display for MatchSource {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            MatchSource::Unknown => write!(f, "unknown"),
-            MatchSource::Tml => write!(f, "tml"),
-            MatchSource::Manual => write!(f, "manual"),
-            MatchSource::OSM => write!(f, "osm"),
-            MatchSource::Flags => write!(f, "flags"),
-            MatchSource::H1 => write!(f, "h1"),
-        }
-    }
 }
 
 #[cfg(test)]

@@ -96,9 +96,7 @@ async fn update_parishes(pool: &PgPool) -> Result<()> {
                 println!(
                     "Stop {} ({}) is in parish {}",
                     stop.name.as_ref().unwrap_or(
-                        stop.official_name.as_ref().unwrap_or(
-                            stop.osm_name.as_ref().unwrap_or(&"?".to_string())
-                        )
+                        stop.osm_name.as_ref().unwrap_or(&"?".to_string())
                     ),
                     stop.id,
                     name
@@ -122,11 +120,8 @@ async fn update_parishes(pool: &PgPool) -> Result<()> {
                 sql::update_stop_parish(pool, stop.id, *id).await?;
                 println!(
                     "Stop {} ({}) is in parish {}",
-                    stop.name.unwrap_or(
-                        stop.official_name.unwrap_or(
-                            stop.osm_name.unwrap_or("?".to_string())
-                        )
-                    ),
+                    stop.name
+                        .unwrap_or(stop.osm_name.unwrap_or("?".to_string())),
                     stop.id,
                     name
                 );

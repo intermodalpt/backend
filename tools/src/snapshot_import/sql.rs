@@ -33,7 +33,6 @@ pub(crate) async fn fetch_stops(pool: &PgPool) -> Result<Vec<models::Stop>> {
         Ok(models::Stop {
             id: r.id,
             name: r.name,
-            official_name: r.official_name,
             osm_name: r.osm_name,
             lat: r.lat,
             lon: r.lon,
@@ -51,12 +50,11 @@ pub(crate) async fn insert_stops(
     for stop in stops {
         let _res = sqlx::query!(
             r#"
-INSERT INTO Stops(name, osm_name, official_name, lon, lat, external_id)
-VALUES ($1, $2, $3, $4, $5, $6)
+INSERT INTO Stops(name, osm_name, lon, lat, external_id)
+VALUES ($1, $2, $3, $4, $5)
     "#,
             stop.name,
             stop.osm_name,
-            stop.official_name,
             stop.lon,
             stop.lat,
             stop.external_id,
@@ -75,10 +73,9 @@ pub(crate) async fn update_stops(
         let _res = sqlx::query!(
             r#"
 UPDATE Stops
-SET official_name=$1, osm_name=$2, lon=$3, lat=$4, refs=$5
-WHERE id=$6 AND external_id=$7
+SET osm_name=$1, lon=$2, lat=$3, refs=$4
+WHERE id=$5 AND external_id=$6
     "#,
-            stop.official_name,
             stop.osm_name,
             stop.lon,
             stop.lat,

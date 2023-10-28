@@ -28,7 +28,6 @@ pub(crate) async fn get_stats(
         r#"
 SELECT count(*) as cnt
 FROM Stops
-WHERE Stops.source = 'osm'
     "#
     )
     .fetch_one(db_pool)

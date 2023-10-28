@@ -60,7 +60,6 @@ pub(crate) struct XMLTag {
 pub(crate) struct Stop {
     pub id: i32,
     pub name: Option<String>,
-    pub official_name: Option<String>,
     pub lat: Option<f64>,
     pub lon: Option<f64>,
 
@@ -74,7 +73,6 @@ impl From<XmlNode> for Stop {
         let mut res = Self {
             id: -1,
             name: None,
-            official_name: None,
             osm_name: None,
             lat: Some(node.lat),
             lon: Some(node.lon),
@@ -85,7 +83,6 @@ impl From<XmlNode> for Stop {
         for tag in node.tags {
             match tag.k.as_str() {
                 "name" => res.osm_name = Some(tag.v),
-                "official_name" => res.official_name = Some(tag.v),
                 "ref" => {
                     res.refs = tag
                         .v

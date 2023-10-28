@@ -79,12 +79,10 @@ pub struct Stop {
     pub id: i32,
     #[schema(example = "Setúbal (ITS)")]
     pub name: Option<String>,
-    #[schema(example = "Setúbal (ITS)")]
-    pub official_name: Option<String>,
-    #[schema(example = "Setúbal (ITS)")]
-    pub osm_name: Option<String>,
     #[schema(example = "Setúbal")]
     pub short_name: Option<String>,
+    #[schema(example = "Setúbal (ITS)")]
+    pub osm_name: Option<String>,
     #[schema(example = "Bairro das bairradas")]
     pub locality: Option<String>,
     #[schema(example = "Rua do Não Sei Decor")]
@@ -335,7 +333,7 @@ mod test {
         ParkingVisualLimitation, ScheduleType, Stop,
     };
     use super::{Flag, Schedule};
-    use chrono::NaiveDate;
+    use chrono::{NaiveDate, Utc};
 
     #[test]
     fn serialize_deserialize_a11y() {
@@ -494,9 +492,7 @@ mod test {
     fn serialize_deserialize_stop() {
         let stop = Stop {
             id: 1,
-            source: "".to_string(),
             name: Some("Test".to_string()),
-            official_name: None,
             osm_name: None,
             short_name: None,
             locality: None,
@@ -505,7 +501,6 @@ mod test {
             parish: None,
             lat: Some(1.0),
             lon: Some(2.0),
-            external_id: "".to_string(),
             a11y: A11yMeta {
                 schedules: Some(vec![Schedule {
                     code: Some("123".to_string()),
@@ -565,9 +560,7 @@ mod test {
             ),
             tags: vec!["test".to_string()],
             notes: Some("test".to_string()),
-            updater: 0,
-            update_date: "".to_string(),
-            refs: vec!["aaaa".to_string()],
+            update_date: Utc::now(),
         };
         let json = serde_json::to_string(&stop).unwrap();
 

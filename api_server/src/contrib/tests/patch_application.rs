@@ -10,7 +10,6 @@ use crate::errors::Error;
 static STOP1: Lazy<stops::Stop> = Lazy::new(|| stops::Stop {
     id: 1,
     name: Some("name".to_string()),
-    official_name: Some("official_name".to_string()),
     osm_name: Some("osm_name".to_string()),
     short_name: Some("short_name".to_string()),
 

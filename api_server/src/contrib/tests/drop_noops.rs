@@ -1,4 +1,4 @@
-use chrono::{ NaiveDate, Utc};
+use chrono::{NaiveDate, Utc};
 use once_cell::sync::Lazy;
 
 use commons::models::history::StopPatch;
@@ -11,7 +11,6 @@ use commons::models::stops::{
 static STOP1: Lazy<Stop> = Lazy::new(|| Stop {
     id: 1,
     name: Some("name".to_string()),
-    official_name: Some("official_name".to_string()),
     osm_name: Some("osm_name".to_string()),
     short_name: Some("short_name".to_string()),
 

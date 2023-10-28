@@ -29,7 +29,6 @@ pub(crate) mod requests {
         pub lat: f64,
         pub name: Option<String>,
         pub short_name: Option<String>,
-        pub official_name: Option<String>,
         pub locality: Option<String>,
         pub street: Option<String>,
         pub door: Option<String>,
@@ -48,13 +47,8 @@ pub(crate) mod requests {
 
     #[derive(Clone, Deserialize, ToSchema)]
     pub struct ChangeStop {
-        // These two are not versioned
         pub lon: Option<f64>,
         pub lat: Option<f64>,
-
-        // Neither this one, but we don't have a reason to change it
-        // Consider dropping
-        pub official_name: Option<String>,
 
         pub name: Option<String>,
         pub short_name: Option<String>,
@@ -81,7 +75,6 @@ pub(crate) mod requests {
                 lat: stop.lat,
                 name: stop.name,
                 short_name: stop.short_name,
-                official_name: stop.official_name,
                 locality: stop.locality,
                 street: stop.street,
                 door: stop.door,

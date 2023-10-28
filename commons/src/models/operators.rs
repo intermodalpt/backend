@@ -208,3 +208,28 @@ pub struct NewsItem {
     pub geojson: Option<serde_json::Value>,
     pub visible: bool,
 }
+
+// TODO use this again in the operator-stop links
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "lowercase")]
+pub(crate) enum MatchSource {
+    Unknown,
+    Tml,
+    Manual,
+    OSM,
+    Flags,
+    H1,
+}
+
+impl fmt::Display for MatchSource {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            MatchSource::Unknown => write!(f, "unknown"),
+            MatchSource::Tml => write!(f, "tml"),
+            MatchSource::Manual => write!(f, "manual"),
+            MatchSource::OSM => write!(f, "osm"),
+            MatchSource::Flags => write!(f, "flags"),
+            MatchSource::H1 => write!(f, "h1"),
+        }
+    }
+}
