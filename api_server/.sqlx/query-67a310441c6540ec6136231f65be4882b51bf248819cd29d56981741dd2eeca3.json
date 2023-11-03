@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,\n    stop_pics.public, stop_pics.sensitive, stop_pics.uploader,\n    stop_pics.upload_date, stop_pics.capture_date, stop_pics.lon, stop_pics.lat,\n    stop_pics.quality, stop_pics.width, stop_pics.height, stop_pics.camera_ref,\n    stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,\n    array_remove(array_agg(ROW(stop_pic_stops.stop, stop_pic_stops.attrs)), NULL) as \"rels!: Vec<(i32, Vec<String>)>\"\nFROM stop_pics\nLEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id\nGROUP BY stop_pics.id\n",
+  "query": "\nSELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,\n    stop_pics.public, stop_pics.sensitive, stop_pics.uploader,\n    stop_pics.upload_date, stop_pics.capture_date, stop_pics.lon, stop_pics.lat,\n    stop_pics.quality, stop_pics.width, stop_pics.height, stop_pics.camera_ref,\n    stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,\n    CASE\n        WHEN count(stop_pic_stops.stop) > 0\n        THEN array_agg(ROW(stop_pic_stops.stop, stop_pic_stops.attrs))\n        ELSE array[]::record[]\n    END as \"rels!: Vec<(i32, Vec<String>)>\"\nFROM stop_pics\nLEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id\nGROUP BY stop_pics.id\n",
   "describe": {
     "columns": [
       {
@@ -124,5 +124,5 @@
       null
     ]
   },
-  "hash": "dc37f5a67f7c425bc4ef9f266d30c274cf51f1b198aac909750c9a6b91c354bb"
+  "hash": "67a310441c6540ec6136231f65be4882b51bf248819cd29d56981741dd2eeca3"
 }

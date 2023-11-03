@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,\n    stop_pics.public, stop_pics.sensitive, stop_pics.uploader,\n    stop_pics.upload_date, stop_pics.capture_date, stop_pics.quality,\n    stop_pics.width, stop_pics.height, stop_pics.lon, stop_pics.lat,\n    stop_pics.camera_ref, stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,\n    array_remove(array_agg(ROW(stop_pic_stops.stop, stop_pic_stops.attrs)), NULL) as \"rels!: Vec<(i32, Vec<String>)>\"\nFROM stop_pics\nLEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id\nWHERE stop_pics.uploader = $1\n    OR (stop_pics.public = true AND stop_pics.sensitive = false)\n    OR $2 = true\nGROUP BY stop_pics.id\nORDER BY capture_date DESC, upload_date DESC\nLIMIT $3 OFFSET $4\n    ",
+  "query": "\nSELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,\n    stop_pics.public, stop_pics.sensitive, stop_pics.uploader,\n    stop_pics.upload_date, stop_pics.capture_date, stop_pics.lon, stop_pics.lat,\n    stop_pics.quality, stop_pics.width, stop_pics.height, stop_pics.camera_ref,\n    stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,\n    CASE\n        WHEN count(stop_pic_stops.stop) > 0\n        THEN array_agg(ROW(stop_pic_stops.stop, stop_pic_stops.attrs))\n        ELSE array[]::record[]\n    END as \"rels!: Vec<(i32, Vec<String>)>\"\nFROM stop_pics\nLEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id\nWHERE stop_pics.id = $1\nGROUP BY stop_pics.id\n",
   "describe": {
     "columns": [
       {
@@ -45,28 +45,28 @@
       },
       {
         "ordinal": 8,
-        "name": "quality",
-        "type_info": "Int2"
-      },
-      {
-        "ordinal": 9,
-        "name": "width",
-        "type_info": "Int4"
-      },
-      {
-        "ordinal": 10,
-        "name": "height",
-        "type_info": "Int4"
-      },
-      {
-        "ordinal": 11,
         "name": "lon",
         "type_info": "Float8"
       },
       {
-        "ordinal": 12,
+        "ordinal": 9,
         "name": "lat",
         "type_info": "Float8"
+      },
+      {
+        "ordinal": 10,
+        "name": "quality",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 11,
+        "name": "width",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 12,
+        "name": "height",
+        "type_info": "Int4"
       },
       {
         "ordinal": 13,
@@ -101,10 +101,7 @@
     ],
     "parameters": {
       "Left": [
-        "Int4",
-        "Bool",
-        "Int8",
-        "Int8"
+        "Int4"
       ]
     },
     "nullable": [
@@ -116,11 +113,11 @@
       false,
       false,
       true,
-      false,
-      false,
-      false,
       true,
       true,
+      false,
+      false,
+      false,
       true,
       false,
       false,
@@ -129,5 +126,5 @@
       null
     ]
   },
-  "hash": "190dec88a4e2e3d5e776877df9a2c33af63389f7e9cd775ccd55169abfbad336"
+  "hash": "df724c176293d348ff30731700442aa9d23caf57f87a86a1df0c79ac1bfb66d0"
 }

@@ -134,7 +134,11 @@ SELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,
     stop_pics.upload_date, stop_pics.capture_date, stop_pics.lon, stop_pics.lat,
     stop_pics.quality, stop_pics.width, stop_pics.height, stop_pics.camera_ref,
     stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,
-	array_remove(array_agg(ROW(stop_pic_stops.stop, stop_pic_stops.attrs)), NULL) as "rels!: Vec<(i32, Vec<String>)>"
+    CASE
+        WHEN count(stop_pic_stops.stop) > 0
+        THEN array_agg(ROW(stop_pic_stops.stop, stop_pic_stops.attrs))
+        ELSE array[]::record[]
+    END as "rels!: Vec<(i32, Vec<String>)>"
 FROM stop_pics
 LEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id
 WHERE stop_pics.id = $1
@@ -167,7 +171,7 @@ GROUP BY stop_pics.id
         tags: r.tags,
         attrs: r.attrs,
         notes: r.notes,
-        stops: r.rels.into_iter().map(std::convert::Into::into).collect()
+        stops: r.rels.into_iter().map(Into::into).collect(),
     }))
 }
 
@@ -182,7 +186,11 @@ SELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,
     stop_pics.upload_date, stop_pics.capture_date, stop_pics.lon, stop_pics.lat,
     stop_pics.quality, stop_pics.width, stop_pics.height, stop_pics.camera_ref,
     stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,
-    array_remove(array_agg(ROW(stop_pic_stops.stop, stop_pic_stops.attrs)), NULL) as "rels!: Vec<(i32, Vec<String>)>"
+    CASE
+        WHEN count(stop_pic_stops.stop) > 0
+        THEN array_agg(ROW(stop_pic_stops.stop, stop_pic_stops.attrs))
+        ELSE array[]::record[]
+    END as "rels!: Vec<(i32, Vec<String>)>"
 FROM stop_pics
 LEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id
 GROUP BY stop_pics.id
@@ -214,7 +222,7 @@ GROUP BY stop_pics.id
         tags: r.tags,
         attrs: r.attrs,
         notes: r.notes,
-        stops: r.rels.into_iter().map(std::convert::Into::into).collect(),
+        stops: r.rels.into_iter().map(Into::into).collect(),
     })
     .collect())
 }
@@ -332,7 +340,11 @@ SELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,
     stop_pics.upload_date, stop_pics.capture_date, stop_pics.quality,
     stop_pics.width, stop_pics.height, stop_pics.lon, stop_pics.lat,
     stop_pics.camera_ref, stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,
-    array_remove(array_agg(ROW(stop_pic_stops.stop, stop_pic_stops.attrs)), NULL) as "rels!: Vec<(i32, Vec<String>)>"
+    CASE
+        WHEN count(stop_pic_stops.stop) > 0
+        THEN array_agg(ROW(stop_pic_stops.stop, stop_pic_stops.attrs))
+        ELSE array[]::record[]
+    END as "rels!: Vec<(i32, Vec<String>)>"
 FROM stop_pics
 LEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id
 WHERE stop_pic_stops.stop=$1
@@ -372,7 +384,7 @@ ORDER BY quality DESC
         tags: r.tags,
         attrs: r.attrs,
         notes: r.notes,
-        stops: r.rels.into_iter().map(std::convert::Into::into).collect()
+        stops: r.rels.into_iter().map(Into::into).collect()
     })
     .collect())
 }
@@ -391,7 +403,11 @@ SELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,
     stop_pics.upload_date, stop_pics.capture_date, stop_pics.quality,
     stop_pics.width, stop_pics.height, stop_pics.lon, stop_pics.lat,
     stop_pics.camera_ref, stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,
-    array_remove(array_agg(ROW(stop_pic_stops.stop, stop_pic_stops.attrs)), NULL) as "rels!: Vec<(i32, Vec<String>)>"
+    CASE
+        WHEN count(stop_pic_stops.stop) > 0
+        THEN array_agg(ROW(stop_pic_stops.stop, stop_pic_stops.attrs))
+        ELSE array[]::record[]
+    END as "rels!: Vec<(i32, Vec<String>)>"
 FROM stop_pics
 LEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id
 WHERE uploader=$1
@@ -429,7 +445,7 @@ LIMIT $2 OFFSET $3
         tags: r.tags,
         attrs: r.attrs,
         notes: r.notes,
-        stops: r.rels.into_iter().map(std::convert::Into::into).collect()
+        stops: r.rels.into_iter().map(Into::into).collect()
     })
     .collect())
 }
@@ -447,7 +463,11 @@ SELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,
     stop_pics.upload_date, stop_pics.capture_date, stop_pics.quality,
     stop_pics.width, stop_pics.height, stop_pics.lon, stop_pics.lat,
     stop_pics.camera_ref, stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,
-    array_remove(array_agg(ROW(stop_pic_stops.stop, stop_pic_stops.attrs)), NULL) as "rels!: Vec<(i32, Vec<String>)>"
+    CASE
+        WHEN count(stop_pic_stops.stop) > 0
+        THEN array_agg(ROW(stop_pic_stops.stop, stop_pic_stops.attrs))
+        ELSE array[]::record[]
+    END as "rels!: Vec<(i32, Vec<String>)>"
 FROM stop_pics
 LEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id
 WHERE public=true AND sensitive=false
@@ -484,7 +504,7 @@ LIMIT $1 OFFSET $2
         tags: r.tags,
         attrs: r.attrs,
         notes: r.notes,
-        stops: r.rels.into_iter().map(std::convert::Into::into).collect()
+        stops: r.rels.into_iter().map(Into::into).collect()
     })
     .collect())
 }
@@ -504,7 +524,11 @@ SELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,
     stop_pics.upload_date, stop_pics.capture_date, stop_pics.quality,
     stop_pics.width, stop_pics.height, stop_pics.lon, stop_pics.lat,
     stop_pics.camera_ref, stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,
-    array_remove(array_agg(ROW(stop_pic_stops.stop, stop_pic_stops.attrs)), NULL) as "rels!: Vec<(i32, Vec<String>)>"
+    CASE
+        WHEN count(stop_pic_stops.stop) > 0
+        THEN array_agg(ROW(stop_pic_stops.stop, stop_pic_stops.attrs))
+        ELSE array[]::record[]
+    END as "rels!: Vec<(i32, Vec<String>)>"
 FROM stop_pics
 LEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id
 WHERE stop_pics.uploader = $1
@@ -545,7 +569,7 @@ LIMIT $3 OFFSET $4
         tags: r.tags,
         attrs: r.attrs,
         notes: r.notes,
-        stops: r.rels.into_iter().map(std::convert::Into::into).collect()
+        stops: r.rels.into_iter().map(Into::into).collect()
     })
     .collect())
 }
@@ -565,7 +589,11 @@ SELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,
     stop_pics.upload_date, stop_pics.capture_date, stop_pics.quality,
     stop_pics.width, stop_pics.height, stop_pics.lon, stop_pics.lat,
     stop_pics.camera_ref, stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,
-    array_remove(array_agg(ROW(stop_pic_stops.stop, stop_pic_stops.attrs)), NULL) as "rels!: Vec<(i32, Vec<String>)>"
+    CASE
+        WHEN count(stop_pic_stops.stop) > 0
+        THEN array_agg(ROW(stop_pic_stops.stop, stop_pic_stops.attrs))
+        ELSE array[]::record[]
+    END as "rels!: Vec<(i32, Vec<String>)>"
 FROM stop_pics
 LEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id
 WHERE tagged=true
@@ -607,7 +635,7 @@ LIMIT $3 OFFSET $4
         tags: r.tags,
         attrs: r.attrs,
         notes: r.notes,
-        stops: r.rels.into_iter().map(std::convert::Into::into).collect()
+        stops: r.rels.into_iter().map(Into::into).collect()
     })
     .collect())
 }
@@ -627,7 +655,11 @@ SELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,
     stop_pics.upload_date, stop_pics.capture_date, stop_pics.quality,
     stop_pics.width, stop_pics.height, stop_pics.lon, stop_pics.lat,
     stop_pics.camera_ref, stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,
-    array_remove(array_agg(ROW(stop_pic_stops.stop, stop_pic_stops.attrs)), NULL) as "rels!: Vec<(i32, Vec<String>)>"
+    CASE
+        WHEN count(stop_pic_stops.stop) > 0
+        THEN array_agg(ROW(stop_pic_stops.stop, stop_pic_stops.attrs))
+        ELSE array[]::record[]
+    END as "rels!: Vec<(i32, Vec<String>)>"
 FROM stop_pics
 LEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id
 WHERE tagged=false
@@ -669,7 +701,7 @@ LIMIT $3 OFFSET $4
         tags: r.tags,
         attrs: r.attrs,
         notes: r.notes,
-        stops: r.rels.into_iter().map(std::convert::Into::into).collect()
+        stops: r.rels.into_iter().map(Into::into).collect()
     })
     .collect())
 }

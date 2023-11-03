@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,\n    stop_pics.public, stop_pics.sensitive, stop_pics.uploader,\n    stop_pics.upload_date, stop_pics.capture_date, stop_pics.quality,\n    stop_pics.width, stop_pics.height, stop_pics.lon, stop_pics.lat,\n    stop_pics.camera_ref, stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,\n    array_remove(array_agg(ROW(stop_pic_stops.stop, stop_pic_stops.attrs)), NULL) as \"rels!: Vec<(i32, Vec<String>)>\"\nFROM stop_pics\nLEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id\nWHERE public=true AND sensitive=false\nGROUP BY stop_pics.id\nORDER BY capture_date DESC, upload_date DESC\nLIMIT $1 OFFSET $2\n    ",
+  "query": "\nSELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,\n    stop_pics.public, stop_pics.sensitive, stop_pics.uploader,\n    stop_pics.upload_date, stop_pics.capture_date, stop_pics.quality,\n    stop_pics.width, stop_pics.height, stop_pics.lon, stop_pics.lat,\n    stop_pics.camera_ref, stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,\n    CASE\n        WHEN count(stop_pic_stops.stop) > 0\n        THEN array_agg(ROW(stop_pic_stops.stop, stop_pic_stops.attrs))\n        ELSE array[]::record[]\n    END as \"rels!: Vec<(i32, Vec<String>)>\"\nFROM stop_pics\nLEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id\nWHERE tagged=true\n    AND (stop_pics.uploader = $1\n        OR (stop_pics.public = true AND stop_pics.sensitive = false)\n        OR $2 = true)\nGROUP BY stop_pics.id\nORDER BY capture_date DESC, upload_date DESC\nLIMIT $3 OFFSET $4\n    ",
   "describe": {
     "columns": [
       {
@@ -101,6 +101,8 @@
     ],
     "parameters": {
       "Left": [
+        "Int4",
+        "Bool",
         "Int8",
         "Int8"
       ]
@@ -127,5 +129,5 @@
       null
     ]
   },
-  "hash": "13dc00f64b5860d26b922be82de8b731656c2257a61b29c65fe8afab1fe7aba7"
+  "hash": "b3f9251344f743b70db3d6f57a2142c7d2bcb76ff82cbe89dd326dc447d13b3d"
 }
