@@ -299,7 +299,7 @@ WHERE lon >= $1 AND lon <= $2 AND lat <= $3 AND lat >= $4 AND id IN (
 }
 
 pub(crate) async fn insert_stop(
-    pool: &PgPool,
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     stop: models::requests::NewStop,
     user_id: i32,
 ) -> Result<stops::Stop> {
@@ -329,7 +329,7 @@ RETURNING id
         stop.service_check_date,
         stop.infrastructure_check_date
     )
-    .fetch_one(pool)
+    .fetch_one(&mut **transaction)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
@@ -354,15 +354,12 @@ RETURNING id
     })
 }
 
-pub(crate) async fn update_stop<'c, E>(
-    executor: E,
+pub(crate) async fn update_stop(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     stop_id: i32,
     changes: models::requests::ChangeStop,
     user_id: i32,
-) -> Result<()>
-where
-    E: sqlx::Executor<'c, Database = sqlx::Postgres>,
-{
+) -> Result<()> {
     let update_date = Utc::now();
 
     let _res = sqlx::query!(
@@ -390,7 +387,7 @@ WHERE id=$16
         changes.infrastructure_check_date,
         stop_id
     )
-    .execute(executor)
+    .execute(&mut **transaction)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 

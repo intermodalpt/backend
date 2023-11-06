@@ -266,17 +266,6 @@ pub(crate) async fn upload_dangling_stop_picture(
     )
     .await?;
 
-    contrib::sql::insert_changeset_log(
-        &state.pool,
-        claims.uid,
-        &[history::Change::StopPicUpload {
-            pic: pic.clone(),
-            stops: vec![],
-        }],
-        None,
-    )
-    .await?;
-
     Ok(Json(pic))
 }
 
@@ -309,6 +298,12 @@ pub(crate) async fn upload_stop_picture(
         .await
         .map_err(|err| Error::ValidationFailure(err.to_string()))?;
 
+    let mut transaction = state
+        .pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
     let pic = logic::upload_stop_picture(
         claims.uid,
         filename.clone(),
@@ -320,7 +315,7 @@ pub(crate) async fn upload_stop_picture(
     .await?;
 
     contrib::sql::insert_changeset_log(
-        &state.pool,
+        &mut transaction,
         claims.uid,
         &[history::Change::StopPicUpload {
             pic: pic.clone(),
@@ -332,6 +327,11 @@ pub(crate) async fn upload_stop_picture(
         None,
     )
     .await?;
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     let pic = responses::PicWithStops::from((
         pic,
@@ -395,7 +395,6 @@ pub(crate) async fn patch_stop_picture_meta(
         return Err(Error::Forbidden);
     }
 
-    //TODO as a transaction
     let original_rels =
         sql::fetch_picture_stops_rel_attrs(&state.pool, pic.id).await?;
 
@@ -423,8 +422,14 @@ pub(crate) async fn patch_stop_picture_meta(
     let changed = !(patch.is_empty() && attrs_changed);
 
     if changed {
+        let mut transaction = state
+            .pool
+            .begin()
+            .await
+            .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
         contrib::sql::insert_changeset_log(
-            &state.pool,
+            &mut transaction,
             claims.uid,
             &[history::Change::StopPicMetaUpdate {
                 original_meta: pic.dyn_meta,
@@ -435,15 +440,22 @@ pub(crate) async fn patch_stop_picture_meta(
             None,
         )
         .await?;
+
+        sql::update_picture_meta(
+            &mut transaction,
+            stop_picture_id,
+            stop_pic_meta,
+            claims.uid,
+        )
+        .await?;
+
+        transaction
+            .commit()
+            .await
+            .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
     }
 
-    sql::update_picture_meta(
-        &state.pool,
-        stop_picture_id,
-        stop_pic_meta,
-        claims.uid,
-    )
-    .await
+    Ok(())
 }
 
 pub(crate) async fn delete_picture(
@@ -456,7 +468,6 @@ pub(crate) async fn delete_picture(
     }
     let claims = claims.unwrap();
 
-    // TODO put all of this in a transaction
     let pic = sql::fetch_picture(&state.pool, picture_id).await?;
     if pic.is_none() {
         return Err(Error::NotFoundUpstream);
@@ -467,23 +478,7 @@ pub(crate) async fn delete_picture(
         return Err(Error::Forbidden);
     }
 
-    let stop_rels =
-        sql::fetch_picture_stops_rel_attrs(&state.pool, pic.id).await?;
-
-    logic::delete_picture(picture_id, &state.bucket, &state.pool).await?;
-
-    contrib::sql::insert_changeset_log(
-        &state.pool,
-        claims.uid,
-        &[history::Change::StopPicDeletion {
-            pic,
-            stops: stop_rels,
-        }],
-        None,
-    )
-    .await?;
-
-    Ok(())
+    logic::delete_picture(pic, claims.uid, &state.bucket, &state.pool).await
 }
 
 pub(crate) async fn get_picture_count_by_stop(
@@ -542,17 +537,6 @@ pub(crate) async fn upload_pano_picture(
         &content,
     )
     .await?;
-
-    /*contrib::sql::insert_changeset_log(
-        &state.pool,
-        claims.uid,
-        &[history::Change::StopPicUpload {
-            pic: pic.clone(),
-            stops: vec![stop_id],
-        }],
-        None,
-    )
-    .await?;*/
 
     Ok(Json(pic))
 }

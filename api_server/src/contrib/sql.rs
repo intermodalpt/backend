@@ -358,14 +358,11 @@ WHERE id=$3
     Ok(())
 }
 
-pub(crate) async fn update_guest_contribution_to_accept<'c, E>(
-    executor: E,
+pub(crate) async fn update_guest_contribution_to_accept(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     contribution_id: i64,
     evaluator_id: i32,
-) -> Result<()>
-where
-    E: sqlx::Executor<'c, Database = sqlx::Postgres>,
-{
+) -> Result<()> {
     let date = Local::now();
 
     sqlx::query!(
@@ -378,21 +375,18 @@ WHERE id=$3
         date,
         contribution_id
     )
-    .execute(executor)
+    .execute(&mut **transaction)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     Ok(())
 }
 
-pub(crate) async fn update_guest_contribution_to_decline<'c, E>(
-    executor: E,
+pub(crate) async fn update_guest_contribution_to_decline(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     contribution_id: i64,
     evaluator_id: i32,
-) -> Result<()>
-where
-    E: sqlx::Executor<'c, Database = sqlx::Postgres>,
-{
+) -> Result<()> {
     let date = Local::now();
 
     sqlx::query!(
@@ -405,7 +399,7 @@ WHERE id=$3
         date,
         contribution_id
     )
-    .execute(executor)
+    .execute(&mut **transaction)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
@@ -467,15 +461,12 @@ INNER JOIN Users ON author_id = Users.id
     .unwrap_or(0))
 }
 
-pub(crate) async fn insert_changeset_log<'c, E>(
-    executor: E,
+pub(crate) async fn insert_changeset_log(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     author_id: i32,
     changes: &[history::Change],
     contribution_id: Option<i64>,
-) -> Result<i64>
-where
-    E: sqlx::Executor<'c, Database = sqlx::Postgres>,
-{
+) -> Result<i64> {
     let res = sqlx::query!(
         r#"
 INSERT INTO Changelog(author_id, changes, contribution_id)
@@ -486,7 +477,7 @@ RETURNING id
         serde_json::to_value(changes).unwrap(),
         contribution_id
     )
-    .fetch_one(executor)
+    .fetch_one(&mut **transaction)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 

@@ -24,10 +24,11 @@ use mime_guess::mime;
 use sha1::{Digest, Sha1};
 use sqlx::PgPool;
 
-use commons::models::pics;
+use commons::models::{history, pics};
 use commons::utils::exif::{Exif, Orientation};
 
 use super::sql;
+use crate::contrib;
 use crate::Error;
 
 const THUMBNAIL_MAX_WIDTH: u32 = 300;
@@ -140,16 +141,54 @@ pub(crate) async fn upload_stop_picture(
     )
     .await?;
 
+    let mut transaction = db_pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
     // TODO Delete if insertion fails
-    sql::insert_picture(db_pool, stop_pic_entry, stops).await
+    let pic =
+        sql::insert_picture(&mut transaction, stop_pic_entry, stops).await?;
+
+    contrib::sql::insert_changeset_log(
+        &mut transaction,
+        user_id,
+        &[history::Change::StopPicUpload {
+            pic: pic.clone(),
+            stops: stops
+                .into_iter()
+                .map(|stop_id| pics::StopAttrs {
+                    id: *stop_id,
+                    attrs: vec![],
+                })
+                .collect(),
+        }],
+        None,
+    )
+    .await?;
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    Ok(pic)
 }
 
 pub(crate) async fn delete_picture(
-    picture_id: i32,
+    pic: pics::StopPic,
+    author_id: i32,
     bucket: &s3::Bucket,
     db_pool: &PgPool,
 ) -> Result<(), Error> {
-    let stop_pic = sql::fetch_picture(db_pool, picture_id)
+    let stop_rels = sql::fetch_picture_stops_rel_attrs(db_pool, pic.id).await?;
+
+    let stop_pic = sql::fetch_picture(db_pool, pic.id)
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    let mut transaction = db_pool
+        .begin()
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
@@ -160,7 +199,23 @@ pub(crate) async fn delete_picture(
         return Err(Error::NotFoundUpstream);
     }
 
-    sql::delete_picture(db_pool, picture_id).await
+    sql::delete_picture(&mut transaction, pic.id).await?;
+
+    contrib::sql::insert_changeset_log(
+        &mut transaction,
+        author_id,
+        &[history::Change::StopPicDeletion {
+            pic,
+            stops: stop_rels,
+        }],
+        None,
+    )
+    .await?;
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
 async fn upload_picture_to_storage(
@@ -300,8 +355,32 @@ pub(crate) async fn upload_pano_picture(
 
     upload_pano_to_storage(bucket, content, &hex_hash).await?;
 
+    let mut transaction = db_pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
     // TODO Delete if insertion fails
-    sql::insert_pano(db_pool, stop_pic_entry).await
+    let inserted_pic =
+        sql::insert_pano(&mut transaction, stop_pic_entry).await?;
+
+    /*contrib::sql::insert_changeset_log(
+        &mut *transaction,
+        claims.uid,
+        &[history::Change::StopPicUpload {
+            pic: pic.clone(),
+            stops: vec![stop_id],
+        }],
+        None,
+    )
+    .await?;*/
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    Ok(inserted_pic)
 }
 
 async fn upload_pano_to_storage(

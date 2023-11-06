@@ -89,17 +89,27 @@ pub(crate) async fn create_stop(
 
     let user_id = claims.uid;
 
-    //TODO as a transaction
-    let stop = sql::insert_stop(&state.pool, stop, user_id).await?;
+    let mut transaction = state
+        .pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    let stop = sql::insert_stop(&mut transaction, stop, user_id).await?;
     let id = stop.id;
 
     contrib::sql::insert_changeset_log(
-        &state.pool,
+        &mut transaction,
         user_id,
         &[history::Change::StopCreation { data: stop }],
         None,
     )
     .await?;
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     Ok(Json({
         let mut map = HashMap::new();
@@ -136,8 +146,14 @@ pub(crate) async fn patch_stop(
         return Ok(());
     }
 
+    let mut transaction = state
+        .pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
     contrib::sql::insert_changeset_log(
-        &state.pool,
+        &mut transaction,
         user_id,
         &[history::Change::StopUpdate {
             original: stop,
@@ -147,7 +163,14 @@ pub(crate) async fn patch_stop(
     )
     .await?;
 
-    sql::update_stop(&state.pool, stop_id, changes, user_id).await
+    sql::update_stop(&mut transaction, stop_id, changes, user_id).await?;
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    Ok(())
 }
 
 pub(crate) async fn get_bounded_stops(

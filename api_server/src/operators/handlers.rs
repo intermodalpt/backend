@@ -58,8 +58,20 @@ pub(crate) async fn put_operator_stop(
         return Err(Error::Forbidden);
     }
 
-    sql::upsert_operator_stop(&state.pool, operator_id, stop_id, change)
+    let mut transaction = state
+        .pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    // TODO log
+    sql::upsert_operator_stop(&mut transaction, operator_id, stop_id, change)
         .await?;
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
     Ok(())
 }
 
@@ -76,7 +88,20 @@ pub(crate) async fn delete_operator_stop(
         return Err(Error::Forbidden);
     }
 
-    sql::delete_operator_stop(&state.pool, operator_id, stop_id).await?;
+    let mut transaction = state
+        .pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    // TODO log
+    sql::delete_operator_stop(&mut transaction, operator_id, stop_id).await?;
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
     Ok(())
 }
 
@@ -114,21 +139,32 @@ pub(crate) async fn post_issue(
     if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }
-    let id = sql::insert_issue(&state.pool, &issue).await?;
+
+    let mut transaction = state
+        .pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    let id = sql::insert_issue(&mut transaction, &issue).await?;
 
     let issue = operators::Issue {
         id,
         ..operators::Issue::from(issue)
     };
 
-    // TODO transaction
     contrib::sql::insert_changeset_log(
-        &state.pool,
+        &mut transaction,
         claims.uid,
         &[history::Change::IssueCreation { data: issue }],
         None,
     )
     .await?;
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     Ok(Json({
         let mut map = HashMap::new();
@@ -151,18 +187,23 @@ pub(crate) async fn patch_issue(
         return Err(Error::Forbidden);
     }
 
-    // TODO transaction
     let issue = sql::fetch_issue(&state.pool, issue_id).await?;
 
     let patch = change.derive_patch(&issue);
     if patch.is_empty() {
         return Ok(());
     }
-    sql::update_issue(&state.pool, issue_id, change).await?;
 
-    // TODO transaction
+    let mut transaction = state
+        .pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    sql::update_issue(&mut transaction, issue_id, change).await?;
+
     contrib::sql::insert_changeset_log(
-        &state.pool,
+        &mut transaction,
         claims.uid,
         &[history::Change::IssueUpdate {
             original: issue,
@@ -171,6 +212,11 @@ pub(crate) async fn patch_issue(
         None,
     )
     .await?;
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     Ok(())
 }
@@ -203,7 +249,22 @@ pub(crate) async fn post_operator_calendar(
     if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }
-    let id = sql::insert_calendar(&state.pool, operator_id, calendar).await?;
+
+    let mut transaction = state
+        .pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    // TODO log
+    let id =
+        sql::insert_calendar(&mut transaction, operator_id, calendar).await?;
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
     Ok(Json({
         let mut map = HashMap::new();
         map.insert("id".to_string(), id);
@@ -225,7 +286,20 @@ pub(crate) async fn delete_operator_calendar(
     }
     // TODO do not allow deletion of calendars that are in use
 
-    sql::delete_calendar(&state.pool, operator_id, calendar_id).await
+    let mut transaction = state
+        .pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    sql::delete_calendar(&mut transaction, operator_id, calendar_id).await?;
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    Ok(())
 }
 
 pub(crate) async fn get_operator_calendars_for_date(

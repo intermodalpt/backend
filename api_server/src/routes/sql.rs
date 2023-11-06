@@ -307,13 +307,10 @@ ORDER BY routes.id asc
     Ok(routes.into_values().collect::<Vec<_>>())
 }
 
-pub(crate) async fn insert_route<'c, E>(
-    executor: E,
+pub(crate) async fn insert_route(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     route: &requests::ChangeRoute,
-) -> Result<i32>
-where
-    E: sqlx::Executor<'c, Database = sqlx::Postgres>,
-{
+) -> Result<i32> {
     let res = sqlx::query!(
         r#"
 INSERT INTO routes(code, name, main_subroute, operator, circular, active, type)
@@ -328,21 +325,18 @@ RETURNING id
         route.active,
         route.type_id
     )
-    .fetch_one(executor)
+    .fetch_one(&mut **transaction)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     Ok(res.id)
 }
 
-pub(crate) async fn update_route<'c, E>(
-    executor: E,
+pub(crate) async fn update_route(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     route_id: i32,
     changes: requests::ChangeRoute,
-) -> Result<()>
-where
-    E: sqlx::Executor<'c, Database = sqlx::Postgres>,
-{
+) -> Result<()> {
     let _res = sqlx::query!(
         r#"
 UPDATE Routes
@@ -358,16 +352,17 @@ WHERE id=$8
         changes.type_id,
         route_id
     )
-    .execute(executor)
+    .execute(&mut **transaction)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     Ok(())
 }
 
-pub(crate) async fn delete_route(pool: &PgPool, route_id: i32) -> Result<()> {
-    // TODO Break this up
-    // Make it a transaction
+pub(crate) async fn delete_route(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    route_id: i32,
+) -> Result<()> {
     let subroute_count: i64 = sqlx::query!(
         r#"
 SELECT count(*) as count
@@ -376,7 +371,7 @@ WHERE route=$1
 "#,
         route_id
     )
-    .fetch_one(pool)
+    .fetch_one(&mut **transaction)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?
     .count
@@ -393,7 +388,7 @@ WHERE id=$1
     "#,
         route_id
     )
-    .execute(pool)
+    .execute(&mut **transaction)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?
     .rows_affected();
@@ -406,7 +401,7 @@ WHERE id=$1
 }
 
 pub(crate) async fn insert_subroute(
-    pool: &PgPool,
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     route_id: i32,
     subroute: requests::ChangeSubroute,
 ) -> Result<routes::Subroute> {
@@ -421,7 +416,7 @@ RETURNING id
         subroute.circular,
         subroute.polyline,
     )
-    .fetch_one(pool)
+    .fetch_one(&mut **transaction)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
@@ -434,15 +429,12 @@ RETURNING id
     })
 }
 
-pub(crate) async fn update_subroute<'c, E>(
-    executor: E,
+pub(crate) async fn update_subroute(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     route_id: i32,
     subroute_id: i32,
     changes: requests::ChangeSubroute,
-) -> Result<()>
-where
-    E: sqlx::Executor<'c, Database = sqlx::Postgres>,
-{
+) -> Result<()> {
     let _res = sqlx::query!(
         r#"
 UPDATE subroutes
@@ -454,21 +446,18 @@ WHERE id=$3 AND route=$4
         subroute_id,
         route_id,
     )
-    .execute(executor)
+    .execute(&mut **transaction)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     Ok(())
 }
 
-pub(crate) async fn delete_subroute<'c, E>(
-    executor: E,
+pub(crate) async fn delete_subroute(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     route_id: i32,
     subroute_id: i32,
-) -> Result<()>
-where
-    E: sqlx::Executor<'c, Database = sqlx::Postgres>,
-{
+) -> Result<()> {
     let deleted_rows = sqlx::query!(
         r#"
 DELETE FROM subroutes
@@ -477,7 +466,7 @@ WHERE id=$1 AND route=$2
         subroute_id,
         route_id
     )
-    .execute(executor)
+    .execute(&mut **transaction)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?
     .rows_affected();
@@ -522,8 +511,7 @@ ORDER BY subroutes.id ASC, subroute_stops.idx ASC
 }
 
 pub(crate) async fn update_subroute_stops(
-    // TODO change to transaction-able
-    pool: &PgPool,
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     route_id: i32,
     subroute_id: i32,
     request: requests::ChangeSubrouteStops,
@@ -539,7 +527,7 @@ ORDER BY subroute_stops.idx ASC
         route_id,
         subroute_id
     )
-    .fetch_all(pool)
+    .fetch_all(&mut **transaction)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
@@ -581,7 +569,7 @@ WHERE Subroute=$1 AND idx>=$2
             subroute_id,
             to_store_len
         )
-        .execute(pool)
+        .execute(&mut **transaction)
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?
         .rows_affected();
@@ -606,7 +594,7 @@ VALUES ($1, $2, $3)
                 stop,
                 index
             )
-            .execute(pool)
+            .execute(&mut **transaction)
             .await
             .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
         }
@@ -629,7 +617,7 @@ WHERE  subroute=$2 AND idx=$3
                 subroute_id,
                 index
             )
-            .execute(pool)
+            .execute(&mut **transaction)
             .await
             .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
         }
@@ -733,14 +721,11 @@ WHERE departures.id = $1
     .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
-pub(crate) async fn insert_departure<'c, E>(
-    executor: E,
+pub(crate) async fn insert_departure(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     subroute_id: i32,
     departure: requests::ChangeDeparture,
-) -> Result<routes::Departure>
-where
-    E: sqlx::Executor<'c, Database = sqlx::Postgres>,
-{
+) -> Result<routes::Departure> {
     let res = sqlx::query!(
         r#"
 INSERT INTO departures(subroute, time, calendar_id)
@@ -751,7 +736,7 @@ RETURNING id
         departure.time,
         departure.calendar_id
     )
-    .fetch_one(executor)
+    .fetch_one(&mut **transaction)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
@@ -763,15 +748,12 @@ RETURNING id
     })
 }
 
-pub(crate) async fn update_departure<'c, E>(
-    executor: E,
+pub(crate) async fn update_departure(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     subroute_id: i32,
     departure_id: i32,
     departure: requests::ChangeDeparture,
-) -> Result<()>
-where
-    E: sqlx::Executor<'c, Database = sqlx::Postgres>,
-{
+) -> Result<()> {
     let _res = sqlx::query!(
         r#"
 UPDATE departures
@@ -783,20 +765,17 @@ WHERE id=$3 AND subroute=$4
         departure_id,
         subroute_id,
     )
-    .execute(executor)
+    .execute(&mut **transaction)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
     Ok(())
 }
 
-pub(crate) async fn delete_departure<'c, E>(
-    executor: E,
+pub(crate) async fn delete_departure(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     subroute_id: i32,
     departure_id: i32,
-) -> Result<()>
-where
-    E: sqlx::Executor<'c, Database = sqlx::Postgres>,
-{
+) -> Result<()> {
     let _res = sqlx::query!(
         r#"
 DELETE FROM departures
@@ -805,7 +784,7 @@ WHERE id=$1 AND subroute=$2
         departure_id,
         subroute_id,
     )
-    .execute(executor)
+    .execute(&mut **transaction)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
     Ok(())

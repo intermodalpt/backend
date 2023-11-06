@@ -80,16 +80,11 @@ WHERE stop_operators.operator_id = $1
 }
 
 pub(crate) async fn upsert_operator_stop(
-    pool: &PgPool,
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     operator_id: i32,
     stop_id: i32,
     change: requests::ChangeOperatorStop,
 ) -> Result<()> {
-    let mut transaction = pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
-
     let existing = sqlx::query!(
         r#"
         SELECT official_name, stop_ref
@@ -99,7 +94,7 @@ pub(crate) async fn upsert_operator_stop(
         operator_id,
         stop_id
     )
-    .fetch_all(&mut *transaction)
+    .fetch_all(&mut **transaction)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
@@ -116,7 +111,7 @@ pub(crate) async fn upsert_operator_stop(
                 change.stop_ref,
                 change.source
             )
-            .execute(&mut *transaction)
+            .execute(&mut **transaction)
             .await
             .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
         }
@@ -135,7 +130,7 @@ pub(crate) async fn upsert_operator_stop(
                 operator_id,
                 stop_id
             )
-            .execute(&mut *transaction)
+            .execute(&mut **transaction)
             .await
             .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
         }
@@ -148,23 +143,14 @@ pub(crate) async fn upsert_operator_stop(
             ));
         }
     }
-
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    Ok(())
 }
 
 pub(crate) async fn delete_operator_stop(
-    pool: &PgPool,
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     operator_id: i32,
     stop_id: i32,
 ) -> Result<()> {
-    let mut transaction = pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
-
     let existing = sqlx::query!(
         r#"
         SELECT official_name, stop_ref
@@ -174,7 +160,7 @@ pub(crate) async fn delete_operator_stop(
         operator_id,
         stop_id
     )
-    .fetch_all(&mut *transaction)
+    .fetch_all(&mut **transaction)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
@@ -191,7 +177,7 @@ pub(crate) async fn delete_operator_stop(
                 operator_id,
                 stop_id
             )
-            .execute(&mut *transaction)
+            .execute(&mut **transaction)
             .await
             .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
         }
@@ -204,11 +190,7 @@ pub(crate) async fn delete_operator_stop(
             ));
         }
     }
-
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    Ok(())
 }
 
 pub(crate) async fn fetch_issues(
@@ -377,14 +359,10 @@ GROUP BY issues.id"#,
 }
 
 pub(crate) async fn insert_issue(
-    pool: &PgPool,
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     issue: &requests::NewIssue,
 ) -> Result<i32> {
     let creation = Local::now();
-    let mut transaction = pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     let row = sqlx::query!(
         r#"
@@ -402,7 +380,7 @@ RETURNING id
         issue.geojson,
         &serde_json::to_string(&operators::IssueState::Unanswered).unwrap()
     )
-        .fetch_one(&mut *transaction)
+        .fetch_one(&mut **transaction)
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
@@ -417,7 +395,7 @@ RETURNING id
             operator_id,
             id
         )
-        .execute(&mut *transaction)
+        .execute(&mut **transaction)
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
     }
@@ -431,7 +409,7 @@ RETURNING id
             route_id,
             id
         )
-        .execute(&mut *transaction)
+        .execute(&mut **transaction)
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
     }
@@ -445,7 +423,7 @@ RETURNING id
             stop_id,
             id
         )
-        .execute(&mut *transaction)
+        .execute(&mut **transaction)
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
     }
@@ -459,29 +437,19 @@ RETURNING id
             pic_id,
             id
         )
-        .execute(&mut *transaction)
+        .execute(&mut **transaction)
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
     }
-
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     Ok(id)
 }
 
 pub(crate) async fn update_issue(
-    pool: &PgPool,
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     issue_id: i32,
     issue: requests::ChangeIssue,
 ) -> Result<()> {
-    let mut transaction = pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
-
     sqlx::query!(
         r#"
         UPDATE issues
@@ -505,7 +473,7 @@ pub(crate) async fn update_issue(
         issue.state_justification,
         issue_id
     )
-    .execute(&mut *transaction)
+    .execute(&mut **transaction)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
@@ -516,7 +484,7 @@ pub(crate) async fn update_issue(
         "#,
         issue_id
     )
-    .execute(&mut *transaction)
+    .execute(&mut **transaction)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
@@ -527,7 +495,7 @@ pub(crate) async fn update_issue(
         "#,
         issue_id
     )
-    .execute(&mut *transaction)
+    .execute(&mut **transaction)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
@@ -538,7 +506,7 @@ pub(crate) async fn update_issue(
         "#,
         issue_id
     )
-    .execute(&mut *transaction)
+    .execute(&mut **transaction)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
@@ -549,7 +517,7 @@ pub(crate) async fn update_issue(
         "#,
         issue_id
     )
-    .execute(&mut *transaction)
+    .execute(&mut **transaction)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
@@ -562,7 +530,7 @@ pub(crate) async fn update_issue(
             operator_id,
             issue_id
         )
-        .execute(&mut *transaction)
+        .execute(&mut **transaction)
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
     }
@@ -576,7 +544,7 @@ pub(crate) async fn update_issue(
             route_id,
             issue_id
         )
-        .execute(&mut *transaction)
+        .execute(&mut **transaction)
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
     }
@@ -590,7 +558,7 @@ pub(crate) async fn update_issue(
             stop_id,
             issue_id
         )
-        .execute(&mut *transaction)
+        .execute(&mut **transaction)
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
     }
@@ -604,15 +572,12 @@ pub(crate) async fn update_issue(
             pic_id,
             issue_id
         )
-        .execute(&mut *transaction)
+        .execute(&mut **transaction)
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
     }
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    Ok(())
 }
 
 pub(crate) async fn fetch_calendars(
@@ -673,7 +638,7 @@ WHERE operator_id=$1
 }
 
 pub(crate) async fn insert_calendar(
-    pool: &PgPool,
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     operator_id: i32,
     calendar: requests::NewOperatorCalendar,
 ) -> Result<i32> {
@@ -687,14 +652,14 @@ RETURNING id
         calendar.name,
         serde_json::to_value(calendar.calendar).unwrap()
     )
-    .fetch_one(pool)
+    .fetch_one(&mut **transaction)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
     Ok(row.id)
 }
 
 pub(crate) async fn delete_calendar(
-    pool: &PgPool,
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     operator_id: i32,
     calendar_id: i32,
 ) -> Result<()> {
@@ -706,7 +671,7 @@ WHERE operator_id=$1 AND id=$2
         operator_id,
         calendar_id
     )
-    .execute(pool)
+    .execute(&mut **transaction)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
     Ok(())

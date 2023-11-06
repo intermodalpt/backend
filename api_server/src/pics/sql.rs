@@ -797,7 +797,7 @@ ORDER BY stop ASC
 }
 
 pub(crate) async fn insert_picture(
-    pool: &PgPool,
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     mut pic: pics::StopPic,
     stops: &[i32],
 ) -> Result<pics::StopPic> {
@@ -824,7 +824,7 @@ RETURNING id
         pic.dyn_meta.lon,
         pic.camera_ref
     )
-    .fetch_one(pool)
+    .fetch_one(&mut **transaction)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
@@ -840,7 +840,7 @@ ON CONFLICT DO NOTHING
             pic.id,
             stop_id
         )
-        .execute(pool)
+        .execute(&mut **transaction)
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
     }
@@ -849,17 +849,13 @@ ON CONFLICT DO NOTHING
 }
 
 pub(crate) async fn update_picture_meta(
-    pool: &PgPool,
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     stop_picture_id: i32,
     stop_pic_meta: requests::ChangeStopPic,
     user_id: i32,
 ) -> Result<()> {
+    // TODO get rid of this
     let update_date = Local::now().to_string();
-
-    let mut transaction = pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     let _res = sqlx::query!(
         r#"
@@ -879,7 +875,7 @@ WHERE id=$10
         update_date,
         stop_picture_id
     )
-    .execute(&mut *transaction)
+    .execute(&mut **transaction)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
@@ -894,7 +890,7 @@ WHERE id=$10
         "#
         ))
         .bind(stop_picture_id)
-        .execute(&mut *transaction)
+        .execute(&mut **transaction)
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
@@ -910,33 +906,26 @@ DO UPDATE SET attrs = EXCLUDED.attrs
                 stop_rel.id,
                 &stop_rel.attrs
             )
-            .execute(&mut *transaction)
+            .execute(&mut **transaction)
             .await
             .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
         }
     }
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
-
     Ok(())
 }
 
-pub(crate) async fn delete_picture(pool: &PgPool, pic_id: i32) -> Result<()> {
-    let mut transaction = pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
-
+pub(crate) async fn delete_picture(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    pic_id: i32,
+) -> Result<()> {
     sqlx::query!(
         r#"
 DELETE FROM stop_pic_stops
 WHERE pic=$1"#,
         pic_id
     )
-    .execute(&mut *transaction)
+    .execute(&mut **transaction)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
@@ -947,14 +936,9 @@ WHERE id=$1
         "#,
         pic_id
     )
-    .execute(&mut *transaction)
+    .execute(&mut **transaction)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
-
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     Ok(())
 }
@@ -1062,7 +1046,7 @@ WHERE stop_id = $1 AND (sensitive = false OR $2 = true)
 }
 
 pub(crate) async fn insert_pano(
-    pool: &PgPool,
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     mut pic: pics::PanoPic,
 ) -> Result<pics::PanoPic> {
     let res = sqlx::query!(
@@ -1083,7 +1067,7 @@ RETURNING id
         pic.capture_date,
         pic.sensitive
     )
-    .fetch_one(pool)
+    .fetch_one(&mut **transaction)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 

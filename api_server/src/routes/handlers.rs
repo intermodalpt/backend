@@ -65,9 +65,13 @@ pub(crate) async fn create_route(
     }
     let user_id = claims.uid;
 
-    //TODO as a transaction
+    let mut transaction = state
+        .pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
-    let id = sql::insert_route(&state.pool, &route).await?;
+    let id = sql::insert_route(&mut transaction, &route).await?;
     let route = routes::Route {
         id,
         type_id: route.type_id,
@@ -80,12 +84,17 @@ pub(crate) async fn create_route(
     };
 
     contrib::sql::insert_changeset_log(
-        &state.pool,
+        &mut transaction,
         user_id,
         &[history::Change::RouteCreation { data: route }],
         None,
     )
     .await?;
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     Ok(Json({
         let mut map = HashMap::new();
@@ -123,7 +132,6 @@ pub(crate) async fn patch_route(
 
     let user_id = claims.uid;
 
-    //TODO as a transaction
     let route = sql::fetch_route(&state.pool, route_id).await?;
     if route.is_none() {
         return Err(Error::NotFoundUpstream);
@@ -136,8 +144,15 @@ pub(crate) async fn patch_route(
         return Ok(());
     }
 
+    let mut transaction = state
+        .pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    sql::update_route(&mut transaction, route_id, changes).await?;
     contrib::sql::insert_changeset_log(
-        &state.pool,
+        &mut transaction,
         user_id,
         &[history::Change::RouteUpdate {
             original: route,
@@ -147,7 +162,12 @@ pub(crate) async fn patch_route(
     )
     .await?;
 
-    sql::update_route(&state.pool, route_id, changes).await
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    Ok(())
 }
 
 pub(crate) async fn delete_route(
@@ -171,14 +191,26 @@ pub(crate) async fn delete_route(
     }
     let route = route.unwrap();
 
+    let mut transaction = state
+        .pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    sql::delete_route(&mut transaction, route_id).await?;
+
     contrib::sql::insert_changeset_log(
-        &state.pool,
+        &mut transaction,
         user_id,
         &[history::Change::RouteDeletion { data: route }],
         None,
     )
     .await?;
-    sql::delete_route(&state.pool, route_id).await
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
 pub(crate) async fn create_subroute(
@@ -197,18 +229,28 @@ pub(crate) async fn create_subroute(
 
     let user_id = claims.uid;
 
-    //TODO as a transaction
+    let mut transaction = state
+        .pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
     let subroute =
-        sql::insert_subroute(&state.pool, route_id, subroute).await?;
+        sql::insert_subroute(&mut transaction, route_id, subroute).await?;
     let id = subroute.id;
 
     contrib::sql::insert_changeset_log(
-        &state.pool,
+        &mut transaction,
         user_id,
         &[history::Change::SubrouteCreation { data: subroute }],
         None,
     )
     .await?;
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     Ok(Json({
         let mut map = HashMap::new();
@@ -233,7 +275,6 @@ pub(crate) async fn patch_subroute(
 
     let user_id = claims.uid;
 
-    //TODO as a transaction
     let subroute = sql::fetch_subroute(&state.pool, subroute_id).await?;
     if subroute.is_none() {
         return Err(Error::NotFoundUpstream);
@@ -246,8 +287,14 @@ pub(crate) async fn patch_subroute(
         return Ok(());
     }
 
+    let mut transaction = state
+        .pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
     contrib::sql::insert_changeset_log(
-        &state.pool,
+        &mut transaction,
         user_id,
         &[history::Change::SubrouteUpdate {
             original: subroute,
@@ -257,7 +304,13 @@ pub(crate) async fn patch_subroute(
     )
     .await?;
 
-    sql::update_subroute(&state.pool, route_id, subroute_id, changes).await
+    sql::update_subroute(&mut transaction, route_id, subroute_id, changes)
+        .await?;
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
 pub(crate) async fn delete_subroute(
@@ -275,7 +328,12 @@ pub(crate) async fn delete_subroute(
 
     let user_id = claims.uid;
 
-    //TODO as a transaction
+    let mut transaction = state
+        .pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
     let subroute = sql::fetch_subroute(&state.pool, subroute_id).await?;
     if subroute.is_none() {
         return Err(Error::NotFoundUpstream);
@@ -292,14 +350,19 @@ pub(crate) async fn delete_subroute(
     }
 
     contrib::sql::insert_changeset_log(
-        &state.pool,
+        &mut transaction,
         user_id,
         &[history::Change::SubrouteDeletion { data: subroute }],
         None,
     )
     .await?;
 
-    sql::delete_subroute(&state.pool, route_id, subroute_id).await
+    sql::delete_subroute(&mut transaction, route_id, subroute_id).await?;
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
 pub(crate) async fn create_subroute_departure(
@@ -316,17 +379,28 @@ pub(crate) async fn create_subroute_departure(
         return Err(Error::Forbidden);
     }
 
+    let mut transaction = state
+        .pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
     let departure =
-        sql::insert_departure(&state.pool, subroute_id, departure).await?;
+        sql::insert_departure(&mut transaction, subroute_id, departure).await?;
     let id = departure.id;
 
     contrib::sql::insert_changeset_log(
-        &state.pool,
+        &mut transaction,
         claims.uid,
         &[history::Change::DepartureCreation { data: departure }],
         None,
     )
     .await?;
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     Ok(Json({
         let mut map = HashMap::new();
@@ -362,11 +436,17 @@ pub(crate) async fn patch_subroute_departure(
         return Ok(());
     }
 
-    sql::update_departure(&state.pool, subroute_id, departure_id, change)
+    let mut transaction = state
+        .pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    sql::update_departure(&mut transaction, subroute_id, departure_id, change)
         .await?;
 
     contrib::sql::insert_changeset_log(
-        &state.pool,
+        &mut transaction,
         claims.uid,
         &[history::Change::DepartureUpdate {
             original: departure,
@@ -375,6 +455,11 @@ pub(crate) async fn patch_subroute_departure(
         None,
     )
     .await?;
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     Ok(())
 }
@@ -399,15 +484,27 @@ pub(crate) async fn delete_subroute_departure(
     }
     let departure = departure.unwrap();
 
-    sql::delete_departure(&state.pool, subroute_id, departure_id).await?;
+    let mut transaction = state
+        .pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    sql::delete_departure(&mut transaction, subroute_id, departure_id).await?;
 
     contrib::sql::insert_changeset_log(
-        &state.pool,
+        &mut transaction,
         claims.uid,
         &[history::Change::DepartureDeletion { data: departure }],
         None,
     )
     .await?;
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
     Ok(())
 }
 
@@ -454,8 +551,27 @@ pub(crate) async fn patch_subroute_stops(
         return Err(Error::Forbidden);
     }
 
-    sql::update_subroute_stops(&state.pool, route_id, subroute_id, request)
+    let mut transaction = state
+        .pool
+        .begin()
         .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    sql::update_subroute_stops(
+        &mut transaction,
+        route_id,
+        subroute_id,
+        request,
+    )
+    .await?;
+
+    // TODO log
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    Ok(())
 }
 
 #[utoipa::path(
