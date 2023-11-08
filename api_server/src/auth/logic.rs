@@ -66,24 +66,79 @@ pub(crate) async fn login(
     encode_claims(claims)
 }
 
+pub(crate) async fn is_user_password(
+    username: &str,
+    password: &str,
+    db_pool: &PgPool,
+) -> Result<bool, Error> {
+    let user = sql::fetch_user(db_pool, username).await?;
+    if user.is_none() {
+        return Err(Error::NotFoundUpstream);
+    }
+    let user = user.unwrap();
+
+    let parsed_hash = PasswordHash::new(&user.password).map_err(|_err| {
+        Error::Processing("Unable to parse existing hash".to_string())
+    })?;
+
+    Ok(Pbkdf2
+        .verify_password(password.as_bytes(), &parsed_hash)
+        .map_or(false, |()| true))
+}
+
+fn gen_kdf_password_string(password: &str) -> Result<String, Error> {
+    let salt = SaltString::generate(&mut OsRng);
+    Ok(Pbkdf2
+        .hash_password(password.as_bytes(), &salt)
+        .map_err(|_err| {
+            Error::Processing("Unable to hash password".to_string())
+        })?
+        .to_string())
+}
+
 pub(crate) async fn register(
     request: requests::Register,
     db_pool: &PgPool,
 ) -> Result<(), Error> {
-    let salt = SaltString::generate(&mut OsRng);
-    let password = Pbkdf2
-        .hash_password(request.password.as_bytes(), &salt)
-        .map_err(|_err| {
-            Error::Processing("Unable to hash password".to_string())
-        })?
-        .to_string();
+    let password_kdf = gen_kdf_password_string(&request.password)?;
     let registration = models::HashedRegistration {
         username: request.username,
-        password,
+        password: password_kdf,
         email: request.email,
     };
-    let user_id = sql::register_user(db_pool, registration).await?;
+    let _user_id = sql::register_user(db_pool, registration).await?;
     // TODO log
+    Ok(())
+}
+
+pub(crate) async fn change_password(
+    request: requests::ChangeKnownPassword,
+    requester_id: i32,
+    db_pool: &PgPool,
+) -> Result<(), Error> {
+    if !is_user_password(&request.username, &request.old_password, db_pool)
+        .await?
+    {
+        return Err(Error::Forbidden);
+    }
+    let password_kdf = gen_kdf_password_string(&request.new_password)?;
+
+    // TODO log, transaction
+    sql::change_user_password(db_pool, &request.username, &password_kdf)
+        .await?;
+    Ok(())
+}
+
+pub(crate) async fn admin_change_password(
+    request: requests::ChangeUnknownPassword,
+    requester_id: i32,
+    db_pool: &PgPool,
+) -> Result<(), Error> {
+    let password_kdf = gen_kdf_password_string(&request.new_password)?;
+
+    // TODO log, transaction
+    sql::change_user_password(db_pool, &request.username, &password_kdf)
+        .await?;
     Ok(())
 }
 

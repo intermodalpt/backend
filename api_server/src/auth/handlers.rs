@@ -50,3 +50,50 @@ pub(crate) async fn post_login(
     let user = logic::login(request, &state.pool).await?;
     Ok(user)
 }
+
+pub(crate) async fn post_admin_change_password(
+    State(state): State<AppState>,
+    claims: Option<models::Claims>,
+    Json(request): Json<models::requests::ChangeUnknownPassword>,
+) -> Result<(), Error> {
+    let is_admin = matches!(
+        claims,
+        Some(models::Claims {
+            permissions: models::Permissions { is_admin: true, .. },
+            ..
+        })
+    );
+
+    if !is_admin {
+        return Err(Error::Forbidden);
+    }
+
+    let Some(models::Claims {
+        uid: requester_id, ..
+    }) = claims
+    else {
+        return Err(Error::Forbidden);
+    };
+
+    logic::admin_change_password(request, requester_id, &state.pool).await
+}
+pub(crate) async fn post_user_change_password(
+    State(state): State<AppState>,
+    claims: Option<models::Claims>,
+    Json(request): Json<models::requests::ChangeKnownPassword>,
+) -> Result<(), Error> {
+    let Some(models::Claims {
+        uid: requester_id,
+        uname: requester_username,
+        ..
+    }) = claims
+    else {
+        return Err(Error::Forbidden);
+    };
+
+    if requester_username != request.username {
+        return Err(Error::Forbidden);
+    }
+
+    logic::change_password(request, requester_id, &state.pool).await
+}

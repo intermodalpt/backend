@@ -75,9 +75,15 @@ pub(crate) mod requests {
     }
 
     #[derive(Debug, Deserialize)]
-    pub struct ChangePassword {
+    pub struct ChangeKnownPassword {
         pub username: String,
         pub old_password: String,
+        pub new_password: String,
+    }
+
+    #[derive(Debug, Deserialize)]
+    pub struct ChangeUnknownPassword {
+        pub username: String,
         pub new_password: String,
     }
 }

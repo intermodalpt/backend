@@ -58,3 +58,19 @@ RETURNING id"#,
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
     Ok(res.id)
 }
+
+pub(crate) async fn change_user_password(
+    pool: &PgPool,
+    username: &str,
+    password: &str,
+) -> Result<()> {
+    sqlx::query!(
+        r#"UPDATE users SET password=$1 WHERE username=$2"#,
+        password,
+        username
+    )
+    .execute(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    Ok(())
+}
