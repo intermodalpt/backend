@@ -16,10 +16,12 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+use std::net::IpAddr;
 use std::ops::Add;
 
 use chrono::Utc;
 
+use commons::models::auth;
 use pbkdf2::{
     password_hash::{
         rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier,
@@ -35,6 +37,7 @@ use crate::errors::Error;
 
 pub(crate) async fn login(
     request: requests::Login,
+    requester_ip: IpAddr,
     db_pool: &PgPool,
 ) -> Result<String, Error> {
     let user = sql::fetch_user(db_pool, &request.username).await?;
@@ -50,6 +53,24 @@ pub(crate) async fn login(
     Pbkdf2
         .verify_password(request.password.as_bytes(), &parsed_hash)
         .map_err(|_| Error::Forbidden)?;
+
+    let mut transaction = db_pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    sql::insert_audit_log_entry(
+        &mut transaction,
+        user.id,
+        &requester_ip.into(),
+        auth::AuditLogAction::Login,
+    )
+    .await?;
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     let issue_time = Utc::now();
     let expiration_time = issue_time.add(chrono::Duration::days(90));
@@ -98,6 +119,7 @@ fn gen_kdf_password_string(password: &str) -> Result<String, Error> {
 
 pub(crate) async fn register(
     request: requests::Register,
+    requester_ip: IpAddr,
     db_pool: &PgPool,
 ) -> Result<(), Error> {
     let password_kdf = gen_kdf_password_string(&request.password)?;
@@ -106,14 +128,34 @@ pub(crate) async fn register(
         password: password_kdf,
         email: request.email,
     };
-    let _user_id = sql::register_user(db_pool, registration).await?;
-    // TODO log
-    Ok(())
+
+    let mut transaction = db_pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    let user_id = sql::register_user(db_pool, &registration).await?;
+    sql::insert_audit_log_entry(
+        &mut transaction,
+        user_id,
+        &requester_ip.into(),
+        auth::AuditLogAction::Register {
+            username: registration.username,
+            email: registration.email,
+        },
+    )
+    .await?;
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
 pub(crate) async fn change_password(
     request: requests::ChangeKnownPassword,
     requester_id: i32,
+    requester_ip: IpAddr,
     db_pool: &PgPool,
 ) -> Result<(), Error> {
     if !is_user_password(&request.username, &request.old_password, db_pool)
@@ -123,23 +165,68 @@ pub(crate) async fn change_password(
     }
     let password_kdf = gen_kdf_password_string(&request.new_password)?;
 
-    // TODO log, transaction
-    sql::change_user_password(db_pool, &request.username, &password_kdf)
-        .await?;
-    Ok(())
+    let mut transaction = db_pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    sql::change_user_password(
+        &mut transaction,
+        &request.username,
+        &password_kdf,
+    )
+    .await?;
+    sql::insert_audit_log_entry(
+        &mut transaction,
+        requester_id,
+        &requester_ip.into(),
+        auth::AuditLogAction::ChangePassword,
+    )
+    .await?;
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
 pub(crate) async fn admin_change_password(
     request: requests::ChangeUnknownPassword,
     requester_id: i32,
+    requester_ip: IpAddr,
     db_pool: &PgPool,
 ) -> Result<(), Error> {
     let password_kdf = gen_kdf_password_string(&request.new_password)?;
 
-    // TODO log, transaction
-    sql::change_user_password(db_pool, &request.username, &password_kdf)
-        .await?;
-    Ok(())
+    let changed_user = sql::fetch_user(db_pool, &request.username)
+        .await?
+        .ok_or(Error::NotFoundUpstream)?;
+
+    let mut transaction = db_pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    sql::change_user_password(
+        &mut transaction,
+        &request.username,
+        &password_kdf,
+    )
+    .await?;
+    sql::insert_audit_log_entry(
+        &mut transaction,
+        requester_id,
+        &requester_ip.into(),
+        auth::AuditLogAction::AdminChangePassword {
+            for_user_id: changed_user.id,
+        },
+    )
+    .await?;
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
 pub(crate) fn encode_claims(claims: models::Claims) -> Result<String, Error> {

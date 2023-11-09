@@ -20,6 +20,7 @@ use axum::extract::DefaultBodyLimit;
 use axum::http::Method;
 use axum::routing::{delete, get, patch, post, put};
 use axum::Router;
+use axum_client_ip::SecureClientIpSource;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::limit::RequestBodyLimitLayer;
 use utoipa::OpenApi;
@@ -28,6 +29,7 @@ use utoipa_swagger_ui::SwaggerUi;
 use crate::state::AppState;
 use crate::{auth, contrib, geo, gtfs, misc, operators, pics, routes, stops};
 
+#[allow(clippy::too_many_lines)]
 pub fn build_paths(state: AppState) -> Router {
     let cors = CorsLayer::new()
         .allow_methods([
@@ -295,9 +297,23 @@ pub fn build_paths(state: AppState) -> Router {
         .route("/v1/auth/register", post(auth::handlers::post_register))
         .route("/v1/auth/check", get(auth::handlers::check_auth))
         .route("/v1/stats", get(misc::handlers::get_stats))
+        .route(
+            "/v1/user/change_password",
+            post(auth::handlers::post_user_change_password),
+        )
+        .route(
+            "/v1/admin/change_password",
+            post(auth::handlers::post_admin_change_password),
+        )
+        .route("/v1/admin/audit_log", post(auth::handlers::get_audit_log))
+        .route(
+            "/v1/admin/audit_log/user/:user_id",
+            post(auth::handlers::get_user_audit_log),
+        )
         .with_state(state)
         .layer(DefaultBodyLimit::disable())
         .layer(RequestBodyLimitLayer::new(30 * 1024 * 1024 /* 30mb */))
+        .layer(SecureClientIpSource::ConnectInfo.into_extension())
         .layer(cors)
 }
 

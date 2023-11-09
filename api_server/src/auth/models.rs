@@ -17,7 +17,6 @@
 */
 
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 
 #[derive(Debug)]
 pub struct HashedRegistration {

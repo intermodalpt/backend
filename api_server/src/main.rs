@@ -121,7 +121,10 @@ async fn main() {
     ));
 
     axum::Server::bind(&addr)
-        .serve(http::build_paths(state).into_make_service())
+        .serve(
+            http::build_paths(state)
+                .into_make_service_with_connect_info::<SocketAddr>(),
+        )
         .await
         .expect("Unable to start service");
 }

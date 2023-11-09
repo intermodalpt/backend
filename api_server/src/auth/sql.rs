@@ -48,7 +48,7 @@ WHERE username=$1
 
 pub(crate) async fn register_user(
     pool: &PgPool,
-    request: models::HashedRegistration,
+    request: &models::HashedRegistration,
 ) -> Result<i32> {
     let res = sqlx::query!(
         r#"INSERT INTO Users (username, password, email)
@@ -65,7 +65,7 @@ RETURNING id"#,
 }
 
 pub(crate) async fn change_user_password(
-    pool: &PgPool,
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     username: &str,
     password: &str,
 ) -> Result<()> {
@@ -74,7 +74,7 @@ pub(crate) async fn change_user_password(
         password,
         username
     )
-    .execute(pool)
+    .execute(&mut **transaction)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
     Ok(())
@@ -122,26 +122,11 @@ LIMIT $1 OFFSET $2
     .collect()
 }
 
-pub(crate) async fn count_audit_logs(pool: &PgPool) -> Result<i64> {
-    Ok(sqlx::query!(
-        r#"
-SELECT count(*) as cnt
-FROM audit_log
-INNER JOIN users ON user_id = users.id
-    "#
-    )
-    .fetch_one(pool)
-    .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
-    .cnt
-    .unwrap_or(0))
-}
-
 pub(crate) async fn insert_audit_log_entry(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     user_id: i32,
     addr: &IpNetwork,
-    action: auth::AuditLogEntry,
+    action: auth::AuditLogAction,
 ) -> Result<i64> {
     let res = sqlx::query!(
         r#"
@@ -190,4 +175,37 @@ ORDER BY datetime ASC
         })
     })
     .collect::<Result<Vec<auth::AuditLogEntry>>>()
+}
+
+pub(crate) async fn count_audit_logs(pool: &PgPool) -> Result<i64> {
+    Ok(sqlx::query!(
+        r#"
+SELECT count(*) as cnt
+FROM audit_log
+    "#
+    )
+    .fetch_one(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .cnt
+    .unwrap_or(0))
+}
+
+pub(crate) async fn count_user_audit_logs(
+    pool: &PgPool,
+    user_id: i32,
+) -> Result<i64> {
+    Ok(sqlx::query!(
+        r#"
+SELECT count(*) as cnt
+FROM audit_log
+WHERE user_id=$1
+    "#,
+        user_id
+    )
+    .fetch_one(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .cnt
+    .unwrap_or(0))
 }

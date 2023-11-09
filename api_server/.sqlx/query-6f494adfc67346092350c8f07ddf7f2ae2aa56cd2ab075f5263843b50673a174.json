@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT count(*) as cnt\nFROM audit_log\nINNER JOIN users ON user_id = users.id\n    ",
+  "query": "\nSELECT count(*) as cnt\nFROM audit_log\n    ",
   "describe": {
     "columns": [
       {
@@ -16,5 +16,5 @@
       null
     ]
   },
-  "hash": "e7af80ac0da6de96c88cb18fdc2afb9d0e34d3bd76cfe006e48c522ac7706778"
+  "hash": "6f494adfc67346092350c8f07ddf7f2ae2aa56cd2ab075f5263843b50673a174"
 }
