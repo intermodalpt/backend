@@ -6,12 +6,12 @@
       {
         "ordinal": 0,
         "name": "official_name",
-        "type_info": "Varchar"
+        "type_info": "Text"
       },
       {
         "ordinal": 1,
         "name": "stop_ref",
-        "type_info": "Varchar"
+        "type_info": "Text"
       }
     ],
     "parameters": {

@@ -11,9 +11,9 @@
     ],
     "parameters": {
       "Left": [
-        "Varchar",
-        "Varchar",
-        "Varchar"
+        "Text",
+        "Text",
+        "Text"
       ]
     },
     "nullable": [

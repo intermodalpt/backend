@@ -11,32 +11,32 @@
       {
         "ordinal": 1,
         "name": "name",
-        "type_info": "Varchar"
+        "type_info": "Text"
       },
       {
         "ordinal": 2,
         "name": "osm_name",
-        "type_info": "Varchar"
+        "type_info": "Text"
       },
       {
         "ordinal": 3,
         "name": "short_name",
-        "type_info": "Varchar"
+        "type_info": "Text"
       },
       {
         "ordinal": 4,
         "name": "locality",
-        "type_info": "Varchar"
+        "type_info": "Text"
       },
       {
         "ordinal": 5,
         "name": "street",
-        "type_info": "Varchar"
+        "type_info": "Text"
       },
       {
         "ordinal": 6,
         "name": "door",
-        "type_info": "Varchar"
+        "type_info": "Text"
       },
       {
         "ordinal": 7,
@@ -56,7 +56,7 @@
       {
         "ordinal": 10,
         "name": "notes",
-        "type_info": "Varchar"
+        "type_info": "Text"
       },
       {
         "ordinal": 11,
@@ -71,7 +71,7 @@
       {
         "ordinal": 13,
         "name": "tags",
-        "type_info": "VarcharArray"
+        "type_info": "TextArray"
       },
       {
         "ordinal": 14,

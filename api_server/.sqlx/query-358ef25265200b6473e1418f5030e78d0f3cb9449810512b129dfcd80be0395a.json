@@ -11,7 +11,7 @@
       {
         "ordinal": 1,
         "name": "sha1",
-        "type_info": "Varchar"
+        "type_info": "Bpchar"
       },
       {
         "ordinal": 2,

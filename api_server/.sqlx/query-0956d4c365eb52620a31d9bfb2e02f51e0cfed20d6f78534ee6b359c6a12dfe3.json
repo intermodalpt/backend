@@ -11,15 +11,15 @@
     ],
     "parameters": {
       "Left": [
-        "Varchar",
-        "Varchar",
-        "Varchar",
+        "Text",
+        "Text",
+        "Text",
         "Int4",
         "Timestamptz",
         "Float8",
         "Float8",
         "Jsonb",
-        "Varchar"
+        "Text"
       ]
     },
     "nullable": [

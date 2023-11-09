@@ -5,14 +5,14 @@
     "columns": [],
     "parameters": {
       "Left": [
-        "Varchar",
-        "Varchar",
+        "Text",
+        "Text",
         "Jsonb",
-        "Varchar",
+        "Text",
         "Float8",
         "Float8",
-        "Varchar",
-        "Varchar",
+        "Text",
+        "Text",
         "Int4"
       ]
     },

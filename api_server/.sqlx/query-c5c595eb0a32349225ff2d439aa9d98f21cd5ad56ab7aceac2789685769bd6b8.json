@@ -7,9 +7,9 @@
       "Left": [
         "Int4",
         "Int4",
-        "Varchar",
-        "Varchar",
-        "Varchar"
+        "Text",
+        "Text",
+        "Text"
       ]
     },
     "nullable": []

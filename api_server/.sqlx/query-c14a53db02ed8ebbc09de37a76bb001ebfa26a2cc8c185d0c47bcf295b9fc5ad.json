@@ -12,9 +12,9 @@
     "parameters": {
       "Left": [
         "Int4",
-        "Varchar",
+        "Text",
         "Bool",
-        "Varchar"
+        "Text"
       ]
     },
     "nullable": [

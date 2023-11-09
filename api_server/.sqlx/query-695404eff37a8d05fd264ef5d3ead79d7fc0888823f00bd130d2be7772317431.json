@@ -12,7 +12,7 @@
     "parameters": {
       "Left": [
         "Text",
-        "Varchar",
+        "Bpchar",
         "Int4",
         "Float8",
         "Float8",

@@ -21,17 +21,17 @@
       {
         "ordinal": 3,
         "name": "official_name",
-        "type_info": "Varchar"
+        "type_info": "Text"
       },
       {
         "ordinal": 4,
         "name": "stop_ref",
-        "type_info": "Varchar"
+        "type_info": "Text"
       },
       {
         "ordinal": 5,
         "name": "source",
-        "type_info": "Varchar"
+        "type_info": "Text"
       }
     ],
     "parameters": {

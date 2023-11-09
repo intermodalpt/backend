@@ -11,17 +11,17 @@
       {
         "ordinal": 1,
         "name": "title",
-        "type_info": "Varchar"
+        "type_info": "Text"
       },
       {
         "ordinal": 2,
         "name": "message",
-        "type_info": "Varchar"
+        "type_info": "Text"
       },
       {
         "ordinal": 3,
         "name": "category",
-        "type_info": "Varchar"
+        "type_info": "Text"
       },
       {
         "ordinal": 4,
@@ -51,12 +51,12 @@
       {
         "ordinal": 9,
         "name": "state",
-        "type_info": "Varchar"
+        "type_info": "Text"
       },
       {
         "ordinal": 10,
         "name": "state_justification",
-        "type_info": "Varchar"
+        "type_info": "Text"
       },
       {
         "ordinal": 11,
