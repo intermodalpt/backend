@@ -211,23 +211,11 @@ pub(crate) mod responses {
     use commons::models::history;
 
     #[derive(Serialize)]
-    pub struct Page<T> {
-        pub items: Vec<T>,
-        pub total: usize,
-    }
-
-    #[derive(Serialize)]
     pub struct Contribution {
-        pub id: i64,
-        pub author_id: i32,
+        #[serde(flatten)]
+        pub contribution: history::Contribution,
         pub author_username: String,
-        pub change: history::Change,
-        pub submission_date: DateTime<Local>,
-        pub accepted: Option<bool>,
-        pub evaluator_id: Option<i32>,
         pub evaluator_username: Option<String>,
-        pub evaluation_date: Option<DateTime<Local>>,
-        pub comment: Option<String>,
     }
 
     #[derive(Serialize)]

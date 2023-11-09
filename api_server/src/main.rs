@@ -34,6 +34,7 @@ mod http;
 pub(crate) mod misc;
 mod operators;
 mod pics;
+mod responses;
 mod routes;
 pub(crate) mod state;
 mod stops;

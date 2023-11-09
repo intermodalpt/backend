@@ -26,6 +26,7 @@ pub mod http;
 pub mod misc;
 pub mod operators;
 pub mod pics;
+mod responses;
 pub mod routes;
 pub mod state;
 pub mod stops;

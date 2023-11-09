@@ -27,6 +27,7 @@ use commons::models::{history, stops};
 
 use super::{logic, requests, responses, sql};
 use crate::errors::Error;
+use crate::responses::Pagination;
 use crate::utils::get_exactly_one_field;
 use crate::{auth, pics, AppState};
 
@@ -184,7 +185,7 @@ pub(crate) async fn get_latest_undecided_contributions(
     State(state): State<AppState>,
     _claims: Option<auth::Claims>,
     paginator: Query<PageForUser>,
-) -> Result<Json<responses::Page<responses::Contribution>>, Error> {
+) -> Result<Json<Pagination<responses::Contribution>>, Error> {
     // FIXME use the claims to censor pictures and other possibly-sensitive data
     // Maybe do this at worker level because the metadata itself should always
     // be public
@@ -192,7 +193,7 @@ pub(crate) async fn get_latest_undecided_contributions(
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
-    Ok(Json(responses::Page {
+    Ok(Json(Pagination {
         items: sql::fetch_undecided_contributions(
             &state.pool,
             paginator.uid,
@@ -209,7 +210,7 @@ pub(crate) async fn get_latest_decided_contributions(
     State(state): State<AppState>,
     _claims: Option<auth::Claims>,
     paginator: Query<Page>,
-) -> Result<Json<responses::Page<responses::Contribution>>, Error> {
+) -> Result<Json<Pagination<responses::Contribution>>, Error> {
     // FIXME use the claims to censor pictures and other possibly-sensitive data
     // Maybe do this at worker level because the metadata itself should always
     // be public
@@ -217,7 +218,7 @@ pub(crate) async fn get_latest_decided_contributions(
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
-    Ok(Json(responses::Page {
+    Ok(Json(Pagination {
         items: sql::fetch_decided_contributions(&state.pool, offset, take)
             .await?,
         total: sql::count_decided_contributions(&state.pool).await? as usize,
@@ -228,7 +229,7 @@ pub(crate) async fn get_changelog(
     State(state): State<AppState>,
     _claims: Option<auth::Claims>,
     paginator: Query<Page>,
-) -> Result<Json<responses::Page<responses::Changeset>>, Error> {
+) -> Result<Json<Pagination<responses::Changeset>>, Error> {
     // FIXME use the claims to censor pictures and other possibly-sensitive data
     // Maybe do this at worker level because the metadata itself should always
     // be public
@@ -236,7 +237,7 @@ pub(crate) async fn get_changelog(
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
-    Ok(Json(responses::Page {
+    Ok(Json(Pagination {
         items: sql::fetch_changeset_logs(&state.pool, offset, take).await?,
         total: sql::count_changeset_logs(&state.pool).await? as usize,
     }))

@@ -182,19 +182,23 @@ LIMIT $2 OFFSET $3
     .into_iter()
     .map(|r| {
         Ok(responses::Contribution {
-            id: r.id,
-            author_id: r.author_id,
+            contribution: history::Contribution {
+                id: r.id,
+                author_id: r.author_id,
+                change: serde_json::from_value(r.change).map_err(|e| {
+                    log::error!("Error deserializing: {}", e);
+                    Error::DatabaseDeserialization
+                })?,
+                submission_date: r.submission_date.with_timezone(&Local),
+                accepted: r.accepted,
+                evaluator_id: r.evaluator_id,
+                evaluation_date: r
+                    .evaluation_date
+                    .map(|d| d.with_timezone(&Local)),
+                comment: r.comment,
+            },
             author_username: r.author_username,
-            change: serde_json::from_value(r.change).map_err(|e| {
-                log::error!("Error deserializing: {}", e);
-                Error::DatabaseDeserialization
-            })?,
-            submission_date: r.submission_date.with_timezone(&Local),
-            accepted: r.accepted,
-            evaluator_id: r.evaluator_id,
             evaluator_username: None,
-            evaluation_date: r.evaluation_date.map(|d| d.with_timezone(&Local)),
-            comment: r.comment,
         })
     })
     .collect::<Result<Vec<responses::Contribution>>>()
@@ -272,19 +276,23 @@ LIMIT $1 OFFSET $2
     .into_iter()
     .map(|r| {
         Ok(responses::Contribution {
-            id: r.id,
-            author_id: r.author_id,
+            contribution: history::Contribution {
+                id: r.id,
+                author_id: r.author_id,
+                change: serde_json::from_value(r.change).map_err(|e| {
+                    log::error!("Error deserializing: {}", e);
+                    Error::DatabaseDeserialization
+                })?,
+                submission_date: r.submission_date.with_timezone(&Local),
+                accepted: r.accepted,
+                evaluator_id: r.evaluator_id,
+                evaluation_date: r
+                    .evaluation_date
+                    .map(|d| d.with_timezone(&Local)),
+                comment: r.comment,
+            },
             author_username: r.author_username,
-            change: serde_json::from_value(r.change).map_err(|e| {
-                log::error!("Error deserializing: {}", e);
-                Error::DatabaseDeserialization
-            })?,
-            submission_date: r.submission_date.with_timezone(&Local),
-            accepted: r.accepted,
-            evaluator_id: r.evaluator_id,
             evaluator_username: Some(r.evaluator_username),
-            evaluation_date: r.evaluation_date.map(|d| d.with_timezone(&Local)),
-            comment: r.comment,
         })
     })
     .collect::<Result<Vec<responses::Contribution>>>()
