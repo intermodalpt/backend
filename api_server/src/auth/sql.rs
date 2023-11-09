@@ -16,9 +16,14 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+use chrono::Utc;
+use sqlx::types::ipnetwork::IpNetwork;
 use sqlx::PgPool;
 
-use super::models;
+use commons::models::auth;
+
+use super::models::responses;
+use crate::auth::models;
 use crate::Error;
 
 type Result<T> = std::result::Result<T, Error>;
@@ -26,9 +31,9 @@ type Result<T> = std::result::Result<T, Error>;
 pub(crate) async fn fetch_user(
     pool: &PgPool,
     username: &str,
-) -> Result<Option<models::User>> {
+) -> Result<Option<auth::User>> {
     sqlx::query_as!(
-        models::User,
+        auth::User,
         r#"
 SELECT id, username, password, email, is_admin, is_trusted, works_for
 FROM Users
@@ -73,4 +78,116 @@ pub(crate) async fn change_user_password(
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
     Ok(())
+}
+
+pub(crate) async fn fetch_audit_log_entries<'c, E>(
+    executor: E,
+    skip: i64,
+    take: i64,
+) -> Result<Vec<responses::AuditLogEntry>>
+where
+    E: sqlx::Executor<'c, Database = sqlx::Postgres>,
+{
+    sqlx::query!(
+        r#"
+SELECT audit_log.id, audit_log.user_id, audit_log.action, audit_log.datetime, audit_log.addr,
+    users.username as user_username
+FROM audit_log
+INNER JOIN users ON user_id = users.id
+ORDER BY datetime DESC
+LIMIT $1 OFFSET $2
+    "#,
+        take,
+        skip
+    )
+    .fetch_all(executor)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .into_iter()
+    .map(|r| {
+        Ok(responses::AuditLogEntry {
+            entry: auth::AuditLogEntry {
+                id: r.id,
+                user_id: r.user_id,
+                action: serde_json::from_value(r.action).map_err(|e| {
+                    log::error!("Error deserializing: {}", e);
+                    Error::DatabaseDeserialization
+                })?,
+                datetime: r.datetime.with_timezone(&Utc),
+                addr: r.addr,
+            },
+            user_username: r.user_username,
+        })
+    })
+    .collect()
+}
+
+pub(crate) async fn count_audit_logs(pool: &PgPool) -> Result<i64> {
+    Ok(sqlx::query!(
+        r#"
+SELECT count(*) as cnt
+FROM audit_log
+INNER JOIN users ON user_id = users.id
+    "#
+    )
+    .fetch_one(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .cnt
+    .unwrap_or(0))
+}
+
+pub(crate) async fn insert_audit_log_entry(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    user_id: i32,
+    addr: &IpNetwork,
+    action: auth::AuditLogEntry,
+) -> Result<i64> {
+    let res = sqlx::query!(
+        r#"
+INSERT INTO audit_log(user_id, action, addr)
+VALUES ($1, $2, $3)
+RETURNING id
+    "#,
+        user_id,
+        serde_json::to_value(action).unwrap(),
+        addr
+    )
+    .fetch_one(&mut **transaction)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    Ok(res.id)
+}
+
+pub(crate) async fn fetch_user_audit_log(
+    pool: &PgPool,
+    user_id: i32,
+) -> Result<Vec<auth::AuditLogEntry>> {
+    sqlx::query!(
+        r#"
+SELECT id, action, datetime, addr
+FROM audit_log
+WHERE user_id=$1
+ORDER BY datetime ASC
+    "#,
+        user_id
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .into_iter()
+    .map(|r| {
+        Ok(auth::AuditLogEntry {
+            id: r.id,
+            user_id,
+            action: serde_json::from_value(r.action).map_err(|e| {
+                log::error!("Error deserializing: {}", e);
+                Error::DatabaseDeserialization
+            })?,
+            datetime: r.datetime.with_timezone(&Utc),
+            addr: r.addr,
+        })
+    })
+    .collect::<Result<Vec<auth::AuditLogEntry>>>()
 }

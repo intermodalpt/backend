@@ -16,6 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+pub mod auth;
 pub mod calendar;
 pub mod geo;
 pub mod gtfs;

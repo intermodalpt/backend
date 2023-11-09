@@ -1,0 +1,53 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT audit_log.id, audit_log.user_id, audit_log.action, audit_log.datetime, audit_log.addr,\n    users.username as user_username\nFROM audit_log\nINNER JOIN users ON user_id = users.id\nORDER BY datetime DESC\nLIMIT $1 OFFSET $2\n    ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "user_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "action",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 3,
+        "name": "datetime",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "addr",
+        "type_info": "Cidr"
+      },
+      {
+        "ordinal": 5,
+        "name": "user_username",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "0737c7c61b69cda3826cf25f37d2018cfbaa1ab80efc3fd3a973c479cdfa1dab"
+}

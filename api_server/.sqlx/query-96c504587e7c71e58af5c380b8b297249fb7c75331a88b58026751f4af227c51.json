@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT id, action, datetime, addr\nFROM audit_log\nWHERE user_id=$1\nORDER BY datetime ASC\n    ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "action",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 2,
+        "name": "datetime",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 3,
+        "name": "addr",
+        "type_info": "Cidr"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "96c504587e7c71e58af5c380b8b297249fb7c75331a88b58026751f4af227c51"
+}

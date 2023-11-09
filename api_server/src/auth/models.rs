@@ -19,17 +19,6 @@
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
-pub struct User {
-    pub id: i32,
-    pub username: String,
-    pub password: String,
-    pub email: Option<String>,
-    pub is_admin: bool,
-    pub is_trusted: bool,
-    pub works_for: Option<i32>,
-}
-
 #[derive(Debug)]
 pub struct HashedRegistration {
     pub username: String,
@@ -85,5 +74,18 @@ pub(crate) mod requests {
     pub struct ChangeUnknownPassword {
         pub username: String,
         pub new_password: String,
+    }
+}
+
+pub(crate) mod responses {
+    use serde::Serialize;
+
+    use commons::models::auth;
+
+    #[derive(Serialize)]
+    pub struct AuditLogEntry {
+        #[serde(flatten)]
+        pub entry: auth::AuditLogEntry,
+        pub user_username: String,
     }
 }
