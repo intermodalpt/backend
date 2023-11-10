@@ -148,15 +148,20 @@ RETURNING id
 pub(crate) async fn fetch_user_audit_log(
     pool: &PgPool,
     user_id: i32,
+    skip: i64,
+    take: i64,
 ) -> Result<Vec<auth::AuditLogEntry>> {
     sqlx::query!(
         r#"
 SELECT id, action, datetime, addr
 FROM audit_log
 WHERE user_id=$1
-ORDER BY datetime ASC
+ORDER BY datetime DESC
+LIMIT $2 OFFSET $3
     "#,
-        user_id
+        user_id,
+        take,
+        skip
     )
     .fetch_all(pool)
     .await

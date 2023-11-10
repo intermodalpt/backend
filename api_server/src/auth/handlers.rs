@@ -23,6 +23,8 @@ use axum::Json;
 use axum_client_ip::SecureClientIp;
 use serde::Deserialize;
 
+use commons::models::auth;
+
 use super::{logic, models, sql};
 use crate::auth::models::responses;
 use crate::errors::Error;
@@ -127,7 +129,7 @@ pub(crate) async fn get_user_audit_log(
     _client_ip: SecureClientIp,
     paginator: Query<Page>,
     Path(user_id): Path<i32>,
-) -> Result<Json<Pagination<responses::AuditLogEntry>>, Error> {
+) -> Result<Json<Pagination<auth::AuditLogEntry>>, Error> {
     let is_admin = matches!(
         claims,
         Some(models::Claims {
@@ -146,7 +148,8 @@ pub(crate) async fn get_user_audit_log(
     let take = i64::from(PAGE_SIZE);
 
     Ok(Json(Pagination {
-        items: sql::fetch_audit_log_entries(&state.pool, offset, take).await?,
+        items: sql::fetch_user_audit_log(&state.pool, user_id, offset, take)
+            .await?,
         total: sql::count_user_audit_logs(&state.pool, user_id).await? as usize,
     }))
 }

@@ -12,7 +12,7 @@
     "parameters": {
       "Left": [
         "Text",
-        "Bpchar",
+        "Text",
         "Bool",
         "Bool",
         "Bool",

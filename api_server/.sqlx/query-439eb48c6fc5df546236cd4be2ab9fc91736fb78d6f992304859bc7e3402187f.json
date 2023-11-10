@@ -11,7 +11,7 @@
       {
         "ordinal": 1,
         "name": "sha1",
-        "type_info": "Bpchar"
+        "type_info": "Text"
       },
       {
         "ordinal": 2,
