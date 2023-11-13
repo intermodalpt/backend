@@ -18,6 +18,8 @@
 
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
+use axum::Json;
+use serde::Serialize;
 use thiserror::Error;
 use utoipa::ToSchema;
 
@@ -47,24 +49,23 @@ impl IntoResponse for Error {
     fn into_response(self) -> Response {
         match self {
             Error::DatabaseDeserialization => {
-                (StatusCode::INTERNAL_SERVER_ERROR, format!("{}", &self))
-                    .into_response()
+                JsonErrorResponse::new_response(StatusCode::INTERNAL_SERVER_ERROR, self.to_string())
             }
             Error::NotFoundUpstream => {
-                (StatusCode::NOT_FOUND, format!("{}", &self)).into_response()
+                JsonErrorResponse::new_response(StatusCode::NOT_FOUND, self.to_string())
             }
             Error::Forbidden => {
-                (StatusCode::FORBIDDEN, format!("{}", &self)).into_response()
+                JsonErrorResponse::new_response(StatusCode::FORBIDDEN, self.to_string())
             }
             Error::DependenciesNotMet => {
-                (StatusCode::FAILED_DEPENDENCY, format!("{}", &self)).into_response()
+                JsonErrorResponse::new_response(StatusCode::FAILED_DEPENDENCY, self.to_string())
             }
             Error::ValidationFailure(_) => {
-                (StatusCode::BAD_REQUEST, format!("{}", &self)).into_response()
+                JsonErrorResponse::new_response(StatusCode::BAD_REQUEST, self.to_string())
             }
             Error::Processing(_) | Error::ObjectStorageFailure(_) | Error::DatabaseExecution(_) | Error::DownloadFailure(_) => {
                 eprintln!("{:?}", &self);
-                (StatusCode::INTERNAL_SERVER_ERROR, "The server had an internal error").into_response()
+                JsonErrorResponse::new_response(StatusCode::INTERNAL_SERVER_ERROR, "The server had an internal error".to_string())
             }
             // _ => (StatusCode::INTERNAL_SERVER_ERROR, format!("{}", &self))
             //     .into_response(),
@@ -85,5 +86,24 @@ impl From<commons::errors::Error> for Error {
                 Error::Processing(msg)
             }
         }
+    }
+}
+
+#[derive(Serialize)]
+struct JsonErrorResponse {
+    code: u16,
+    message: String,
+}
+
+impl JsonErrorResponse {
+    fn new_response(code: StatusCode, message: String) -> Response {
+        (
+            code,
+            Json(Self {
+                code: code.as_u16(),
+                message: message,
+            }),
+        )
+            .into_response()
     }
 }
