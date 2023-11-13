@@ -147,6 +147,10 @@ pub fn build_paths(state: AppState) -> Router {
             "/v1/stop_pics/linked/:stop_id",
             post(pics::handlers::upload_stop_picture),
         )
+        .route(
+            "/v1/stop_pics/uploaded_by/:user_id",
+            post(pics::handlers::get_user_stop_pictures),
+        )
         .route("/v1/stop_pics/pano/all", get(pics::handlers::get_panos))
         .route(
             "/v1/stop_pics/pano",

@@ -393,6 +393,7 @@ ORDER BY quality DESC
 pub(crate) async fn fetch_user_pictures(
     pool: &PgPool,
     user_id: i32,
+    include_private: bool,
     skip: i64,
     take: i64,
 ) -> Result<Vec<responses::PicWithStops>> {
@@ -411,72 +412,15 @@ SELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,
 FROM stop_pics
 LEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id
 WHERE uploader=$1
+    AND ((stop_pics.public = true AND stop_pics.sensitive = false) OR $4 = true)
 GROUP BY stop_pics.id
 ORDER BY capture_date DESC, upload_date DESC
 LIMIT $2 OFFSET $3
     "#,
         user_id,
         take,
-        skip
-    )
-    .fetch_all(pool)
-    .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
-    .into_iter()
-    .map(|r| responses::PicWithStops {
-        id: r.id,
-        url_full: get_full_path(&r.sha1),
-        url_medium: get_medium_path(&r.sha1),
-        url_thumb: get_thumb_path(&r.sha1),
-        original_filename: r.original_filename,
-        sha1: r.sha1,
-        tagged: r.tagged,
-        uploader: r.uploader,
-        upload_date: r.upload_date,
-        capture_date: r.capture_date,
-        width: r.width,
-        height: r.height,
-        camera_ref: r.camera_ref,
-        public: r.public,
-        sensitive: r.sensitive,
-        lon: r.lon,
-        lat: r.lat,
-        quality: r.quality,
-        tags: r.tags,
-        attrs: r.attrs,
-        notes: r.notes,
-        stops: r.rels.into_iter().map(Into::into).collect()
-    })
-    .collect())
-}
-
-/// A range of pictures that are meant to be public (auth-free)
-pub(crate) async fn fetch_latest_public_pictures(
-    pool: &PgPool,
-    skip: i64,
-    take: i64,
-) -> Result<Vec<responses::PicWithStops>> {
-    Ok(sqlx::query!(
-        r#"
-SELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,
-    stop_pics.public, stop_pics.sensitive, stop_pics.uploader,
-    stop_pics.upload_date, stop_pics.capture_date, stop_pics.quality,
-    stop_pics.width, stop_pics.height, stop_pics.lon, stop_pics.lat,
-    stop_pics.camera_ref, stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,
-    CASE
-        WHEN count(stop_pic_stops.stop) > 0
-        THEN array_agg(ROW(stop_pic_stops.stop, stop_pic_stops.attrs))
-        ELSE array[]::record[]
-    END as "rels!: Vec<(i32, Vec<String>)>"
-FROM stop_pics
-LEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id
-WHERE public=true AND sensitive=false
-GROUP BY stop_pics.id
-ORDER BY capture_date DESC, upload_date DESC
-LIMIT $1 OFFSET $2
-    "#,
-        take,
-        skip
+        skip,
+        include_private
     )
     .fetch_all(pool)
     .await

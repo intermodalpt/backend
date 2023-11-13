@@ -199,6 +199,39 @@ pub(crate) async fn get_latest_stop_pictures(
     ))
 }
 
+pub(crate) async fn get_user_stop_pictures(
+    State(state): State<AppState>,
+    claims: Option<auth::Claims>,
+    page_qs: Query<PicsPage>,
+    Path(user_id): Path<i32>,
+) -> Result<Json<Vec<responses::PicWithStops>>, Error> {
+    let is_trusted = matches!(
+        claims,
+        Some(auth::Claims {
+            permissions: auth::Permissions { is_admin: true, .. },
+            ..
+        })
+    );
+
+    let requester_uid = claims.map(|c| c.uid);
+
+    let is_self = requester_uid == Some(user_id);
+
+    let offset = i64::from(page_qs.p * PAGE_SIZE);
+    let take = i64::from(PAGE_SIZE);
+
+    Ok(Json(
+        sql::fetch_user_pictures(
+            &state.pool,
+            user_id,
+            is_trusted || is_self,
+            offset,
+            take,
+        )
+        .await?,
+    ))
+}
+
 pub(crate) async fn get_unpositioned_stop_pictures(
     State(state): State<AppState>,
     claims: Option<auth::Claims>,
