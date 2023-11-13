@@ -16,7 +16,7 @@
       {
         "ordinal": 2,
         "name": "sha1",
-        "type_info": "Text"
+        "type_info": "Bpchar"
       },
       {
         "ordinal": 3,
@@ -96,7 +96,7 @@
     ],
     "parameters": {
       "Left": [
-        "Text"
+        "Bpchar"
       ]
     },
     "nullable": [
