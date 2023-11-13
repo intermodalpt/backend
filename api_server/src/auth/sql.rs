@@ -46,6 +46,26 @@ WHERE username=$1
     .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
+pub(crate) async fn fetch_user_by_username_or_email(
+    pool: &PgPool,
+    username: &str,
+    email: &str,
+) -> Result<Option<auth::User>> {
+    sqlx::query_as!(
+        auth::User,
+        r#"
+SELECT id, username, password, email, is_admin, is_trusted, works_for
+FROM Users
+WHERE username=$1 or email = $2
+    "#,
+        username,
+        email
+    )
+    .fetch_optional(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+}
+
 pub(crate) async fn register_user(
     pool: &PgPool,
     request: &models::HashedRegistration,

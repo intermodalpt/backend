@@ -7,7 +7,7 @@ pub struct User {
     pub id: i32,
     pub username: String,
     pub password: String,
-    pub email: Option<String>,
+    pub email: String,
     pub is_admin: bool,
     pub is_trusted: bool,
     pub works_for: Option<i32>,

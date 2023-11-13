@@ -6,7 +6,7 @@ CREATE TABLE users
     is_admin            boolean DEFAULT false NOT NULL,
     is_trusted          boolean DEFAULT false NOT NULL,
     works_for           integer,
-    email               text,
+    email               text                  NOT NULL,
     can_edit_departures boolean DEFAULT false NOT NULL
 );
 

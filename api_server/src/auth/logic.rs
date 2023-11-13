@@ -122,6 +122,41 @@ pub(crate) async fn register(
     requester_ip: IpAddr,
     db_pool: &PgPool,
 ) -> Result<(), Error> {
+    let existing_user = sql::fetch_user_by_username_or_email(
+        db_pool,
+        &request.username,
+        &request.email,
+    )
+    .await?;
+
+    // TODO something more robust than this
+    if request.username.contains(" ") {
+        return Err(Error::ValidationFailure(
+            "Username cannot contain spaces".to_string(),
+        ));
+    }
+
+    if request.password.len() < 7 {
+        return Err(Error::ValidationFailure(
+            "Password must be at least 7 characters long".to_string(),
+        ));
+    }
+
+    if existing_user.is_some() {
+        let existing_user = existing_user.unwrap();
+        if existing_user.username == request.username {
+            return Err(Error::ValidationFailure(
+                "Username already in use".to_string(),
+            ));
+        }
+
+        if existing_user.email == request.email {
+            return Err(Error::ValidationFailure(
+                "Email already in use".to_string(),
+            ));
+        }
+    }
+
     let password_kdf = gen_kdf_password_string(&request.password)?;
     let registration = models::HashedRegistration {
         username: request.username,
@@ -254,6 +289,12 @@ pub(crate) fn decode_claims(jwt: &str) -> Result<models::Claims, Error> {
 
 #[cfg(test)]
 mod tests {
+    use sqlx::PgPool;
+    use std::net::{IpAddr, Ipv4Addr};
+
+    use crate::auth::models::requests;
+    use crate::errors::Error;
+
     #[test]
     fn encode_decode_claims() {
         use super::*;
@@ -275,5 +316,223 @@ mod tests {
         let encoded = encode_claims(claims.clone()).unwrap();
         let decoded = decode_claims(&encoded).unwrap();
         assert_eq!(claims, decoded);
+    }
+
+    #[sqlx::test]
+    async fn ok_register_login(pool: PgPool) {
+        // REGISTER
+        let req = requests::Register {
+            username: "username".to_string(),
+            password: "password".to_string(),
+            email: "user@intermodal.pt".to_string(),
+        };
+        let req_ori = IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4));
+
+        let res = super::register(req, req_ori, &pool).await;
+        assert_eq!(res, Ok(()));
+
+        // LOGIN
+        let req = requests::Login {
+            username: "username".to_string(),
+            password: "password".to_string(),
+        };
+        let req_ori = IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4));
+
+        let res = super::login(req, req_ori, &pool).await;
+        assert!(res.is_ok())
+    }
+
+    #[sqlx::test]
+    async fn err_register_bad_username_spaces(pool: PgPool) {
+        let req = requests::Register {
+            username: "invalid username".to_string(),
+            password: "password".to_string(),
+            email: "user@intermodal.pt".to_string(),
+        };
+        let req_ori = IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4));
+
+        let res = super::register(req, req_ori, &pool).await;
+        assert_eq!(
+            res,
+            Err(Error::ValidationFailure(
+                "Username cannot contain spaces".into()
+            ))
+        );
+    }
+
+    #[sqlx::test]
+    async fn err_register_bad_password(pool: PgPool) {
+        let req = requests::Register {
+            username: "username".to_string(),
+            password: "".to_string(),
+            email: "user@intermodal.pt".to_string(),
+        };
+        let req_ori = IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4));
+
+        let res = super::register(req, req_ori, &pool).await;
+        assert_eq!(
+            res,
+            Err(Error::ValidationFailure(
+                "Password must be at least 7 characters long".to_string()
+            ))
+        );
+    }
+
+    #[sqlx::test]
+    async fn err_register_duplicated_username(pool: PgPool) {
+        let req = requests::Register {
+            username: "username".to_string(),
+            password: "password".to_string(),
+            email: "user@intermodal.pt".to_string(),
+        };
+        let req_ori = IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4));
+
+        let res = super::register(req, req_ori, &pool).await;
+        assert_eq!(res, Ok(()));
+
+        let req = requests::Register {
+            username: "username".to_string(),
+            password: "password2".to_string(),
+            email: "user2@intermodal.pt".to_string(),
+        };
+        let req_ori = IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4));
+
+        let res = super::register(req, req_ori, &pool).await;
+        assert_eq!(
+            res,
+            Err(Error::ValidationFailure(
+                "Username already in use".to_string()
+            ))
+        );
+    }
+
+    #[sqlx::test]
+    async fn err_register_duplicated_email(pool: PgPool) {
+        let req = requests::Register {
+            username: "username".to_string(),
+            password: "password".to_string(),
+            email: "user@intermodal.pt".to_string(),
+        };
+        let req_ori = IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4));
+
+        let res = super::register(req, req_ori, &pool).await;
+        assert_eq!(res, Ok(()));
+
+        let req = requests::Register {
+            username: "username2".to_string(),
+            password: "password2".to_string(),
+            email: "user@intermodal.pt".to_string(),
+        };
+        let req_ori = IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4));
+
+        let res = super::register(req, req_ori, &pool).await;
+        assert_eq!(
+            res,
+            Err(Error::ValidationFailure("Email already in use".to_string()))
+        );
+    }
+
+    #[sqlx::test(fixtures("users"))]
+    async fn ok_login_admin(pool: PgPool) {
+        let req = requests::Login {
+            username: "admin".to_string(),
+            password: "password".to_string(),
+        };
+        let req_ori = IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4));
+
+        let jwt = super::login(req, req_ori, &pool).await.unwrap();
+        let claims = super::decode_claims(&jwt).unwrap();
+
+        assert_eq!(claims.uid, 1);
+        assert_eq!(&claims.uname, "admin");
+        assert_eq!(claims.permissions.is_admin, true);
+    }
+
+    #[sqlx::test(fixtures("users"))]
+    async fn ok_login_user(pool: PgPool) {
+        let req = requests::Login {
+            username: "user".to_string(),
+            password: "password".to_string(),
+        };
+        let req_ori = IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4));
+
+        let jwt = super::login(req, req_ori, &pool).await.unwrap();
+        let claims = super::decode_claims(&jwt).unwrap();
+
+        assert_eq!(claims.uid, 2);
+        assert_eq!(&claims.uname, "user");
+        assert_eq!(claims.permissions.is_admin, false);
+    }
+
+    #[sqlx::test(fixtures("users"))]
+    async fn err_login_user_bad_password(pool: PgPool) {
+        let req = requests::Login {
+            username: "user".to_string(),
+            password: "wrong_password".to_string(),
+        };
+        let req_ori = IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4));
+
+        let res = super::login(req, req_ori, &pool).await;
+        assert_eq!(res, Err(Error::Forbidden));
+    }
+
+    #[sqlx::test(fixtures("users"))]
+    async fn ok_change_password(pool: PgPool) {
+        // PASSWORD CHANGE
+        let req = requests::ChangeKnownPassword {
+            username: "user".to_string(),
+            old_password: "password".to_string(),
+            new_password: "new_password".to_string(),
+        };
+        let req_ori = IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4));
+
+        let res = super::change_password(req, 1, req_ori, &pool)
+            .await
+            .unwrap();
+
+        // LOGIN
+        let req = requests::Login {
+            username: "user".to_string(),
+            password: "new_password".to_string(),
+        };
+
+        assert!(super::login(req, req_ori, &pool).await.is_ok());
+    }
+
+    #[sqlx::test(fixtures("users"))]
+    async fn err_change_password_bad_old_password(pool: PgPool) {
+        let req = requests::ChangeKnownPassword {
+            username: "user".to_string(),
+            old_password: "wrong_password".to_string(),
+            new_password: "new_password".to_string(),
+        };
+        let req_ori = IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4));
+
+        assert_eq!(
+            super::change_password(req, 1, req_ori, &pool).await,
+            Err(Error::Forbidden)
+        );
+    }
+
+    #[sqlx::test(fixtures("users"))]
+    async fn ok_admin_change_password(pool: PgPool) {
+        // PASSWORD CHANGE
+        let req = requests::ChangeUnknownPassword {
+            username: "user".to_string(),
+            new_password: "new_password".to_string(),
+        };
+        let req_ori = IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4));
+
+        let res = super::admin_change_password(req, 1, req_ori, &pool)
+            .await
+            .unwrap();
+
+        // LOGIN
+        let req = requests::Login {
+            username: "user".to_string(),
+            password: "new_password".to_string(),
+        };
+
+        assert!(super::login(req, req_ori, &pool).await.is_ok());
     }
 }

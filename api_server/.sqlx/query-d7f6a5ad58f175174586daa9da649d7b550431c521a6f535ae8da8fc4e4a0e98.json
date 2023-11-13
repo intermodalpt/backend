@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT id, username, password, email, is_admin, is_trusted, works_for\nFROM Users\nWHERE username=$1\n    ",
+  "query": "\nSELECT id, username, password, email, is_admin, is_trusted, works_for\nFROM Users\nWHERE username=$1 or email = $2\n    ",
   "describe": {
     "columns": [
       {
@@ -41,6 +41,7 @@
     ],
     "parameters": {
       "Left": [
+        "Text",
         "Text"
       ]
     },
@@ -54,5 +55,5 @@
       true
     ]
   },
-  "hash": "06ce34e2d26bb3da8b0269ec12cdccfac34345ed4e596a1e70d495a25e6d30b5"
+  "hash": "d7f6a5ad58f175174586daa9da649d7b550431c521a6f535ae8da8fc4e4a0e98"
 }
