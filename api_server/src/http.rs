@@ -132,8 +132,7 @@ pub fn build_paths(state: AppState) -> Router {
         .route("/v1/stop_pics/map", get(pics::handlers::get_pictures_map))
         .route(
             "/v1/stop_pics/dangling",
-            get(pics::handlers::get_dangling_stop_pictures)
-                .post(pics::handlers::upload_dangling_stop_picture),
+            post(pics::handlers::upload_dangling_stop_picture),
         )
         .route(
             "/v1/stop_pics/latest",

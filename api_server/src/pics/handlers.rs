@@ -107,36 +107,6 @@ pub(crate) struct Page {
 
 const PAGE_SIZE: u32 = 20;
 
-// TODO deprecate
-pub(crate) async fn get_dangling_stop_pictures(
-    State(state): State<AppState>,
-    claims: Option<auth::Claims>,
-    paginator: Query<Page>,
-) -> Result<Json<Vec<responses::PicWithStops>>, Error> {
-    let is_trusted = matches!(
-        claims,
-        Some(auth::Claims {
-            permissions: auth::Permissions { is_admin: true, .. },
-            ..
-        })
-    );
-    let uid = claims.map(|c| c.uid);
-
-    let offset = i64::from(paginator.p * PAGE_SIZE);
-    let take = i64::from(PAGE_SIZE);
-
-    Ok(Json(
-        sql::fetch_untagged_pictures(
-            &state.pool,
-            is_trusted,
-            uid,
-            offset,
-            take,
-        )
-        .await?,
-    ))
-}
-
 #[derive(Deserialize, Default)]
 pub(crate) struct PicsPage {
     #[serde(default)]
