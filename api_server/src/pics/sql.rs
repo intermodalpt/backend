@@ -611,7 +611,7 @@ WHERE tagged=false
         OR (stop_pics.public = true AND stop_pics.sensitive = false)
         OR $2 = true)
 GROUP BY stop_pics.id
-ORDER BY capture_date DESC, upload_date DESC
+ORDER BY capture_date ASC, upload_date ASC
 LIMIT $3 OFFSET $4
     "#,
         uid,
@@ -692,6 +692,7 @@ WHERE (stop_pics.lat IS NULL OR stop_pics.lon IS NULL)
     AND (stop_pics.uploader = $1
         OR (stop_pics.public = true AND stop_pics.sensitive = false)
         OR $2 = true)
+ORDER BY capture_date ASC, upload_date ASC
 LIMIT $3 OFFSET $4
     "#,
         uid,
