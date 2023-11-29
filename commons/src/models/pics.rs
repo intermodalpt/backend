@@ -20,6 +20,12 @@ use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
+#[derive(Debug)]
+pub enum Resource {
+    StopPic(StopPic),
+    PanoPic(PanoPic),
+}
+
 #[derive(Debug, Serialize, ToSchema)]
 pub struct TaggedStopPic {
     pub id: i32,

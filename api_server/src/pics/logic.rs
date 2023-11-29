@@ -55,7 +55,7 @@ pub(crate) async fn upload_stop_picture(
     let res = sql::fetch_picture_by_hash(db_pool, &hex_hash).await?;
 
     if let Some(pic) = res {
-        return Ok(pic);
+        return Err(Error::DuplicatedResource(pics::Resource::StopPic(pic)));
     }
 
     let mut original_img = image::load_from_memory(content.as_ref())
@@ -324,7 +324,7 @@ pub(crate) async fn upload_pano_picture(
     let res = sql::fetch_pano_by_hash(db_pool, &hex_hash).await?;
 
     if let Some(pic) = res {
-        return Ok(pic);
+        return Err(Error::DuplicatedResource(pics::Resource::PanoPic(pic)));
     }
 
     let _ = image::load_from_memory(content.as_ref())

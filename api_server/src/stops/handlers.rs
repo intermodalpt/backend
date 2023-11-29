@@ -123,7 +123,7 @@ pub(crate) async fn patch_stop(
     claims: Option<auth::Claims>,
     Path(stop_id): Path<i32>,
     Json(changes): Json<models::requests::ChangeStop>,
-) -> Result<(), Error> {
+) -> Result<Json<stops::Stop>, Error> {
     if claims.is_none() {
         return Err(Error::Forbidden);
     }
@@ -138,12 +138,12 @@ pub(crate) async fn patch_stop(
     if stop.is_none() {
         return Err(Error::NotFoundUpstream);
     }
-    let stop = stop.unwrap();
+    let mut stop = stop.unwrap();
 
     let patch = changes.derive_patch(&stop);
 
     if patch.is_empty() {
-        return Ok(());
+        return Ok(Json(stop));
     }
 
     let mut transaction = state
@@ -156,8 +156,8 @@ pub(crate) async fn patch_stop(
         &mut transaction,
         user_id,
         &[history::Change::StopUpdate {
-            original: stop,
-            patch,
+            original: stop.clone(),
+            patch: patch.clone(),
         }],
         None,
     )
@@ -170,7 +170,9 @@ pub(crate) async fn patch_stop(
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
-    Ok(())
+    patch.apply(&mut stop);
+
+    Ok(Json(stop))
 }
 
 pub(crate) async fn get_bounded_stops(

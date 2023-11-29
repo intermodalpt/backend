@@ -23,7 +23,10 @@ use serde::Serialize;
 use thiserror::Error;
 use utoipa::ToSchema;
 
-#[derive(Error, Debug, PartialEq, Eq, ToSchema)]
+use commons::models::pics;
+use commons::models::pics::Resource;
+
+#[derive(Error, Debug, ToSchema)]
 pub enum Error {
     #[error("Failed to deserialize data from the database")]
     DatabaseDeserialization,
@@ -37,38 +40,66 @@ pub enum Error {
     ValidationFailure(String),
     #[error("The data could not be handled: `{0}`")]
     Processing(String),
-    #[error("Unable to comunicate with the storage: `{0}`")]
+    #[error("Unable to communicate with the storage: `{0}`")]
     ObjectStorageFailure(String),
     #[error("Unable to execute database transaction: `{0}`")]
     DatabaseExecution(String),
     #[error("Unable to download file: `{0}`")]
     DownloadFailure(String),
+    #[error("Attempted to duplicate resource`")]
+    DuplicatedResource(Resource),
 }
 
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
+        let message = self.to_string();
         match self {
-            Error::DatabaseDeserialization => {
-                JsonErrorResponse::new_response(StatusCode::INTERNAL_SERVER_ERROR, self.to_string())
-            }
+            Error::DatabaseDeserialization => JsonErrorResponse::new_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                message,
+            ),
             Error::NotFoundUpstream => {
-                JsonErrorResponse::new_response(StatusCode::NOT_FOUND, self.to_string())
+                JsonErrorResponse::new_response(StatusCode::NOT_FOUND, message)
             }
             Error::Forbidden => {
-                JsonErrorResponse::new_response(StatusCode::FORBIDDEN, self.to_string())
+                JsonErrorResponse::new_response(StatusCode::FORBIDDEN, message)
             }
-            Error::DependenciesNotMet => {
-                JsonErrorResponse::new_response(StatusCode::FAILED_DEPENDENCY, self.to_string())
-            }
-            Error::ValidationFailure(_) => {
-                JsonErrorResponse::new_response(StatusCode::BAD_REQUEST, self.to_string())
-            }
-            Error::Processing(_) | Error::ObjectStorageFailure(_) | Error::DatabaseExecution(_) | Error::DownloadFailure(_) => {
+            Error::DependenciesNotMet => JsonErrorResponse::new_response(
+                StatusCode::FAILED_DEPENDENCY,
+                message,
+            ),
+            Error::ValidationFailure(_) => JsonErrorResponse::new_response(
+                StatusCode::BAD_REQUEST,
+                message,
+            ),
+            Error::DuplicatedResource(resource) => match resource {
+                Resource::StopPic(pic) => {
+                    let detail = DuplicatedPicDetail { existing: pic };
+                    DetailedJsonErrorResponse::new_response(
+                        StatusCode::CONFLICT,
+                        message,
+                        detail,
+                    )
+                }
+                Resource::PanoPic(pano) => {
+                    let detail = DuplicatedPanoDetail { existing: pano };
+                    DetailedJsonErrorResponse::new_response(
+                        StatusCode::CONFLICT,
+                        message,
+                        detail,
+                    )
+                }
+            },
+            Error::Processing(_)
+            | Error::ObjectStorageFailure(_)
+            | Error::DatabaseExecution(_)
+            | Error::DownloadFailure(_) => {
                 eprintln!("{:?}", &self);
-                JsonErrorResponse::new_response(StatusCode::INTERNAL_SERVER_ERROR, "The server had an internal error".to_string())
+                JsonErrorResponse::new_response(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "The server had an internal error".to_string(),
+                )
             }
-            // _ => (StatusCode::INTERNAL_SERVER_ERROR, format!("{}", &self))
-            //     .into_response(),
         }
     }
 }
@@ -101,9 +132,43 @@ impl JsonErrorResponse {
             code,
             Json(Self {
                 code: code.as_u16(),
-                message: message,
+                message,
             }),
         )
             .into_response()
     }
+}
+
+#[derive(Serialize)]
+struct DetailedJsonErrorResponse<D: serde::Serialize> {
+    code: u16,
+    message: String,
+    detail: D,
+}
+
+impl<D: serde::Serialize> DetailedJsonErrorResponse<D> {
+    fn new_response(code: StatusCode, message: String, detail: D) -> Response
+    where
+        D: serde::Serialize,
+    {
+        (
+            code,
+            Json(Self {
+                code: code.as_u16(),
+                message,
+                detail,
+            }),
+        )
+            .into_response()
+    }
+}
+
+#[derive(Serialize)]
+struct DuplicatedPicDetail {
+    existing: pics::StopPic,
+}
+
+#[derive(Serialize)]
+struct DuplicatedPanoDetail {
+    existing: pics::PanoPic,
 }
