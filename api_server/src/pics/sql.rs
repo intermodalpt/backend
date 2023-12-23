@@ -31,10 +31,13 @@ use crate::Error;
 type Result<T> = std::result::Result<T, Error>;
 
 /// Fetches a picture by its id.
-pub(crate) async fn fetch_picture(
-    pool: &PgPool,
+pub(crate) async fn fetch_picture<'c, E>(
+    executor: E,
     picture_id: i32,
-) -> Result<Option<pics::StopPic>> {
+) -> Result<Option<pics::StopPic>>
+where
+    E: sqlx::Executor<'c, Database = sqlx::Postgres>,
+{
     sqlx::query!(
         r#"
 SELECT id, original_filename, sha1, tagged, public, sensitive, uploader,
@@ -45,7 +48,7 @@ WHERE id = $1
 "#,
         picture_id
     )
-    .fetch_optional(pool)
+    .fetch_optional(executor)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))
     .map(|row| {
@@ -266,7 +269,7 @@ GROUP BY stop_pics.id
 
 /// All of the stops that are linked to a picture
 pub(crate) async fn fetch_picture_stops_rel_attrs(
-    pool: &PgPool,
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     picture_id: i32,
 ) -> Result<Vec<pics::StopAttrs>> {
     Ok(sqlx::query!(
@@ -278,7 +281,7 @@ ORDER BY stop ASC
 "#,
         picture_id
     )
-    .fetch_all(pool)
+    .fetch_all(&mut **transaction)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?
     .into_iter()

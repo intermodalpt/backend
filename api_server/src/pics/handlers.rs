@@ -386,7 +386,13 @@ pub(crate) async fn patch_stop_picture_meta(
     }
     let claims = claims.unwrap();
 
-    let pic = sql::fetch_picture(&state.pool, stop_picture_id).await?;
+    let mut transaction = state
+        .pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    let pic = sql::fetch_picture(&mut *transaction, stop_picture_id).await?;
     if pic.is_none() {
         return Err(Error::NotFoundUpstream);
     }
@@ -399,7 +405,7 @@ pub(crate) async fn patch_stop_picture_meta(
     }
 
     let original_rels =
-        sql::fetch_picture_stops_rel_attrs(&state.pool, pic.id).await?;
+        sql::fetch_picture_stops_rel_attrs(&mut transaction, pic.id).await?;
 
     let new_stop_attrs = stop_pic_meta
         .stops
@@ -422,19 +428,14 @@ pub(crate) async fn patch_stop_picture_meta(
 
     let patch = stop_pic_meta.derive_patch(&pic);
 
-    let changed = !(patch.is_empty() && attrs_changed);
+    let changed = !patch.is_empty() || attrs_changed;
 
     if changed {
-        let mut transaction = state
-            .pool
-            .begin()
-            .await
-            .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
-
         contrib::sql::insert_changeset_log(
             &mut transaction,
             claims.uid,
             &[history::Change::StopPicMetaUpdate {
+                pic_id: Some(stop_picture_id),
                 original_meta: pic.dyn_meta,
                 original_stops: original_rels,
                 meta_patch: patch,

@@ -181,14 +181,15 @@ pub(crate) async fn delete_picture(
     bucket: &s3::Bucket,
     db_pool: &PgPool,
 ) -> Result<(), Error> {
-    let stop_rels = sql::fetch_picture_stops_rel_attrs(db_pool, pic.id).await?;
-
-    let stop_pic = sql::fetch_picture(db_pool, pic.id)
+    let mut transaction = db_pool
+        .begin()
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
-    let mut transaction = db_pool
-        .begin()
+    let stop_rels =
+        sql::fetch_picture_stops_rel_attrs(&mut transaction, pic.id).await?;
+
+    let stop_pic = sql::fetch_picture(db_pool, pic.id)
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
