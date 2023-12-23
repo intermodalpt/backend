@@ -23,8 +23,9 @@ use sqlx::PgPool;
 
 use commons::models::routes;
 
-use super::models::{requests, responses};
 use crate::Error;
+
+use super::models::{requests, responses};
 
 type Result<T> = std::result::Result<T, Error>;
 
@@ -478,6 +479,42 @@ WHERE id=$1 AND route=$2
     }
 }
 
+pub(crate) async fn delete_subroute_stops(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    subroute_id: i32,
+) -> Result<()> {
+    sqlx::query!(
+        r#"
+DELETE FROM subroute_stops
+WHERE subroute=$1
+    "#,
+        subroute_id
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    Ok(())
+}
+
+pub(crate) async fn delete_subroute_departures(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    subroute_id: i32,
+) -> Result<()> {
+    sqlx::query!(
+        r#"
+DELETE FROM departures
+WHERE subroute=$1
+    "#,
+        subroute_id
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    Ok(())
+}
+
 pub(crate) async fn fetch_route_stops(
     pool: &PgPool,
     route_id: i32,
@@ -625,42 +662,45 @@ WHERE  subroute=$2 AND idx=$3
     Ok(())
 }
 
-pub(crate) async fn fetch_subroute_stop_count(
-    pool: &PgPool,
+pub(crate) async fn fetch_subroute_stops(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     subroute_id: i32,
-) -> Result<i64> {
+) -> Result<Vec<i32>> {
     Ok(sqlx::query!(
         r#"
-SELECT count(*) as count
+SELECT stop
 FROM subroute_stops
 WHERE subroute=$1
 "#,
         subroute_id
     )
-    .fetch_one(pool)
+    .fetch_all(&mut **transaction)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?
-    .count
-    .unwrap_or(0))
+    .into_iter()
+    .map(|r| r.stop)
+    .collect())
 }
 
-pub(crate) async fn fetch_subroute_departure_count(
-    pool: &PgPool,
+pub(crate) async fn fetch_subroute_departures(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     subroute_id: i32,
-) -> Result<i64> {
-    Ok(sqlx::query!(
+) -> Result<Vec<routes::Departure>> {
+    sqlx::query_as!(
+        routes::Departure,
         r#"
-SELECT count(*) as count
+SELECT departures.id as id,
+    departures.time as time,
+    departures.subroute as subroute_id,
+    departures.calendar_id as "calendar_id!: i32"
 FROM departures
-WHERE subroute=$1
+WHERE departures.subroute = $1
 "#,
         subroute_id
     )
-    .fetch_one(pool)
+    .fetch_all(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
-    .count
-    .unwrap_or(0))
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
 pub(crate) async fn fetch_schedule(

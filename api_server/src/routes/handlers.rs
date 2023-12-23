@@ -340,23 +340,25 @@ pub(crate) async fn delete_subroute(
     }
     let subroute = subroute.unwrap();
 
-    let stop_count =
-        sql::fetch_subroute_stop_count(&state.pool, subroute_id).await?;
-    let departure_count =
-        sql::fetch_subroute_departure_count(&state.pool, subroute_id).await?;
-
-    if stop_count > 0 || departure_count > 0 {
-        return Err(Error::DependenciesNotMet);
-    }
+    let stops =
+        sql::fetch_subroute_stops(&mut transaction, subroute_id).await?;
+    let departures =
+        sql::fetch_subroute_departures(&mut transaction, subroute_id).await?;
 
     contrib::sql::insert_changeset_log(
         &mut transaction,
         user_id,
-        &[history::Change::SubrouteDeletion { data: subroute }],
+        &[history::Change::SubrouteDeletion {
+            subroute,
+            stops,
+            departures,
+        }],
         None,
     )
     .await?;
 
+    sql::delete_subroute_stops(&mut transaction, subroute_id).await?;
+    sql::delete_subroute_departures(&mut transaction, subroute_id).await?;
     sql::delete_subroute(&mut transaction, route_id, subroute_id).await?;
 
     transaction

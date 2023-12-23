@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT departures.id as id,\n    departures.time as time,\n    departures.subroute as subroute_id,\n    departures.calendar_id as \"calendar_id!: i32\"\nFROM departures\nWHERE departures.subroute = $1\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "time",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 2,
+        "name": "subroute_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 3,
+        "name": "calendar_id!: i32",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "60bf8d319e2a9f038c5e0e57206231973e121fe8786eea878bea151eb4140698"
+}
