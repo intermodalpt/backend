@@ -115,6 +115,8 @@ pub(crate) struct PicsPage {
     tagged_only: bool,
     #[serde(default)]
     untagged_only: bool,
+    #[serde(default)]
+    user: Option<i32>,
 }
 
 pub(crate) async fn get_latest_stop_pictures(
@@ -122,14 +124,28 @@ pub(crate) async fn get_latest_stop_pictures(
     claims: Option<auth::Claims>,
     qs: Query<PicsPage>,
 ) -> Result<Json<Vec<responses::PicWithStops>>, Error> {
-    let is_trusted = matches!(
+    let mut is_trusted = matches!(
         claims,
         Some(auth::Claims {
             permissions: auth::Permissions { is_admin: true, .. },
             ..
         })
     );
-    let uid = claims.map(|c| c.uid);
+
+    let claims_matches_user = matches!(
+        claims,
+        Some(auth::Claims {
+            uid,
+            ..
+        })
+        if Some(uid) == qs.user
+    );
+
+    if !claims_matches_user && (qs.user.is_some() && !is_trusted) {
+        return Err(Error::Forbidden);
+    }
+
+    let uid = qs.user.or(claims.map(|c| c.uid));
     let offset = i64::from(qs.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
