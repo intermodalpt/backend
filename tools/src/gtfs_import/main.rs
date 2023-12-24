@@ -121,12 +121,21 @@ async fn main() {
                     .iter()
                     .find(|subroute| subroute.id == m.iml.subroute_id)
                     .unwrap();
+                let trip_headsigns = m
+                    .gtfs
+                    .trip_ids
+                    .iter()
+                    .map(|id| gtfs.trips.get(id).unwrap().trip_headsign.clone())
+                    .unique()
+                    .collect::<Vec<_>>()
+                    .join(";");
                 println!(
-                    "\t\tIML#{} {} matched with GTFS#{};;{}",
+                    "\t\tIML#{} {} matched with GTFS#{};;{};HS:{}",
                     m.iml.subroute_id,
                     subroute.flag,
                     m.gtfs.route_id,
-                    m.gtfs.pattern_ids.join(";")
+                    m.gtfs.pattern_ids.join(";"),
+                    trip_headsigns
                 );
 
                 // Check if the iml.stop_ids are equal to the gtfs.iml_stop_ids
@@ -195,10 +204,18 @@ async fn main() {
         if !res.unmatched_gtfs.is_empty() {
             println!("\tUnmatched GTFS:");
             for data in res.unmatched_gtfs.iter() {
+                let trip_headsigns = data
+                    .trip_ids
+                    .iter()
+                    .map(|id| gtfs.trips.get(id).unwrap().trip_headsign.clone())
+                    .unique()
+                    .collect::<Vec<_>>()
+                    .join(";");
                 println!(
-                    "\t\tGTFS#{};;{} - {:?}",
+                    "\t\tGTFS#{};;{};HS:{} - {:?}",
                     data.route_id,
                     data.pattern_ids.join(";"),
+                    trip_headsigns,
                     data.stop_ids
                 );
                 println!(

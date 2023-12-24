@@ -180,19 +180,6 @@ async fn match_gtfs_route(
             gtfs.route_pattern_clusters.get(&gtfs_route.route_id)
         {
             for cluster in gtfs_pattern_cluster {
-                println!(
-                    "\t\tGTFS#{:?} - {:?}",
-                    // First pattern or if none first trip
-                    cluster
-                        .patterns
-                        .iter()
-                        .next()
-                        .or(cluster.trips.iter().next())
-                        .map(|id| id.as_ref())
-                        .unwrap_or("???"),
-                    cluster.stops
-                );
-
                 let iml_stop_ids = cluster
                     .stops
                     .iter()
@@ -254,7 +241,6 @@ async fn match_gtfs_route(
         matched_indices.push((iml_idx, min_idx as usize));
     }
 
-    let produced_matches = matched_indices.len();
     let used_iml_idxs = matched_indices
         .iter()
         .map(|(iml_idx, _)| *iml_idx)
@@ -263,17 +249,6 @@ async fn match_gtfs_route(
         .iter()
         .map(|(_, gtfs_idx)| *gtfs_idx)
         .collect::<HashSet<_>>();
-
-    if used_gtfs_idxs.len() != produced_matches
-        || used_iml_idxs.len() != produced_matches
-    {
-        println!(
-            "Route {} has {} subroutes, but only {} were matched",
-            iml_route.code.as_ref().unwrap(),
-            iml_subroute_data.len(),
-            produced_matches
-        );
-    }
 
     let matches = matched_indices
         .into_iter()
