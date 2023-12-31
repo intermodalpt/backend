@@ -69,7 +69,6 @@ impl State {
 }
 
 pub struct Cached {
-    pub gtfs_stops:
-        RwLock<HashMap<i32, Arc<Vec<commons::models::gtfs::GTFSStop>>>>,
+    pub gtfs_stops: RwLock<HashMap<i32, Arc<Vec<commons::models::gtfs::Stop>>>>,
     pub tml_routes: RwLock<HashMap<i32, Arc<Vec<gtfs::models::TMLRoute>>>>,
 }
