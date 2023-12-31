@@ -48,12 +48,12 @@ pub static WEEKEND: [Weekday; 2] = [Weekday::Saturday, Weekday::Sunday];
 
 pub static HOLIDAYS: [(u8, u8); 13] = [
     (1, 1),
-    (4, 15),
-    (4, 17),
-    (4, 17),
+    (4, 9),
+    (4, 10),
     (4, 25),
+    (5, 1),
+    (6, 8),
     (6, 10),
-    (6, 16),
     (8, 15),
     (10, 5),
     (11, 1),
