@@ -34,7 +34,7 @@ use crate::Error;
 
 pub(crate) fn gtfs_stops(
     operator: &operators::Operator,
-) -> Result<Vec<gtfs::GTFSStop>, Error> {
+) -> Result<Vec<gtfs::Stop>, Error> {
     let gtfs_root = operator.get_gtfs_root();
     let stops_path = File::Stops.prepend_root(&gtfs_root);
 
@@ -52,13 +52,13 @@ pub(crate) fn gtfs_stops(
     Ok(rdr
         .deserialize()
         .map(Result::unwrap)
-        .collect::<Vec<gtfs::GTFSStop>>())
+        .collect::<Vec<gtfs::Stop>>())
 }
 
 // Read trips from GTFS tile
 pub(crate) fn gtfs_routes(
     operator: &operators::Operator,
-) -> Result<Vec<gtfs::GTFSRoute>, Error> {
+) -> Result<Vec<gtfs::Route>, Error> {
     let gtfs_root = operator.get_gtfs_root();
     let routes_path = File::Routes.prepend_root(&gtfs_root);
 
@@ -68,20 +68,18 @@ pub(crate) fn gtfs_routes(
     let f = fs::File::open(routes_path).unwrap();
     let reader = io::BufReader::new(f);
 
-    let mut rdr = csv::ReaderBuilder::new()
-        // .trim(csv::Trim::All)
-        .from_reader(reader);
+    let mut rdr = csv::ReaderBuilder::new().from_reader(reader);
 
     Ok(rdr
         .deserialize()
         .map(Result::unwrap)
-        .collect::<Vec<gtfs::GTFSRoute>>())
+        .collect::<Vec<gtfs::Route>>())
 }
 
 // Read trips from GTFS tile
 pub(crate) fn gtfs_trips(
     operator: &operators::Operator,
-) -> Result<Vec<gtfs::GTFSTrips>, Error> {
+) -> Result<Vec<gtfs::Trip>, Error> {
     let gtfs_root = operator.get_gtfs_root();
     let trips_path = File::Trips.prepend_root(&gtfs_root);
 
@@ -99,13 +97,13 @@ pub(crate) fn gtfs_trips(
     Ok(rdr
         .deserialize()
         .map(Result::unwrap)
-        .collect::<Vec<gtfs::GTFSTrips>>())
+        .collect::<Vec<gtfs::Trip>>())
 }
 
 // Read stop times from GTFS tile
 pub(crate) fn gtfs_stop_times(
     operator: &operators::Operator,
-) -> Result<Vec<gtfs::GTFSStopTimes>, Error> {
+) -> Result<Vec<gtfs::StopTime>, Error> {
     let gtfs_root = operator.get_gtfs_root();
     let stop_times_path = File::StopTimes.prepend_root(&gtfs_root);
 
@@ -123,7 +121,7 @@ pub(crate) fn gtfs_stop_times(
     Ok(rdr
         .deserialize()
         .map(Result::unwrap)
-        .collect::<Vec<gtfs::GTFSStopTimes>>())
+        .collect::<Vec<gtfs::StopTime>>())
 }
 
 // Have regex as a static

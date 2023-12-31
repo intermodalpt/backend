@@ -60,7 +60,7 @@ pub(crate) async fn post_update_operator_gtfs(
 pub(crate) async fn get_gtfs_stops(
     State(state): State<AppState>,
     Path(operator_id): Path<i32>,
-) -> Result<Json<Arc<Vec<gtfs::GTFSStop>>>, Error> {
+) -> Result<Json<Arc<Vec<gtfs::Stop>>>, Error> {
     let operator =
         operators_sql::fetch_operator(&state.pool, operator_id).await?;
     if operator.is_none() {
@@ -155,7 +155,7 @@ pub(crate) async fn get_gtfs_stop_sliding_windows(
     let gtfs_stop_times = rdr
         .deserialize()
         .map(Result::unwrap)
-        .collect::<Vec<gtfs::GTFSStopTimes>>();
+        .collect::<Vec<gtfs::StopTime>>();
 
     let trips_stop_seq = calculate_gtfs_stop_sequence(&gtfs_stop_times);
     let sliding_windows = calculate_stop_sliding_windows(&trips_stop_seq);

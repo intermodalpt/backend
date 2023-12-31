@@ -17,35 +17,46 @@
 */
 
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
+pub type StopId = String;
+pub type TripId = String;
+pub type RouteId = String;
+pub type PatternId = String;
+
 #[derive(Debug, Serialize, Deserialize)]
-pub struct GTFSStop {
-    pub stop_id: String,
+pub struct Stop {
+    pub stop_id: StopId,
     pub stop_name: String,
     pub stop_lat: f64,
     pub stop_lon: f64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct GTFSStopTimes {
-    pub trip_id: String,
-    pub stop_id: String,
-    pub stop_sequence: u32,
+pub struct StopTime {
+    pub trip_id: TripId,
+    pub stop_id: StopId,
+    pub stop_sequence: usize,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct GTFSRoute {
-    pub route_id: String,
+pub struct Route {
+    pub route_id: RouteId,
     pub route_short_name: String,
     pub route_long_name: String,
+    pub route_type: Option<String>,
+    pub circular: Option<u8>,
+    pub route_color: Option<String>,
+    pub route_text_color: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct GTFSTrips {
-    pub route_id: String,
+pub struct Trip {
+    pub route_id: RouteId,
+    pub pattern_id: String,
     pub service_id: String,
-    pub trip_id: String,
+    pub trip_id: TripId,
     pub trip_headsign: String,
 }
 
@@ -89,4 +100,44 @@ impl File {
     pub fn prepend_root(&self, root: &Path) -> PathBuf {
         root.join(self.filename())
     }
+}
+
+// Validation structs
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PatternCluster {
+    // This field is the unique identifier
+    pub stops: Vec<StopId>,
+    // And these are just agglomerates
+    pub headsigns: HashSet<PatternId>,
+    pub patterns: HashSet<PatternId>,
+    pub trips: HashSet<TripId>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubrouteValidation {
+    pub gtfs_pattern_ids: Vec<PatternId>,
+    pub gtfs_trip_ids: Vec<TripId>,
+    pub iml_stops: Vec<i32>,
+    pub gtfs_stops: Vec<StopId>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RouteValidation {
+    pub unmatched: Vec<PatternCluster>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OperatorValidation {
+    pub lints: Vec<Lint>,
+}
+
+#[derive(Debug)]
+pub enum Lint {
+    ServicelessTrip(TripId),
+    EmptyTrip(TripId),
+    EmptyPattern(PatternId),
+    PatternlessRoute(RouteId),
+    DuplicatedPattern(HashSet<PatternId>),
+    UnusedStop(StopId),
+    DanglingStopPointer(StopId),
 }

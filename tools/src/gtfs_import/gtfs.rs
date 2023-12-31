@@ -20,58 +20,21 @@
 
 use itertools::Itertools;
 use serde::de::DeserializeOwned;
-use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
+use std::path::PathBuf;
 use std::sync::OnceLock;
+
+pub(crate) use commons::models::gtfs::{
+    self, Lint, PatternId, Route, RouteId, Stop, StopId, StopTime, Trip, TripId,
+};
 
 use crate::error::Error;
 
-static GTFS_PATH: &'static str = "./data/operators/1/gtfs";
-
-pub(crate) type StopId = String;
-pub(crate) type TripId = String;
-pub(crate) type RouteId = String;
-pub(crate) type PatternId = String;
-
-#[derive(Deserialize)]
-pub(crate) struct Stop {
-    pub(crate) stop_id: String,
-    stop_name: String,
-    pub(crate) stop_lat: f64,
-    pub(crate) stop_lon: f64,
-}
-
-#[derive(Deserialize)]
-pub(crate) struct GtfsTime {
-    pub(crate) trip_id: String,
-    pub(crate) stop_id: String,
-    pub(crate) stop_sequence: usize,
-}
-
-#[derive(Deserialize)]
-pub(crate) struct Route {
-    pub(crate) route_id: String,
-    pub(crate) route_short_name: String,
-    pub(crate) route_long_name: String,
-    route_type: Option<String>,
-    circular: Option<u8>,
-    route_color: Option<String>,
-    route_text_color: Option<String>,
-}
-
-#[derive(Deserialize)]
-pub(crate) struct Trip {
-    pub(crate) route_id: String,
-    pub(crate) pattern_id: String,
-    pub(crate) service_id: String,
-    pub(crate) trip_id: String,
-    pub(crate) trip_headsign: String,
-}
 pub(crate) struct Data {
     pub(crate) stops: HashMap<StopId, Stop>,
     pub(crate) routes: HashMap<RouteId, Route>,
     pub(crate) trips: HashMap<TripId, Trip>,
-    pub(crate) stop_times: Vec<GtfsTime>,
+    pub(crate) stop_times: Vec<StopTime>,
     // Calculated data
     pub(crate) trip_stops: HashMap<TripId, Vec<StopId>>,
     pub(crate) route_pattern_clusters: HashMap<RouteId, Vec<PatternCluster>>,
@@ -82,8 +45,9 @@ pub(crate) struct PatternCluster {
     pub(crate) trips: HashSet<TripId>,
 }
 
-pub(crate) fn load_gtfs() -> Result<Data, Error> {
-    let (gtfs_stops, gtfs_routes, gtfs_trips, gtfs_times) = load_gtfs_files()?;
+pub(crate) fn load_gtfs(root: &PathBuf) -> Result<Data, Error> {
+    let (gtfs_stops, gtfs_routes, gtfs_trips, gtfs_times) =
+        load_gtfs_files(root)?;
 
     let trip_stops = gtfs_times
         .iter()
@@ -163,32 +127,33 @@ pub(crate) fn load_gtfs() -> Result<Data, Error> {
     Ok(gtfs)
 }
 fn load_gtfs_files(
-) -> Result<(Vec<Stop>, Vec<Route>, Vec<Trip>, Vec<GtfsTime>), Error> {
+    root: &PathBuf,
+) -> Result<(Vec<Stop>, Vec<Route>, Vec<Trip>, Vec<StopTime>), Error> {
     let gtfs_stops: OnceLock<Result<Vec<Stop>, Error>> = OnceLock::new();
-    let gtfs_times: OnceLock<Result<Vec<GtfsTime>, Error>> = OnceLock::new();
+    let gtfs_times: OnceLock<Result<Vec<StopTime>, Error>> = OnceLock::new();
     let gtfs_routes: OnceLock<Result<Vec<Route>, Error>> = OnceLock::new();
     let gtfs_trips: OnceLock<Result<Vec<Trip>, Error>> = OnceLock::new();
 
     rayon::scope(|s| {
         s.spawn(|_| {
-            let _ = gtfs_stops.set(deserialize_gtfs_entity(&format!(
-                "{GTFS_PATH}/stops.txt"
-            )));
+            let _ = gtfs_stops.set(deserialize_gtfs_entity(
+                &gtfs::File::Stops.prepend_root(root),
+            ));
         });
         s.spawn(|_| {
-            let _ = gtfs_times.set(deserialize_gtfs_entity(&format!(
-                "{GTFS_PATH}/stop_times.txt"
-            )));
+            let _ = gtfs_times.set(deserialize_gtfs_entity(
+                &gtfs::File::StopTimes.prepend_root(root),
+            ));
         });
         s.spawn(|_| {
-            let _ = gtfs_routes.set(deserialize_gtfs_entity(&format!(
-                "{GTFS_PATH}/routes.txt"
-            )));
+            let _ = gtfs_routes.set(deserialize_gtfs_entity(
+                &gtfs::File::Routes.prepend_root(root),
+            ));
         });
         s.spawn(|_| {
-            let _ = gtfs_trips.set(deserialize_gtfs_entity(&format!(
-                "{GTFS_PATH}/trips.txt"
-            )));
+            let _ = gtfs_trips.set(deserialize_gtfs_entity(
+                &gtfs::File::Trips.prepend_root(root),
+            ));
         });
     });
     let gtfs_stops = gtfs_stops.into_inner().unwrap()?;
@@ -196,16 +161,11 @@ fn load_gtfs_files(
     let gtfs_routes = gtfs_routes.into_inner().unwrap()?;
     let gtfs_trips = gtfs_trips.into_inner().unwrap()?;
 
-    println!("Loaded {} stops", gtfs_stops.len());
-    println!("Loaded {} times", gtfs_times.len());
-    println!("Loaded {} routes", gtfs_routes.len());
-    println!("Loaded {} trips", gtfs_trips.len());
-
     Ok((gtfs_stops, gtfs_routes, gtfs_trips, gtfs_times))
 }
 
 fn deserialize_gtfs_entity<E: DeserializeOwned>(
-    path: &str,
+    path: &PathBuf,
 ) -> Result<Vec<E>, Error> {
     let res = csv::Reader::from_path(path)
         .map(|mut stops| {
@@ -216,6 +176,6 @@ fn deserialize_gtfs_entity<E: DeserializeOwned>(
         })
         .map_err(|err| Error::Files(err.to_string()))?;
 
-    println!("Done deserializing {path}");
+    println!("Done deserializing {}", path.display());
     res
 }

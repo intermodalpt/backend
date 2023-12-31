@@ -18,6 +18,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::models::gtfs;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Route {
     pub id: i32,
@@ -45,7 +47,7 @@ pub struct Subroute {
     pub via: Vec<SubrouteVia>,
     pub circular: bool,
     pub polyline: Option<String>,
-    pub validation: Option<SubrouteValidation>,
+    pub validation: Option<gtfs::SubrouteValidation>,
 
     // --- Deprecated. Needed for historical data
     pub flag: String,
@@ -62,12 +64,4 @@ pub struct Departure {
     pub subroute_id: i32,
     pub time: i16,
     pub calendar_id: i32,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubrouteValidation {
-    pub gtfs_pattern_ids: Vec<String>,
-    pub gtfs_trip_ids: Vec<String>,
-    pub iml_stops: Vec<i32>,
-    pub gtfs_stops: Vec<String>,
 }

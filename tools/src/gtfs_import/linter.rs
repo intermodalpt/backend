@@ -16,21 +16,11 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use crate::gtfs;
 use std::collections::HashSet;
 
-#[derive(Debug)]
-pub(crate) enum GtfsLint {
-    ServicelessTrip(gtfs::TripId),
-    EmptyTrip(gtfs::TripId),
-    EmptyPattern(gtfs::PatternId),
-    PatternlessRoute(gtfs::RouteId),
-    DuplicatedPattern(HashSet<gtfs::PatternId>),
-    UnusedStop(gtfs::StopId),
-    DanglingStopPointer(gtfs::StopId),
-}
+use crate::gtfs;
 
-pub(crate) fn lint_gtfs(data: &gtfs::Data) -> Vec<GtfsLint> {
+pub(crate) fn lint_gtfs(data: &gtfs::Data) -> Vec<gtfs::Lint> {
     let mut lints = vec![];
 
     let mut used_stops = HashSet::new();
@@ -42,19 +32,19 @@ pub(crate) fn lint_gtfs(data: &gtfs::Data) -> Vec<GtfsLint> {
     let unused_stops = declared_stops.difference(&used_stops);
     let dangling_stops = used_stops.difference(&declared_stops);
     unused_stops.for_each(|stop_id| {
-        lints.push(GtfsLint::UnusedStop((*stop_id).clone()));
+        lints.push(gtfs::Lint::UnusedStop((*stop_id).clone()));
     });
     dangling_stops.for_each(|stop_id| {
-        lints.push(GtfsLint::DanglingStopPointer((*stop_id).clone()));
+        lints.push(gtfs::Lint::DanglingStopPointer((*stop_id).clone()));
     });
 
     data.trips.values().for_each(|trip| {
         if let Some(stops) = data.trip_stops.get(&trip.trip_id) {
             if stops.is_empty() {
-                lints.push(GtfsLint::EmptyTrip(trip.trip_id.clone()));
+                lints.push(gtfs::Lint::EmptyTrip(trip.trip_id.clone()));
             }
         } else {
-            lints.push(GtfsLint::ServicelessTrip(trip.trip_id.clone()));
+            lints.push(gtfs::Lint::ServicelessTrip(trip.trip_id.clone()));
         }
     });
 
@@ -65,11 +55,12 @@ pub(crate) fn lint_gtfs(data: &gtfs::Data) -> Vec<GtfsLint> {
                 assert!(cluster.trips.len() > 0);
                 if cluster.stops.len() == 0 {
                     for pattern_id in cluster.patterns.iter() {
-                        lints.push(GtfsLint::EmptyPattern(pattern_id.clone()));
+                        lints
+                            .push(gtfs::Lint::EmptyPattern(pattern_id.clone()));
                     }
                 }
                 if cluster.patterns.len() > 1 {
-                    lints.push(GtfsLint::DuplicatedPattern(
+                    lints.push(gtfs::Lint::DuplicatedPattern(
                         cluster.patterns.clone(),
                     ))
                 }
@@ -82,10 +73,11 @@ pub(crate) fn lint_gtfs(data: &gtfs::Data) -> Vec<GtfsLint> {
             let contains_non_empty_patterns =
                 cluster.iter().any(|cluster| cluster.stops.len() > 0);
             if !contains_non_empty_patterns || cluster.len() == 0 {
-                lints.push(GtfsLint::PatternlessRoute(route.route_id.clone()));
+                lints
+                    .push(gtfs::Lint::PatternlessRoute(route.route_id.clone()));
             }
         } else {
-            lints.push(GtfsLint::PatternlessRoute(route.route_id.clone()));
+            lints.push(gtfs::Lint::PatternlessRoute(route.route_id.clone()));
         }
     });
     lints

@@ -16,11 +16,14 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+use itertools::Itertools;
+use std::collections::{HashMap, HashSet};
+use std::path::PathBuf;
+
 use crate::gtfs::load_gtfs;
 use crate::iml::load_base_data;
 use crate::linter::lint_gtfs;
 use crate::matcher::match_gtfs_routes;
-use std::collections::{HashMap, HashSet};
 
 mod error;
 mod gtfs;
@@ -31,7 +34,7 @@ mod utils;
 
 #[tokio::main]
 async fn main() {
-    let gtfs = load_gtfs().unwrap();
+    let gtfs = load_gtfs(&PathBuf::from("./data/operators/1/gtfs")).unwrap();
     let lints = lint_gtfs(&gtfs);
     for lint in lints {
         println!("{:?}", lint);

@@ -46,7 +46,7 @@ const GTFS_FILES: [&str; 13] = [
 // a vector of GTFSStopTimes.
 #[must_use]
 pub fn calculate_gtfs_stop_sequence(
-    gtfs_stop_times: &[gtfs::GTFSStopTimes],
+    gtfs_stop_times: &[gtfs::StopTime],
 ) -> HashMap<String, Vec<String>> {
     gtfs_stop_times
         .iter()
