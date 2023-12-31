@@ -1,0 +1,88 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT routes.*, route_types.badge_text_color as badge_text, route_types.badge_bg_color as badge_bg\nFROM (\n    SELECT routes.id, routes.code, routes.name, routes.operator, routes.type as type_id,\n        routes.circular, routes.main_subroute, routes.active, routes.parishes,\n        COALESCE(\n            array_agg((subroutes.id, subroutes.group, subroutes.flag, subroutes.headsign, subroutes.origin,\n                subroutes.destination, subroutes.via, subroutes.circular, subroutes.polyline))\n            FILTER (WHERE subroutes.id IS NOT NULL),\n            '{}'\n        ) AS \"subroutes!: Vec<responses::Subroute>\"\n    FROM routes\n    LEFT JOIN subroutes ON routes.id = subroutes.route\n    WHERE routes.operator = $1\n    GROUP BY routes.id\n    ORDER BY routes.id asc\n) as routes\nJOIN route_types on routes.type_id = route_types.id\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "code",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "operator",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "type_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 5,
+        "name": "circular",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 6,
+        "name": "main_subroute",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 7,
+        "name": "active",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 8,
+        "name": "parishes",
+        "type_info": "Int4Array"
+      },
+      {
+        "ordinal": 9,
+        "name": "subroutes!: Vec<responses::Subroute>",
+        "type_info": "RecordArray"
+      },
+      {
+        "ordinal": 10,
+        "name": "badge_text",
+        "type_info": "Bpchar"
+      },
+      {
+        "ordinal": 11,
+        "name": "badge_bg",
+        "type_info": "Bpchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      null,
+      false,
+      false
+    ]
+  },
+  "hash": "a0ec8beaaf971fb255daa4de04445a8a215e22aec702929c4a21cb284bff45a9"
+}

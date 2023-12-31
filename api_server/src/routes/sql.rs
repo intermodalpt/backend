@@ -16,8 +16,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use std::collections::HashMap;
-
 use itertools::Itertools;
 use sqlx::PgPool;
 
@@ -29,7 +27,7 @@ use super::models::{requests, responses};
 
 type Result<T> = std::result::Result<T, Error>;
 
-pub(crate) async fn fetch_route(
+pub(crate) async fn fetch_commons_route(
     pool: &PgPool,
     route_id: i32,
 ) -> Result<Option<routes::Route>> {
@@ -54,18 +52,22 @@ WHERE routes.id = $1
     .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
-pub(crate) async fn fetch_subroute(
+pub(crate) async fn fetch_simple_subroute(
     pool: &PgPool,
     subroute_id: i32,
 ) -> Result<Option<routes::Subroute>> {
-    sqlx::query_as!(
-        routes::Subroute,
+    let res = sqlx::query!(
         r#"
 SELECT subroutes.id,
     subroutes.route as route_id,
     subroutes.flag,
     subroutes.circular,
-    subroutes.polyline
+    subroutes.polyline,
+    subroutes.group,
+    subroutes.origin,
+    subroutes.destination,
+    subroutes.headsign,
+    subroutes.via
 FROM Subroutes
 WHERE subroutes.id = $1
 "#,
@@ -73,239 +75,149 @@ WHERE subroutes.id = $1
     )
     .fetch_optional(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    if let Some(row) = res {
+        Ok(Some(routes::Subroute {
+            id: row.id,
+            route_id: row.route_id,
+            group: row.group,
+            flag: row.flag,
+            origin: row.origin,
+            destination: row.destination,
+            headsign: row.headsign,
+            via: serde_json::from_value(row.via).map_err(|e| {
+                log::error!("Error deserializing: {}", e);
+                Error::DatabaseDeserialization
+            })?,
+            circular: row.circular,
+            polyline: row.polyline,
+            validation: None,
+        }))
+    } else {
+        Ok(None)
+    }
 }
 
 pub(crate) async fn fetch_route_with_subroutes(
     pool: &PgPool,
     route_id: i32,
 ) -> Result<Option<responses::Route>> {
-    let res = sqlx::query!(
+    sqlx::query_as!(
+        responses::Route,
         r#"
-SELECT routes.id as route,
-    routes.operator as operator,
-    routes.code as code,
-    routes.name as name,
-    routes.circular as circular,
-    routes.main_subroute as main_subroute,
-    routes.active as active,
-    routes.type as service_type,
-    routes.parishes as parishes,
-    route_types.badge_text_color as text_color,
-    route_types.badge_bg_color as bg_color,
-    subroutes.id as subroute,
-    subroutes.flag as subroute_flag,
-    subroutes.circular as subroute_circular,
-    subroutes.polyline as subroute_polyline
-FROM routes
-JOIN route_types on routes.type = route_types.id
-LEFT JOIN subroutes on routes.id = subroutes.route
-WHERE routes.id = $1
-ORDER BY routes.id asc
-"#,
+SELECT routes.*, route_types.badge_text_color as badge_text, route_types.badge_bg_color as badge_bg
+FROM (
+    SELECT routes.id, routes.code, routes.name, routes.operator, routes.type as type_id,
+        routes.circular, routes.main_subroute, routes.active, routes.parishes,
+        COALESCE(
+            array_agg((subroutes.id, subroutes.group, subroutes.flag, subroutes.headsign, subroutes.origin,
+                subroutes.destination, subroutes.via, subroutes.circular, subroutes.polyline))
+            FILTER (WHERE subroutes.id IS NOT NULL),
+            '{}'
+        ) AS "subroutes!: Vec<responses::Subroute>"
+    FROM routes
+    LEFT JOIN subroutes ON routes.id = subroutes.route
+    WHERE routes.id = $1
+    GROUP BY routes.id
+    ORDER BY routes.id asc
+) as routes
+JOIN route_types on routes.type_id = route_types.id"#,
         route_id
     )
-    .fetch_all(pool)
-    .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
-
-    let mut row_iter = res.into_iter();
-
-    if let Some(row) = row_iter.next() {
-        let mut route = responses::Route {
-            id: row.route,
-            type_id: row.service_type,
-            name: row.name,
-            code: row.code,
-            circular: row.circular,
-            main_subroute: row.main_subroute,
-            badge_text: row.text_color,
-            badge_bg: row.bg_color,
-            subroutes: vec![responses::Subroute {
-                id: row.subroute,
-                flag: row.subroute_flag,
-                circular: row.subroute_circular,
-                polyline: row.subroute_polyline,
-            }],
-            active: row.active,
-            operator: row.operator,
-            parishes: row.parishes,
-        };
-
-        for row in row_iter {
-            route.subroutes.push(responses::Subroute {
-                id: row.subroute,
-                flag: row.subroute_flag,
-                circular: row.subroute_circular,
-                polyline: row.subroute_polyline,
-            });
-        }
-        Ok(Some(route))
-    } else {
-        Ok(None)
-    }
+        .fetch_optional(pool)
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
-pub(crate) async fn fetch_routes_with_subroutes(
+pub(crate) async fn fetch_routes(
     pool: &PgPool,
 ) -> Result<Vec<responses::Route>> {
-    let res = sqlx::query!(
+    sqlx::query_as!(
+        responses::Route,
         r#"
-SELECT routes.id as route,
-    routes.code as code,
-    routes.name as name,
-    routes.operator as operator,
-    routes.type as service_type,
-    routes.circular as circular,
-    routes.main_subroute as main_subroute,
-    routes.active as active,
-    routes.parishes as parishes,
-    route_types.badge_text_color as text_color,
-    route_types.badge_bg_color as bg_color,
-    subroutes.id as "subroute!: Option<i32>",
-    subroutes.flag as "subroute_flag!: Option<String>",
-    subroutes.circular as "subroute_circular!: Option<bool>",
-    subroutes.polyline as "subroute_polyline!: Option<String>"
-FROM routes
-JOIN route_types on routes.type = route_types.id
-LEFT JOIN subroutes ON routes.id = subroutes.route
-ORDER BY routes.id asc
+SELECT routes.*, route_types.badge_text_color as badge_text, route_types.badge_bg_color as badge_bg
+FROM (
+    SELECT routes.id, routes.code, routes.name, routes.operator, routes.type as type_id,
+        routes.circular, routes.main_subroute, routes.active, routes.parishes,
+        COALESCE(
+            array_agg((subroutes.id, subroutes.group, subroutes.flag, subroutes.headsign, subroutes.origin,
+                subroutes.destination, subroutes.via, subroutes.circular, subroutes.polyline))
+            FILTER (WHERE subroutes.id IS NOT NULL),
+            '{}'
+        ) AS "subroutes!: Vec<responses::Subroute>"
+    FROM routes
+    LEFT JOIN subroutes ON routes.id = subroutes.route
+    GROUP BY routes.id
+    ORDER BY routes.id asc
+) as routes
+JOIN route_types on routes.type_id = route_types.id
 "#
     )
-    .fetch_all(pool)
-    .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
-
-    let mut routes: HashMap<i32, responses::Route> = HashMap::new();
-
-    for row in res {
-        routes
-            .entry(row.route)
-            .and_modify(|route| {
-                if let (Some(id), Some(flag), Some(circular)) = (
-                    row.subroute,
-                    row.subroute_flag.clone(),
-                    row.subroute_circular,
-                ) {
-                    route.subroutes.push(responses::Subroute {
-                        id,
-                        flag,
-                        circular,
-                        polyline: row.subroute_polyline.clone(),
-                    });
-                }
-            })
-            .or_insert(responses::Route {
-                id: row.route,
-                code: row.code,
-                name: row.name,
-                circular: row.circular,
-                main_subroute: row.main_subroute,
-                badge_text: row.text_color,
-                badge_bg: row.bg_color,
-                subroutes: if let (Some(id), Some(flag), Some(circular)) =
-                    (row.subroute, row.subroute_flag, row.subroute_circular)
-                {
-                    vec![responses::Subroute {
-                        id,
-                        flag,
-                        circular,
-                        polyline: row.subroute_polyline,
-                    }]
-                } else {
-                    vec![]
-                },
-                active: row.active,
-                operator: row.operator,
-                type_id: row.service_type,
-                parishes: row.parishes,
-            });
-    }
-
-    Ok(routes.into_values().collect::<Vec<_>>())
+        .fetch_all(pool)
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
-pub(crate) async fn fetch_operator_routes_with_subroutes(
+pub(crate) async fn fetch_operator_routes(
     pool: &PgPool,
     operator_id: i32,
 ) -> Result<Vec<responses::Route>> {
-    let res = sqlx::query!(
+    sqlx::query_as!(
+        responses::Route,
         r#"
-SELECT routes.id as route,
-    routes.code as code,
-    routes.name as name,
-    routes.operator as operator,
-    routes.type as service_type,
-    routes.circular as circular,
-    routes.main_subroute as main_subroute,
-    routes.active as active,
-    routes.parishes as parishes,
-    route_types.badge_text_color as text_color,
-    route_types.badge_bg_color as bg_color,
-    subroutes.id as "subroute!: Option<i32>",
-    subroutes.flag as "subroute_flag!: Option<String>",
-    subroutes.circular as "subroute_circular!: Option<bool>",
-    subroutes.polyline as "subroute_polyline!: Option<String>"
-FROM routes
-JOIN route_types on routes.type = route_types.id
-LEFT JOIN subroutes ON routes.id = subroutes.route
-JOIN operators ON routes.operator = operators.id
-WHERE routes.operator = $1
-ORDER BY routes.id asc
-"#,
+SELECT routes.*, route_types.badge_text_color as badge_text, route_types.badge_bg_color as badge_bg
+FROM (
+    SELECT routes.id, routes.code, routes.name, routes.operator, routes.type as type_id,
+        routes.circular, routes.main_subroute, routes.active, routes.parishes,
+        COALESCE(
+            array_agg((subroutes.id, subroutes.group, subroutes.flag, subroutes.headsign, subroutes.origin,
+                subroutes.destination, subroutes.via, subroutes.circular, subroutes.polyline))
+            FILTER (WHERE subroutes.id IS NOT NULL),
+            '{}'
+        ) AS "subroutes!: Vec<responses::Subroute>"
+    FROM routes
+    LEFT JOIN subroutes ON routes.id = subroutes.route
+    WHERE routes.operator = $1
+    GROUP BY routes.id
+    ORDER BY routes.id asc
+) as routes
+JOIN route_types on routes.type_id = route_types.id
+        "#,
         operator_id
     )
-    .fetch_all(pool)
-    .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+        .fetch_all(pool)
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+}
 
-    let mut routes: HashMap<i32, responses::Route> = HashMap::new();
-
-    for row in res {
-        routes
-            .entry(row.route)
-            .and_modify(|route| {
-                if let (Some(id), Some(flag), Some(circular)) = (
-                    row.subroute,
-                    row.subroute_flag.clone(),
-                    row.subroute_circular,
-                ) {
-                    route.subroutes.push(responses::Subroute {
-                        id,
-                        flag,
-                        circular,
-                        polyline: row.subroute_polyline.clone(),
-                    });
-                }
-            })
-            .or_insert(responses::Route {
-                id: row.route,
-                code: row.code,
-                name: row.name,
-                circular: row.circular,
-                main_subroute: row.main_subroute,
-                badge_text: row.text_color,
-                badge_bg: row.bg_color,
-                subroutes: if let (Some(id), Some(flag), Some(circular)) =
-                    (row.subroute, row.subroute_flag, row.subroute_circular)
-                {
-                    vec![responses::Subroute {
-                        id,
-                        flag,
-                        circular,
-                        polyline: row.subroute_polyline,
-                    }]
-                } else {
-                    vec![]
-                },
-                active: row.active,
-                operator: row.operator,
-                type_id: row.service_type,
-                parishes: row.parishes,
-            });
-    }
-
-    Ok(routes.into_values().collect::<Vec<_>>())
+pub(crate) async fn fetch_full_routes(
+    pool: &PgPool,
+) -> Result<Vec<responses::FullRoute>> {
+    sqlx::query_as!(
+        responses::FullRoute,
+        r#"
+SELECT routes.*, route_types.badge_text_color as badge_text, route_types.badge_bg_color as badge_bg
+FROM (
+    SELECT routes.id, routes.code, routes.name, routes.operator, routes.type as type_id,
+        routes.circular, routes.main_subroute, routes.active, routes.parishes,
+        COALESCE(
+            array_agg((subroutes.id, subroutes.group, subroutes.flag, subroutes.headsign, subroutes.origin,
+                subroutes.destination, subroutes.via, subroutes.circular, subroutes.polyline, subroutes.validation))
+            FILTER (WHERE subroutes.id IS NOT NULL),
+            '{}'
+        ) AS "subroutes!: Vec<responses::FullSubroute>"
+    FROM routes
+    LEFT JOIN subroutes ON routes.id = subroutes.route
+    GROUP BY routes.id
+    ORDER BY routes.id asc
+) as routes
+JOIN route_types on routes.type_id = route_types.id
+    "#
+    )
+        .fetch_all(pool)
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
 pub(crate) async fn insert_route(
@@ -404,18 +316,22 @@ WHERE id=$1
 pub(crate) async fn insert_subroute(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     route_id: i32,
-    subroute: requests::ChangeSubroute,
+    change: requests::ChangeSubroute,
 ) -> Result<routes::Subroute> {
     let res = sqlx::query!(
         r#"
-INSERT INTO subroutes(route, flag, circular, polyline)
-VALUES ($1, $2, $3, $4)
+INSERT INTO subroutes(route, "group",flag, origin, destination, headsign,  via, circular)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 RETURNING id
     "#,
         route_id,
-        subroute.flag,
-        subroute.circular,
-        subroute.polyline,
+        change.group,
+        change.flag,
+        change.origin,
+        change.destination,
+        change.headsign,
+        sqlx::types::Json(&change.via) as _,
+        change.circular,
     )
     .fetch_one(&mut **transaction)
     .await
@@ -424,9 +340,15 @@ RETURNING id
     Ok(routes::Subroute {
         id: res.id,
         route_id,
-        flag: subroute.flag,
-        circular: subroute.circular,
-        polyline: subroute.polyline,
+        group: change.group,
+        flag: change.flag,
+        origin: change.origin,
+        destination: change.destination,
+        headsign: change.headsign,
+        via: change.via,
+        circular: change.circular,
+        polyline: None,
+        validation: None,
     })
 }
 

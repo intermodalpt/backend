@@ -935,29 +935,52 @@ impl RoutePatch {
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct SubroutePatch {
+    pub group: Option<i32>,
     pub flag: Option<String>,
+    pub headsign: Option<String>,
+    pub origin: Option<String>,
+    pub destination: Option<String>,
+    pub via: Option<Vec<routes::SubrouteVia>>,
     pub circular: Option<bool>,
+
+    // TODO This ended up here by mistake. Drop it
     pub polyline: Option<String>,
 }
 
 impl SubroutePatch {
     #[must_use]
     pub fn is_empty(&self) -> bool {
-        self.flag.is_none()
+        self.group.is_none()
+            && self.flag.is_none()
+            && self.headsign.is_none()
+            && self.origin.is_none()
+            && self.destination.is_none()
+            && self.via.is_none()
             && self.circular.is_none()
-            && self.polyline.is_none()
     }
 
     #[allow(unused)]
     pub fn apply(self, subroute: &mut routes::Subroute) {
+        if let Some(group) = self.group {
+            subroute.group = group;
+        }
         if let Some(flag) = self.flag {
             subroute.flag = flag;
         }
+        if let Some(headsign) = self.headsign {
+            subroute.headsign = headsign;
+        }
+        if let Some(origin) = self.origin {
+            subroute.origin = origin;
+        }
+        if let Some(destination) = self.destination {
+            subroute.destination = destination;
+        }
+        if let Some(via) = self.via {
+            subroute.via = via;
+        }
         if let Some(circular) = self.circular {
             subroute.circular = circular;
-        }
-        if let Some(polyline) = self.polyline {
-            subroute.polyline = Some(polyline);
         }
     }
 }

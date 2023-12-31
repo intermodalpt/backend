@@ -28,17 +28,32 @@ pub struct Route {
     // FIXME this default is temporary while we have change logs without it
     #[serde(default)]
     pub circular: bool,
-    pub main_subroute: Option<i32>,
     pub active: bool,
+
+    // --- TODO Maybe deprecate. Keep for historical data
+    pub main_subroute: Option<i32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Subroute {
     pub id: i32,
     pub route_id: i32,
-    pub flag: String,
+    pub group: i32,
+    pub origin: String,
+    pub destination: String,
+    pub headsign: String,
+    pub via: Vec<SubrouteVia>,
     pub circular: bool,
     pub polyline: Option<String>,
+    pub validation: Option<SubrouteValidation>,
+
+    // --- Deprecated. Needed for historical data
+    pub flag: String,
+}
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SubrouteVia {
+    pub name: String,
+    pub stops: Option<[i32; 2]>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -47,4 +62,12 @@ pub struct Departure {
     pub subroute_id: i32,
     pub time: i16,
     pub calendar_id: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubrouteValidation {
+    pub gtfs_pattern_ids: Vec<String>,
+    pub gtfs_trip_ids: Vec<String>,
+    pub iml_stops: Vec<i32>,
+    pub gtfs_stops: Vec<String>,
 }

@@ -37,18 +37,22 @@ use crate::{auth, contrib, AppState, Error};
 pub(crate) async fn get_routes(
     State(state): State<AppState>,
 ) -> Result<Json<Vec<responses::Route>>, Error> {
-    let routes = sql::fetch_routes_with_subroutes(&state.pool).await?;
-    Ok(Json(routes))
+    Ok(Json(sql::fetch_routes(&state.pool).await?))
+}
+
+pub(crate) async fn get_full_routes(
+    State(state): State<AppState>,
+) -> Result<Json<Vec<responses::FullRoute>>, Error> {
+    Ok(Json(sql::fetch_full_routes(&state.pool).await?))
 }
 
 pub(crate) async fn get_operator_routes(
     State(state): State<AppState>,
     Path(operator_id): Path<i32>,
 ) -> Result<Json<Vec<responses::Route>>, Error> {
-    let routes =
-        sql::fetch_operator_routes_with_subroutes(&state.pool, operator_id)
-            .await?;
-    Ok(Json(routes))
+    Ok(Json(
+        sql::fetch_operator_routes(&state.pool, operator_id).await?,
+    ))
 }
 
 pub(crate) async fn create_route(
@@ -132,7 +136,7 @@ pub(crate) async fn patch_route(
 
     let user_id = claims.uid;
 
-    let route = sql::fetch_route(&state.pool, route_id).await?;
+    let route = sql::fetch_commons_route(&state.pool, route_id).await?;
     if route.is_none() {
         return Err(Error::NotFoundUpstream);
     }
@@ -185,7 +189,7 @@ pub(crate) async fn delete_route(
 
     let user_id = claims.uid;
 
-    let route = sql::fetch_route(&state.pool, route_id).await?;
+    let route = sql::fetch_commons_route(&state.pool, route_id).await?;
     if route.is_none() {
         return Err(Error::NotFoundUpstream);
     }
@@ -275,7 +279,7 @@ pub(crate) async fn patch_subroute(
 
     let user_id = claims.uid;
 
-    let subroute = sql::fetch_subroute(&state.pool, subroute_id).await?;
+    let subroute = sql::fetch_simple_subroute(&state.pool, subroute_id).await?;
     if subroute.is_none() {
         return Err(Error::NotFoundUpstream);
     }
@@ -334,7 +338,7 @@ pub(crate) async fn delete_subroute(
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
-    let subroute = sql::fetch_subroute(&state.pool, subroute_id).await?;
+    let subroute = sql::fetch_simple_subroute(&state.pool, subroute_id).await?;
     if subroute.is_none() {
         return Err(Error::NotFoundUpstream);
     }

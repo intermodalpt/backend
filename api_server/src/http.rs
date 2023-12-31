@@ -93,6 +93,7 @@ pub fn build_paths(state: AppState) -> Router {
             get(routes::handlers::get_routes)
                 .post(routes::handlers::create_route),
         )
+        .route("/v1/routes/full", get(routes::handlers::get_full_routes))
         .route(
             "/v1/routes/:route_id",
             get(routes::handlers::get_route)

@@ -82,9 +82,14 @@ pub(crate) mod requests {
 
     #[derive(Deserialize, ToSchema)]
     pub struct ChangeSubroute {
-        pub flag: String,
+        pub group: i32,
+        pub origin: String,
+        pub destination: String,
+        pub headsign: String,
         pub circular: bool,
-        pub polyline: Option<String>,
+        pub via: Vec<routes::SubrouteVia>,
+        // TODO consider deprecating
+        pub flag: String,
     }
 
     impl From<routes::Subroute> for ChangeSubroute {
@@ -92,7 +97,11 @@ pub(crate) mod requests {
             Self {
                 flag: subroute.flag,
                 circular: subroute.circular,
-                polyline: subroute.polyline,
+                origin: subroute.origin,
+                destination: subroute.destination,
+                headsign: subroute.headsign,
+                group: subroute.group,
+                via: subroute.via,
             }
         }
     }
@@ -103,14 +112,26 @@ pub(crate) mod requests {
             subroute: &routes::Subroute,
         ) -> history::SubroutePatch {
             let mut patch = history::SubroutePatch::default();
+            if self.group != subroute.group {
+                patch.group = Some(self.group);
+            }
             if self.flag != subroute.flag {
                 patch.flag = Some(self.flag.clone());
             }
+            if self.headsign != subroute.headsign {
+                patch.headsign = Some(self.headsign.clone());
+            }
+            if self.origin != subroute.origin {
+                patch.origin = Some(self.origin.clone());
+            }
+            if self.destination != subroute.destination {
+                patch.destination = Some(self.destination.clone());
+            }
+            if self.via != subroute.via {
+                patch.via = Some(self.via.clone());
+            }
             if self.circular != subroute.circular {
                 patch.circular = Some(self.circular);
-            }
-            if self.polyline != subroute.polyline {
-                patch.polyline = self.polyline.clone();
             }
 
             patch
@@ -155,31 +176,79 @@ pub(crate) mod responses {
     use serde::Serialize;
     use utoipa::ToSchema;
 
+    use commons::models::routes;
+
+    /// This is an extension of `commons::Route` that includes parishes
     #[derive(Serialize, ToSchema)]
     pub struct Route {
         pub(crate) id: i32,
         pub(crate) type_id: i32,
         pub(crate) operator: i32,
-        pub(crate) subroutes: Vec<Subroute>,
         #[schema(example = "Azeitão (Circular)")]
         pub(crate) code: Option<String>,
         pub(crate) name: String,
         #[schema(example = true)]
         pub(crate) circular: bool,
-        pub(crate) main_subroute: Option<i32>,
         pub(crate) badge_text: String,
         pub(crate) badge_bg: String,
         pub(crate) active: bool,
-        pub(crate) parishes: Vec<i16>,
+        pub(crate) parishes: Vec<i32>,
+        pub(crate) subroutes: Vec<Subroute>,
+        // TODO drop
+        pub(crate) main_subroute: Option<i32>,
     }
 
     #[derive(Debug, Serialize, ToSchema)]
     pub struct Subroute {
         pub(crate) id: i32,
-        #[schema(example = "Azeitão (Circular)")]
-        pub(crate) flag: String,
+        pub(crate) group: i32,
+        pub(crate) headsign: String,
+        pub(crate) origin: String,
+        pub(crate) destination: String,
+        pub(crate) via: sqlx::types::Json<Vec<routes::SubrouteVia>>,
         pub(crate) circular: bool,
         pub(crate) polyline: Option<String>,
+
+        // TODO remove flag after transitioned
+        pub(crate) flag: String,
+    }
+
+    /// Same as a `Route` + validation data
+    #[derive(Serialize)]
+    pub struct FullRoute {
+        pub(crate) id: i32,
+        pub(crate) type_id: i32,
+        pub(crate) operator: i32,
+        pub(crate) code: Option<String>,
+        pub(crate) name: String,
+        pub(crate) circular: bool,
+        pub(crate) badge_text: String,
+        pub(crate) badge_bg: String,
+        pub(crate) active: bool,
+        pub(crate) parishes: Vec<i32>,
+        pub(crate) subroutes: Vec<FullSubroute>,
+        // pub(crate) validation: Option<routes::RouteValidationData>,
+
+        //  TODO drop
+        pub(crate) main_subroute: Option<i32>,
+    }
+
+    /// This is an extension of Subroute that includes validation data
+    // The order of these fields CANNOT BE CHANGED because of the COALESCE's in SQL
+    #[derive(Debug, Serialize)]
+    pub struct FullSubroute {
+        pub(crate) id: i32,
+        pub(crate) group: i32,
+        pub(crate) headsign: String,
+        pub(crate) origin: String,
+        pub(crate) destination: String,
+        pub(crate) via: sqlx::types::Json<Vec<routes::SubrouteVia>>,
+        pub(crate) circular: bool,
+        pub(crate) polyline: Option<String>,
+        pub(crate) validation: sqlx::types::JsonValue,
+
+        // TODO remove flag after transitioned
+        pub(crate) flag: String,
     }
 
     #[derive(Serialize, ToSchema)]
@@ -203,5 +272,83 @@ pub(crate) mod responses {
     pub struct SubrouteStops {
         pub subroute: i32,
         pub stops: Vec<i32>,
+    }
+
+    // Manual implementations of sqlx::Type due to
+    // https://github.com/rust-lang/rust/issues/82219
+    impl<'r> sqlx::decode::Decode<'r, sqlx::Postgres> for Subroute {
+        fn decode(
+            value: sqlx::postgres::PgValueRef<'r>,
+        ) -> Result<Self, Box<dyn ::std::error::Error + 'static + Send + Sync>>
+        {
+            let mut decoder =
+                sqlx::postgres::types::PgRecordDecoder::new(value)?;
+            let id = decoder.try_decode::<i32>()?;
+            let group = decoder.try_decode::<i32>()?;
+            let flag = decoder.try_decode::<String>()?;
+            let headsign = decoder.try_decode::<String>()?;
+            let origin = decoder.try_decode::<String>()?;
+            let destination = decoder.try_decode::<String>()?;
+            let via = decoder
+                .try_decode::<sqlx::types::Json<Vec<routes::SubrouteVia>>>()?;
+            let circular = decoder.try_decode::<bool>()?;
+            let polyline = decoder.try_decode::<Option<String>>()?;
+            Ok(Subroute {
+                id,
+                group,
+                flag,
+                headsign,
+                origin,
+                destination,
+                via,
+                circular,
+                polyline,
+            })
+        }
+    }
+
+    impl sqlx::Type<sqlx::Postgres> for Subroute {
+        fn type_info() -> sqlx::postgres::PgTypeInfo {
+            sqlx::postgres::PgTypeInfo::with_name("Subroute")
+        }
+    }
+
+    impl<'r> sqlx::decode::Decode<'r, sqlx::Postgres> for FullSubroute {
+        fn decode(
+            value: sqlx::postgres::PgValueRef<'r>,
+        ) -> Result<Self, Box<dyn ::std::error::Error + 'static + Send + Sync>>
+        {
+            let mut decoder =
+                sqlx::postgres::types::PgRecordDecoder::new(value)?;
+            let id = decoder.try_decode::<i32>()?;
+            let group = decoder.try_decode::<i32>()?;
+            let flag = decoder.try_decode::<String>()?;
+            let headsign = decoder.try_decode::<String>()?;
+            let origin = decoder.try_decode::<String>()?;
+            let destination = decoder.try_decode::<String>()?;
+            let via = decoder
+                .try_decode::<sqlx::types::Json<Vec<routes::SubrouteVia>>>()?;
+            let circular = decoder.try_decode::<bool>()?;
+            let polyline = decoder.try_decode::<Option<String>>()?;
+            let validation = decoder.try_decode::<sqlx::types::JsonValue>()?;
+            Ok(FullSubroute {
+                id,
+                group,
+                flag,
+                headsign,
+                origin,
+                destination,
+                via,
+                circular,
+                polyline,
+                validation,
+            })
+        }
+    }
+
+    impl sqlx::Type<sqlx::Postgres> for FullSubroute {
+        fn type_info() -> sqlx::postgres::PgTypeInfo {
+            sqlx::postgres::PgTypeInfo::with_name("FullSubroute")
+        }
     }
 }

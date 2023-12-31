@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO subroutes(route, \"group\",flag, origin, destination, headsign,  via, circular)\nVALUES ($1, $2, $3, $4, $5, $6, $7, $8)\nRETURNING id\n    ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int4",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Jsonb",
+        "Bool"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "8c18b6ae96405f6274870b9de59e23522c11b168adf4e6e631edfc4d416afe26"
+}

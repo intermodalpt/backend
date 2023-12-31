@@ -145,32 +145,41 @@ CREATE TABLE route_types
 
 CREATE TABLE routes
 (
-    id              serial PRIMARY KEY,
-    code            text,
-    name            text                                                 NOT NULL,
-    -- TODO deprecate
-    circular        boolean                                              NOT NULL,
-    main_subroute   integer,
-    operator        integer                                              NOT NULL,
-    active          boolean                                              NOT NULL,
-    type            integer                                              NOT NULL REFERENCES route_types (id),
-    official_name   text                     DEFAULT ''::text            NOT NULL,
-    municipalities  integer[]                DEFAULT ARRAY []::integer[] NOT NULL,
-    parishes        integer[]                DEFAULT ARRAY []::integer[] NOT NULL,
-    validated       boolean                  DEFAULT false               NOT NULL,
-    validation_date timestamp with time zone DEFAULT '2001-01-01 00:00:00'::timestamp without time zone
+    id             serial PRIMARY KEY,
+    code           text,
+    name           text                                  NOT NULL,
+
+    operator       integer                               NOT NULL,
+    active         boolean                               NOT NULL,
+    type           integer                               NOT NULL REFERENCES route_types (id),
+    official_name  text      DEFAULT ''::text            NOT NULL,
+    municipalities integer[] DEFAULT ARRAY []::integer[] NOT NULL,
+    parishes       integer[] DEFAULT ARRAY []::integer[] NOT NULL,
+    main_subroute  integer,
+
+    -- TODO consider deprecating
+    circular       boolean                               NOT NULL
 );
 
 CREATE TABLE subroutes
 (
-    id       serial PRIMARY KEY,
-    route    integer               NOT NULL REFERENCES routes (id),
-    flag     text                  NOT NULL,
-    circular boolean DEFAULT false NOT NULL,
-    polyline text,
-    oriflag  text,
-    dstflag  text,
-    via      text
+    id          serial PRIMARY KEY,
+    route       integer                    NOT NULL REFERENCES routes (id),
+    circular    boolean DEFAULT false      NOT NULL,
+
+    -- Cached fields
+    polyline    text,
+
+    -- TODO consider dropping
+    flag        text                       NOT NULL,
+
+    "group"     integer                    NOT NULL,
+    headsign    text                       NOT NULL,
+    origin      text                       NOT NULL,
+    destination text                       NOT NULL,
+    via         jsonb   DEFAULT '[]'::json NOT NULL,
+
+    validation  jsonb
 );
 
 ALTER TABLE ONLY routes
