@@ -250,11 +250,12 @@ pub(crate) mod requests {
 }
 
 pub(crate) mod responses {
+    use chrono::{DateTime, NaiveDate, Utc};
+    use serde::{Deserialize, Serialize};
     use std::collections::HashMap;
+    use utoipa::ToSchema;
 
     use commons::models::stops;
-    use serde::{Deserialize, Serialize};
-    use utoipa::ToSchema;
 
     #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
     pub struct OperatorStop {
@@ -264,6 +265,59 @@ pub(crate) mod responses {
         pub source: String,
     }
 
+    /// Meant to be an information-rich stop for the client
+    #[derive(Debug, Clone, Serialize, PartialEq)]
+    pub struct Stop {
+        pub id: i32,
+        pub name: Option<String>,
+        pub short_name: Option<String>,
+        pub locality: Option<String>,
+        pub street: Option<String>,
+        pub door: Option<String>,
+        pub parish: Option<i32>,
+        pub lat: Option<f64>,
+        pub lon: Option<f64>,
+        pub notes: Option<String>,
+        pub tags: Vec<String>,
+        pub a11y: sqlx::types::Json<stops::A11yMeta>,
+        // This is an 8 bit flag (u32 because of postgres::Decode) made of 4 duets.
+        // The four binary duets are for: Position, Service, Infra and [reserved]
+        // 0 => Not verified; 1 => Wrong; 2 => Likely; 3 => Verified
+        #[serde(default)]
+        pub verification_level: i32,
+
+        #[serde(default)]
+        pub service_check_date: Option<NaiveDate>,
+        #[serde(default)]
+        pub infrastructure_check_date: Option<NaiveDate>,
+        // TODO rename this to osm_id (going to be breaking)
+        pub external_id: String,
+    }
+
+    impl From<Stop> for stops::Stop {
+        fn from(stop: Stop) -> Self {
+            let sqlx::types::Json(ally) = stop.a11y;
+            stops::Stop {
+                id: stop.id,
+                name: stop.name,
+                short_name: stop.short_name,
+                locality: stop.locality,
+                street: stop.street,
+                door: stop.door,
+                parish: stop.parish,
+                lat: stop.lat,
+                lon: stop.lon,
+                notes: stop.notes,
+                tags: stop.tags,
+                a11y: ally,
+                verification_level: stop.verification_level as u8,
+                service_check_date: stop.service_check_date,
+                infrastructure_check_date: stop.infrastructure_check_date,
+            }
+        }
+    }
+
+    /// Meant to be an information-rich stop for the editor
     #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
     pub struct FullStop {
         #[serde(flatten)]
@@ -273,6 +327,7 @@ pub(crate) mod responses {
         pub operators: Vec<OperatorStop>,
         pub deleted_upstream: bool,
         pub verified_position: bool,
+        pub update_date: DateTime<Utc>,
     }
 
     #[derive(Serialize, ToSchema)]
@@ -302,5 +357,60 @@ pub(crate) mod responses {
         pub routes: HashMap<i32, SpiderRoute>,
         pub subroutes: HashMap<i32, SpiderSubroute>,
         pub stops: HashMap<i32, SpiderStop>,
+    }
+
+    // Manual implementations of sqlx::Type due to
+    // https://github.com/rust-lang/rust/issues/82219
+    impl<'r> sqlx::decode::Decode<'r, sqlx::Postgres> for Stop {
+        fn decode(
+            value: sqlx::postgres::PgValueRef<'r>,
+        ) -> Result<Self, Box<dyn ::std::error::Error + 'static + Send + Sync>>
+        {
+            let mut decoder =
+                sqlx::postgres::types::PgRecordDecoder::new(value)?;
+            let id = decoder.try_decode::<i32>()?;
+            let name = decoder.try_decode::<Option<String>>()?;
+            let short_name = decoder.try_decode::<Option<String>>()?;
+            let locality = decoder.try_decode::<Option<String>>()?;
+            let street = decoder.try_decode::<Option<String>>()?;
+            let door = decoder.try_decode::<Option<String>>()?;
+            let parish = decoder.try_decode::<Option<i32>>()?;
+            let lat = decoder.try_decode::<Option<f64>>()?;
+            let lon = decoder.try_decode::<Option<f64>>()?;
+            let notes = decoder.try_decode::<Option<String>>()?;
+            let tags = decoder.try_decode::<Vec<String>>()?;
+            let a11y =
+                decoder.try_decode::<sqlx::types::Json<stops::A11yMeta>>()?;
+            let verification_level = decoder.try_decode::<i32>()?;
+            let service_check_date =
+                decoder.try_decode::<Option<NaiveDate>>()?;
+            let infrastructure_check_date =
+                decoder.try_decode::<Option<NaiveDate>>()?;
+            let external_id = decoder.try_decode::<String>()?;
+            Ok(Stop {
+                id,
+                name,
+                short_name,
+                locality,
+                street,
+                door,
+                parish,
+                lat,
+                lon,
+                notes,
+                tags,
+                a11y,
+                verification_level,
+                service_check_date,
+                infrastructure_check_date,
+                external_id,
+            })
+        }
+    }
+
+    impl sqlx::Type<sqlx::Postgres> for Stop {
+        fn type_info() -> sqlx::postgres::PgTypeInfo {
+            sqlx::postgres::PgTypeInfo::with_name("Stop")
+        }
     }
 }

@@ -86,7 +86,7 @@ pub(crate) async fn accept_contribution(
                     "Stop no longer exists".to_string(),
                 ));
             }
-            let stop = stop.unwrap();
+            let stop = stops::Stop::from(stop.unwrap());
 
             *original = stop.clone();
             // FIXME This we might want to check if the original has been patched

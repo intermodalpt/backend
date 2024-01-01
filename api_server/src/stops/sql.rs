@@ -32,12 +32,13 @@ type Result<T> = std::result::Result<T, Error>;
 pub(crate) async fn fetch_stop(
     pool: &PgPool,
     stop_id: i32,
-) -> Result<Option<stops::Stop>> {
-    sqlx::query!(
+) -> Result<Option<responses::Stop>> {
+    sqlx::query_as!(
+        responses::Stop,
         r#"
-SELECT id, name, osm_name, short_name, locality, street, door, lat, lon, external_id, notes,
-    updater, update_date, parish, tags, accessibility_meta, verification_level,
-    service_check_date, infrastructure_check_date
+SELECT id, name, short_name, locality, street, door, lat, lon, external_id, notes, parish, tags,
+    accessibility_meta as "a11y!: sqlx::types::Json<stops::A11yMeta>", verification_level, service_check_date,
+     infrastructure_check_date
 FROM Stops
 WHERE id = $1
     "#,
@@ -45,45 +46,19 @@ WHERE id = $1
     )
     .fetch_optional(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
-    .map(|r| {
-        Ok(stops::Stop {
-            id: r.id,
-            name: r.name,
-            osm_name: r.osm_name,
-            short_name: r.short_name,
-            locality: r.locality,
-            street: r.street,
-            door: r.door,
-            lat: r.lat,
-            lon: r.lon,
-            notes: r.notes,
-            update_date: r.update_date,
-            parish: r.parish,
-            tags: r.tags,
-            a11y: serde_json::from_value(r.accessibility_meta).map_err(
-                |e| {
-                    log::error!("Error deserializing: {}", e);
-                    Error::DatabaseDeserialization
-                },
-            )?,
-            verification_level: r.verification_level as u8,
-            service_check_date: r.service_check_date,
-            infrastructure_check_date: r.infrastructure_check_date,
-        })
-    })
-    .transpose()
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
 pub(crate) async fn fetch_stops(
     pool: &PgPool,
     filter_used: bool,
-) -> Result<Vec<stops::Stop>> {
+) -> Result<Vec<responses::Stop>> {
     if filter_used {
-        sqlx::query!(
+        sqlx::query_as!(
+            responses::Stop,
             r#"
-SELECT id, name, osm_name, short_name, locality, street, door, lat, lon, external_id, notes,
-    updater, update_date, parish, tags, accessibility_meta, verification_level,
+SELECT id, name, short_name, locality, street, door, lat, lon, external_id, notes, parish, tags,
+    accessibility_meta as "a11y!: sqlx::types::Json<stops::A11yMeta>", verification_level,
     service_check_date, infrastructure_check_date
 FROM Stops
 WHERE id IN (
@@ -92,74 +67,18 @@ WHERE id IN (
 )
         "#
         )
-        .fetch_all(pool)
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?
-        .into_iter()
-        .map(|r| {
-            Ok(stops::Stop {
-                id: r.id,
-                name: r.name,
-                osm_name: r.osm_name,
-                short_name: r.short_name,
-                locality: r.locality,
-                street: r.street,
-                door: r.door,
-                lat: r.lat,
-                lon: r.lon,
-                notes: r.notes,
-                update_date: r.update_date,
-                parish: r.parish,
-                tags: r.tags,
-                a11y: serde_json::from_value(r.accessibility_meta).map_err(
-                    |e| {
-                        log::error!("Error deserializing: {}", e);
-                        Error::DatabaseDeserialization
-                    },
-                )?,
-                verification_level: r.verification_level as u8,
-                service_check_date: r.service_check_date,
-                infrastructure_check_date: r.infrastructure_check_date,
-            })
-        })
-        .collect()
+            .fetch_all(pool)
+            .await
+            .map_err(|err| Error::DatabaseExecution(err.to_string()))
     } else {
-        sqlx::query!(
-"SELECT id, name, osm_name, short_name, locality, street, door, lat, lon, external_id, notes,
-    update_date, parish, tags, accessibility_meta,
-    verification_level, service_check_date, infrastructure_check_date
-FROM stops")
-        .fetch_all(pool)
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?
-        .into_iter()
-        .map(|r| {
-            Ok(stops::Stop {
-                id: r.id,
-                name: r.name,
-                osm_name: r.osm_name,
-                short_name: r.short_name,
-                locality: r.locality,
-                street: r.street,
-                door: r.door,
-                lat: r.lat,
-                lon: r.lon,
-                notes: r.notes,
-                update_date: r.update_date,
-                parish: r.parish,
-                tags: r.tags,
-                a11y: serde_json::from_value(r.accessibility_meta).map_err(
-                    |e| {
-                        log::error!("Error deserializing: {}", e);
-                        Error::DatabaseDeserialization
-                    },
-                )?,
-                verification_level: r.verification_level as u8,
-                service_check_date: r.service_check_date,
-                infrastructure_check_date: r.infrastructure_check_date,
-            })
-        })
-        .collect()
+        sqlx::query_as!(
+            responses::Stop,
+r#"SELECT id, name, short_name, locality, street, door, lat, lon, external_id, notes, parish, tags,
+    accessibility_meta as "a11y!: sqlx::types::Json<stops::A11yMeta>", verification_level, service_check_date, infrastructure_check_date
+FROM stops"#)
+            .fetch_all(pool)
+            .await
+            .map_err(|err| Error::DatabaseExecution(err.to_string()))
     }
 }
 
@@ -183,7 +102,6 @@ FROM Stops
             stop: stops::Stop {
                 id: r.id,
                 name: r.name,
-                osm_name: r.osm_name,
                 short_name: r.short_name,
                 locality: r.locality,
                 street: r.street,
@@ -191,7 +109,6 @@ FROM Stops
                 lat: r.lat,
                 lon: r.lon,
                 notes: r.notes,
-                update_date: r.update_date,
                 parish: r.parish,
                 tags: r.tags,
                 a11y: serde_json::from_value(r.accessibility_meta).map_err(
@@ -212,6 +129,7 @@ FROM Stops
             updater: r.updater,
             deleted_upstream: r.deleted_upstream,
             verified_position: r.verified_position,
+            update_date: r.update_date,
             operators: vec![],
         })
     })
@@ -250,11 +168,13 @@ FROM stop_operators
 pub(crate) async fn fetch_bounded_stops(
     pool: &PgPool,
     (x0, y0, x1, y1): (f64, f64, f64, f64),
-) -> Result<Vec<stops::Stop>> {
-    sqlx::query!(
+) -> Result<Vec<responses::Stop>> {
+    sqlx::query_as!(
+        responses::Stop,
         r#"
-SELECT id, name, osm_name, short_name, locality, street, door, lat, lon, notes, update_date, parish,
-    tags, accessibility_meta, verification_level, service_check_date, infrastructure_check_date
+SELECT id, name, short_name, locality, street, door, lat, lon, external_id, notes, parish, tags,
+    accessibility_meta as "a11y!: sqlx::types::Json<stops::A11yMeta>", verification_level,
+    service_check_date, infrastructure_check_date
 FROM Stops
 WHERE lon >= $1 AND lon <= $2 AND lat <= $3 AND lat >= $4 AND id IN (
     SELECT DISTINCT stop FROM subroute_stops
@@ -267,35 +187,7 @@ WHERE lon >= $1 AND lon <= $2 AND lat <= $3 AND lat >= $4 AND id IN (
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
-    .into_iter()
-    .map(|r| {
-        Ok(stops::Stop {
-            id: r.id,
-            name: r.name,
-            osm_name: r.osm_name,
-            short_name: r.short_name,
-            locality: r.locality,
-            street: r.street,
-            door: r.door,
-            lat: r.lat,
-            lon: r.lon,
-            notes: r.notes,
-            update_date: r.update_date,
-            parish: r.parish,
-            tags: r.tags,
-            a11y: serde_json::from_value(r.accessibility_meta).map_err(
-                |e| {
-                    log::error!("Error deserializing: {}", e);
-                    Error::DatabaseDeserialization
-                },
-            )?,
-            verification_level: r.verification_level as u8,
-            service_check_date: r.service_check_date,
-            infrastructure_check_date: r.infrastructure_check_date,
-        })
-    })
-    .collect()
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
 pub(crate) async fn insert_stop(
@@ -336,7 +228,6 @@ RETURNING id
     Ok(stops::Stop {
         id: res.id,
         name: stop.name,
-        osm_name: None,
         short_name: stop.short_name,
         locality: stop.locality,
         street: stop.street,
@@ -344,7 +235,6 @@ RETURNING id
         lat: Some(stop.lat),
         lon: Some(stop.lon),
         notes: stop.notes,
-        update_date,
         parish: None,
         tags: stop.tags,
         a11y: stop.a11y,
@@ -366,7 +256,7 @@ pub(crate) async fn update_stop(
         r#"
 UPDATE Stops
 SET name=$1, short_name=$2, locality=$3, street=$4, door=$5, lon=$6, lat=$7, notes=$8,
-    accessibility_meta=$9 , updater=$10, update_date=$11, tags=$12, verification_level=$13,
+    accessibility_meta=$9, updater=$10, update_date=$11, tags=$12, verification_level=$13,
     service_check_date=$14, infrastructure_check_date=$15
 WHERE id=$16
     "#,

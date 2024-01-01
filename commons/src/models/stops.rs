@@ -16,7 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use utoipa::ToSchema;
@@ -81,8 +81,6 @@ pub struct Stop {
     pub name: Option<String>,
     #[schema(example = "Setúbal")]
     pub short_name: Option<String>,
-    #[schema(example = "Setúbal (ITS)")]
-    pub osm_name: Option<String>,
     #[schema(example = "Bairro das bairradas")]
     pub locality: Option<String>,
     #[schema(example = "Rua do Não Sei Decor")]
@@ -96,7 +94,6 @@ pub struct Stop {
     pub lon: Option<f64>,
     #[serde(default)]
     pub notes: Option<String>,
-    pub update_date: DateTime<Utc>,
     #[serde(default)]
     pub tags: Vec<String>,
     #[serde(flatten)]
@@ -458,7 +455,6 @@ mod test {
         let stop = Stop {
             id: 1,
             name: Some("Test".to_string()),
-            osm_name: None,
             short_name: None,
             locality: None,
             street: None,
@@ -517,7 +513,6 @@ mod test {
             ),
             tags: vec!["test".to_string()],
             notes: Some("test".to_string()),
-            update_date: Utc::now(),
         };
         let json = serde_json::to_string(&stop).unwrap();
 

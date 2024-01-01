@@ -44,7 +44,7 @@ pub(crate) struct StopQueryParam {
 pub(crate) async fn get_stops(
     State(state): State<AppState>,
     params: Query<StopQueryParam>,
-) -> Result<Json<Vec<stops::Stop>>, Error> {
+) -> Result<Json<Vec<responses::Stop>>, Error> {
     Ok(Json(sql::fetch_stops(&state.pool, !params.all).await?))
 }
 
@@ -64,7 +64,7 @@ pub(crate) async fn get_full_stops(
 pub(crate) async fn get_stop(
     State(state): State<AppState>,
     Path(stop_id): Path<i32>,
-) -> Result<Json<stops::Stop>, Error> {
+) -> Result<Json<responses::Stop>, Error> {
     let stop = sql::fetch_stop(&state.pool, stop_id).await?;
 
     if let Some(stop) = stop {
@@ -138,7 +138,7 @@ pub(crate) async fn patch_stop(
     if stop.is_none() {
         return Err(Error::NotFoundUpstream);
     }
-    let mut stop = stop.unwrap();
+    let mut stop = stops::Stop::from(stop.unwrap());
 
     let patch = changes.derive_patch(&stop);
 
@@ -178,7 +178,7 @@ pub(crate) async fn patch_stop(
 pub(crate) async fn get_bounded_stops(
     State(state): State<AppState>,
     Path(boundary): Path<(f64, f64, f64, f64)>,
-) -> Result<Json<Vec<stops::Stop>>, Error> {
+) -> Result<Json<Vec<responses::Stop>>, Error> {
     Ok(Json(sql::fetch_bounded_stops(&state.pool, boundary).await?))
 }
 

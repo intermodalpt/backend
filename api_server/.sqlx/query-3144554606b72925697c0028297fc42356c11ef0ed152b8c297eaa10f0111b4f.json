@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, name, osm_name, short_name, locality, street, door, lat, lon, external_id, notes,\n    update_date, parish, tags, accessibility_meta,\n    verification_level, service_check_date, infrastructure_check_date\nFROM stops",
+  "query": "SELECT id, name, short_name, locality, street, door, lat, lon, external_id, notes, parish, tags,\n    accessibility_meta as \"a11y!: sqlx::types::Json<stops::A11yMeta>\", verification_level, service_check_date, infrastructure_check_date\nFROM stops",
   "describe": {
     "columns": [
       {
@@ -15,81 +15,71 @@
       },
       {
         "ordinal": 2,
-        "name": "osm_name",
-        "type_info": "Text"
-      },
-      {
-        "ordinal": 3,
         "name": "short_name",
         "type_info": "Text"
       },
       {
-        "ordinal": 4,
+        "ordinal": 3,
         "name": "locality",
         "type_info": "Text"
       },
       {
-        "ordinal": 5,
+        "ordinal": 4,
         "name": "street",
         "type_info": "Text"
       },
       {
-        "ordinal": 6,
+        "ordinal": 5,
         "name": "door",
         "type_info": "Text"
       },
       {
-        "ordinal": 7,
+        "ordinal": 6,
         "name": "lat",
         "type_info": "Float8"
       },
       {
-        "ordinal": 8,
+        "ordinal": 7,
         "name": "lon",
         "type_info": "Float8"
       },
       {
-        "ordinal": 9,
+        "ordinal": 8,
         "name": "external_id",
         "type_info": "Text"
       },
       {
-        "ordinal": 10,
+        "ordinal": 9,
         "name": "notes",
         "type_info": "Text"
       },
       {
-        "ordinal": 11,
-        "name": "update_date",
-        "type_info": "Timestamptz"
-      },
-      {
-        "ordinal": 12,
+        "ordinal": 10,
         "name": "parish",
         "type_info": "Int4"
       },
       {
-        "ordinal": 13,
+        "ordinal": 11,
         "name": "tags",
         "type_info": "TextArray"
       },
       {
-        "ordinal": 14,
-        "name": "accessibility_meta",
+        "ordinal": 12,
+        "name": "a11y!: sqlx::types::Json<stops::A11yMeta>",
         "type_info": "Jsonb"
       },
       {
-        "ordinal": 15,
+        "ordinal": 13,
         "name": "verification_level",
         "type_info": "Int2"
       },
       {
-        "ordinal": 16,
+        "ordinal": 14,
         "name": "service_check_date",
         "type_info": "Date"
       },
       {
-        "ordinal": 17,
+        "ordinal": 15,
         "name": "infrastructure_check_date",
         "type_info": "Date"
       }
@@ -106,10 +96,8 @@
       true,
       true,
       true,
-      true,
       false,
       true,
-      false,
       true,
       false,
       false,
@@ -118,5 +106,5 @@
       true
     ]
   },
-  "hash": "192f866f981ee9e6aacfef3211f008a22dece7f0b4be91e667da70f7460231c0"
+  "hash": "3144554606b72925697c0028297fc42356c11ef0ed152b8c297eaa10f0111b4f"
 }

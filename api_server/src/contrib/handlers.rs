@@ -259,7 +259,7 @@ pub(crate) async fn post_contrib_stop_data(
     if stop.is_none() {
         return Err(Error::NotFoundUpstream);
     }
-    let stop = stop.unwrap();
+    let stop = stop.unwrap().into();
     let patch = contribution.contribution.derive_patch(&stop);
 
     if patch.is_empty() {
