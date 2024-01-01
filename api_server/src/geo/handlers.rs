@@ -18,31 +18,20 @@
 
 use axum::extract::State;
 use axum::Json;
-use serde::Serialize;
 
 use commons::models::geo;
 
 use super::sql;
 use crate::{AppState, Error};
 
-#[utoipa::path(
-    get,
-    path = "/v1/parishes",
-    responses(
-        (
-            status = 200,
-            description = "List of parishes",
-            body = [Parish])
-    )
-)]
+pub(crate) async fn get_regions(
+    State(state): State<AppState>,
+) -> Result<Json<Vec<geo::Region>>, Error> {
+    Ok(Json(sql::fetch_regions(&state.pool).await?))
+}
+
 pub(crate) async fn get_parishes(
     State(state): State<AppState>,
 ) -> Result<Json<Vec<geo::Parish>>, Error> {
     Ok(Json(sql::fetch_parishes(&state.pool).await?))
-}
-
-#[derive(Serialize)]
-pub(crate) struct OsmDiff {
-    inserted: usize,
-    updated: usize,
 }

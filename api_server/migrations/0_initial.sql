@@ -42,8 +42,9 @@ CREATE TABLE audit_log
 
 CREATE TABLE regions
 (
-    id   serial PRIMARY KEY,
-    name text NOT NULL
+    id       serial PRIMARY KEY,
+    name     text NOT NULL,
+    geometry jsonb
 );
 
 CREATE TABLE municipalities
@@ -74,12 +75,6 @@ CREATE TABLE operators
 ALTER TABLE ONLY users
     ADD CONSTRAINT employee_fkey FOREIGN KEY (works_for) REFERENCES operators (id) NOT VALID;
 
-CREATE TABLE region_operators
-(
-    region_id   integer NOT NULL REFERENCES operators (id),
-    operator_id integer NOT NULL REFERENCES regions (id),
-    PRIMARY KEY (region_id, operator_id)
-);
 
 CREATE TABLE operator_calendars
 (
@@ -213,6 +208,28 @@ CREATE TABLE stop_operators
     source        text    NOT NULL,
     PRIMARY KEY (stop_id, operator_id)
 );
+
+CREATE TABLE region_operators
+(
+    region_id   integer NOT NULL REFERENCES regions (id),
+    operator_id integer NOT NULL REFERENCES operators (id),
+    PRIMARY KEY (region_id, operator_id)
+);
+
+CREATE TABLE region_routes
+(
+    region_id integer NOT NULL REFERENCES regions (id),
+    route_id  integer NOT NULL REFERENCES routes (id),
+    PRIMARY KEY (region_id, route_id)
+);
+
+CREATE TABLE region_stops
+(
+    region_id integer NOT NULL REFERENCES regions (id),
+    stop_id   integer NOT NULL REFERENCES stops (id),
+    PRIMARY KEY (region_id, stop_id)
+);
+
 
 CREATE TABLE stop_pics
 (

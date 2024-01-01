@@ -24,6 +24,19 @@ use crate::Error;
 
 type Result<T> = std::result::Result<T, Error>;
 
+pub(crate) async fn fetch_regions(pool: &PgPool) -> Result<Vec<geo::Region>> {
+    sqlx::query_as!(
+        geo::Region,
+        r#"
+SELECT id, name, geometry
+FROM regions
+    "#
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+}
+
 pub(crate) async fn fetch_parishes(pool: &PgPool) -> Result<Vec<geo::Parish>> {
     sqlx::query_as!(
         geo::Parish,
