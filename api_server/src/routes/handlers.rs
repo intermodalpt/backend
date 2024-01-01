@@ -16,7 +16,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use std::collections::HashMap;
 
 use axum::extract::{Path, State};
 use axum::Json;
@@ -59,7 +58,7 @@ pub(crate) async fn create_route(
     State(state): State<AppState>,
     claims: Option<auth::Claims>,
     Json(route): Json<requests::ChangeRoute>,
-) -> Result<Json<HashMap<String, i32>>, Error> {
+) -> Result<Json<routes::Route>, Error> {
     if claims.is_none() {
         return Err(Error::Forbidden);
     }
@@ -75,22 +74,14 @@ pub(crate) async fn create_route(
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
-    let id = sql::insert_route(&mut transaction, &route).await?;
-    let route = routes::Route {
-        id,
-        type_id: route.type_id,
-        operator_id: route.operator_id,
-        code: route.code,
-        name: route.name,
-        circular: route.circular,
-        main_subroute: route.main_subroute,
-        active: route.active,
-    };
+    let route = sql::insert_route(&mut transaction, route).await?;
 
     contrib::sql::insert_changeset_log(
         &mut transaction,
         user_id,
-        &[history::Change::RouteCreation { data: route }],
+        &[history::Change::RouteCreation {
+            data: route.clone(),
+        }],
         None,
     )
     .await?;
@@ -100,11 +91,7 @@ pub(crate) async fn create_route(
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
-    Ok(Json({
-        let mut map = HashMap::new();
-        map.insert("id".to_string(), id);
-        map
-    }))
+    Ok(Json(route))
 }
 
 pub(crate) async fn get_route(
@@ -125,7 +112,7 @@ pub(crate) async fn patch_route(
     claims: Option<auth::Claims>,
     Path(route_id): Path<i32>,
     Json(changes): Json<requests::ChangeRoute>,
-) -> Result<(), Error> {
+) -> Result<Json<routes::Route>, Error> {
     if claims.is_none() {
         return Err(Error::Forbidden);
     }
@@ -145,7 +132,7 @@ pub(crate) async fn patch_route(
     let patch = changes.derive_patch(&route);
 
     if patch.is_empty() {
-        return Ok(());
+        return Ok(Json(route));
     }
 
     let mut transaction = state
@@ -159,7 +146,7 @@ pub(crate) async fn patch_route(
         &mut transaction,
         user_id,
         &[history::Change::RouteUpdate {
-            original: route,
+            original: route.clone(),
             patch,
         }],
         None,
@@ -171,7 +158,7 @@ pub(crate) async fn patch_route(
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
-    Ok(())
+    Ok(Json(route))
 }
 
 pub(crate) async fn delete_route(
@@ -222,7 +209,7 @@ pub(crate) async fn create_subroute(
     claims: Option<auth::Claims>,
     Path(route_id): Path<i32>,
     Json(subroute): Json<requests::ChangeSubroute>,
-) -> Result<Json<HashMap<String, i32>>, Error> {
+) -> Result<Json<routes::Subroute>, Error> {
     if claims.is_none() {
         return Err(Error::Forbidden);
     }
@@ -241,12 +228,13 @@ pub(crate) async fn create_subroute(
 
     let subroute =
         sql::insert_subroute(&mut transaction, route_id, subroute).await?;
-    let id = subroute.id;
 
     contrib::sql::insert_changeset_log(
         &mut transaction,
         user_id,
-        &[history::Change::SubrouteCreation { data: subroute }],
+        &[history::Change::SubrouteCreation {
+            data: subroute.clone(),
+        }],
         None,
     )
     .await?;
@@ -255,12 +243,7 @@ pub(crate) async fn create_subroute(
         .commit()
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
-
-    Ok(Json({
-        let mut map = HashMap::new();
-        map.insert("id".to_string(), id);
-        map
-    }))
+    Ok(Json(subroute))
 }
 
 pub(crate) async fn patch_subroute(
@@ -268,7 +251,7 @@ pub(crate) async fn patch_subroute(
     claims: Option<auth::Claims>,
     Path((route_id, subroute_id)): Path<(i32, i32)>,
     Json(changes): Json<requests::ChangeSubroute>,
-) -> Result<(), Error> {
+) -> Result<Json<routes::Subroute>, Error> {
     if claims.is_none() {
         return Err(Error::Forbidden);
     }
@@ -288,7 +271,7 @@ pub(crate) async fn patch_subroute(
     let patch = changes.derive_patch(&subroute);
 
     if patch.is_empty() {
-        return Ok(());
+        return Ok(Json(subroute));
     }
 
     let mut transaction = state
@@ -301,7 +284,7 @@ pub(crate) async fn patch_subroute(
         &mut transaction,
         user_id,
         &[history::Change::SubrouteUpdate {
-            original: subroute,
+            original: subroute.clone(),
             patch,
         }],
         None,
@@ -314,7 +297,9 @@ pub(crate) async fn patch_subroute(
     transaction
         .commit()
         .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    Ok(Json(subroute))
 }
 
 pub(crate) async fn delete_subroute(
@@ -376,7 +361,7 @@ pub(crate) async fn create_subroute_departure(
     claims: Option<auth::Claims>,
     Path(subroute_id): Path<i32>,
     Json(departure): Json<requests::ChangeDeparture>,
-) -> Result<Json<HashMap<String, i32>>, Error> {
+) -> Result<Json<routes::Departure>, Error> {
     if claims.is_none() {
         return Err(Error::Forbidden);
     }
@@ -393,12 +378,13 @@ pub(crate) async fn create_subroute_departure(
 
     let departure =
         sql::insert_departure(&mut transaction, subroute_id, departure).await?;
-    let id = departure.id;
 
     contrib::sql::insert_changeset_log(
         &mut transaction,
         claims.uid,
-        &[history::Change::DepartureCreation { data: departure }],
+        &[history::Change::DepartureCreation {
+            data: departure.clone(),
+        }],
         None,
     )
     .await?;
@@ -408,11 +394,7 @@ pub(crate) async fn create_subroute_departure(
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
-    Ok(Json({
-        let mut map = HashMap::new();
-        map.insert("id".to_string(), id);
-        map
-    }))
+    Ok(Json(departure))
 }
 
 pub(crate) async fn patch_subroute_departure(
@@ -420,7 +402,7 @@ pub(crate) async fn patch_subroute_departure(
     claims: Option<auth::Claims>,
     Path((subroute_id, departure_id)): Path<(i32, i32)>,
     Json(change): Json<requests::ChangeDeparture>,
-) -> Result<(), Error> {
+) -> Result<Json<routes::Departure>, Error> {
     if claims.is_none() {
         return Err(Error::Forbidden);
     }
@@ -439,7 +421,7 @@ pub(crate) async fn patch_subroute_departure(
     let patch = change.derive_patch(&departure);
 
     if patch.is_empty() {
-        return Ok(());
+        return Ok(Json(departure));
     }
 
     let mut transaction = state
@@ -455,7 +437,7 @@ pub(crate) async fn patch_subroute_departure(
         &mut transaction,
         claims.uid,
         &[history::Change::DepartureUpdate {
-            original: departure,
+            original: departure.clone(),
             patch,
         }],
         None,
@@ -467,7 +449,7 @@ pub(crate) async fn patch_subroute_departure(
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
-    Ok(())
+    Ok(Json(departure))
 }
 
 pub(crate) async fn delete_subroute_departure(

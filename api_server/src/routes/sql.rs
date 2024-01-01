@@ -222,8 +222,8 @@ JOIN route_types on routes.type_id = route_types.id
 
 pub(crate) async fn insert_route(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-    route: &requests::ChangeRoute,
-) -> Result<i32> {
+    route: requests::ChangeRoute,
+) -> Result<routes::Route> {
     let res = sqlx::query!(
         r#"
 INSERT INTO routes(code, name, main_subroute, operator, circular, active, type)
@@ -242,7 +242,16 @@ RETURNING id
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
-    Ok(res.id)
+    Ok(routes::Route {
+        id: res.id,
+        type_id: route.type_id,
+        operator_id: route.operator_id,
+        code: route.code,
+        name: route.name,
+        circular: route.circular,
+        main_subroute: route.main_subroute,
+        active: route.active,
+    })
 }
 
 pub(crate) async fn update_route(
