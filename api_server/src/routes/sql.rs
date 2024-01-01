@@ -320,7 +320,7 @@ pub(crate) async fn insert_subroute(
 ) -> Result<routes::Subroute> {
     let res = sqlx::query!(
         r#"
-INSERT INTO subroutes(route, "group",flag, origin, destination, headsign,  via, circular)
+INSERT INTO subroutes(route, "group", flag, origin, destination, headsign,  via, circular)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 RETURNING id
     "#,
@@ -361,10 +361,15 @@ pub(crate) async fn update_subroute(
     let _res = sqlx::query!(
         r#"
 UPDATE subroutes
-SET flag=$1, circular=$2
-WHERE id=$3 AND route=$4
+SET "group"=$1, flag=$2, origin=$3, destination=$4, headsign=$5, via=$6, circular=$7
+WHERE id=$8 AND route=$9
     "#,
+        changes.group,
         changes.flag,
+        changes.origin,
+        changes.destination,
+        changes.headsign,
+        sqlx::types::Json(&changes.via) as _,
         changes.circular,
         subroute_id,
         route_id,
