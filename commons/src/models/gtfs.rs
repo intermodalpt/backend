@@ -131,7 +131,7 @@ pub struct OperatorValidation {
     pub lints: Vec<Lint>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Lint {
     ServicelessTrip(TripId),
     EmptyTrip(TripId),

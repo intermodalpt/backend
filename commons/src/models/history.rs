@@ -79,7 +79,10 @@ pub enum Change {
         patch: SubroutePatch,
     },
     SubrouteDeletion {
-        data: routes::Subroute,
+        #[serde(alias = "data")]
+        subroute: routes::Subroute,
+        stops: Vec<i32>,
+        departures: Vec<routes::Departure>,
     },
     DepartureCreation {
         data: routes::Departure,
@@ -96,6 +99,8 @@ pub enum Change {
         stops: Vec<pics::StopAttrs>,
     },
     StopPicMetaUpdate {
+        // TODO drop the Option when the mess of unlinked updates gets sorted
+        pic_id: Option<i32>,
         original_meta: pics::StopPicDynMeta,
         original_stops: Vec<pics::StopAttrs>,
         meta_patch: StopPicturePatch,
