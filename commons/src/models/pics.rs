@@ -20,7 +20,7 @@ use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Resource {
     StopPic(StopPic),
     PanoPic(PanoPic),
@@ -50,7 +50,7 @@ pub struct TaggedStopPic {
     pub tagged: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 pub struct StopPic {
     pub id: i32,
     pub original_filename: String,
@@ -67,7 +67,7 @@ pub struct StopPic {
     #[serde(flatten)]
     pub dyn_meta: StopPicDynMeta,
 }
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 pub struct StopPicDynMeta {
     pub public: bool,
     pub sensitive: bool,
@@ -92,7 +92,7 @@ impl From<(i32, Vec<String>)> for StopAttrs {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 pub struct PanoPic {
     pub id: i32,
     pub original_filename: String,

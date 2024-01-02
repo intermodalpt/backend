@@ -40,6 +40,7 @@ pub struct Route {
 pub struct Subroute {
     pub id: i32,
     pub route_id: i32,
+    #[serde(default)]
     pub group: i32,
     pub origin: String,
     pub destination: String,

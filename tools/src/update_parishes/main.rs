@@ -89,14 +89,14 @@ async fn update_parishes(pool: &PgPool) -> Result<()> {
         if stop.parish.is_some() {
             return;
         }
-        let point = geo::Point::new(stop.lon.unwrap(), stop.lat.unwrap());
+        let point = geo::Point::new(stop.lon, stop.lat);
         for (id, name, multipoly) in &polygons {
             if multipoly.contains(&point) {
                 stop_parish_pairs.lock().unwrap().push((stop.id, *id));
                 println!(
                     "Stop {} ({}) is in parish {}",
                     stop.name.as_ref().unwrap_or(
-                        stop.osm_name.as_ref().unwrap_or(&"?".to_string())
+                        stop.name.as_ref().unwrap_or(&"?".to_string())
                     ),
                     stop.id,
                     name
@@ -114,14 +114,13 @@ async fn update_parishes(pool: &PgPool) -> Result<()> {
         if stop.parish.is_some() {
             continue;
         }
-        let point = geo::Point::new(stop.lon.unwrap(), stop.lat.unwrap());
+        let point = geo::Point::new(stop.lon, stop.lat);
         for (id, name, multipoly) in &polygons {
             if multipoly.contains(&point) {
                 sql::update_stop_parish(pool, stop.id, *id).await?;
                 println!(
                     "Stop {} ({}) is in parish {}",
-                    stop.name
-                        .unwrap_or(stop.osm_name.unwrap_or("?".to_string())),
+                    stop.name.unwrap(),
                     stop.id,
                     name
                 );

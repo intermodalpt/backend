@@ -154,14 +154,17 @@ pub(crate) async fn upload_stop_picture(
         &mut transaction,
         user_id,
         &[history::Change::StopPicUpload {
-            pic: pic.clone(),
+            pic: pic.clone().into(),
             stops: stops
                 .into_iter()
-                .map(|stop_id| pics::StopAttrs {
-                    id: *stop_id,
-                    attrs: vec![],
+                .map(|stop_id| {
+                    pics::StopAttrs {
+                        id: *stop_id,
+                        attrs: vec![],
+                    }
+                    .into()
                 })
-                .collect(),
+                .collect::<Vec<history::pics::StopAttrs>>(),
         }],
         None,
     )
@@ -206,8 +209,8 @@ pub(crate) async fn delete_picture(
         &mut transaction,
         author_id,
         &[history::Change::StopPicDeletion {
-            pic,
-            stops: stop_rels,
+            pic: pic.into(),
+            stops: history::vec_into_vec(stop_rels),
         }],
         None,
     )

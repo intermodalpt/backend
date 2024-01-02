@@ -16,7 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use axum::extract::State;
+use axum::extract::{Path, State};
 use axum::Json;
 
 use commons::models::geo;
@@ -32,6 +32,8 @@ pub(crate) async fn get_regions(
 
 pub(crate) async fn get_parishes(
     State(state): State<AppState>,
+    Path(region_id): Path<i32>,
 ) -> Result<Json<Vec<geo::Parish>>, Error> {
+    // TODO filter by region
     Ok(Json(sql::fetch_parishes(&state.pool).await?))
 }

@@ -1,4 +1,4 @@
-use commons::models::history::StopPatch;
+use commons::models::history::stops::StopPatch;
 use commons::models::stops;
 
 #[test]

@@ -48,8 +48,8 @@ pub(crate) mod requests {
         pub(crate) fn derive_patch(
             self,
             stop: &stops::Stop,
-        ) -> history::StopPatch {
-            let mut patch = history::StopPatch::default();
+        ) -> history::stops::StopPatch {
+            let mut patch = history::stops::StopPatch::default();
 
             if self.locality != stop.locality {
                 patch.locality = Some(self.locality.clone());
@@ -62,10 +62,14 @@ pub(crate) mod requests {
             }
 
             if self.a11y.schedules != stop.a11y.schedules {
-                patch.schedules = Some(self.a11y.schedules.clone());
+                patch.schedules = Some(history::opt_vec_into_opt_vec(
+                    self.a11y.schedules.clone(),
+                ));
             }
             if self.a11y.flags != stop.a11y.flags {
-                patch.flags = Some(self.a11y.flags.clone());
+                patch.flags = Some(history::opt_vec_into_opt_vec(
+                    self.a11y.flags.clone(),
+                ));
             }
 
             if self.a11y.has_sidewalk != stop.a11y.has_sidewalk {
@@ -99,7 +103,8 @@ pub(crate) mod requests {
                     Some(self.a11y.has_costumer_support);
             }
             if self.a11y.advertisement_qty != stop.a11y.advertisement_qty {
-                patch.advertisement_qty = Some(self.a11y.advertisement_qty);
+                patch.advertisement_qty =
+                    Some(self.a11y.advertisement_qty.map(Into::into));
             }
 
             if self.a11y.has_crossing != stop.a11y.has_crossing {
@@ -120,13 +125,13 @@ pub(crate) mod requests {
                 != stop.a11y.illumination_strength
             {
                 patch.illumination_strength =
-                    Some(self.a11y.illumination_strength);
+                    Some(self.a11y.illumination_strength.map(Into::into));
             }
             if self.a11y.illumination_position
                 != stop.a11y.illumination_position
             {
                 patch.illumination_position =
-                    Some(self.a11y.illumination_position);
+                    Some(self.a11y.illumination_position.map(Into::into));
             }
             if self.a11y.has_illuminated_path != stop.a11y.has_illuminated_path
             {
@@ -155,22 +160,25 @@ pub(crate) mod requests {
             if self.a11y.parking_visibility_impairment
                 != stop.a11y.parking_visibility_impairment
             {
-                patch.parking_visibility_impairment =
-                    Some(self.a11y.parking_visibility_impairment);
+                patch.parking_visibility_impairment = Some(
+                    self.a11y.parking_visibility_impairment.map(Into::into),
+                );
             }
 
             if self.a11y.parking_local_access_impairment
                 != stop.a11y.parking_local_access_impairment
             {
-                patch.parking_local_access_impairment =
-                    Some(self.a11y.parking_local_access_impairment);
+                patch.parking_local_access_impairment = Some(
+                    self.a11y.parking_local_access_impairment.map(Into::into),
+                );
             }
 
             if self.a11y.parking_area_access_impairment
                 != stop.a11y.parking_area_access_impairment
             {
-                patch.parking_area_access_impairment =
-                    Some(self.a11y.parking_area_access_impairment);
+                patch.parking_area_access_impairment = Some(
+                    self.a11y.parking_area_access_impairment.map(Into::into),
+                );
             }
 
             if self.a11y.tmp_issues != stop.a11y.tmp_issues {

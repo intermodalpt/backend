@@ -53,8 +53,8 @@ pub(crate) mod requests {
         pub fn derive_patch(
             &self,
             route: &routes::Route,
-        ) -> history::RoutePatch {
-            let mut patch = history::RoutePatch::default();
+        ) -> history::routes::RoutePatch {
+            let mut patch = history::routes::RoutePatch::default();
             if self.type_id != route.type_id {
                 patch.type_id = Some(self.type_id);
             }
@@ -110,8 +110,8 @@ pub(crate) mod requests {
         pub fn derive_patch(
             &self,
             subroute: &routes::Subroute,
-        ) -> history::SubroutePatch {
-            let mut patch = history::SubroutePatch::default();
+        ) -> history::routes::SubroutePatch {
+            let mut patch = history::routes::SubroutePatch::default();
             if self.group != subroute.group {
                 patch.group = Some(self.group);
             }
@@ -128,7 +128,7 @@ pub(crate) mod requests {
                 patch.destination = Some(self.destination.clone());
             }
             if self.via != subroute.via {
-                patch.via = Some(self.via.clone());
+                patch.via = Some(history::vec_into_vec(self.via.clone()));
             }
             if self.circular != subroute.circular {
                 patch.circular = Some(self.circular);
@@ -159,8 +159,8 @@ pub(crate) mod requests {
         pub fn derive_patch(
             &self,
             departure: &routes::Departure,
-        ) -> history::DeparturePatch {
-            let mut patch = history::DeparturePatch::default();
+        ) -> history::routes::DeparturePatch {
+            let mut patch = history::routes::DeparturePatch::default();
             if self.time != departure.time {
                 patch.time = Some(self.time);
             }

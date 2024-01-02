@@ -173,8 +173,8 @@ pub(crate) mod requests {
         pub fn derive_patch(
             &self,
             issue: &operators::Issue,
-        ) -> history::IssuePatch {
-            let mut patch = history::IssuePatch::default();
+        ) -> history::operators::IssuePatch {
+            let mut patch = history::operators::IssuePatch::default();
 
             if self.title != issue.title {
                 patch.title = Some(self.title.clone());
@@ -183,13 +183,13 @@ pub(crate) mod requests {
                 patch.message = Some(self.message.clone());
             }
             if self.category != issue.category {
-                patch.category = Some(self.category);
+                patch.category = Some(self.category.into());
             }
             if self.impact != issue.impact {
                 patch.impact = Some(self.impact);
             }
             if self.state != issue.state {
-                patch.state = Some(self.state);
+                patch.state = Some(self.state.into());
             }
             if self.state_justification != issue.state_justification {
                 patch.state_justification =

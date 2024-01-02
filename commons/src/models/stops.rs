@@ -89,9 +89,11 @@ pub struct Stop {
     pub door: Option<String>,
     pub parish: Option<i32>,
     #[schema(example = 38.123_456)]
-    pub lat: Option<f64>,
+    #[serde(default)]
+    pub lat: f64,
     #[schema(example = -9.654_321)]
-    pub lon: Option<f64>,
+    #[serde(default)]
+    pub lon: f64,
     #[serde(default)]
     pub notes: Option<String>,
     #[serde(default)]
@@ -312,7 +314,7 @@ mod test {
         ParkingVisualLimitation, ScheduleType, Stop,
     };
     use super::{Flag, Schedule};
-    use chrono::{NaiveDate, Utc};
+    use chrono::NaiveDate;
 
     #[test]
     fn serialize_deserialize_a11y() {
@@ -460,8 +462,8 @@ mod test {
             street: None,
             door: None,
             parish: None,
-            lat: Some(1.0),
-            lon: Some(2.0),
+            lat: 1.0,
+            lon: 2.0,
             a11y: A11yMeta {
                 schedules: Some(vec![Schedule {
                     code: Some("123".to_string()),

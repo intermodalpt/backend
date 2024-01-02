@@ -1,7 +1,7 @@
-use chrono::{NaiveDate, Utc};
+use chrono::NaiveDate;
 use once_cell::sync::Lazy;
 
-use commons::models::history::StopPatch;
+use commons::models::history::stops::StopPatch;
 use commons::models::stops::{
     A11yMeta, AdvertisementQuantification, AreaParkingLimitation,
     IlluminationPos, IlluminationStrength, LocalParkingLimitation,
@@ -11,7 +11,6 @@ use commons::models::stops::{
 static STOP1: Lazy<Stop> = Lazy::new(|| Stop {
     id: 1,
     name: Some("name".to_string()),
-    osm_name: Some("osm_name".to_string()),
     short_name: Some("short_name".to_string()),
 
     // TODO, continue from here
@@ -19,8 +18,8 @@ static STOP1: Lazy<Stop> = Lazy::new(|| Stop {
     street: Some("street".to_string()),
     door: Some("door".to_string()),
     parish: None,
-    lat: Some(1.0),
-    lon: Some(2.0),
+    lat: 1.0,
+    lon: 2.0,
     a11y: A11yMeta {
         schedules: Some(vec![]),
         flags: Some(vec![]),
@@ -56,8 +55,6 @@ static STOP1: Lazy<Stop> = Lazy::new(|| Stop {
     ),
     tags: vec!["tags".to_string()],
     notes: Some("notes".to_string()),
-    // TODO Deprecate
-    update_date: Utc::now(),
 });
 
 #[test]
@@ -67,7 +64,7 @@ fn keeps_name() {
         ..StopPatch::default()
     };
 
-    patch.drop_noops(&STOP1);
+    assert!(patch.drop_noops(&STOP1).is_ok());
     assert!(!patch.is_empty());
 }
 
@@ -78,7 +75,7 @@ fn drops_name() {
         ..StopPatch::default()
     };
 
-    patch.drop_noops(&STOP1);
+    assert!(patch.drop_noops(&STOP1).is_ok());
     assert!(patch.is_empty());
 }
 
@@ -89,7 +86,7 @@ fn keeps_short_name() {
         ..StopPatch::default()
     };
 
-    patch.drop_noops(&STOP1);
+    assert!(patch.drop_noops(&STOP1).is_ok());
     assert!(!patch.is_empty());
 }
 
@@ -100,7 +97,7 @@ fn drops_short_name() {
         ..StopPatch::default()
     };
 
-    patch.drop_noops(&STOP1);
+    assert!(patch.drop_noops(&STOP1).is_ok());
     assert!(patch.is_empty());
 }
 
@@ -111,7 +108,7 @@ fn keeps_locality() {
         ..StopPatch::default()
     };
 
-    patch.drop_noops(&STOP1);
+    assert!(patch.drop_noops(&STOP1).is_ok());
     assert!(!patch.is_empty());
 }
 
@@ -122,7 +119,7 @@ fn drops_locality() {
         ..StopPatch::default()
     };
 
-    patch.drop_noops(&STOP1);
+    assert!(patch.drop_noops(&STOP1).is_ok());
     assert!(patch.is_empty());
 }
 
@@ -133,7 +130,7 @@ fn keeps_street() {
         ..StopPatch::default()
     };
 
-    patch.drop_noops(&STOP1);
+    assert!(patch.drop_noops(&STOP1).is_ok());
     assert!(!patch.is_empty());
 }
 
@@ -144,7 +141,7 @@ fn drops_street() {
         ..StopPatch::default()
     };
 
-    patch.drop_noops(&STOP1);
+    assert!(patch.drop_noops(&STOP1).is_ok());
     assert!(patch.is_empty());
 }
 
@@ -155,7 +152,7 @@ fn keeps_door() {
         ..StopPatch::default()
     };
 
-    patch.drop_noops(&STOP1);
+    assert!(patch.drop_noops(&STOP1).is_ok());
     assert!(!patch.is_empty());
 }
 
@@ -166,7 +163,7 @@ fn drops_door() {
         ..StopPatch::default()
     };
 
-    patch.drop_noops(&STOP1);
+    assert!(patch.drop_noops(&STOP1).is_ok());
     assert!(patch.is_empty());
 }
 
@@ -177,7 +174,7 @@ fn keeps_schedules() {
         ..StopPatch::default()
     };
 
-    patch.drop_noops(&STOP1);
+    assert!(patch.drop_noops(&STOP1).is_ok());
     assert!(!patch.is_empty());
 }
 
@@ -188,7 +185,7 @@ fn drops_schedules() {
         ..StopPatch::default()
     };
 
-    patch.drop_noops(&STOP1);
+    assert!(patch.drop_noops(&STOP1).is_ok());
     assert!(patch.is_empty());
 }
 #[test]
@@ -198,7 +195,7 @@ fn keeps_flags() {
         ..StopPatch::default()
     };
 
-    patch.drop_noops(&STOP1);
+    assert!(patch.drop_noops(&STOP1).is_ok());
     assert!(!patch.is_empty());
 }
 
@@ -209,7 +206,7 @@ fn drops_flags() {
         ..StopPatch::default()
     };
 
-    patch.drop_noops(&STOP1);
+    assert!(patch.drop_noops(&STOP1).is_ok());
     assert!(patch.is_empty());
 }
 
@@ -220,7 +217,7 @@ fn keeps_has_sidewalk() {
         ..StopPatch::default()
     };
 
-    patch.drop_noops(&STOP1);
+    assert!(patch.drop_noops(&STOP1).is_ok());
     assert!(!patch.is_empty());
 }
 
@@ -231,7 +228,7 @@ fn drops_has_sidewalk() {
         ..StopPatch::default()
     };
 
-    patch.drop_noops(&STOP1);
+    assert!(patch.drop_noops(&STOP1).is_ok());
     assert!(patch.is_empty());
 }
 
@@ -242,7 +239,7 @@ fn keeps_has_sidewalked_path() {
         ..StopPatch::default()
     };
 
-    patch.drop_noops(&STOP1);
+    assert!(patch.drop_noops(&STOP1).is_ok());
     assert!(!patch.is_empty());
 }
 
@@ -253,7 +250,7 @@ fn drops_has_sidewalked_path() {
         ..StopPatch::default()
     };
 
-    patch.drop_noops(&STOP1);
+    assert!(patch.drop_noops(&STOP1).is_ok());
     assert!(patch.is_empty());
 }
 
@@ -264,7 +261,7 @@ fn keeps_verification_level() {
         ..StopPatch::default()
     };
 
-    patch.drop_noops(&STOP1);
+    assert!(patch.drop_noops(&STOP1).is_ok());
     assert!(!patch.is_empty());
 }
 
@@ -275,6 +272,6 @@ fn drops_verification_level() {
         ..StopPatch::default()
     };
 
-    patch.drop_noops(&STOP1);
+    assert!(patch.drop_noops(&STOP1).is_ok());
     assert!(patch.is_empty());
 }

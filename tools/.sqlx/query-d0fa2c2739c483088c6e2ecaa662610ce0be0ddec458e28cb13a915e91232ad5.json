@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, source, name, osm_name, short_name, locality, street, door, lat, lon, external_id,\n    notes, updater, update_date, parish, tags, accessibility_meta,\n    verification_level, service_check_date, infrastructure_check_date\nFROM stops",
+  "query": "SELECT id, name, short_name, locality, street, door, lat, lon, external_id,\n    notes, updater, update_date, parish, tags, accessibility_meta,\n    verification_level, service_check_date, infrastructure_check_date\nFROM stops",
   "describe": {
     "columns": [
       {
@@ -10,96 +10,86 @@
       },
       {
         "ordinal": 1,
-        "name": "source",
-        "type_info": "Varchar"
+        "name": "name",
+        "type_info": "Text"
       },
       {
         "ordinal": 2,
-        "name": "name",
-        "type_info": "Varchar"
+        "name": "short_name",
+        "type_info": "Text"
       },
       {
         "ordinal": 3,
-        "name": "osm_name",
-        "type_info": "Varchar"
+        "name": "locality",
+        "type_info": "Text"
       },
       {
         "ordinal": 4,
-        "name": "short_name",
-        "type_info": "Varchar"
+        "name": "street",
+        "type_info": "Text"
       },
       {
         "ordinal": 5,
-        "name": "locality",
-        "type_info": "Varchar"
+        "name": "door",
+        "type_info": "Text"
       },
       {
         "ordinal": 6,
-        "name": "street",
-        "type_info": "Varchar"
-      },
-      {
-        "ordinal": 7,
-        "name": "door",
-        "type_info": "Varchar"
-      },
-      {
-        "ordinal": 8,
         "name": "lat",
         "type_info": "Float8"
       },
       {
-        "ordinal": 9,
+        "ordinal": 7,
         "name": "lon",
         "type_info": "Float8"
       },
       {
-        "ordinal": 10,
+        "ordinal": 8,
         "name": "external_id",
         "type_info": "Text"
       },
       {
-        "ordinal": 11,
+        "ordinal": 9,
         "name": "notes",
-        "type_info": "Varchar"
+        "type_info": "Text"
       },
       {
-        "ordinal": 12,
+        "ordinal": 10,
         "name": "updater",
         "type_info": "Int4"
       },
       {
-        "ordinal": 13,
+        "ordinal": 11,
         "name": "update_date",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 14,
+        "ordinal": 12,
         "name": "parish",
         "type_info": "Int4"
       },
       {
-        "ordinal": 15,
+        "ordinal": 13,
         "name": "tags",
-        "type_info": "VarcharArray"
+        "type_info": "TextArray"
       },
       {
-        "ordinal": 16,
+        "ordinal": 14,
         "name": "accessibility_meta",
         "type_info": "Jsonb"
       },
       {
-        "ordinal": 17,
+        "ordinal": 15,
         "name": "verification_level",
         "type_info": "Int2"
       },
       {
-        "ordinal": 18,
+        "ordinal": 16,
         "name": "service_check_date",
         "type_info": "Date"
       },
       {
-        "ordinal": 19,
+        "ordinal": 17,
         "name": "infrastructure_check_date",
         "type_info": "Date"
       }
@@ -114,10 +104,8 @@
       true,
       true,
       true,
-      true,
-      true,
-      true,
-      true,
+      false,
+      false,
       false,
       true,
       false,
@@ -130,5 +118,5 @@
       true
     ]
   },
-  "hash": "f9a8de2cf3b3ec177d91a85371783f942ad71f023b375a17fc4d4e5cf0bd1a47"
+  "hash": "d0fa2c2739c483088c6e2ecaa662610ce0be0ddec458e28cb13a915e91232ad5"
 }

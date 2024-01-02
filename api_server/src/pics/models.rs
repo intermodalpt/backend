@@ -20,7 +20,7 @@ pub(crate) mod requests {
     use serde::Deserialize;
     use utoipa::ToSchema;
 
-    use commons::models::{history, pics};
+    use commons::models::{history::pics as history, pics};
 
     #[derive(Debug, Deserialize, ToSchema)]
     pub struct ChangeStopPic {

@@ -21,8 +21,7 @@ use std::collections::{HashMap, HashSet};
 
 use sqlx::PgPool;
 
-use commons::models::history;
-use commons::models::stops;
+use commons::models::{history, stops};
 
 use super::sql;
 use crate::errors::Error;
@@ -30,20 +29,23 @@ use crate::errors::Error;
 pub(crate) fn summarize_stop_meta_contributions(
     contributions: Vec<history::Contribution>,
 ) -> Vec<stops::Stop> {
-    let mut modified_stops = HashMap::new();
+    let mut modified_stops: HashMap<i32, stops::Stop> = HashMap::new();
 
     for contribution in contributions {
         match contribution.change {
-            history::Change::StopUpdate {
-                mut original,
-                patch,
-            } => match modified_stops.entry(original.id) {
-                Entry::Occupied(mut entry) => patch.apply(entry.get_mut()),
-                Entry::Vacant(entry) => {
-                    patch.apply(&mut original);
-                    entry.insert(original);
+            history::Change::StopUpdate { original, patch } => {
+                match modified_stops.entry(original.id) {
+                    Entry::Occupied(mut entry) => {
+                        let _ = patch.apply(entry.get_mut());
+                    }
+                    Entry::Vacant(entry) => {
+                        if let Ok(mut stop) = original.try_into() {
+                            let _ = patch.apply(&mut stop);
+                            entry.insert(stop);
+                        }
+                    }
                 }
-            },
+            }
             _ => {
                 unreachable!()
             }
@@ -88,7 +90,7 @@ pub(crate) async fn accept_contribution(
             }
             let stop = stops::Stop::from(stop.unwrap());
 
-            *original = stop.clone();
+            *original = stop.clone().into();
             // FIXME This we might want to check if the original has been patched
             // and if that conflicts with the patch
             let stop = accept_stop_contribution(stop, patch, verify, ignored)?;
@@ -132,7 +134,7 @@ pub(crate) async fn accept_contribution(
 
 pub(crate) fn accept_stop_contribution(
     mut current: stops::Stop,
-    patch: &mut history::StopPatch,
+    patch: &mut history::stops::StopPatch,
     verify: bool,
     ignored: &Option<String>,
 ) -> Result<stops::Stop, Error> {
@@ -151,7 +153,7 @@ pub(crate) fn accept_stop_contribution(
         patch.deverify(current.verification_level.into());
     }
 
-    patch.drop_noops(&current);
+    patch.drop_noops(&current)?;
 
     if patch.is_empty() {
         // TODO Prevent patches from reaching this state
@@ -160,7 +162,7 @@ pub(crate) fn accept_stop_contribution(
         ));
     }
 
-    patch.apply(&mut current);
+    patch.apply(&mut current)?;
 
     Ok(current)
 }

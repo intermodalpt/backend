@@ -60,8 +60,8 @@ pub(crate) struct XMLTag {
 pub(crate) struct Stop {
     pub id: i32,
     pub name: Option<String>,
-    pub lat: Option<f64>,
-    pub lon: Option<f64>,
+    pub lat: f64,
+    pub lon: f64,
 
     pub osm_name: Option<String>,
     pub external_id: String,
@@ -73,8 +73,8 @@ impl From<XmlNode> for Stop {
             id: -1,
             name: None,
             osm_name: None,
-            lat: Some(node.lat),
-            lon: Some(node.lon),
+            lat: node.lat,
+            lon: node.lon,
             external_id: node.id.to_string(),
         };
 

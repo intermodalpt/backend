@@ -18,14 +18,13 @@
 
 use sqlx::postgres::PgPool;
 
-use commons::models::geo;
-use commons::models::stops;
+use commons::models::{geo, stops};
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 pub(crate) async fn fetch_stops(pool: &PgPool) -> Result<Vec<stops::Stop>> {
     sqlx::query!(
-"SELECT id, source, name, osm_name, short_name, locality, street, door, lat, lon, external_id,
+"SELECT id, name, short_name, locality, street, door, lat, lon, external_id,
     notes, updater, update_date, parish, tags, accessibility_meta,
     verification_level, service_check_date, infrastructure_check_date
 FROM stops")
@@ -36,7 +35,6 @@ FROM stops")
         Ok(stops::Stop {
             id: r.id,
             name: r.name,
-            osm_name: r.osm_name,
             short_name: r.short_name,
             locality: r.locality,
             street: r.street,
@@ -44,7 +42,6 @@ FROM stops")
             lat: r.lat,
             lon: r.lon,
             notes: r.notes,
-            update_date: r.update_date,
             parish: r.parish,
             tags: r.tags,
             a11y: serde_json::from_value(r.accessibility_meta)?,

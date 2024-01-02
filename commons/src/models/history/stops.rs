@@ -1,6 +1,6 @@
 /*
     Intermodal, transportation information aggregator
-    Copyright (C) 2022 - 2023  Cláudio Pereira
+    Copyright (C) 2023  Cláudio Pereira
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -16,107 +16,620 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+use chrono::NaiveDate;
+use serde::{Deserialize, Serialize};
+use serde_repr::{Deserialize_repr, Serialize_repr};
 use std::collections::HashSet;
 
-use chrono::{DateTime, Local, NaiveDate};
-use serde::{Deserialize, Serialize};
+use crate::errors::Error;
+use crate::models::stops as current;
 
-use super::operators;
-use super::pics;
-use super::routes;
-use super::stops;
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Contribution {
-    pub id: i64,
-    pub author_id: i32,
-    pub change: Change,
-    pub submission_date: DateTime<Local>,
-    pub accepted: Option<bool>,
-    pub evaluator_id: Option<i32>,
-    pub evaluation_date: Option<DateTime<Local>>,
-    pub comment: Option<String>,
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize_repr, Deserialize_repr)]
+pub enum IlluminationPos {
+    Indirect = 0,
+    Direct = 10,
+    Own = 20,
 }
 
-#[derive(Debug, Serialize)]
-pub struct Changeset {
-    pub id: i64,
-    pub author_id: i32,
-    pub changes: Vec<Change>,
-    pub datetime: DateTime<Local>,
-    pub contribution_id: Option<i64>,
+impl From<current::IlluminationPos> for IlluminationPos {
+    fn from(pos: current::IlluminationPos) -> Self {
+        match pos {
+            current::IlluminationPos::Indirect => IlluminationPos::Indirect,
+            current::IlluminationPos::Direct => IlluminationPos::Direct,
+            current::IlluminationPos::Own => IlluminationPos::Own,
+        }
+    }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub enum Change {
-    // Hint: Do not to change these names without a corresponding migration
-    // as they'll be stored as strings in the database
-    StopCreation {
-        data: stops::Stop,
-    },
-    StopUpdate {
-        original: stops::Stop,
-        patch: StopPatch,
-    },
-    StopDeletion {
-        data: stops::Stop,
-    },
-    RouteCreation {
-        data: routes::Route,
-    },
-    RouteUpdate {
-        original: routes::Route,
-        patch: RoutePatch,
-    },
-    RouteDeletion {
-        data: routes::Route,
-    },
-    SubrouteCreation {
-        data: routes::Subroute,
-    },
-    SubrouteUpdate {
-        original: routes::Subroute,
-        patch: SubroutePatch,
-    },
-    SubrouteDeletion {
-        #[serde(alias = "data")]
-        subroute: routes::Subroute,
-        stops: Vec<i32>,
-        departures: Vec<routes::Departure>,
-    },
-    DepartureCreation {
-        data: routes::Departure,
-    },
-    DepartureUpdate {
-        original: routes::Departure,
-        patch: DeparturePatch,
-    },
-    DepartureDeletion {
-        data: routes::Departure,
-    },
-    StopPicUpload {
-        pic: pics::StopPic,
-        stops: Vec<pics::StopAttrs>,
-    },
-    StopPicMetaUpdate {
-        // TODO drop the Option when the mess of unlinked updates gets sorted
-        pic_id: Option<i32>,
-        original_meta: pics::StopPicDynMeta,
-        original_stops: Vec<pics::StopAttrs>,
-        meta_patch: StopPicturePatch,
-        stops: Vec<pics::StopAttrs>,
-    },
-    StopPicDeletion {
-        pic: pics::StopPic,
-        stops: Vec<pics::StopAttrs>,
-    },
-    IssueCreation {
-        data: operators::Issue,
-    },
-    IssueUpdate {
-        original: operators::Issue,
-        patch: IssuePatch,
-    },
+impl TryFrom<IlluminationPos> for current::IlluminationPos {
+    type Error = Error;
+
+    fn try_from(pos: IlluminationPos) -> Result<Self, Self::Error> {
+        match pos {
+            IlluminationPos::Indirect => Ok(current::IlluminationPos::Indirect),
+            IlluminationPos::Direct => Ok(current::IlluminationPos::Direct),
+            IlluminationPos::Own => Ok(current::IlluminationPos::Own),
+        }
+    }
+}
+
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize_repr, Deserialize_repr)]
+pub enum IlluminationStrength {
+    None = 0,
+    Low = 1,
+    Medium = 3,
+    High = 5,
+}
+
+impl From<current::IlluminationStrength> for IlluminationStrength {
+    fn from(strength: current::IlluminationStrength) -> Self {
+        match strength {
+            current::IlluminationStrength::None => IlluminationStrength::None,
+            current::IlluminationStrength::Low => IlluminationStrength::Low,
+            current::IlluminationStrength::Medium => {
+                IlluminationStrength::Medium
+            }
+            current::IlluminationStrength::High => IlluminationStrength::High,
+        }
+    }
+}
+
+impl TryFrom<IlluminationStrength> for current::IlluminationStrength {
+    type Error = Error;
+
+    fn try_from(strength: IlluminationStrength) -> Result<Self, Self::Error> {
+        match strength {
+            IlluminationStrength::None => {
+                Ok(current::IlluminationStrength::None)
+            }
+            IlluminationStrength::Low => Ok(current::IlluminationStrength::Low),
+            IlluminationStrength::Medium => {
+                Ok(current::IlluminationStrength::Medium)
+            }
+            IlluminationStrength::High => {
+                Ok(current::IlluminationStrength::High)
+            }
+        }
+    }
+}
+
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize_repr, Deserialize_repr)]
+pub enum AdvertisementQuantification {
+    None = 0,
+    Few = 2,
+    Many = 4,
+    Intrusive = 6,
+}
+
+impl From<current::AdvertisementQuantification>
+    for AdvertisementQuantification
+{
+    fn from(quantification: current::AdvertisementQuantification) -> Self {
+        match quantification {
+            current::AdvertisementQuantification::None => {
+                AdvertisementQuantification::None
+            }
+            current::AdvertisementQuantification::Few => {
+                AdvertisementQuantification::Few
+            }
+            current::AdvertisementQuantification::Many => {
+                AdvertisementQuantification::Many
+            }
+            current::AdvertisementQuantification::Intrusive => {
+                AdvertisementQuantification::Intrusive
+            }
+        }
+    }
+}
+
+impl TryFrom<AdvertisementQuantification>
+    for current::AdvertisementQuantification
+{
+    type Error = Error;
+
+    fn try_from(
+        quantification: AdvertisementQuantification,
+    ) -> Result<Self, Self::Error> {
+        match quantification {
+            AdvertisementQuantification::None => {
+                Ok(current::AdvertisementQuantification::None)
+            }
+            AdvertisementQuantification::Few => {
+                Ok(current::AdvertisementQuantification::Few)
+            }
+            AdvertisementQuantification::Many => {
+                Ok(current::AdvertisementQuantification::Many)
+            }
+            AdvertisementQuantification::Intrusive => {
+                Ok(current::AdvertisementQuantification::Intrusive)
+            }
+        }
+    }
+}
+
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize_repr, Deserialize_repr)]
+pub enum ParkingVisualLimitation {
+    None = 0,
+    Little = 2,
+    Some = 4,
+    Very = 6,
+}
+
+impl From<current::ParkingVisualLimitation> for ParkingVisualLimitation {
+    fn from(limitation: current::ParkingVisualLimitation) -> Self {
+        match limitation {
+            current::ParkingVisualLimitation::None => {
+                ParkingVisualLimitation::None
+            }
+            current::ParkingVisualLimitation::Little => {
+                ParkingVisualLimitation::Little
+            }
+            current::ParkingVisualLimitation::Some => {
+                ParkingVisualLimitation::Some
+            }
+            current::ParkingVisualLimitation::Very => {
+                ParkingVisualLimitation::Very
+            }
+        }
+    }
+}
+
+impl TryFrom<ParkingVisualLimitation> for current::ParkingVisualLimitation {
+    type Error = Error;
+
+    fn try_from(
+        limitation: ParkingVisualLimitation,
+    ) -> Result<Self, Self::Error> {
+        match limitation {
+            ParkingVisualLimitation::None => {
+                Ok(current::ParkingVisualLimitation::None)
+            }
+            ParkingVisualLimitation::Little => {
+                Ok(current::ParkingVisualLimitation::Little)
+            }
+            ParkingVisualLimitation::Some => {
+                Ok(current::ParkingVisualLimitation::Some)
+            }
+            ParkingVisualLimitation::Very => {
+                Ok(current::ParkingVisualLimitation::Very)
+            }
+        }
+    }
+}
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize_repr, Deserialize_repr)]
+pub enum LocalParkingLimitation {
+    None = 0,
+    Low = 2,
+    Medium = 4,
+    High = 6,
+}
+
+impl From<current::LocalParkingLimitation> for LocalParkingLimitation {
+    fn from(limitation: current::LocalParkingLimitation) -> Self {
+        match limitation {
+            current::LocalParkingLimitation::None => {
+                LocalParkingLimitation::None
+            }
+            current::LocalParkingLimitation::Low => LocalParkingLimitation::Low,
+            current::LocalParkingLimitation::Medium => {
+                LocalParkingLimitation::Medium
+            }
+            current::LocalParkingLimitation::High => {
+                LocalParkingLimitation::High
+            }
+        }
+    }
+}
+
+impl TryFrom<LocalParkingLimitation> for current::LocalParkingLimitation {
+    type Error = Error;
+
+    fn try_from(
+        limitation: LocalParkingLimitation,
+    ) -> Result<Self, Self::Error> {
+        match limitation {
+            LocalParkingLimitation::None => {
+                Ok(current::LocalParkingLimitation::None)
+            }
+            LocalParkingLimitation::Low => {
+                Ok(current::LocalParkingLimitation::Low)
+            }
+            LocalParkingLimitation::Medium => {
+                Ok(current::LocalParkingLimitation::Medium)
+            }
+            LocalParkingLimitation::High => {
+                Ok(current::LocalParkingLimitation::High)
+            }
+        }
+    }
+}
+
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize_repr, Deserialize_repr)]
+pub enum AreaParkingLimitation {
+    None = 0,
+    Low = 2,
+    Medium = 4,
+    High = 6,
+}
+
+impl From<current::AreaParkingLimitation> for AreaParkingLimitation {
+    fn from(limitation: current::AreaParkingLimitation) -> Self {
+        match limitation {
+            current::AreaParkingLimitation::None => AreaParkingLimitation::None,
+            current::AreaParkingLimitation::Low => AreaParkingLimitation::Low,
+            current::AreaParkingLimitation::Medium => {
+                AreaParkingLimitation::Medium
+            }
+            current::AreaParkingLimitation::High => AreaParkingLimitation::High,
+        }
+    }
+}
+
+impl TryFrom<AreaParkingLimitation> for current::AreaParkingLimitation {
+    type Error = Error;
+
+    fn try_from(
+        limitation: AreaParkingLimitation,
+    ) -> Result<Self, Self::Error> {
+        match limitation {
+            AreaParkingLimitation::None => {
+                Ok(current::AreaParkingLimitation::None)
+            }
+            AreaParkingLimitation::Low => {
+                Ok(current::AreaParkingLimitation::Low)
+            }
+            AreaParkingLimitation::Medium => {
+                Ok(current::AreaParkingLimitation::Medium)
+            }
+            AreaParkingLimitation::High => {
+                Ok(current::AreaParkingLimitation::High)
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Stop {
+    pub id: i32,
+    pub name: Option<String>,
+    pub short_name: Option<String>,
+    pub locality: Option<String>,
+    pub street: Option<String>,
+    pub door: Option<String>,
+    pub parish: Option<i32>,
+    pub lat: Option<f64>,
+    pub lon: Option<f64>,
+    pub notes: Option<String>,
+    pub tags: Vec<String>,
+    #[serde(flatten)]
+    pub a11y: A11yMeta,
+    #[serde(default)]
+    pub verification_level: u8,
+
+    pub service_check_date: Option<NaiveDate>,
+    pub infrastructure_check_date: Option<NaiveDate>,
+}
+
+impl From<current::Stop> for Stop {
+    fn from(stop: current::Stop) -> Self {
+        Stop {
+            id: stop.id,
+            name: stop.name,
+            short_name: stop.short_name,
+            locality: stop.locality,
+            street: stop.street,
+            door: stop.door,
+            parish: stop.parish,
+            lat: Some(stop.lat),
+            lon: Some(stop.lon),
+            notes: stop.notes,
+            tags: stop.tags,
+            a11y: stop.a11y.into(),
+            verification_level: stop.verification_level,
+            service_check_date: stop.service_check_date,
+            infrastructure_check_date: stop.infrastructure_check_date,
+        }
+    }
+}
+
+impl TryFrom<Stop> for current::Stop {
+    type Error = Error;
+
+    fn try_from(stop: Stop) -> Result<Self, Self::Error> {
+        Ok(current::Stop {
+            id: stop.id,
+            name: stop.name,
+            short_name: stop.short_name,
+            locality: stop.locality,
+            street: stop.street,
+            door: stop.door,
+            parish: stop.parish,
+            lat: stop.lat.ok_or_else(|| Error::PatchingFailure {
+                field: "lat",
+                value: "None".to_string(),
+            })?,
+            lon: stop.lon.ok_or_else(|| Error::PatchingFailure {
+                field: "lon",
+                value: "None".to_string(),
+            })?,
+            notes: stop.notes,
+            tags: stop.tags,
+            a11y: stop.a11y.try_into()?,
+            verification_level: stop.verification_level,
+            service_check_date: stop.service_check_date,
+            infrastructure_check_date: stop.infrastructure_check_date,
+        })
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct A11yMeta {
+    pub schedules: Option<Vec<Schedule>>,
+    pub flags: Option<Vec<Flag>>,
+
+    // Amenities fields
+    pub has_sidewalk: Option<bool>,
+    pub has_sidewalked_path: Option<bool>,
+    pub has_shelter: Option<bool>,
+    pub has_cover: Option<bool>,
+    pub has_bench: Option<bool>,
+    pub has_trash_can: Option<bool>,
+    pub has_waiting_times: Option<bool>,
+    pub has_ticket_seller: Option<bool>,
+    pub has_costumer_support: Option<bool>,
+    pub advertisement_qty: Option<AdvertisementQuantification>,
+
+    // Access fields
+    pub has_crossing: Option<bool>,
+    pub has_wide_access: Option<bool>,
+    pub has_flat_access: Option<bool>,
+    pub has_tactile_access: Option<bool>,
+
+    // Visibility fields
+    pub illumination_strength: Option<IlluminationStrength>,
+    pub illumination_position: Option<IlluminationPos>,
+    pub has_illuminated_path: Option<bool>,
+    pub has_visibility_from_within: Option<bool>,
+    pub has_visibility_from_area: Option<bool>,
+    pub is_visible_from_outside: Option<bool>,
+
+    // Parking fields
+    pub parking_visibility_impairment: Option<ParkingVisualLimitation>,
+    pub parking_local_access_impairment: Option<LocalParkingLimitation>,
+    pub parking_area_access_impairment: Option<AreaParkingLimitation>,
+
+    #[serde(default)]
+    pub tmp_issues: Vec<String>,
+}
+
+impl From<current::A11yMeta> for A11yMeta {
+    fn from(a11y: current::A11yMeta) -> Self {
+        A11yMeta {
+            schedules: a11y.schedules.map(|schedules| {
+                schedules.into_iter().map(Into::into).collect::<Vec<_>>()
+            }),
+            flags: a11y.flags.map(|flags| {
+                flags.into_iter().map(Into::into).collect::<Vec<_>>()
+            }),
+            has_sidewalk: a11y.has_sidewalk,
+            has_sidewalked_path: a11y.has_sidewalked_path,
+            has_shelter: a11y.has_shelter,
+            has_cover: a11y.has_cover,
+            has_bench: a11y.has_bench,
+            has_trash_can: a11y.has_trash_can,
+            has_waiting_times: a11y.has_waiting_times,
+            has_ticket_seller: a11y.has_ticket_seller,
+            has_costumer_support: a11y.has_costumer_support,
+            advertisement_qty: a11y.advertisement_qty.map(|qty| qty.into()),
+            has_crossing: a11y.has_crossing,
+            has_wide_access: a11y.has_wide_access,
+            has_flat_access: a11y.has_flat_access,
+            has_tactile_access: a11y.has_tactile_access,
+            illumination_strength: a11y.illumination_strength.map(|s| s.into()),
+            illumination_position: a11y.illumination_position.map(|p| p.into()),
+            has_illuminated_path: a11y.has_illuminated_path,
+            has_visibility_from_within: a11y.has_visibility_from_within,
+            has_visibility_from_area: a11y.has_visibility_from_area,
+            is_visible_from_outside: a11y.is_visible_from_outside,
+            parking_visibility_impairment: a11y
+                .parking_visibility_impairment
+                .map(|v| v.into()),
+            parking_local_access_impairment: a11y
+                .parking_local_access_impairment
+                .map(|v| v.into()),
+            parking_area_access_impairment: a11y
+                .parking_area_access_impairment
+                .map(|v| v.into()),
+            tmp_issues: a11y.tmp_issues,
+        }
+    }
+}
+
+impl TryFrom<A11yMeta> for current::A11yMeta {
+    type Error = Error;
+
+    fn try_from(a11y: A11yMeta) -> Result<Self, Self::Error> {
+        Ok(current::A11yMeta {
+            schedules: super::opt_vec_try_into(a11y.schedules)?,
+            flags: super::opt_vec_try_into(a11y.flags)?,
+            has_sidewalk: a11y.has_sidewalk,
+            has_sidewalked_path: a11y.has_sidewalked_path,
+            has_shelter: a11y.has_shelter,
+            has_cover: a11y.has_cover,
+            has_bench: a11y.has_bench,
+            has_trash_can: a11y.has_trash_can,
+            has_waiting_times: a11y.has_waiting_times,
+            has_ticket_seller: a11y.has_ticket_seller,
+            has_costumer_support: a11y.has_costumer_support,
+            advertisement_qty: a11y
+                .advertisement_qty
+                .map(|qty| qty.try_into())
+                .transpose()?,
+            has_crossing: a11y.has_crossing,
+            has_wide_access: a11y.has_wide_access,
+            has_flat_access: a11y.has_flat_access,
+            has_tactile_access: a11y.has_tactile_access,
+            illumination_strength: a11y
+                .illumination_strength
+                .map(|s| s.try_into())
+                .transpose()?,
+            illumination_position: a11y
+                .illumination_position
+                .map(|p| p.try_into())
+                .transpose()?,
+            has_illuminated_path: a11y.has_illuminated_path,
+            has_visibility_from_within: a11y.has_visibility_from_within,
+            has_visibility_from_area: a11y.has_visibility_from_area,
+            is_visible_from_outside: a11y.is_visible_from_outside,
+            parking_visibility_impairment: a11y
+                .parking_visibility_impairment
+                .map(|v| v.try_into())
+                .transpose()?,
+            parking_local_access_impairment: a11y
+                .parking_local_access_impairment
+                .map(|v| v.try_into())
+                .transpose()?,
+            parking_area_access_impairment: a11y
+                .parking_area_access_impairment
+                .map(|v| v.try_into())
+                .transpose()?,
+            tmp_issues: a11y.tmp_issues,
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Flag {
+    pub id: String,
+    pub name: Option<String>,
+    pub route_codes: Vec<String>,
+}
+
+impl From<current::Flag> for Flag {
+    fn from(flag: current::Flag) -> Self {
+        Flag {
+            id: flag.id,
+            name: flag.name,
+            route_codes: flag.route_codes,
+        }
+    }
+}
+
+impl TryFrom<Flag> for current::Flag {
+    type Error = Error;
+
+    fn try_from(flag: Flag) -> Result<Self, Self::Error> {
+        Ok(current::Flag {
+            id: flag.id,
+            name: flag.name,
+            route_codes: flag.route_codes,
+        })
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ScheduleType {
+    Origin,
+    Prediction,
+    Frequency,
+}
+
+impl From<current::ScheduleType> for ScheduleType {
+    fn from(schedule_type: current::ScheduleType) -> Self {
+        match schedule_type {
+            current::ScheduleType::Origin => ScheduleType::Origin,
+            current::ScheduleType::Prediction => ScheduleType::Prediction,
+            current::ScheduleType::Frequency => ScheduleType::Frequency,
+        }
+    }
+}
+
+impl TryFrom<ScheduleType> for current::ScheduleType {
+    type Error = Error;
+
+    fn try_from(schedule_type: ScheduleType) -> Result<Self, Self::Error> {
+        match schedule_type {
+            ScheduleType::Origin => Ok(current::ScheduleType::Origin),
+            ScheduleType::Prediction => Ok(current::ScheduleType::Prediction),
+            ScheduleType::Frequency => Ok(current::ScheduleType::Frequency),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Schedule {
+    pub code: Option<String>,
+    pub discriminator: Option<String>,
+    #[serde(rename = "type")]
+    pub schedule_type: ScheduleType,
+}
+
+impl From<current::Schedule> for Schedule {
+    fn from(schedule: current::Schedule) -> Self {
+        Schedule {
+            code: schedule.code,
+            discriminator: schedule.discriminator,
+            schedule_type: schedule.schedule_type.into(),
+        }
+    }
+}
+
+impl TryFrom<Schedule> for current::Schedule {
+    type Error = Error;
+
+    fn try_from(schedule: Schedule) -> Result<Self, Self::Error> {
+        Ok(current::Schedule {
+            code: schedule.code,
+            discriminator: schedule.discriminator,
+            schedule_type: schedule.schedule_type.try_into()?,
+        })
+    }
+}
+
+#[derive(Eq, PartialEq, Debug, Copy, Clone)]
+pub enum Verification {
+    NotVerified = 0,
+    Wrong = 1,
+    Likely = 2,
+    Verified = 3,
+}
+
+impl From<current::Verification> for Verification {
+    fn from(verification: current::Verification) -> Self {
+        match verification {
+            current::Verification::NotVerified => Verification::NotVerified,
+            current::Verification::Wrong => Verification::Wrong,
+            current::Verification::Likely => Verification::Likely,
+            current::Verification::Verified => Verification::Verified,
+        }
+    }
+}
+
+impl TryFrom<Verification> for current::Verification {
+    type Error = Error;
+
+    fn try_from(verification: Verification) -> Result<Self, Self::Error> {
+        match verification {
+            Verification::NotVerified => Ok(current::Verification::NotVerified),
+            Verification::Wrong => Ok(current::Verification::Wrong),
+            Verification::Likely => Ok(current::Verification::Likely),
+            Verification::Verified => Ok(current::Verification::Verified),
+        }
+    }
+}
+
+#[derive(Eq, PartialEq, Debug, Copy, Clone)]
+pub struct StopVerification {
+    pub position: Verification,
+    pub service: Verification,
+    pub infrastructure: Verification,
 }
 
 #[allow(clippy::option_option)]
@@ -158,13 +671,13 @@ pub struct StopPatch {
         skip_serializing_if = "Option::is_none",
         with = "::serde_with::rust::double_option"
     )]
-    pub schedules: Option<Option<Vec<stops::Schedule>>>,
+    pub schedules: Option<Option<Vec<Schedule>>>,
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
         with = "::serde_with::rust::double_option"
     )]
-    pub flags: Option<Option<Vec<stops::Flag>>>,
+    pub flags: Option<Option<Vec<Flag>>>,
 
     #[serde(
         default,
@@ -225,7 +738,7 @@ pub struct StopPatch {
         skip_serializing_if = "Option::is_none",
         with = "::serde_with::rust::double_option"
     )]
-    pub advertisement_qty: Option<Option<stops::AdvertisementQuantification>>,
+    pub advertisement_qty: Option<Option<AdvertisementQuantification>>,
 
     #[serde(
         default,
@@ -256,13 +769,13 @@ pub struct StopPatch {
         skip_serializing_if = "Option::is_none",
         with = "::serde_with::rust::double_option"
     )]
-    pub illumination_strength: Option<Option<stops::IlluminationStrength>>,
+    pub illumination_strength: Option<Option<IlluminationStrength>>,
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
         with = "::serde_with::rust::double_option"
     )]
-    pub illumination_position: Option<Option<stops::IlluminationPos>>,
+    pub illumination_position: Option<Option<IlluminationPos>>,
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
@@ -293,22 +806,19 @@ pub struct StopPatch {
         skip_serializing_if = "Option::is_none",
         with = "::serde_with::rust::double_option"
     )]
-    pub parking_visibility_impairment:
-        Option<Option<stops::ParkingVisualLimitation>>,
+    pub parking_visibility_impairment: Option<Option<ParkingVisualLimitation>>,
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
         with = "::serde_with::rust::double_option"
     )]
-    pub parking_local_access_impairment:
-        Option<Option<stops::LocalParkingLimitation>>,
+    pub parking_local_access_impairment: Option<Option<LocalParkingLimitation>>,
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
         with = "::serde_with::rust::double_option"
     )]
-    pub parking_area_access_impairment:
-        Option<Option<stops::AreaParkingLimitation>>,
+    pub parking_area_access_impairment: Option<Option<AreaParkingLimitation>>,
 
     pub tmp_issues: Option<Vec<String>>,
     pub tags: Option<Vec<String>>,
@@ -331,6 +841,7 @@ pub struct StopPatch {
         with = "::serde_with::rust::double_option"
     )]
     pub infrastructure_check_date: Option<Option<NaiveDate>>,
+    #[serde(default)]
     pub verification_level: Option<u8>,
 }
 
@@ -375,7 +886,7 @@ impl StopPatch {
             && self.verification_level.is_none()
     }
 
-    pub fn apply(&self, stop: &mut stops::Stop) {
+    pub fn apply(&self, stop: &mut current::Stop) -> Result<(), Error> {
         if let Some(name) = self.name.clone() {
             stop.name = name;
         }
@@ -392,10 +903,17 @@ impl StopPatch {
             stop.door = door;
         }
         if let Some(schedules) = self.schedules.clone() {
-            stop.a11y.schedules = schedules;
+            stop.a11y.schedules = schedules
+                .map(|schedules| {
+                    schedules
+                        .into_iter()
+                        .map(TryInto::try_into)
+                        .collect::<Result<Vec<_>, Error>>()
+                })
+                .transpose()?;
         }
         if let Some(flags) = self.flags.clone() {
-            stop.a11y.flags = flags;
+            stop.a11y.flags = super::opt_vec_try_into(flags)?;
         }
 
         if let Some(has_sidewalk) = self.has_sidewalk {
@@ -426,7 +944,8 @@ impl StopPatch {
             stop.a11y.has_costumer_support = has_costumer_support;
         }
         if let Some(advertisement_qty) = self.advertisement_qty {
-            stop.a11y.advertisement_qty = advertisement_qty;
+            stop.a11y.advertisement_qty =
+                advertisement_qty.map(TryInto::try_into).transpose()?;
         }
         if let Some(has_crossing) = self.has_crossing {
             stop.a11y.has_crossing = has_crossing;
@@ -441,10 +960,12 @@ impl StopPatch {
             stop.a11y.has_tactile_access = has_tactile_access;
         }
         if let Some(illumination_strength) = self.illumination_strength {
-            stop.a11y.illumination_strength = illumination_strength;
+            stop.a11y.illumination_strength =
+                illumination_strength.map(TryInto::try_into).transpose()?;
         }
         if let Some(illumination_position) = self.illumination_position {
-            stop.a11y.illumination_position = illumination_position;
+            stop.a11y.illumination_position =
+                illumination_position.map(TryInto::try_into).transpose()?;
         }
         if let Some(has_illuminated_path) = self.has_illuminated_path {
             stop.a11y.has_illuminated_path = has_illuminated_path;
@@ -464,19 +985,25 @@ impl StopPatch {
             self.parking_visibility_impairment
         {
             stop.a11y.parking_visibility_impairment =
-                parking_visibility_impairment;
+                parking_visibility_impairment
+                    .map(TryInto::try_into)
+                    .transpose()?;
         }
         if let Some(parking_local_access_impairment) =
             self.parking_local_access_impairment
         {
             stop.a11y.parking_local_access_impairment =
-                parking_local_access_impairment;
+                parking_local_access_impairment
+                    .map(TryInto::try_into)
+                    .transpose()?;
         }
         if let Some(parking_area_access_impairment) =
             self.parking_area_access_impairment
         {
             stop.a11y.parking_area_access_impairment =
-                parking_area_access_impairment;
+                parking_area_access_impairment
+                    .map(TryInto::try_into)
+                    .transpose()?;
         }
         if let Some(tmp_issues) = self.tmp_issues.clone() {
             stop.a11y.tmp_issues = tmp_issues;
@@ -495,11 +1022,12 @@ impl StopPatch {
         }
         if let Some(infrastructure_check_date) = self.infrastructure_check_date
         {
-            stop.infrastructure_check_date = infrastructure_check_date;
+            stop.infrastructure_check_date = infrastructure_check_date.into();
         }
+        Ok(())
     }
 
-    pub fn drop_noops(&mut self, stop: &stops::Stop) {
+    pub fn drop_noops(&mut self, stop: &current::Stop) -> Result<(), Error> {
         if let Some(name) = &self.name {
             if name == &stop.name {
                 self.name = None;
@@ -526,12 +1054,20 @@ impl StopPatch {
             }
         }
         if let Some(flags) = &self.flags {
-            if flags == &stop.a11y.flags {
+            let flags_to_historical =
+                &stop.a11y.flags.as_ref().map(|flags| {
+                    flags.iter().cloned().map(Into::into).collect()
+                });
+            if flags == flags_to_historical {
                 self.flags = None;
             }
         }
         if let Some(schedules) = &self.schedules {
-            if schedules == &stop.a11y.schedules {
+            let schedules_to_historical =
+                &stop.a11y.schedules.as_ref().map(|schedules| {
+                    schedules.iter().cloned().map(Into::into).collect()
+                });
+            if schedules == schedules_to_historical {
                 self.schedules = None;
             }
         }
@@ -581,12 +1117,9 @@ impl StopPatch {
             }
         }
         if let Some(advertisement_qty) = &self.advertisement_qty {
-            if advertisement_qty == &stop.a11y.advertisement_qty {
-                self.advertisement_qty = None;
-            }
-        }
-        if let Some(advertisement_qty) = &self.advertisement_qty {
-            if advertisement_qty == &stop.a11y.advertisement_qty {
+            if advertisement_qty.map(TryInto::try_into).transpose()?
+                == stop.a11y.advertisement_qty
+            {
                 self.advertisement_qty = None;
             }
         }
@@ -611,12 +1144,16 @@ impl StopPatch {
             }
         }
         if let Some(illumination_strength) = &self.illumination_strength {
-            if illumination_strength == &stop.a11y.illumination_strength {
+            if illumination_strength.map(TryInto::try_into).transpose()?
+                == stop.a11y.illumination_strength
+            {
                 self.illumination_strength = None;
             }
         }
         if let Some(illumination_position) = &self.illumination_position {
-            if illumination_position == &stop.a11y.illumination_position {
+            if illumination_position.map(TryInto::try_into).transpose()?
+                == stop.a11y.illumination_position
+            {
                 self.illumination_position = None;
             }
         }
@@ -648,7 +1185,9 @@ impl StopPatch {
             &self.parking_visibility_impairment
         {
             if parking_visibility_impairment
-                == &stop.a11y.parking_visibility_impairment
+                .map(TryInto::try_into)
+                .transpose()?
+                == stop.a11y.parking_visibility_impairment
             {
                 self.parking_visibility_impairment = None;
             }
@@ -657,7 +1196,9 @@ impl StopPatch {
             &self.parking_local_access_impairment
         {
             if parking_local_access_impairment
-                == &stop.a11y.parking_local_access_impairment
+                .map(TryInto::try_into)
+                .transpose()?
+                == stop.a11y.parking_local_access_impairment
             {
                 self.parking_local_access_impairment = None;
             }
@@ -666,7 +1207,9 @@ impl StopPatch {
             &self.parking_area_access_impairment
         {
             if parking_area_access_impairment
-                == &stop.a11y.parking_area_access_impairment
+                .map(TryInto::try_into)
+                .transpose()?
+                == stop.a11y.parking_area_access_impairment
             {
                 self.parking_area_access_impairment = None;
             }
@@ -702,6 +1245,7 @@ impl StopPatch {
                 self.verification_level = None;
             }
         }
+        Ok(())
     }
 
     pub fn drop_fields(&mut self, fields: &HashSet<&str>) {
@@ -815,7 +1359,10 @@ impl StopPatch {
         }
     }
 
-    pub fn deverify(&mut self, original_verification: stops::StopVerification) {
+    pub fn deverify(
+        &mut self,
+        original_verification: current::StopVerification,
+    ) {
         let deverify_service = self.flags.is_some() || self.schedules.is_some();
         let deverify_infra = self.has_sidewalk.is_some()
             || self.has_sidewalked_path.is_some()
@@ -844,30 +1391,33 @@ impl StopPatch {
         let mut new_verification = original_verification;
 
         if deverify_service {
-            new_verification.service = stops::Verification::NotVerified;
+            new_verification.service = current::Verification::NotVerified;
         }
         if deverify_infra {
-            new_verification.infrastructure = stops::Verification::NotVerified;
+            new_verification.infrastructure =
+                current::Verification::NotVerified;
         }
 
         // We allow the patch to deverify by itself
         if let Some(patch_verification) = self.verification_level {
             let patch_verification =
-                stops::StopVerification::from(patch_verification);
+                current::StopVerification::from(patch_verification);
 
-            if patch_verification.service == stops::Verification::NotVerified {
-                new_verification.service = stops::Verification::NotVerified;
+            if patch_verification.service == current::Verification::NotVerified
+            {
+                new_verification.service = current::Verification::NotVerified;
             };
 
             if patch_verification.infrastructure
-                == stops::Verification::NotVerified
+                == current::Verification::NotVerified
             {
                 new_verification.infrastructure =
-                    stops::Verification::NotVerified;
+                    current::Verification::NotVerified;
             };
 
-            if patch_verification.position == stops::Verification::NotVerified {
-                new_verification.position = stops::Verification::NotVerified;
+            if patch_verification.position == current::Verification::NotVerified
+            {
+                new_verification.position = current::Verification::NotVerified;
             };
         }
 
@@ -875,315 +1425,6 @@ impl StopPatch {
             None
         } else {
             Some(new_verification.into())
-        }
-    }
-}
-
-#[derive(Default, Debug, Clone, Serialize, Deserialize)]
-pub struct RoutePatch {
-    pub type_id: Option<i32>,
-    pub operator_id: Option<i32>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        with = "::serde_with::rust::double_option"
-    )]
-    pub code: Option<Option<String>>,
-    pub name: Option<String>,
-    pub circular: Option<bool>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        with = "::serde_with::rust::double_option"
-    )]
-    pub main_subroute: Option<Option<i32>>,
-    pub active: Option<bool>,
-}
-
-impl RoutePatch {
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.type_id.is_none()
-            && self.operator_id.is_none()
-            && self.code.is_none()
-            && self.name.is_none()
-            && self.circular.is_none()
-            && self.main_subroute.is_none()
-            && self.active.is_none()
-    }
-
-    #[allow(unused)]
-    pub fn apply(self, route: &mut routes::Route) {
-        if let Some(type_id) = self.type_id {
-            route.type_id = type_id;
-        }
-        if let Some(operator) = self.operator_id {
-            route.operator_id = operator;
-        }
-        if let Some(code) = self.code {
-            route.code = code;
-        }
-        if let Some(name) = self.name {
-            route.name = name;
-        }
-        if let Some(main_subroute) = self.main_subroute {
-            route.main_subroute = main_subroute;
-        }
-        if let Some(active) = self.active {
-            route.active = active;
-        }
-        if let Some(circular) = self.circular {
-            route.circular = circular;
-        }
-    }
-}
-
-#[derive(Default, Debug, Clone, Serialize, Deserialize)]
-pub struct SubroutePatch {
-    pub group: Option<i32>,
-    pub flag: Option<String>,
-    pub headsign: Option<String>,
-    pub origin: Option<String>,
-    pub destination: Option<String>,
-    pub via: Option<Vec<routes::SubrouteVia>>,
-    pub circular: Option<bool>,
-
-    // TODO This ended up here by mistake. Drop it
-    pub polyline: Option<String>,
-}
-
-impl SubroutePatch {
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.group.is_none()
-            && self.flag.is_none()
-            && self.headsign.is_none()
-            && self.origin.is_none()
-            && self.destination.is_none()
-            && self.via.is_none()
-            && self.circular.is_none()
-    }
-
-    #[allow(unused)]
-    pub fn apply(self, subroute: &mut routes::Subroute) {
-        if let Some(group) = self.group {
-            subroute.group = group;
-        }
-        if let Some(flag) = self.flag {
-            subroute.flag = flag;
-        }
-        if let Some(headsign) = self.headsign {
-            subroute.headsign = headsign;
-        }
-        if let Some(origin) = self.origin {
-            subroute.origin = origin;
-        }
-        if let Some(destination) = self.destination {
-            subroute.destination = destination;
-        }
-        if let Some(via) = self.via {
-            subroute.via = via;
-        }
-        if let Some(circular) = self.circular {
-            subroute.circular = circular;
-        }
-    }
-}
-
-#[derive(Default, Debug, Clone, Serialize, Deserialize)]
-pub struct DeparturePatch {
-    pub time: Option<i16>,
-    pub subroute_id: Option<i32>,
-    pub calendar_id: Option<i32>,
-}
-
-impl DeparturePatch {
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.time.is_none()
-            && self.subroute_id.is_none()
-            && self.calendar_id.is_none()
-    }
-
-    #[allow(unused)]
-    pub fn apply(self, departure: &mut routes::Departure) {
-        if let Some(time) = self.time {
-            departure.time = time;
-        }
-        if let Some(subroute_id) = self.subroute_id {
-            departure.subroute_id = subroute_id;
-        }
-        if let Some(calendar_id) = self.calendar_id {
-            departure.calendar_id = calendar_id;
-        }
-    }
-}
-
-#[derive(Default, Debug, Clone, Serialize, Deserialize)]
-pub struct StopPicturePatch {
-    pub public: Option<bool>,
-    pub sensitive: Option<bool>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        with = "::serde_with::rust::double_option"
-    )]
-    pub lon: Option<Option<f64>>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        with = "::serde_with::rust::double_option"
-    )]
-    pub lat: Option<Option<f64>>,
-    pub quality: Option<i16>,
-    pub tags: Option<Vec<String>>,
-    pub attrs: Option<Vec<String>>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        with = "::serde_with::rust::double_option"
-    )]
-    pub notes: Option<Option<String>>,
-}
-
-impl StopPicturePatch {
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.public.is_none()
-            && self.sensitive.is_none()
-            && self.lon.is_none()
-            && self.lat.is_none()
-            && self.quality.is_none()
-            && self.tags.is_none()
-            && self.notes.is_none()
-    }
-
-    #[allow(unused)]
-    pub fn apply(self, pic: &mut pics::StopPic) {
-        if let Some(public) = self.public {
-            pic.dyn_meta.public = public;
-        }
-        if let Some(sensitive) = self.sensitive {
-            pic.dyn_meta.sensitive = sensitive;
-        }
-        if let Some(lon) = self.lon {
-            pic.dyn_meta.lon = lon;
-        }
-        if let Some(lat) = self.lat {
-            pic.dyn_meta.lat = lat;
-        }
-        if let Some(quality) = self.quality {
-            pic.dyn_meta.quality = quality;
-        }
-        if let Some(tags) = self.tags {
-            pic.dyn_meta.tags = tags;
-        }
-        if let Some(notes) = self.notes {
-            pic.dyn_meta.notes = notes;
-        }
-    }
-}
-
-#[derive(Default, Debug, Clone, Serialize, Deserialize)]
-pub struct IssuePatch {
-    pub title: Option<String>,
-    pub message: Option<String>,
-    pub creation: Option<DateTime<Local>>,
-    pub category: Option<operators::IssueCategory>,
-    pub impact: Option<i32>,
-    pub state: Option<operators::IssueState>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        with = "::serde_with::rust::double_option"
-    )]
-    pub state_justification: Option<Option<String>>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        with = "::serde_with::rust::double_option"
-    )]
-    pub lat: Option<Option<f64>>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        with = "::serde_with::rust::double_option"
-    )]
-    pub lon: Option<Option<f64>>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        with = "::serde_with::rust::double_option"
-    )]
-    pub geojson: Option<Option<serde_json::Value>>,
-    pub operator_ids: Option<Vec<i32>>,
-    pub route_ids: Option<Vec<i32>>,
-    pub stop_ids: Option<Vec<i32>>,
-    pub pic_ids: Option<Vec<i32>>,
-}
-
-impl IssuePatch {
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.title.is_none()
-            && self.message.is_none()
-            && self.creation.is_none()
-            && self.impact.is_none()
-            && self.category.is_none()
-            && self.state.is_none()
-            && self.state_justification.is_none()
-            && self.lat.is_none()
-            && self.lon.is_none()
-            && self.geojson.is_none()
-            && self.operator_ids.is_none()
-            && self.route_ids.is_none()
-            && self.stop_ids.is_none()
-            && self.pic_ids.is_none()
-    }
-
-    #[allow(unused)]
-    pub fn apply(self, issue: &mut operators::Issue) {
-        if let Some(title) = self.title {
-            issue.title = title;
-        }
-        if let Some(message) = self.message {
-            issue.message = message;
-        }
-        if let Some(creation) = self.creation {
-            issue.creation = creation;
-        }
-        if let Some(category) = self.category {
-            issue.category = category;
-        }
-        if let Some(impact) = self.impact {
-            issue.impact = impact;
-        }
-        if let Some(state) = self.state {
-            issue.state = state;
-        }
-        if let Some(state_justification) = self.state_justification {
-            issue.state_justification = state_justification;
-        }
-        if let Some(lat) = self.lat {
-            issue.lat = lat;
-        }
-        if let Some(lon) = self.lon {
-            issue.lon = lon;
-        }
-        if let Some(geojson) = self.geojson {
-            issue.geojson = geojson;
-        }
-        if let Some(operator_ids) = self.operator_ids {
-            issue.operator_ids = operator_ids;
-        }
-        if let Some(route_ids) = self.route_ids {
-            issue.route_ids = route_ids;
-        }
-        if let Some(stop_ids) = self.stop_ids {
-            issue.stop_ids = stop_ids;
-        }
-        if let Some(pic_ids) = self.pic_ids {
-            issue.pic_ids = pic_ids;
         }
     }
 }

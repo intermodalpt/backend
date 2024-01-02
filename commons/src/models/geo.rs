@@ -23,7 +23,7 @@ use utoipa::ToSchema;
 pub struct Region {
     pub id: i32,
     pub name: String,
-    pub geometry: serde_json::Value
+    pub geometry: serde_json::Value,
 }
 
 #[derive(Serialize, ToSchema)]

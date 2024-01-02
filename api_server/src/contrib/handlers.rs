@@ -259,7 +259,7 @@ pub(crate) async fn post_contrib_stop_data(
     if stop.is_none() {
         return Err(Error::NotFoundUpstream);
     }
-    let stop = stop.unwrap().into();
+    let stop: stops::Stop = stop.unwrap().into();
     let patch = contribution.contribution.derive_patch(&stop);
 
     if patch.is_empty() {
@@ -274,7 +274,7 @@ pub(crate) async fn post_contrib_stop_data(
         id: 0,
         author_id: user_id,
         change: history::Change::StopUpdate {
-            original: stop,
+            original: stop.into(),
             patch,
         },
         accepted: None,
@@ -330,7 +330,10 @@ pub(crate) async fn post_contrib_stop_picture(
     let contribution = history::Contribution {
         id: 0,
         author_id: user_id,
-        change: history::Change::StopPicUpload { pic, stops: vec![] },
+        change: history::Change::StopPicUpload {
+            pic: pic.into(),
+            stops: vec![],
+        },
         accepted: None,
         evaluator_id: None,
         evaluation_date: None,
@@ -400,7 +403,7 @@ pub(crate) async fn patch_contrib_stop_picture_meta(
 
     contribution.change = history::Change::StopPicUpload {
         pic,
-        stops: contribution_meta.stops,
+        stops: history::vec_into_vec(contribution_meta.stops),
     };
 
     sql::update_contribution(

@@ -5,7 +5,7 @@
     "columns": [],
     "parameters": {
       "Left": [
-        "Varchar",
+        "Text",
         "Float8",
         "Float8",
         "Int4",

@@ -1,7 +1,8 @@
-use chrono::{NaiveDate, Utc};
+use chrono::NaiveDate;
 use once_cell::sync::Lazy;
 
-use commons::models::history::StopPatch;
+use commons::models::history::opt_vec_into_opt_vec;
+use commons::models::history::stops::StopPatch;
 use commons::models::stops::{
     A11yMeta, AdvertisementQuantification, AreaParkingLimitation, Flag,
     IlluminationPos, IlluminationStrength, LocalParkingLimitation,
@@ -13,14 +14,13 @@ use crate::stops::models::requests::ChangeStop;
 static STOP1: Lazy<Stop> = Lazy::new(|| Stop {
     id: 1,
     name: Some("Original".to_string()),
-    osm_name: Some("Original osm".to_string()),
     short_name: Some("Original short".to_string()),
     locality: Some("Fooland".to_string()),
     street: Some("Barstreet".to_string()),
     door: Some("123A".to_string()),
     parish: None,
-    lat: Some(1.0),
-    lon: Some(2.0),
+    lat: 1.0,
+    lon: 2.0,
     a11y: A11yMeta {
         schedules: Some(vec![Schedule {
             code: Some("123".to_string()),
@@ -64,8 +64,6 @@ static STOP1: Lazy<Stop> = Lazy::new(|| Stop {
     ),
     tags: vec!["tag1".to_string()],
     notes: Some("foo note".to_string()),
-    // TODO Deprecate
-    update_date: Utc::now(),
 });
 
 static STOP1_NOOP_CHANGE: Lazy<ChangeStop> = Lazy::new(|| ChangeStop {
@@ -116,7 +114,7 @@ fn ok_apply_name_patch() {
     let mut patch = StopPatch::default();
     patch.name = Some(new_val.clone());
 
-    patch.apply(&mut stop);
+    assert!(patch.apply(&mut stop).is_ok());
     assert_eq!(stop.name, new_val);
 
     // Revert, confirm that nothing else changed
@@ -156,7 +154,7 @@ fn ok_apply_short_name_patch() {
     let mut patch = StopPatch::default();
     patch.short_name = Some(new_val.clone());
 
-    patch.apply(&mut stop);
+    assert!(patch.apply(&mut stop).is_ok());
     assert_eq!(stop.short_name, new_val);
 
     // Revert, confirm that nothing else changed
@@ -196,7 +194,7 @@ fn ok_apply_locality_patch() {
     let mut patch = StopPatch::default();
     patch.locality = Some(new_val.clone());
 
-    patch.apply(&mut stop);
+    assert!(patch.apply(&mut stop).is_ok());
     assert_eq!(stop.locality, new_val);
 
     // Revert, confirm that nothing else changed
@@ -236,7 +234,7 @@ fn ok_apply_street_patch() {
     let mut patch = StopPatch::default();
     patch.street = Some(new_val.clone());
 
-    patch.apply(&mut stop);
+    assert!(patch.apply(&mut stop).is_ok());
     assert_eq!(stop.street, new_val);
 
     // Revert, confirm that nothing else changed
@@ -276,7 +274,7 @@ fn ok_apply_door_patch() {
     let mut patch = StopPatch::default();
     patch.door = Some(new_val.clone());
 
-    patch.apply(&mut stop);
+    assert!(patch.apply(&mut stop).is_ok());
     assert_eq!(stop.door, new_val);
 
     // Revert, confirm that nothing else changed
@@ -316,7 +314,7 @@ fn ok_apply_notes_patch() {
     let mut patch = StopPatch::default();
     patch.notes = Some(new_val.clone());
 
-    patch.apply(&mut stop);
+    assert!(patch.apply(&mut stop).is_ok());
     assert_eq!(stop.notes, new_val);
 
     // Revert, confirm that nothing else changed
@@ -356,7 +354,7 @@ fn ok_apply_tags_patch() {
     let mut patch = StopPatch::default();
     patch.tags = Some(new_val.clone());
 
-    patch.apply(&mut stop);
+    assert!(patch.apply(&mut stop).is_ok());
     assert_eq!(stop.tags, new_val);
 
     // Revert, confirm that nothing else changed
@@ -396,7 +394,7 @@ fn ok_apply_verification_level_patch() {
     let mut patch = StopPatch::default();
     patch.verification_level = Some(new_val.clone());
 
-    patch.apply(&mut stop);
+    assert!(patch.apply(&mut stop).is_ok());
     assert_eq!(stop.verification_level, new_val);
 
     // Revert, confirm that nothing else changed
@@ -436,7 +434,7 @@ fn ok_apply_service_check_date_patch() {
     let mut patch = StopPatch::default();
     patch.service_check_date = Some(new_val.clone());
 
-    patch.apply(&mut stop);
+    assert!(patch.apply(&mut stop).is_ok());
     assert_eq!(stop.service_check_date, new_val);
 
     // Revert, confirm that nothing else changed
@@ -476,7 +474,7 @@ fn ok_apply_infrastructure_check_date_patch() {
     let mut patch = StopPatch::default();
     patch.infrastructure_check_date = Some(new_val.clone());
 
-    patch.apply(&mut stop);
+    assert!(patch.apply(&mut stop).is_ok());
     assert_eq!(stop.infrastructure_check_date, new_val);
 
     // Revert, confirm that nothing else changed
@@ -500,7 +498,7 @@ fn ok_derive_schedules_patch() {
     change.a11y.schedules = new_val.clone();
 
     let mut patch = change.derive_patch(&STOP1);
-    assert_eq!(patch.schedules, Some(new_val));
+    assert_eq!(patch.schedules, Some(opt_vec_into_opt_vec(new_val)));
 
     // Ensure that the patch is only about this attribute
     patch.schedules = None;
@@ -526,9 +524,9 @@ fn ok_apply_schedules_patch() {
     }]);
 
     let mut patch = StopPatch::default();
-    patch.schedules = Some(new_val.clone());
+    patch.schedules = Some(opt_vec_into_opt_vec(new_val.clone()));
 
-    patch.apply(&mut stop);
+    assert!(patch.apply(&mut stop).is_ok());
     assert_eq!(stop.a11y.schedules, new_val);
 
     // Revert, confirm that nothing else changed
@@ -550,7 +548,7 @@ fn ok_derive_flags_patch() {
     change.a11y.flags = new_val.clone();
 
     let mut patch = change.derive_patch(&STOP1);
-    assert_eq!(patch.flags, Some(new_val));
+    assert_eq!(patch.flags, Some(opt_vec_into_opt_vec(new_val)));
 
     // Ensure that the patch is only about this attribute
     patch.flags = None;
@@ -576,9 +574,9 @@ fn ok_apply_flags_patch() {
     }]);
 
     let mut patch = StopPatch::default();
-    patch.flags = Some(new_val.clone());
+    patch.flags = Some(opt_vec_into_opt_vec(new_val.clone()));
 
-    patch.apply(&mut stop);
+    assert!(patch.apply(&mut stop).is_ok());
     assert_eq!(stop.a11y.flags, new_val);
 
     // Revert, confirm that nothing else changed
@@ -620,7 +618,7 @@ fn ok_apply_has_crossing_patch() {
     let mut patch = StopPatch::default();
     patch.has_crossing = Some(new_val.clone());
 
-    patch.apply(&mut stop);
+    assert!(patch.apply(&mut stop).is_ok());
     assert_eq!(stop.a11y.has_crossing, new_val);
 
     // Revert, confirm that nothing else changed
@@ -662,7 +660,7 @@ fn ok_apply_has_wide_access_patch() {
     let mut patch = StopPatch::default();
     patch.has_wide_access = Some(new_val.clone());
 
-    patch.apply(&mut stop);
+    assert!(patch.apply(&mut stop).is_ok());
     assert_eq!(stop.a11y.has_wide_access, new_val);
 
     // Revert, confirm that nothing else changed
@@ -704,7 +702,7 @@ fn ok_apply_has_flat_access_patch() {
     let mut patch = StopPatch::default();
     patch.has_flat_access = Some(new_val.clone());
 
-    patch.apply(&mut stop);
+    assert!(patch.apply(&mut stop).is_ok());
     assert_eq!(stop.a11y.has_flat_access, new_val);
 
     // Revert, confirm that nothing else changed
@@ -746,7 +744,7 @@ fn ok_apply_has_tactile_access_patch() {
     let mut patch = StopPatch::default();
     patch.has_tactile_access = Some(new_val.clone());
 
-    patch.apply(&mut stop);
+    assert!(patch.apply(&mut stop).is_ok());
     assert_eq!(stop.a11y.has_tactile_access, new_val);
 
     // Revert, confirm that nothing else changed
@@ -788,7 +786,7 @@ fn ok_apply_has_sidewalk_patch() {
     let mut patch = StopPatch::default();
     patch.has_sidewalk = Some(new_val.clone());
 
-    patch.apply(&mut stop);
+    assert!(patch.apply(&mut stop).is_ok());
     assert_eq!(stop.a11y.has_sidewalk, new_val);
 
     // Revert, confirm that nothing else changed
@@ -830,7 +828,7 @@ fn ok_apply_has_sidewalked_path_patch() {
     let mut patch = StopPatch::default();
     patch.has_sidewalked_path = Some(new_val.clone());
 
-    patch.apply(&mut stop);
+    assert!(patch.apply(&mut stop).is_ok());
     assert_eq!(stop.a11y.has_sidewalked_path, new_val);
 
     // Revert, confirm that nothing else changed
@@ -872,7 +870,7 @@ fn ok_apply_has_shelter_patch() {
     let mut patch = StopPatch::default();
     patch.has_shelter = Some(new_val.clone());
 
-    patch.apply(&mut stop);
+    assert!(patch.apply(&mut stop).is_ok());
     assert_eq!(stop.a11y.has_shelter, new_val);
 
     // Revert, confirm that nothing else changed
@@ -914,7 +912,7 @@ fn ok_apply_has_cover_patch() {
     let mut patch = StopPatch::default();
     patch.has_cover = Some(new_val.clone());
 
-    patch.apply(&mut stop);
+    assert!(patch.apply(&mut stop).is_ok());
     assert_eq!(stop.a11y.has_cover, new_val);
 
     // Revert, confirm that nothing else changed
@@ -956,7 +954,7 @@ fn ok_apply_has_bench_patch() {
     let mut patch = StopPatch::default();
     patch.has_bench = Some(new_val.clone());
 
-    patch.apply(&mut stop);
+    assert!(patch.apply(&mut stop).is_ok());
     assert_eq!(stop.a11y.has_bench, new_val);
 
     // Revert, confirm that nothing else changed
@@ -998,7 +996,7 @@ fn ok_apply_has_trash_can_patch() {
     let mut patch = StopPatch::default();
     patch.has_trash_can = Some(new_val.clone());
 
-    patch.apply(&mut stop);
+    assert!(patch.apply(&mut stop).is_ok());
     assert_eq!(stop.a11y.has_trash_can, new_val);
 
     // Revert, confirm that nothing else changed
@@ -1040,7 +1038,7 @@ fn ok_apply_has_waiting_times_patch() {
     let mut patch = StopPatch::default();
     patch.has_waiting_times = Some(new_val.clone());
 
-    patch.apply(&mut stop);
+    assert!(patch.apply(&mut stop).is_ok());
     assert_eq!(stop.a11y.has_waiting_times, new_val);
 
     // Revert, confirm that nothing else changed
@@ -1082,7 +1080,7 @@ fn ok_apply_has_ticket_seller_patch() {
     let mut patch = StopPatch::default();
     patch.has_ticket_seller = Some(new_val.clone());
 
-    patch.apply(&mut stop);
+    assert!(patch.apply(&mut stop).is_ok());
     assert_eq!(stop.a11y.has_ticket_seller, new_val);
 
     // Revert, confirm that nothing else changed
@@ -1124,7 +1122,7 @@ fn ok_apply_has_costumer_support_patch() {
     let mut patch = StopPatch::default();
     patch.has_costumer_support = Some(new_val.clone());
 
-    patch.apply(&mut stop);
+    assert!(patch.apply(&mut stop).is_ok());
     assert_eq!(stop.a11y.has_costumer_support, new_val);
 
     // Revert, confirm that nothing else changed
@@ -1142,7 +1140,7 @@ fn ok_derive_illumination_strength_patch() {
     change.a11y.illumination_strength = new_val.clone();
 
     let mut patch = change.derive_patch(&STOP1);
-    assert_eq!(patch.illumination_strength, Some(new_val));
+    assert_eq!(patch.illumination_strength, Some(new_val.map(Into::into)));
 
     // Ensure that the patch is only about this attribute
     patch.illumination_strength = None;
@@ -1164,9 +1162,9 @@ fn ok_apply_illumination_strength_patch() {
     let new_val = Some(IlluminationStrength::High);
 
     let mut patch = StopPatch::default();
-    patch.illumination_strength = Some(new_val.clone());
+    patch.illumination_strength = Some(new_val.clone().map(Into::into));
 
-    patch.apply(&mut stop);
+    assert!(patch.apply(&mut stop).is_ok());
     assert_eq!(stop.a11y.illumination_strength, new_val);
 
     // Revert, confirm that nothing else changed
@@ -1184,7 +1182,7 @@ fn ok_derive_illumination_position_patch() {
     change.a11y.illumination_position = new_val.clone();
 
     let mut patch = change.derive_patch(&STOP1);
-    assert_eq!(patch.illumination_position, Some(new_val));
+    assert_eq!(patch.illumination_position, Some(new_val.map(Into::into)));
 
     // Ensure that the patch is only about this attribute
     patch.illumination_position = None;
@@ -1206,9 +1204,9 @@ fn ok_apply_illumination_position_patch() {
     let new_val = Some(IlluminationPos::Own);
 
     let mut patch = StopPatch::default();
-    patch.illumination_position = Some(new_val.clone());
+    patch.illumination_position = Some(new_val.clone().map(Into::into));
 
-    patch.apply(&mut stop);
+    assert!(patch.apply(&mut stop).is_ok());
     assert_eq!(stop.a11y.illumination_position, new_val);
 
     // Revert, confirm that nothing else changed
@@ -1250,7 +1248,7 @@ fn ok_apply_has_illuminated_path_patch() {
     let mut patch = StopPatch::default();
     patch.has_illuminated_path = Some(new_val.clone());
 
-    patch.apply(&mut stop);
+    assert!(patch.apply(&mut stop).is_ok());
     assert_eq!(stop.a11y.has_illuminated_path, new_val);
 
     // Revert, confirm that nothing else changed
@@ -1293,7 +1291,7 @@ fn ok_apply_has_visibility_from_within_patch() {
     let mut patch = StopPatch::default();
     patch.has_visibility_from_within = Some(new_val.clone());
 
-    patch.apply(&mut stop);
+    assert!(patch.apply(&mut stop).is_ok());
     assert_eq!(stop.a11y.has_visibility_from_within, new_val);
 
     // Revert, confirm that nothing else changed
@@ -1336,7 +1334,7 @@ fn ok_apply_has_visibility_from_area_patch() {
     let mut patch = StopPatch::default();
     patch.has_visibility_from_area = Some(new_val.clone());
 
-    patch.apply(&mut stop);
+    assert!(patch.apply(&mut stop).is_ok());
     assert_eq!(stop.a11y.has_visibility_from_area, new_val);
 
     // Revert, confirm that nothing else changed
@@ -1378,7 +1376,7 @@ fn ok_apply_is_visible_from_outside_patch() {
     let mut patch = StopPatch::default();
     patch.is_visible_from_outside = Some(new_val.clone());
 
-    patch.apply(&mut stop);
+    assert!(patch.apply(&mut stop).is_ok());
     assert_eq!(stop.a11y.is_visible_from_outside, new_val);
 
     // Revert, confirm that nothing else changed
@@ -1396,7 +1394,10 @@ fn ok_derive_parking_visibility_impairment_patch() {
     change.a11y.parking_visibility_impairment = new_val.clone();
 
     let mut patch = change.derive_patch(&STOP1);
-    assert_eq!(patch.parking_visibility_impairment, Some(new_val));
+    assert_eq!(
+        patch.parking_visibility_impairment,
+        Some(new_val.map(Into::into))
+    );
 
     // Ensure that the patch is only about this attribute
     patch.parking_visibility_impairment = None;
@@ -1419,9 +1420,9 @@ fn ok_apply_parking_visibility_impairment_patch() {
     let new_val = Some(ParkingVisualLimitation::Very);
 
     let mut patch = StopPatch::default();
-    patch.parking_visibility_impairment = Some(new_val.clone());
+    patch.parking_visibility_impairment = Some(new_val.clone().map(Into::into));
 
-    patch.apply(&mut stop);
+    assert!(patch.apply(&mut stop).is_ok());
     assert_eq!(stop.a11y.parking_visibility_impairment, new_val);
 
     // Revert, confirm that nothing else changed
@@ -1440,7 +1441,10 @@ fn ok_derive_parking_local_access_impairment_patch() {
     change.a11y.parking_local_access_impairment = new_val.clone();
 
     let mut patch = change.derive_patch(&STOP1);
-    assert_eq!(patch.parking_local_access_impairment, Some(new_val));
+    assert_eq!(
+        patch.parking_local_access_impairment,
+        Some(new_val.map(Into::into))
+    );
 
     // Ensure that the patch is only about this attribute
     patch.parking_local_access_impairment = None;
@@ -1463,9 +1467,10 @@ fn ok_apply_parking_local_access_impairment_patch() {
     let new_val = Some(LocalParkingLimitation::High);
 
     let mut patch = StopPatch::default();
-    patch.parking_local_access_impairment = Some(new_val.clone());
+    patch.parking_local_access_impairment =
+        Some(new_val.clone().map(Into::into));
 
-    patch.apply(&mut stop);
+    assert!(patch.apply(&mut stop).is_ok());
     assert_eq!(stop.a11y.parking_local_access_impairment, new_val);
 
     // Revert, confirm that nothing else changed
@@ -1484,7 +1489,10 @@ fn ok_derive_parking_area_access_impairment_patch() {
     change.a11y.parking_area_access_impairment = new_val.clone();
 
     let mut patch = change.derive_patch(&STOP1);
-    assert_eq!(patch.parking_area_access_impairment, Some(new_val));
+    assert_eq!(
+        patch.parking_area_access_impairment,
+        Some(new_val.map(Into::into))
+    );
 
     // Ensure that the patch is only about this attribute
     patch.parking_area_access_impairment = None;
@@ -1507,9 +1515,10 @@ fn ok_apply_parking_area_access_impairment_patch() {
     let new_val = Some(AreaParkingLimitation::High);
 
     let mut patch = StopPatch::default();
-    patch.parking_area_access_impairment = Some(new_val.clone());
+    patch.parking_area_access_impairment =
+        Some(new_val.clone().map(Into::into));
 
-    patch.apply(&mut stop);
+    assert!(patch.apply(&mut stop).is_ok());
     assert_eq!(stop.a11y.parking_area_access_impairment, new_val);
 
     // Revert, confirm that nothing else changed
@@ -1528,7 +1537,7 @@ fn ok_derive_advertisement_qty_patch() {
     change.a11y.advertisement_qty = new_val.clone();
 
     let mut patch = change.derive_patch(&STOP1);
-    assert_eq!(patch.advertisement_qty, Some(new_val));
+    assert_eq!(patch.advertisement_qty, Some(new_val.map(Into::into)));
 
     // Ensure that the patch is only about this attribute
     patch.advertisement_qty = None;
@@ -1550,9 +1559,9 @@ fn ok_apply_advertisement_qty_patch() {
     let new_val = Some(AdvertisementQuantification::Many);
 
     let mut patch = StopPatch::default();
-    patch.advertisement_qty = Some(new_val.clone());
+    patch.advertisement_qty = Some(new_val.clone().map(Into::into));
 
-    patch.apply(&mut stop);
+    assert!(patch.apply(&mut stop).is_ok());
     assert_eq!(stop.a11y.advertisement_qty, new_val);
 
     // Revert, confirm that nothing else changed
@@ -1594,7 +1603,7 @@ fn ok_apply_tmp_issues_patch() {
     let mut patch = StopPatch::default();
     patch.tmp_issues = Some(new_val.clone());
 
-    patch.apply(&mut stop);
+    assert!(patch.apply(&mut stop).is_ok());
     assert_eq!(stop.a11y.tmp_issues, new_val);
 
     // Revert, confirm that nothing else changed

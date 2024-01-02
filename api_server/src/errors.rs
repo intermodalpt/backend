@@ -21,12 +21,11 @@ use axum::response::{IntoResponse, Response};
 use axum::Json;
 use serde::Serialize;
 use thiserror::Error;
-use utoipa::ToSchema;
 
 use commons::models::pics;
 use commons::models::pics::Resource;
 
-#[derive(Error, Debug, ToSchema)]
+#[derive(Error, Debug, PartialEq)]
 pub enum Error {
     #[error("Failed to deserialize data from the database")]
     DatabaseDeserialization,
@@ -115,6 +114,12 @@ impl From<commons::errors::Error> for Error {
             }
             commons::errors::Error::FilesystemFailure(msg) => {
                 Error::Processing(msg)
+            }
+            commons::errors::Error::PatchingFailure { field, value } => {
+                Error::Processing(format!(
+                    "Patching failure: field `{}` does not accept value `{}`",
+                    field, value
+                ))
             }
         }
     }

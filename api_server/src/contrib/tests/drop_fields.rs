@@ -1,7 +1,6 @@
 use chrono::NaiveDate;
 
-use commons::models::history::StopPatch;
-use commons::models::stops;
+use commons::models::history::{self, stops::StopPatch};
 #[test]
 fn stop_patch_drop_name() {
     let mut patch = StopPatch {
@@ -245,7 +244,9 @@ fn stop_patch_drop_has_costumer_support() {
 #[test]
 fn stop_patch_drop_advertisement_qty() {
     let mut patch = StopPatch {
-        advertisement_qty: Some(Some(stops::AdvertisementQuantification::None)),
+        advertisement_qty: Some(Some(
+            history::stops::AdvertisementQuantification::None,
+        )),
         ..Default::default()
     };
 
@@ -320,7 +321,9 @@ fn stop_patch_drop_has_tactile_access() {
 #[test]
 fn stop_patch_drop_illumination_strength() {
     let mut patch = StopPatch {
-        illumination_strength: Some(Some(stops::IlluminationStrength::None)),
+        illumination_strength: Some(Some(
+            history::stops::IlluminationStrength::None,
+        )),
         ..Default::default()
     };
 
@@ -335,7 +338,9 @@ fn stop_patch_drop_illumination_strength() {
 #[test]
 fn stop_patch_drop_illumination_position() {
     let mut patch = StopPatch {
-        illumination_position: Some(Some(stops::IlluminationPos::Indirect)),
+        illumination_position: Some(Some(
+            history::stops::IlluminationPos::Indirect,
+        )),
         ..Default::default()
     };
 
@@ -411,7 +416,7 @@ fn stop_patch_drop_is_visible_from_outside() {
 fn stop_patch_drop_parking_visibility_impairment() {
     let mut patch = StopPatch {
         parking_visibility_impairment: Some(Some(
-            stops::ParkingVisualLimitation::None,
+            history::stops::ParkingVisualLimitation::None,
         )),
         ..Default::default()
     };
@@ -428,7 +433,7 @@ fn stop_patch_drop_parking_visibility_impairment() {
 fn stop_patch_drop_parking_local_access_impairment() {
     let mut patch = StopPatch {
         parking_local_access_impairment: Some(Some(
-            stops::LocalParkingLimitation::None,
+            history::stops::LocalParkingLimitation::None,
         )),
         ..Default::default()
     };
@@ -447,7 +452,7 @@ fn stop_patch_drop_parking_local_access_impairment() {
 fn stop_patch_drop_parking_area_access_impairment() {
     let mut patch = StopPatch {
         parking_area_access_impairment: Some(Some(
-            stops::AreaParkingLimitation::None,
+            history::stops::AreaParkingLimitation::None,
         )),
         ..Default::default()
     };

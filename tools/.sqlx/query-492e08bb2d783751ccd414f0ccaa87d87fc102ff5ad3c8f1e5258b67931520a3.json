@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE Stops\nSET osm_name=$1, osm_lon=$2, osm_lat=$3, osm_author=$4, osm_differs=$5\nWHERE id=$6 AND external_id=$7\n    ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Float8",
+        "Float8",
+        "Text",
+        "Bool",
+        "Int4",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "492e08bb2d783751ccd414f0ccaa87d87fc102ff5ad3c8f1e5258b67931520a3"
+}

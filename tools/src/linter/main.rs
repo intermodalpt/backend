@@ -69,12 +69,14 @@ pub async fn fix_duplicated_schedules(
                         Vec<stops::Schedule>,
                     > = HashMap::new();
                     for schedule in schedules.iter() {
+                        let current_schedule: stops::Schedule =
+                            schedule.clone().try_into().unwrap();
                         seen_routes
                             .entry(&schedule.code)
                             .and_modify(|e| {
-                                e.push(schedule.clone());
+                                e.push(current_schedule.clone());
                             })
-                            .or_insert(vec![schedule.clone()]);
+                            .or_insert(vec![current_schedule]);
                     }
 
                     let mut merged = false;
@@ -129,11 +131,12 @@ pub async fn fix_duplicated_schedules(
                                 schedules
                             }
                         })
-                        .collect();
+                        .collect::<Vec<stops::Schedule>>();
 
                     if merged {
                         println!("Merged result {:?}", schedules);
-                        patch.schedules = Some(Some(schedules));
+                        patch.schedules =
+                            Some(Some(history::vec_into_vec(schedules)));
 
                         if !dry_run {
                             sql::update_contribution(

@@ -16,7 +16,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-
 use axum::extract::{Path, State};
 use axum::Json;
 
@@ -80,7 +79,7 @@ pub(crate) async fn create_route(
         &mut transaction,
         user_id,
         &[history::Change::RouteCreation {
-            data: route.clone(),
+            data: route.clone().into(),
         }],
         None,
     )
@@ -146,7 +145,7 @@ pub(crate) async fn patch_route(
         &mut transaction,
         user_id,
         &[history::Change::RouteUpdate {
-            original: route.clone(),
+            original: route.clone().into(),
             patch,
         }],
         None,
@@ -193,7 +192,7 @@ pub(crate) async fn delete_route(
     contrib::sql::insert_changeset_log(
         &mut transaction,
         user_id,
-        &[history::Change::RouteDeletion { data: route }],
+        &[history::Change::RouteDeletion { data: route.into() }],
         None,
     )
     .await?;
@@ -233,7 +232,7 @@ pub(crate) async fn create_subroute(
         &mut transaction,
         user_id,
         &[history::Change::SubrouteCreation {
-            data: subroute.clone(),
+            data: subroute.clone().into(),
         }],
         None,
     )
@@ -284,7 +283,7 @@ pub(crate) async fn patch_subroute(
         &mut transaction,
         user_id,
         &[history::Change::SubrouteUpdate {
-            original: subroute.clone(),
+            original: subroute.clone().into(),
             patch,
         }],
         None,
@@ -338,9 +337,9 @@ pub(crate) async fn delete_subroute(
         &mut transaction,
         user_id,
         &[history::Change::SubrouteDeletion {
-            subroute,
-            stops,
-            departures,
+            subroute: subroute.into(),
+            stops: Some(stops),
+            departures: Some(history::vec_into_vec(departures)),
         }],
         None,
     )
@@ -383,7 +382,7 @@ pub(crate) async fn create_subroute_departure(
         &mut transaction,
         claims.uid,
         &[history::Change::DepartureCreation {
-            data: departure.clone(),
+            data: departure.clone().into(),
         }],
         None,
     )
@@ -437,7 +436,7 @@ pub(crate) async fn patch_subroute_departure(
         &mut transaction,
         claims.uid,
         &[history::Change::DepartureUpdate {
-            original: departure.clone(),
+            original: departure.clone().into(),
             patch,
         }],
         None,
@@ -483,7 +482,9 @@ pub(crate) async fn delete_subroute_departure(
     contrib::sql::insert_changeset_log(
         &mut transaction,
         claims.uid,
-        &[history::Change::DepartureDeletion { data: departure }],
+        &[history::Change::DepartureDeletion {
+            data: departure.into(),
+        }],
         None,
     )
     .await?;

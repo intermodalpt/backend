@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT id, name, osm_name, short_name, locality, street, door, lat, lon, external_id, notes,\n    updater, update_date, parish, tags, accessibility_meta, deleted_upstream, verification_level,\n    service_check_date, infrastructure_check_date, verified_position\nFROM Stops\n        ",
+  "query": "SELECT id, name, short_name, locality, street, door, lat, lon, external_id, notes, parish, tags,\n    accessibility_meta as \"a11y!: sqlx::types::Json<stops::A11yMeta>\", verification_level, service_check_date,\n    infrastructure_check_date\nFROM stops\nWHERE id IN (\n    SELECT DISTINCT stop_id\n    FROM region_stops\n    WHERE region_id = $1\n)\n",
   "describe": {
     "columns": [
       {
@@ -15,102 +15,79 @@
       },
       {
         "ordinal": 2,
-        "name": "osm_name",
-        "type_info": "Text"
-      },
-      {
-        "ordinal": 3,
         "name": "short_name",
         "type_info": "Text"
       },
       {
-        "ordinal": 4,
+        "ordinal": 3,
         "name": "locality",
         "type_info": "Text"
       },
       {
-        "ordinal": 5,
+        "ordinal": 4,
         "name": "street",
         "type_info": "Text"
       },
       {
-        "ordinal": 6,
+        "ordinal": 5,
         "name": "door",
         "type_info": "Text"
       },
       {
-        "ordinal": 7,
+        "ordinal": 6,
         "name": "lat",
         "type_info": "Float8"
       },
       {
-        "ordinal": 8,
+        "ordinal": 7,
         "name": "lon",
         "type_info": "Float8"
       },
       {
-        "ordinal": 9,
+        "ordinal": 8,
         "name": "external_id",
         "type_info": "Text"
       },
       {
-        "ordinal": 10,
+        "ordinal": 9,
         "name": "notes",
         "type_info": "Text"
       },
       {
-        "ordinal": 11,
-        "name": "updater",
-        "type_info": "Int4"
-      },
-      {
-        "ordinal": 12,
-        "name": "update_date",
-        "type_info": "Timestamptz"
-      },
-      {
-        "ordinal": 13,
+        "ordinal": 10,
         "name": "parish",
         "type_info": "Int4"
       },
       {
-        "ordinal": 14,
+        "ordinal": 11,
         "name": "tags",
         "type_info": "TextArray"
       },
       {
-        "ordinal": 15,
-        "name": "accessibility_meta",
+        "ordinal": 12,
+        "name": "a11y!: sqlx::types::Json<stops::A11yMeta>",
         "type_info": "Jsonb"
       },
       {
-        "ordinal": 16,
-        "name": "deleted_upstream",
-        "type_info": "Bool"
-      },
-      {
-        "ordinal": 17,
+        "ordinal": 13,
         "name": "verification_level",
         "type_info": "Int2"
       },
       {
-        "ordinal": 18,
+        "ordinal": 14,
         "name": "service_check_date",
         "type_info": "Date"
       },
       {
-        "ordinal": 19,
+        "ordinal": 15,
         "name": "infrastructure_check_date",
         "type_info": "Date"
-      },
-      {
-        "ordinal": 20,
-        "name": "verified_position",
-        "type_info": "Bool"
       }
     ],
     "parameters": {
-      "Left": []
+      "Left": [
+        "Int4"
+      ]
     },
     "nullable": [
       false,
@@ -119,22 +96,17 @@
       true,
       true,
       true,
-      true,
-      true,
-      true,
-      false,
-      true,
-      false,
-      false,
-      true,
-      false,
       false,
       false,
       false,
       true,
       true,
-      false
+      false,
+      false,
+      false,
+      true,
+      true
     ]
   },
-  "hash": "55d094d35294702aed9ba71ccbaac083d082d7bf2d67dd6f086c7153c367b35a"
+  "hash": "b0174d5a08165ca43fa5dc7e4841038b253ff201cacc6184db8da911361035a3"
 }

@@ -49,41 +49,54 @@ WHERE id = $1
     .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
-pub(crate) async fn fetch_stops(
+pub(crate) async fn fetch_simple_stops(
     pool: &PgPool,
-    filter_used: bool,
-) -> Result<Vec<responses::Stop>> {
-    if filter_used {
-        sqlx::query_as!(
-            responses::Stop,
-            r#"
-SELECT id, name, short_name, locality, street, door, lat, lon, external_id, notes, parish, tags,
-    accessibility_meta as "a11y!: sqlx::types::Json<stops::A11yMeta>", verification_level,
-    service_check_date, infrastructure_check_date
-FROM Stops
+    region_id: i32,
+) -> Result<Vec<responses::SimpleStop>> {
+    sqlx::query_as!(
+        responses::SimpleStop,
+        r#"
+SELECT id, name, short_name, lat, lon
+FROM stops
 WHERE id IN (
-    SELECT DISTINCT stop
-    FROM subroute_stops
+    SELECT DISTINCT stop_id
+    FROM region_stops
+    WHERE region_id = $1
 )
-        "#
-        )
-            .fetch_all(pool)
-            .await
-            .map_err(|err| Error::DatabaseExecution(err.to_string()))
-    } else {
-        sqlx::query_as!(
+        "#,
+        region_id
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+}
+
+pub(crate) async fn fetch_detailed_stops(
+    pool: &PgPool,
+    region_id: i32,
+) -> Result<Vec<responses::Stop>> {
+    sqlx::query_as!(
             responses::Stop,
 r#"SELECT id, name, short_name, locality, street, door, lat, lon, external_id, notes, parish, tags,
-    accessibility_meta as "a11y!: sqlx::types::Json<stops::A11yMeta>", verification_level, service_check_date, infrastructure_check_date
-FROM stops"#)
+    accessibility_meta as "a11y!: sqlx::types::Json<stops::A11yMeta>", verification_level, service_check_date,
+    infrastructure_check_date
+FROM stops
+WHERE id IN (
+    SELECT DISTINCT stop_id
+    FROM region_stops
+    WHERE region_id = $1
+)
+"#,
+    region_id
+    )
             .fetch_all(pool)
             .await
             .map_err(|err| Error::DatabaseExecution(err.to_string()))
-    }
 }
 
 pub(crate) async fn fetch_full_stops(
     pool: &PgPool,
+    region_id: i32,
 ) -> Result<Vec<responses::FullStop>> {
     let stops = sqlx::query!(
         r#"
@@ -91,7 +104,13 @@ SELECT id, name, osm_name, short_name, locality, street, door, lat, lon, externa
     updater, update_date, parish, tags, accessibility_meta, deleted_upstream, verification_level,
     service_check_date, infrastructure_check_date, verified_position
 FROM Stops
+WHERE id IN (
+    SELECT DISTINCT stop_id
+    FROM region_stops
+    WHERE region_id = $1
+)
         "#,
+        region_id
     )
     .fetch_all(pool)
     .await
@@ -232,8 +251,8 @@ RETURNING id
         locality: stop.locality,
         street: stop.street,
         door: stop.door,
-        lat: Some(stop.lat),
-        lon: Some(stop.lon),
+        lat: stop.lat,
+        lon: stop.lon,
         notes: stop.notes,
         parish: None,
         tags: stop.tags,
@@ -343,15 +362,13 @@ ORDER BY subroute_stops.idx"#,
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
-    let mut routes: HashMap<i32, models::responses::SpiderRoute> =
-        HashMap::new();
-    let mut subroutes: HashMap<i32, models::responses::SpiderSubroute> =
-        HashMap::new();
-    let mut stops: HashMap<i32, models::responses::SpiderStop> = HashMap::new();
+    let mut routes: HashMap<i32, responses::SpiderRoute> = HashMap::new();
+    let mut subroutes: HashMap<i32, responses::SpiderSubroute> = HashMap::new();
+    let mut stops: HashMap<i32, responses::SpiderStop> = HashMap::new();
 
     for row in res {
         if let hash_map::Entry::Vacant(e) = routes.entry(row.route_id) {
-            e.insert(models::responses::SpiderRoute {
+            e.insert(responses::SpiderRoute {
                 code: row.route_code,
                 name: row.route_name,
                 circular: row.route_circular,
@@ -363,7 +380,7 @@ ORDER BY subroute_stops.idx"#,
         } else {
             subroutes.insert(
                 row.subroute_id,
-                models::responses::SpiderSubroute {
+                responses::SpiderSubroute {
                     route: row.route_id,
                     flag: row.subroute_flag,
                     stop_sequence: vec![],

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, name, osm_name, lat, lon, external_id FROM stops",
+  "query": "\nSELECT id, name, short_name, lat, lon\nFROM stops\nWHERE id IN (\n    SELECT DISTINCT stop_id\n    FROM region_stops\n    WHERE region_id = $1\n)\n        ",
   "describe": {
     "columns": [
       {
@@ -15,7 +15,7 @@
       },
       {
         "ordinal": 2,
-        "name": "osm_name",
+        "name": "short_name",
         "type_info": "Text"
       },
       {
@@ -27,24 +27,20 @@
         "ordinal": 4,
         "name": "lon",
         "type_info": "Float8"
-      },
-      {
-        "ordinal": 5,
-        "name": "external_id",
-        "type_info": "Text"
       }
     ],
     "parameters": {
-      "Left": []
+      "Left": [
+        "Int4"
+      ]
     },
     "nullable": [
       false,
       true,
       true,
       false,
-      false,
       false
     ]
   },
-  "hash": "a31568920153b54fb5087a8d65f2fb2d9cec725d7ed41c1b2a451544c92c8653"
+  "hash": "35f2ba1f77776d03a9e926f24bf2d457fe561ed31ebf7609aafc45e7bab16636"
 }

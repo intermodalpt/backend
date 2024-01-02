@@ -47,8 +47,8 @@ pub(crate) mod requests {
 
     #[derive(Clone, Deserialize, ToSchema)]
     pub struct ChangeStop {
-        pub lon: Option<f64>,
-        pub lat: Option<f64>,
+        pub lon: f64,
+        pub lat: f64,
 
         pub name: Option<String>,
         pub short_name: Option<String>,
@@ -89,8 +89,11 @@ pub(crate) mod requests {
     }
 
     impl ChangeStop {
-        pub fn derive_patch(&self, stop: &stops::Stop) -> history::StopPatch {
-            let mut patch = history::StopPatch::default();
+        pub fn derive_patch(
+            &self,
+            stop: &stops::Stop,
+        ) -> history::stops::StopPatch {
+            let mut patch = history::stops::StopPatch::default();
 
             if self.name != stop.name {
                 patch.name = Some(self.name.clone());
@@ -109,10 +112,14 @@ pub(crate) mod requests {
             }
 
             if self.a11y.schedules != stop.a11y.schedules {
-                patch.schedules = Some(self.a11y.schedules.clone());
+                patch.schedules = Some(history::opt_vec_into_opt_vec(
+                    self.a11y.schedules.clone(),
+                ));
             }
             if self.a11y.flags != stop.a11y.flags {
-                patch.flags = Some(self.a11y.flags.clone());
+                patch.flags = Some(history::opt_vec_into_opt_vec(
+                    self.a11y.flags.clone(),
+                ));
             }
 
             if self.a11y.has_sidewalk != stop.a11y.has_sidewalk {
@@ -147,7 +154,8 @@ pub(crate) mod requests {
             }
 
             if self.a11y.advertisement_qty != stop.a11y.advertisement_qty {
-                patch.advertisement_qty = Some(self.a11y.advertisement_qty);
+                patch.advertisement_qty =
+                    Some(self.a11y.advertisement_qty.map(Into::into));
             }
 
             if self.a11y.has_crossing != stop.a11y.has_crossing {
@@ -168,13 +176,13 @@ pub(crate) mod requests {
                 != stop.a11y.illumination_strength
             {
                 patch.illumination_strength =
-                    Some(self.a11y.illumination_strength);
+                    Some(self.a11y.illumination_strength.map(Into::into));
             }
             if self.a11y.illumination_position
                 != stop.a11y.illumination_position
             {
                 patch.illumination_position =
-                    Some(self.a11y.illumination_position);
+                    Some(self.a11y.illumination_position.map(Into::into));
             }
             if self.a11y.has_illuminated_path != stop.a11y.has_illuminated_path
             {
@@ -203,22 +211,25 @@ pub(crate) mod requests {
             if self.a11y.parking_visibility_impairment
                 != stop.a11y.parking_visibility_impairment
             {
-                patch.parking_visibility_impairment =
-                    Some(self.a11y.parking_visibility_impairment);
+                patch.parking_visibility_impairment = Some(
+                    self.a11y.parking_visibility_impairment.map(Into::into),
+                );
             }
 
             if self.a11y.parking_local_access_impairment
                 != stop.a11y.parking_local_access_impairment
             {
-                patch.parking_local_access_impairment =
-                    Some(self.a11y.parking_local_access_impairment);
+                patch.parking_local_access_impairment = Some(
+                    self.a11y.parking_local_access_impairment.map(Into::into),
+                );
             }
 
             if self.a11y.parking_area_access_impairment
                 != stop.a11y.parking_area_access_impairment
             {
-                patch.parking_area_access_impairment =
-                    Some(self.a11y.parking_area_access_impairment);
+                patch.parking_area_access_impairment = Some(
+                    self.a11y.parking_area_access_impairment.map(Into::into),
+                );
             }
 
             if self.a11y.tmp_issues != stop.a11y.tmp_issues {
@@ -265,6 +276,17 @@ pub(crate) mod responses {
         pub source: String,
     }
 
+    /// Meant to be a minimal stop for the client to fill the UI with
+    /// It should request `Stop` from then on
+    #[derive(Debug, Clone, Serialize, PartialEq, sqlx::Type)]
+    pub struct SimpleStop {
+        pub id: i32,
+        pub name: Option<String>,
+        pub short_name: Option<String>,
+        pub lat: f64,
+        pub lon: f64,
+    }
+
     /// Meant to be an information-rich stop for the client
     #[derive(Debug, Clone, Serialize, PartialEq)]
     pub struct Stop {
@@ -275,8 +297,8 @@ pub(crate) mod responses {
         pub street: Option<String>,
         pub door: Option<String>,
         pub parish: Option<i32>,
-        pub lat: Option<f64>,
-        pub lon: Option<f64>,
+        pub lat: f64,
+        pub lon: f64,
         pub notes: Option<String>,
         pub tags: Vec<String>,
         pub a11y: sqlx::types::Json<stops::A11yMeta>,
@@ -347,9 +369,8 @@ pub(crate) mod responses {
     #[derive(Serialize, ToSchema)]
     pub struct SpiderStop {
         pub name: Option<String>,
-        // TODO Why the option?
-        pub lat: Option<f64>,
-        pub lon: Option<f64>,
+        pub lat: f64,
+        pub lon: f64,
     }
 
     #[derive(Serialize, ToSchema)]
@@ -375,8 +396,8 @@ pub(crate) mod responses {
             let street = decoder.try_decode::<Option<String>>()?;
             let door = decoder.try_decode::<Option<String>>()?;
             let parish = decoder.try_decode::<Option<i32>>()?;
-            let lat = decoder.try_decode::<Option<f64>>()?;
-            let lon = decoder.try_decode::<Option<f64>>()?;
+            let lat = decoder.try_decode::<f64>()?;
+            let lon = decoder.try_decode::<f64>()?;
             let notes = decoder.try_decode::<Option<String>>()?;
             let tags = decoder.try_decode::<Vec<String>>()?;
             let a11y =

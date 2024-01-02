@@ -16,10 +16,25 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#[derive(Debug)]
-pub enum Error {
-    DownloadFailure(String),
-    FilesystemFailure(String),
-    ExtractionFailure(String),
-    PatchingFailure { field: &'static str, value: String },
+use serde::{Deserialize, Serialize};
+
+// This is never going to be changed. Is ok to use and re-export
+pub use crate::models::calendar::Weekday;
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(tag = "condition")]
+pub enum Condition {
+    Holiday,
+    Summer,
+    School,
+    Range { start: (u8, u8), end: (u8, u8) },
+    Nth { nth: u8 },
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Calendar {
+    pub weekdays: Vec<Weekday>,
+    pub only_if: Vec<Condition>,
+    pub also_if: Vec<Condition>,
+    pub except_if: Vec<Condition>,
 }

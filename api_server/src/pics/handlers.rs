@@ -124,7 +124,7 @@ pub(crate) async fn get_latest_stop_pictures(
     claims: Option<auth::Claims>,
     qs: Query<PicsPage>,
 ) -> Result<Json<Vec<responses::PicWithStops>>, Error> {
-    let mut is_trusted = matches!(
+    let is_trusted = matches!(
         claims,
         Some(auth::Claims {
             permissions: auth::Permissions { is_admin: true, .. },
@@ -337,11 +337,12 @@ pub(crate) async fn upload_stop_picture(
         &mut transaction,
         claims.uid,
         &[history::Change::StopPicUpload {
-            pic: pic.clone(),
+            pic: pic.clone().into(),
             stops: vec![pics::StopAttrs {
                 id: stop_id,
                 attrs: vec![],
-            }],
+            }
+            .into()],
         }],
         None,
     )
@@ -452,10 +453,10 @@ pub(crate) async fn patch_stop_picture_meta(
             claims.uid,
             &[history::Change::StopPicMetaUpdate {
                 pic_id: Some(stop_picture_id),
-                original_meta: pic.dyn_meta,
-                original_stops: original_rels,
+                original_meta: pic.dyn_meta.into(),
+                original_stops: history::vec_into_vec(original_rels),
                 meta_patch: patch,
-                stops: stop_pic_meta.stops.clone(),
+                stops: history::vec_into_vec(stop_pic_meta.stops.clone()),
             }],
             None,
         )

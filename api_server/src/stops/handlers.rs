@@ -18,9 +18,8 @@
 
 use std::collections::HashMap;
 
-use axum::extract::{Path, Query, State};
+use axum::extract::{Path, State};
 use axum::Json;
-use serde::Deserialize;
 
 use commons::models::{history, routes, stops};
 
@@ -28,30 +27,27 @@ use super::{models, sql};
 use crate::stops::models::responses;
 use crate::{auth, contrib, AppState, Error};
 
-#[derive(Deserialize)]
-pub(crate) struct StopQueryParam {
-    #[serde(default)]
-    all: bool,
-}
-
-#[utoipa::path(
-    get,
-    path = "/v1/stops",
-    responses(
-        (status = 200, description = "List of stops", body = [Stop])
-    )
-)]
 pub(crate) async fn get_stops(
     State(state): State<AppState>,
-    params: Query<StopQueryParam>,
+    Path(region_id): Path<i32>,
+) -> Result<Json<Vec<responses::SimpleStop>>, Error> {
+    Ok(Json(sql::fetch_simple_stops(&state.pool, region_id).await?))
+}
+
+pub(crate) async fn get_detailed_stops(
+    State(state): State<AppState>,
+    Path(region_id): Path<i32>,
 ) -> Result<Json<Vec<responses::Stop>>, Error> {
-    Ok(Json(sql::fetch_stops(&state.pool, !params.all).await?))
+    Ok(Json(
+        sql::fetch_detailed_stops(&state.pool, region_id).await?,
+    ))
 }
 
 pub(crate) async fn get_full_stops(
     State(state): State<AppState>,
+    Path(region_id): Path<i32>,
 ) -> Result<Json<Vec<responses::FullStop>>, Error> {
-    Ok(Json(sql::fetch_full_stops(&state.pool).await?))
+    Ok(Json(sql::fetch_full_stops(&state.pool, region_id).await?))
 }
 
 #[utoipa::path(
@@ -101,7 +97,7 @@ pub(crate) async fn create_stop(
     contrib::sql::insert_changeset_log(
         &mut transaction,
         user_id,
-        &[history::Change::StopCreation { data: stop }],
+        &[history::Change::StopCreation { data: stop.into() }],
         None,
     )
     .await?;
@@ -156,7 +152,7 @@ pub(crate) async fn patch_stop(
         &mut transaction,
         user_id,
         &[history::Change::StopUpdate {
-            original: stop.clone(),
+            original: stop.clone().into(),
             patch: patch.clone(),
         }],
         None,
@@ -165,12 +161,14 @@ pub(crate) async fn patch_stop(
 
     sql::update_stop(&mut transaction, stop_id, changes, user_id).await?;
 
+    // If this fails then proceed find a better suited job in a fast food chain.
+    // The patch was just made, must be valid.
+    assert!(patch.apply(&mut stop).is_ok());
+
     transaction
         .commit()
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
-
-    patch.apply(&mut stop);
 
     Ok(Json(stop))
 }

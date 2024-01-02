@@ -156,7 +156,7 @@ pub(crate) async fn post_issue(
     contrib::sql::insert_changeset_log(
         &mut transaction,
         claims.uid,
-        &[history::Change::IssueCreation { data: issue }],
+        &[history::Change::IssueCreation { data: issue.into() }],
         None,
     )
     .await?;
@@ -206,7 +206,7 @@ pub(crate) async fn patch_issue(
         &mut transaction,
         claims.uid,
         &[history::Change::IssueUpdate {
-            original: issue,
+            original: issue.into(),
             patch,
         }],
         None,

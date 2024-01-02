@@ -74,10 +74,8 @@ pub(crate) async fn import(
             osm_stop_ids.push(osm_stop.external_id.clone());
             if let Some(stop) = stop_index.get(&osm_stop.external_id) {
                 osm_stop.id = stop.id;
-                if (stop.lat.unwrap() - osm_stop.lat.unwrap()).abs()
-                    > FLOAT_TOLERANCE
-                    || (stop.lon.unwrap() - osm_stop.lon.unwrap()).abs()
-                        > FLOAT_TOLERANCE
+                if (stop.lat - osm_stop.lat).abs() > FLOAT_TOLERANCE
+                    || (stop.lon - osm_stop.lon).abs() > FLOAT_TOLERANCE
                     || stop.osm_name != osm_stop.osm_name
                 {
                     updated_stops.push(osm_stop);
