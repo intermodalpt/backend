@@ -19,20 +19,24 @@
 use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
+use strsim::normalized_levenshtein;
 
 use crate::error::Error;
 use crate::utils::stop_seq_error;
 use crate::{gtfs, iml, GTFS_TMP_SUPRESS};
 
 pub(crate) struct RouteSummary<'iml, 'gtfs> {
+    // Some of these fields are unnecessary since the subroute has a ref
+    pub(crate) iml_route: &'iml iml::Route,
     pub(crate) iml_route_id: iml::RouteId,
-    pub(crate) route_code: &'iml Option<String>,
     pub(crate) subroutes: Vec<SubrouteSummary<'iml>>,
     pub(crate) patterns: Vec<PatternSummary<'gtfs>>,
 }
 
 #[derive(Clone)]
 pub(crate) struct SubrouteSummary<'iml> {
+    // Some of these fields are unnecessary since the subroute has a ref
+    pub(crate) subroute: &'iml iml::Subroute,
     pub(crate) subroute_id: iml::SubrouteId,
     pub(crate) prematched_gtfs_pattern: Option<gtfs::PatternId>,
     pub(crate) stop_ids: &'iml [iml::StopId],
@@ -47,6 +51,7 @@ pub(crate) struct PatternSummary<'gtfs> {
     pub(crate) route_id: &'gtfs gtfs::RouteId,
     pub(crate) patterns: &'gtfs HashSet<gtfs::PatternId>,
     pub(crate) trips: &'gtfs HashSet<gtfs::TripId>,
+    pub(crate) headsigns: &'gtfs HashSet<String>,
 }
 
 #[derive(Debug)]
@@ -127,6 +132,7 @@ async fn link_gtfs_to_iml_route<'iml, 'gtfs>(
     for iml_subroute in iml_route.subroutes.iter() {
         iml_subroute_data.push(SubrouteSummary {
             subroute_id: iml_subroute.id,
+            subroute: &iml_subroute,
             stop_ids_as_option: iml_subroute
                 .stops
                 .iter()
@@ -150,8 +156,8 @@ async fn link_gtfs_to_iml_route<'iml, 'gtfs>(
         );
 
         return Ok(RouteSummary {
+            iml_route,
             iml_route_id: iml_route.id,
-            route_code: &iml_route.code,
             subroutes: iml_subroute_data.clone(),
             patterns: vec![],
         });
@@ -183,14 +189,15 @@ async fn link_gtfs_to_iml_route<'iml, 'gtfs>(
                     iml_stop_ids,
                     patterns: &cluster.patterns,
                     trips: &cluster.trips,
+                    headsigns: &cluster.headsigns,
                 });
             }
         }
     }
 
     Ok(RouteSummary {
+        iml_route,
         iml_route_id: iml_route.id,
-        route_code: &iml_route.code,
         subroutes: iml_subroute_data.clone(),
         patterns: gtfs_patterns_data.clone(),
     })
@@ -244,7 +251,6 @@ pub(crate) fn pair_patterns_with_subroutes<'iml, 'gtfs>(
     // (This means at most 3 new stops or 2 removed stops per 15 stops)
     let mut strong_match_candidates = vec![];
     let mut strong_matches: Vec<_>;
-
     let mut weak_past_assignments = vec![];
 
     fn meets_strong_match_criteria(
@@ -437,13 +443,74 @@ pub(crate) fn pair_patterns_with_subroutes<'iml, 'gtfs>(
             }
         });
 
-    // Textual match
-    // TODO once the API returns the headsigns
-
     // Notable cases:
     // Only one pattern and subroute -> Match them
     // Two and the headsigns are very close to the subroute's -> Match them
     // One strong and one weak -> Match the strong
+    // Weak assignments from the past pose no conflict -> Add them all
+    if strong_matches.len() == 0 {
+        if patterns.len() == 1 && subroutes.len() == 1 {
+            strong_matches.push((0, 0));
+        } else if !weak_past_assignments.is_empty() {
+            weak_past_assignments.iter().for_each(
+                |(weak_iml_idx, weak_gtfs_idx)| {
+                    // Check if there are conflicts with any of the strong matches or other weak matches
+                    let conflicts = strong_matches
+                        .iter()
+                        .find_position(|(strong_iml_idx, strong_gtfs_idx)| {
+                            weak_iml_idx == strong_iml_idx
+                                && weak_gtfs_idx != strong_gtfs_idx
+                        })
+                        .is_some()
+                        || weak_past_assignments
+                            .iter()
+                            .find_position(|(other_iml_idx, other_gtfs_idx)| {
+                                weak_iml_idx == other_iml_idx
+                                    && weak_gtfs_idx != other_gtfs_idx
+                            })
+                            .is_some();
+                    if !conflicts {
+                        strong_matches.push((*weak_iml_idx, *weak_gtfs_idx))
+                    }
+                },
+            );
+        } else if patterns.len() == 2 && subroutes.len() == 2 {
+            if let (Some(sr0_hs), Some(sr1_hs)) = (
+                &subroutes[0].subroute.headsign,
+                &subroutes[1].subroute.headsign,
+            ) {
+                const MIN_SIMILARITY: f64 = 0.9;
+                let sr0_matches_p0 = patterns[0].headsigns.iter().any(|hs| {
+                    normalized_levenshtein(hs, &sr0_hs) > MIN_SIMILARITY
+                });
+                let sr0_matches_p1 = patterns[1].headsigns.iter().any(|hs| {
+                    normalized_levenshtein(hs, &sr0_hs) > MIN_SIMILARITY
+                });
+                let sr1_matches_p0 = patterns[0].headsigns.iter().any(|hs| {
+                    normalized_levenshtein(hs, &sr1_hs) > MIN_SIMILARITY
+                });
+                let sr1_matches_p1 = patterns[1].headsigns.iter().any(|hs| {
+                    normalized_levenshtein(hs, &sr1_hs) > MIN_SIMILARITY
+                });
+
+                if sr0_matches_p0
+                    && sr1_matches_p1
+                    && !sr0_matches_p1
+                    && !sr1_matches_p0
+                {
+                    strong_matches.push((0, 0));
+                    strong_matches.push((1, 1));
+                } else if sr0_matches_p1
+                    && sr1_matches_p0
+                    && !sr0_matches_p0
+                    && !sr1_matches_p1
+                {
+                    strong_matches.push((0, 1));
+                    strong_matches.push((1, 0));
+                }
+            }
+        }
+    }
 
     let used_iml_idxs = strong_matches
         .iter()

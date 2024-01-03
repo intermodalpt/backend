@@ -43,6 +43,7 @@ pub(crate) struct PatternCluster {
     pub(crate) stops: Vec<StopId>,
     pub(crate) patterns: HashSet<PatternId>,
     pub(crate) trips: HashSet<TripId>,
+    pub(crate) headsigns: HashSet<String>,
 }
 
 pub(crate) fn load_gtfs(root: &PathBuf) -> Result<Data, Error> {
@@ -88,16 +89,19 @@ pub(crate) fn load_gtfs(root: &PathBuf) -> Result<Data, Error> {
             trips_by_stops.into_iter().for_each(|(stops, trips)| {
                 let mut pattern_ids = HashSet::new();
                 let mut trip_ids = HashSet::new();
+                let mut headsigns = HashSet::new();
 
                 trips.into_iter().for_each(|trip| {
                     pattern_ids.insert(trip.pattern_id.clone());
                     trip_ids.insert(trip.trip_id.clone());
+                    headsigns.insert(trip.trip_headsign.clone());
                 });
 
                 let cluster = PatternCluster {
                     stops,
                     patterns: pattern_ids,
                     trips: trip_ids,
+                    headsigns,
                 };
                 clusters.push(cluster);
             });

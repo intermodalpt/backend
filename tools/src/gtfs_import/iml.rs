@@ -18,6 +18,7 @@
 
 #![allow(dead_code)]
 
+use itertools::Itertools;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::fs;
@@ -52,19 +53,21 @@ pub(crate) struct Route {
     pub(crate) name: String,
     pub(crate) code: Option<String>,
     pub(crate) operator: OperatorId,
-    circular: bool,
-    badge_text: String,
-    badge_bg: String,
-    type_id: i32,
-    active: bool,
+    pub(crate) circular: bool,
+    pub(crate) badge_text: String,
+    pub(crate) badge_bg: String,
+    pub(crate) type_id: i32,
+    pub(crate) active: bool,
     pub(crate) subroutes: Vec<Subroute>,
 }
 
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 pub(crate) struct Subroute {
     pub(crate) id: SubrouteId,
     pub(crate) flag: String,
     pub(crate) circular: bool,
+    pub(crate) headsign: Option<String>,
+    pub(crate) destination: Option<String>,
     #[serde(default)]
     pub(crate) stops: Vec<StopId>,
     #[serde(default)]
@@ -88,6 +91,23 @@ pub(crate) async fn load_base_data() -> Result<Data, Error> {
     println!("Downloaded IML routes");
 
     for route in &mut iml_routes {
+        for subroute in &mut route.subroutes {
+            if subroute.headsign.is_some() {
+                continue;
+            }
+            if subroute.flag.contains('-') {
+                let flag_parts = subroute.flag.split('-').collect_vec();
+                if flag_parts.len() == 2 {
+                    let trimmed = flag_parts[1].trim();
+                    if trimmed.len() > 5 {
+                        subroute.headsign = Some(trimmed.to_string());
+                        continue;
+                    }
+                }
+            }
+            subroute.headsign = subroute.destination.clone();
+        }
+
         let iml_subroute_stops = fetch_subroute_stops(route.id).await.unwrap();
         println!("Downloaded IML subroute stops for route {}", route.id);
         iml_subroute_stops
