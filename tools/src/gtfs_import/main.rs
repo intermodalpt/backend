@@ -30,6 +30,8 @@ mod gtfs;
 mod iml;
 mod linter;
 mod matcher;
+#[cfg(test)]
+mod tests;
 mod utils;
 
 #[tokio::main]
@@ -94,7 +96,7 @@ async fn main() {
         {
             let mut used_gtfs_pattern_ids = HashSet::new();
             let mut used_iml_subroute_ids = HashSet::new();
-            for m in res.matches.iter() {
+            for m in res.pairings.iter() {
                 let new = used_gtfs_pattern_ids.insert(&m.gtfs.pattern_ids);
                 if !new {
                     conflicts = true;
@@ -116,9 +118,9 @@ async fn main() {
         let mut every_match_perfect = true;
         let mut missing_stop_rels = false;
 
-        if !res.matches.is_empty() {
+        if !res.pairings.is_empty() {
             println!("\tMatches:");
-            for m in res.matches.iter() {
+            for m in res.pairings.iter() {
                 let subroute = route
                     .subroutes
                     .iter()
@@ -180,7 +182,7 @@ async fn main() {
         }
 
         let no_unmatched =
-            res.unmatched_iml.is_empty() || res.unmatched_gtfs.is_empty();
+            res.unpaired_iml.is_empty() || res.unpaired_gtfs.is_empty();
 
         if every_match_perfect && no_unmatched {
             good_cnt += 1;
@@ -191,9 +193,9 @@ async fn main() {
             println!("\t\t### BAD MATCH ###")
         }
 
-        if !res.unmatched_iml.is_empty() {
+        if !res.unpaired_iml.is_empty() {
             println!("\tUnmatched IML:");
-            for data in res.unmatched_iml.iter() {
+            for data in res.unpaired_iml.iter() {
                 let subroute = route
                     .subroutes
                     .iter()
@@ -204,9 +206,9 @@ async fn main() {
                 println!("\t\t---");
             }
         }
-        if !res.unmatched_gtfs.is_empty() {
+        if !res.unpaired_gtfs.is_empty() {
             println!("\tUnmatched GTFS:");
-            for data in res.unmatched_gtfs.iter() {
+            for data in res.unpaired_gtfs.iter() {
                 let trip_headsigns = data
                     .trip_ids
                     .iter()

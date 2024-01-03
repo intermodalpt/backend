@@ -64,7 +64,11 @@ pub(crate) struct Route {
 pub(crate) struct Subroute {
     pub(crate) id: SubrouteId,
     pub(crate) flag: String,
-    circular: bool,
+    pub(crate) circular: bool,
+    #[serde(default)]
+    pub(crate) stops: Vec<StopId>,
+    #[serde(default)]
+    pub(crate) prematched_gtfs_pattern: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -80,8 +84,29 @@ pub(crate) struct Data {
 pub(crate) async fn load_base_data() -> Result<Data, Error> {
     let iml_stops = fetch_iml_stops().await.unwrap();
     println!("Downloaded IML stops");
-    let iml_routes = fetch_iml_routes().await.unwrap();
+    let mut iml_routes = fetch_iml_routes().await.unwrap();
     println!("Downloaded IML routes");
+
+    for route in &mut iml_routes {
+        let iml_subroute_stops = fetch_subroute_stops(route.id).await.unwrap();
+        println!("Downloaded IML subroute stops for route {}", route.id);
+        iml_subroute_stops
+            .into_iter()
+            .for_each(|(subroute_id, stops)| {
+                if let Some(subroute) = route
+                    .subroutes
+                    .iter_mut()
+                    .find(|subroute| subroute.id == subroute_id)
+                {
+                    subroute.stops = stops;
+                } else {
+                    eprintln!(
+                        "Subroute {} not found in route {}",
+                        subroute_id, route.id
+                    );
+                }
+            });
+    }
 
     Ok(Data {
         stops: iml_stops

@@ -95,7 +95,7 @@ pub fn needleman_wunsch<'a, T: PartialEq + Clone>(
     (aligned_seq1, aligned_seq2, matrix)
 }
 
-pub(crate) fn stop_seq_error2<T: PartialEq + Clone>(
+pub(crate) fn stop_seq_error<T: PartialEq + Clone>(
     seq1: &[T],
     seq2: &[T],
 ) -> (usize, usize) {
