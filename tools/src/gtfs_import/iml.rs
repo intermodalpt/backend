@@ -93,6 +93,8 @@ pub(crate) async fn load_base_data() -> Result<Data, Error> {
     for route in &mut iml_routes {
         for subroute in &mut route.subroutes {
             if subroute.headsign.is_some() {
+                subroute.headsign =
+                    subroute.headsign.as_ref().map(|s| s.trim().to_lowercase());
                 continue;
             }
             if subroute.flag.contains('-') {
@@ -100,12 +102,15 @@ pub(crate) async fn load_base_data() -> Result<Data, Error> {
                 if flag_parts.len() == 2 {
                     let trimmed = flag_parts[1].trim();
                     if trimmed.len() > 5 {
-                        subroute.headsign = Some(trimmed.to_string());
+                        subroute.headsign = Some(trimmed.to_lowercase());
                         continue;
                     }
                 }
             }
-            subroute.headsign = subroute.destination.clone();
+            subroute.headsign = subroute
+                .destination
+                .as_ref()
+                .map(|s| s.trim().to_lowercase());
         }
 
         let iml_subroute_stops = fetch_subroute_stops(route.id).await.unwrap();

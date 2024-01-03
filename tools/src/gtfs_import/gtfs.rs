@@ -94,7 +94,7 @@ pub(crate) fn load_gtfs(root: &PathBuf) -> Result<Data, Error> {
                 trips.into_iter().for_each(|trip| {
                     pattern_ids.insert(trip.pattern_id.clone());
                     trip_ids.insert(trip.trip_id.clone());
-                    headsigns.insert(trip.trip_headsign.clone());
+                    headsigns.insert(trip.trip_headsign.to_lowercase());
                 });
 
                 let cluster = PatternCluster {
