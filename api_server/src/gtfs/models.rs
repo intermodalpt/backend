@@ -49,6 +49,19 @@ pub struct TMLRoute {
     pub(crate) trips: Vec<TMLTrip>,
 }
 
+pub(crate) mod requests {
+    use serde::Deserialize;
+    use std::collections::HashMap;
+
+    use commons::models::gtfs;
+
+    #[derive(Debug, Deserialize)]
+    pub(crate) struct ValidateRoute {
+        pub(crate) validation: gtfs::RouteValidation,
+        pub(crate) subroutes: HashMap<i32, gtfs::SubrouteValidation>,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{TMLRoute, TMLTrip};

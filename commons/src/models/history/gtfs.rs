@@ -82,13 +82,13 @@ impl From<current::RouteValidation> for RouteValidation {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OperatorValidation {
-    pub lints: Vec<Lint>,
+    pub gtfs_lints: Vec<Lint>,
 }
 
 impl From<current::OperatorValidation> for OperatorValidation {
     fn from(validation: current::OperatorValidation) -> Self {
         Self {
-            lints: super::vec_into_vec(validation.lints),
+            gtfs_lints: super::vec_into_vec(validation.gtfs_lints),
         }
     }
 }

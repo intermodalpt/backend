@@ -67,9 +67,10 @@ CREATE TABLE parishes
 
 CREATE TABLE operators
 (
-    id   serial PRIMARY KEY,
-    name text NOT NULL,
-    tag  text NOT NULL
+    id         serial PRIMARY KEY,
+    name       text NOT NULL,
+    tag        text NOT NULL,
+    validation jsonb
 );
 
 ALTER TABLE ONLY users
@@ -151,6 +152,7 @@ CREATE TABLE routes
     municipalities integer[] DEFAULT ARRAY []::integer[] NOT NULL,
     parishes       integer[] DEFAULT ARRAY []::integer[] NOT NULL,
     main_subroute  integer,
+    validation     jsonb,
 
     -- TODO consider deprecating
     circular       boolean                               NOT NULL

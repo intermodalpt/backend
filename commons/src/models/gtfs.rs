@@ -128,7 +128,7 @@ pub struct RouteValidation {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OperatorValidation {
-    pub lints: Vec<Lint>,
+    pub gtfs_lints: Vec<Lint>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

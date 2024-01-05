@@ -37,6 +37,129 @@ FROM regions
     .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
+pub(crate) async fn upsert_operator_into_region(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    region_id: i32,
+    operator_id: i32,
+) -> Result<()> {
+    sqlx::query!(
+        r#"
+INSERT INTO region_operators (region_id, operator_id)
+VALUES ($1, $2)
+ON CONFLICT DO NOTHING;
+    "#,
+        region_id,
+        operator_id
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    Ok(())
+}
+
+pub(crate) async fn delete_operator_from_region(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    region_id: i32,
+    operator_id: i32,
+) -> Result<()> {
+    sqlx::query!(
+        r#"
+DELETE FROM region_operators
+WHERE region_id=$1 AND operator_id=$2;
+    "#,
+        region_id,
+        operator_id
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    Ok(())
+}
+
+pub(crate) async fn upsert_route_into_region(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    region_id: i32,
+    route_id: i32,
+) -> Result<()> {
+    sqlx::query!(
+        r#"
+INSERT INTO region_routes (region_id, route_id)
+VALUES ($1, $2)
+ON CONFLICT DO NOTHING;
+    "#,
+        region_id,
+        route_id
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    Ok(())
+}
+
+pub(crate) async fn delete_route_from_region(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    region_id: i32,
+    route_id: i32,
+) -> Result<()> {
+    sqlx::query!(
+        r#"
+DELETE FROM region_routes
+WHERE region_id=$1 AND route_id=$2;
+    "#,
+        region_id,
+        route_id
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    Ok(())
+}
+
+pub(crate) async fn upsert_stop_into_region(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    region_id: i32,
+    stop_id: i32,
+) -> Result<()> {
+    sqlx::query!(
+        r#"
+INSERT INTO region_stops (region_id, stop_id)
+VALUES ($1, $2)
+ON CONFLICT DO NOTHING;
+    "#,
+        region_id,
+        stop_id
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    Ok(())
+}
+
+pub(crate) async fn delete_stop_from_region(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    region_id: i32,
+    stop_id: i32,
+) -> Result<()> {
+    sqlx::query!(
+        r#"
+DELETE FROM region_stops
+WHERE region_id=$1 AND stop_id=$2;
+    "#,
+        region_id,
+        stop_id
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    Ok(())
+}
+
 pub(crate) async fn fetch_parishes(pool: &PgPool) -> Result<Vec<geo::Parish>> {
     sqlx::query_as!(
         geo::Parish,

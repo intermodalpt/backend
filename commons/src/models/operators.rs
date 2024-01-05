@@ -24,12 +24,14 @@ use serde_repr::Serialize_repr;
 use utoipa::ToSchema;
 
 use super::calendar::Calendar;
+use super::gtfs;
 
 #[derive(Debug, Serialize, ToSchema)]
 pub struct Operator {
     pub id: i32,
     pub name: String,
     pub tag: String,
+    pub validation: Option<gtfs::OperatorValidation>,
 }
 
 #[derive(Debug, Serialize, ToSchema)]

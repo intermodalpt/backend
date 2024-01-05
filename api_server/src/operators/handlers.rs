@@ -25,13 +25,13 @@ use serde::Deserialize;
 
 use commons::models::{history, operators};
 
-use super::models::{requests, responses};
+use super::models::{self, requests, responses};
 use super::sql;
 use crate::{auth, contrib, AppState, Error};
 
 pub(crate) async fn get_operators(
     State(state): State<AppState>,
-) -> Result<Json<Vec<operators::Operator>>, Error> {
+) -> Result<Json<Vec<models::Operator>>, Error> {
     Ok(Json(sql::fetch_operators(&state.pool).await?))
 }
 

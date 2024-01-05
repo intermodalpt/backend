@@ -59,12 +59,27 @@ pub fn build_paths(state: AppState) -> Router {
             get(stops::handlers::get_stops),
         )
         .route(
+            "/v1/regions/:region_id/stops/:stop_id",
+            get(geo::handlers::put_stop_into_region)
+                .delete(geo::handlers::delete_stop_from_region),
+        )
+        .route(
             "/v1/regions/:region_id/stops/detailed",
             get(stops::handlers::get_detailed_stops),
         )
         .route(
             "/v1/regions/:region_id/stops/full",
             get(stops::handlers::get_full_stops),
+        )
+        .route(
+            "/v1/regions/:region_id/operators/:operator_id",
+            get(geo::handlers::put_operator_into_region)
+                .delete(geo::handlers::delete_operator_from_region),
+        )
+        .route(
+            "/v1/regions/:region_id/routes/:route_id",
+            get(geo::handlers::put_route_into_region)
+                .delete(geo::handlers::delete_route_from_region),
         )
         .route("/v1/stops/:stop_id", get(stops::handlers::get_stop))
         .route("/v1/stops/create", post(stops::handlers::create_stop))
@@ -126,6 +141,10 @@ pub fn build_paths(state: AppState) -> Router {
         .route(
             "/v1/routes/:route_id/schedule",
             get(routes::handlers::get_schedule),
+        )
+        .route(
+            "/v1/routes/:route_id/attach_validation",
+            put(gtfs::handlers::put_route_validation_data),
         )
         .route(
             "/v1/schedules/:subroute_id",
@@ -306,6 +325,10 @@ pub fn build_paths(state: AppState) -> Router {
         .route(
             "/v1/operators/:operator_id/news",
             get(operators::handlers::get_operator_news),
+        )
+        .route(
+            "/v1/operators/:operator_id/attach_validation",
+            put(gtfs::handlers::put_operator_validation_data),
         )
         .route(
             "/v1/actions/migrate_stop/:original_id/:replacement_id",

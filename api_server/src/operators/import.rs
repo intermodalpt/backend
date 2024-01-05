@@ -25,23 +25,31 @@ use serde::{Deserialize, Serialize};
 use commons::models::operators;
 use commons::utils::{git, gtfs as gtfs_utils, http};
 
+use super::models;
 use crate::errors::Error;
 
 pub(crate) trait OperatorData {
-    fn get_data_root(&self) -> PathBuf;
-    fn get_gtfs_root(&self) -> PathBuf;
-    fn get_storage_meta(&self) -> Result<OperatorStorageMeta, Error>;
-}
-impl OperatorData for operators::Operator {
+    fn get_id(&self) -> i32;
     fn get_data_root(&self) -> PathBuf {
-        PathBuf::from(format!("./data/operators/{}/", self.id))
+        PathBuf::from(format!("./data/operators/{}/", self.get_id()))
     }
     fn get_gtfs_root(&self) -> PathBuf {
-        PathBuf::from(format!("./data/operators/{}/gtfs/", self.id))
+        PathBuf::from(format!("./data/operators/{}/gtfs/", self.get_id()))
     }
-
     fn get_storage_meta(&self) -> Result<OperatorStorageMeta, Error> {
-        get_operator_storage_meta(self.id)
+        get_operator_storage_meta(self.get_id())
+    }
+}
+
+impl OperatorData for models::Operator {
+    fn get_id(&self) -> i32 {
+        self.id
+    }
+}
+
+impl OperatorData for operators::Operator {
+    fn get_id(&self) -> i32 {
+        self.id
     }
 }
 #[derive(Deserialize, Serialize, Debug, Default)]
@@ -104,11 +112,11 @@ pub(crate) fn set_operator_storage_meta(
 }
 
 pub(crate) async fn update_operator_gtfs(
-    operator: &operators::Operator,
+    operator_id: i32,
+    operator_tag: &str,
 ) -> Result<(), Error> {
-    let operator_id = operator.id;
     let mut meta = get_operator_storage_meta(operator_id)?;
-    match operator.tag.as_str() {
+    match operator_tag {
         "cmet" => {
             let path = format!("./data/operators/{operator_id}/gtfsrepo");
             let url = "https://github.com/carrismetropolitana/gtfs";

@@ -37,3 +37,115 @@ pub(crate) async fn get_parishes(
     // TODO filter by region
     Ok(Json(sql::fetch_parishes(&state.pool).await?))
 }
+
+pub(crate) async fn put_operator_into_region(
+    State(state): State<AppState>,
+    Path((region_id, operator_id)): Path<(i32, i32)>,
+) -> Result<(), Error> {
+    let mut transaction = state
+        .pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    sql::upsert_operator_into_region(&mut transaction, region_id, operator_id)
+        .await?;
+
+    transaction.commit().await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+}
+
+pub(crate) async fn delete_operator_from_region(
+    State(state): State<AppState>,
+    Path((region_id, operator_id)): Path<(i32, i32)>,
+) -> Result<(), Error> {
+    let mut transaction = state
+        .pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    sql::delete_operator_from_region(&mut transaction, region_id, operator_id)
+        .await?;
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+}
+
+pub(crate) async fn put_route_into_region(
+    State(state): State<AppState>,
+    Path((region_id, route_id)): Path<(i32, i32)>,
+) -> Result<(), Error> {
+    let mut transaction = state
+        .pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    sql::upsert_route_into_region(&mut transaction, region_id, route_id)
+        .await?;
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+}
+
+pub(crate) async fn delete_route_from_region(
+    State(state): State<AppState>,
+    Path((region_id, route_id)): Path<(i32, i32)>,
+) -> Result<(), Error> {
+    let mut transaction = state
+        .pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    sql::delete_route_from_region(&mut transaction, region_id, route_id)
+        .await?;
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+}
+
+pub(crate) async fn put_stop_into_region(
+    State(state): State<AppState>,
+    Path((region_id, stop_id)): Path<(i32, i32)>,
+) -> Result<(), Error> {
+    let mut transaction = state
+        .pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    sql::upsert_stop_into_region(&mut transaction, region_id, stop_id).await?;
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+}
+
+pub(crate) async fn delete_stop_from_region(
+    State(state): State<AppState>,
+    Path((region_id, stop_id)): Path<(i32, i32)>,
+) -> Result<(), Error> {
+    let mut transaction = state
+        .pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    sql::delete_stop_from_region(&mut transaction, region_id, stop_id).await?;
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    Ok(())
+}

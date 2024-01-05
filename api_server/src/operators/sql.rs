@@ -22,7 +22,7 @@ use sqlx::PgPool;
 use commons::models::calendar::Calendar;
 use commons::models::operators;
 
-use super::models::{requests, responses};
+use super::models::{self, requests, responses};
 use crate::Error;
 
 type Result<T> = std::result::Result<T, Error>;
@@ -30,9 +30,9 @@ type Result<T> = std::result::Result<T, Error>;
 pub(crate) async fn fetch_operator(
     pool: &PgPool,
     operator_id: i32,
-) -> Result<Option<operators::Operator>> {
+) -> Result<Option<models::Operator>> {
     sqlx::query_as!(
-        operators::Operator,
+        models::Operator,
         r#"
 SELECT id, name, tag
 FROM Operators
@@ -47,9 +47,9 @@ WHERE id = $1
 
 pub(crate) async fn fetch_operators(
     pool: &PgPool,
-) -> Result<Vec<operators::Operator>> {
+) -> Result<Vec<models::Operator>> {
     sqlx::query_as!(
-        operators::Operator,
+        models::Operator,
         r#"
 SELECT id, name, tag
 FROM Operators

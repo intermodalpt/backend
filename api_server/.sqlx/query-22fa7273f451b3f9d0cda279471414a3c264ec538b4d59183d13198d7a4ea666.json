@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE Subroutes\nSET validation=$1\nWHERE id=$2\n    ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Jsonb",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "22fa7273f451b3f9d0cda279471414a3c264ec538b4d59183d13198d7a4ea666"
+}

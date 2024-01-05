@@ -23,13 +23,13 @@ use itertools::Itertools;
 use once_cell::sync::Lazy;
 use regex::Regex;
 
-use commons::models::gtfs::File;
-use commons::models::{gtfs, operators};
+use commons::models::gtfs::{self, File};
 use commons::utils::gtfs::calculate_gtfs_stop_sequence;
 
 use super::models;
 use crate::gtfs::models::TMLRoute;
 use crate::operators::import::OperatorData;
+use crate::operators::models as operators;
 use crate::Error;
 
 pub(crate) fn gtfs_stops(

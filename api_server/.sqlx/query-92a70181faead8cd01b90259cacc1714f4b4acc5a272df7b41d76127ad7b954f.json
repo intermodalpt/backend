@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO region_routes (region_id, route_id)\nVALUES ($1, $2)\nON CONFLICT DO NOTHING;\n    ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "92a70181faead8cd01b90259cacc1714f4b4acc5a272df7b41d76127ad7b954f"
+}

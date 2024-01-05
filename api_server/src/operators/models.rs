@@ -16,6 +16,16 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
+
+#[derive(Serialize, Deserialize, ToSchema)]
+pub struct Operator {
+    pub id: i32,
+    pub name: String,
+    pub tag: String,
+}
+
 pub(crate) mod responses {
     use chrono::{DateTime, Local};
     use serde::Serialize;

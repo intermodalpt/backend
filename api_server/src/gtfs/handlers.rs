@@ -22,12 +22,13 @@ use std::{fs, io};
 use axum::extract::{Path, State};
 use axum::Json;
 
-use commons::models::gtfs;
-use commons::models::gtfs::File;
+use commons::models::gtfs::{self, File};
 use commons::utils::gtfs::{
     calculate_gtfs_stop_sequence, calculate_stop_sliding_windows,
 };
 
+use super::models::requests;
+use super::sql;
 use super::{loaders, models};
 use crate::operators::import::{update_operator_gtfs, OperatorData};
 use crate::operators::sql as operators_sql;
@@ -54,7 +55,7 @@ pub(crate) async fn post_update_operator_gtfs(
     }
     let operator = operator.unwrap();
 
-    update_operator_gtfs(&operator).await
+    update_operator_gtfs(operator.id, &operator.tag).await
 }
 
 pub(crate) async fn get_gtfs_stops(
@@ -161,4 +162,79 @@ pub(crate) async fn get_gtfs_stop_sliding_windows(
     let sliding_windows = calculate_stop_sliding_windows(&trips_stop_seq);
 
     Ok(Json(sliding_windows))
+}
+
+pub(crate) async fn put_operator_validation_data(
+    State(state): State<AppState>,
+    claims: Option<auth::Claims>,
+    Path(operator_id): Path<i32>,
+    Json(validation): Json<gtfs::OperatorValidation>,
+) -> Result<(), Error> {
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
+    let mut transaction = state
+        .pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    sql::update_operator_validation_data(
+        &mut transaction,
+        operator_id,
+        validation,
+    )
+    .await?;
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+}
+
+pub(crate) async fn put_route_validation_data(
+    State(state): State<AppState>,
+    claims: Option<auth::Claims>,
+    Path(route): Path<i32>,
+    Json(request): Json<requests::ValidateRoute>,
+) -> Result<(), Error> {
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
+    let mut transaction = state
+        .pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    sql::update_route_validation_data(
+        &mut transaction,
+        route,
+        request.validation,
+    )
+    .await?;
+
+    for (subroute, validation) in request.subroutes {
+        sql::update_subroute_validation_data(
+            &mut transaction,
+            subroute,
+            validation,
+        )
+        .await?;
+    }
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }

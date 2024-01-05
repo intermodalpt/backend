@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nDELETE FROM region_operators\nWHERE region_id=$1 AND operator_id=$2;\n    ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "45370a31e83947301f2e7218bd1d57a77c79e541535fa81b16dc3a96a053cd02"
+}
