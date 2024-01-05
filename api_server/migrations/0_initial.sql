@@ -103,16 +103,18 @@ CREATE TABLE vehicle
 CREATE TABLE stops
 (
     id                        serial PRIMARY KEY,
-    name                      text,
+    name                      text                                              NOT NULL,
     short_name                text,
-    osm_name                  text,
+    -- If the name is ours or has been externally sourced (needed to make the name NON NULL)
+    is_name_overridden        boolean,
     locality                  text,
     street                    text,
     door                      text,
     parish                    integer REFERENCES parishes (id),
-    lon                       double precision,
-    lat                       double precision,
-    external_id               text                                              NOT NULL,
+    lon                       double precision                                  NOT NULL,
+    lat                       double precision                                  NOT NULL,
+    vehicle_lat               double precision,
+    vehicle_lon               double precision,
     notes                     text,
     updater                   integer                  DEFAULT 1                NOT NULL,
     update_date               timestamp with time zone DEFAULT now()            NOT NULL,
@@ -123,8 +125,19 @@ CREATE TABLE stops
     verification_level        smallint                 DEFAULT 0                NOT NULL,
     service_check_date        date,
     infrastructure_check_date date,
-    osm_history               jsonb                    DEFAULT '{}'::jsonb      NOT NULL,
-    verified_position         boolean                  DEFAULT false            NOT NULL
+    verified_position         boolean                  DEFAULT false            NOT NULL,
+    survey_method             int,
+
+-- TODO Rename this to osm_id later on (going to be a breaking change)
+    external_id               text                                              NOT NULL,
+    osm_name                  text,
+    osm_lon                   double precision,
+    osm_lat                   double precision,
+    osm_author                text,
+    osm_differs               boolean                  DEFAULT false            NOT NULL,
+    osm_sync_time             timestamp with time zone                          NOT NULL,
+    osm_map_quality           boolean,
+    osm_history               jsonb                    DEFAULT '{}'::jsonb      NOT NULL
 );
 
 CREATE TABLE route_types

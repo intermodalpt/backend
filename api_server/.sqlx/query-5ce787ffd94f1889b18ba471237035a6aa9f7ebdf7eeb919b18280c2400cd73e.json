@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT stop_id, osm_map_quality\nFROM Stops\nJOIN region_stops ON region_stops.stop_id = Stops.id\nWHERE region_stops.region_id = $1\n    ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "stop_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "osm_map_quality",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      true
+    ]
+  },
+  "hash": "5ce787ffd94f1889b18ba471237035a6aa9f7ebdf7eeb919b18280c2400cd73e"
+}

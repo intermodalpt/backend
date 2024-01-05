@@ -18,6 +18,7 @@
 
 use axum::extract::{Path, State};
 use axum::Json;
+use std::collections::HashMap;
 
 use commons::models::geo;
 
@@ -51,7 +52,9 @@ pub(crate) async fn put_operator_into_region(
     sql::upsert_operator_into_region(&mut transaction, region_id, operator_id)
         .await?;
 
-    transaction.commit().await
+    transaction
+        .commit()
+        .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
@@ -148,4 +151,13 @@ pub(crate) async fn delete_stop_from_region(
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     Ok(())
+}
+
+pub(crate) async fn get_region_stops_osm_quality(
+    State(state): State<AppState>,
+    Path(region_id): Path<i32>,
+) -> Result<Json<HashMap<i32, Option<bool>>>, Error> {
+    Ok(Json(
+        sql::fetch_region_osm_quality(&state.pool, region_id).await?,
+    ))
 }

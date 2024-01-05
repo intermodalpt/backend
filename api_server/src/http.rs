@@ -81,6 +81,11 @@ pub fn build_paths(state: AppState) -> Router {
             get(geo::handlers::put_route_into_region)
                 .delete(geo::handlers::delete_route_from_region),
         )
+        .route(
+            "/v1/regions/:region_id/osm_stops_quality",
+            get(geo::handlers::put_route_into_region)
+                .delete(geo::handlers::delete_route_from_region),
+        )
         .route("/v1/stops/:stop_id", get(stops::handlers::get_stop))
         .route("/v1/stops/create", post(stops::handlers::create_stop))
         .route(
