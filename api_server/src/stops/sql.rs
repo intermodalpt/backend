@@ -94,15 +94,31 @@ WHERE id IN (
             .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
+pub(crate) async fn fetch_all_detailed_stops(
+    pool: &PgPool,
+) -> Result<Vec<responses::Stop>> {
+    sqlx::query_as!(
+            responses::Stop,
+r#"SELECT id, name, short_name, locality, street, door, lat, lon, external_id, notes, parish, tags,
+    accessibility_meta as "a11y!: sqlx::types::Json<stops::A11yMeta>", verification_level, service_check_date,
+    infrastructure_check_date
+FROM stops
+"#
+    )
+        .fetch_all(pool)
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+}
+
 pub(crate) async fn fetch_full_stops(
     pool: &PgPool,
     region_id: i32,
 ) -> Result<Vec<responses::FullStop>> {
     let stops = sqlx::query!(
         r#"
-SELECT id, name, osm_name, short_name, locality, street, door, lat, lon, external_id, notes,
-    updater, update_date, parish, tags, accessibility_meta, deleted_upstream, verification_level,
-    service_check_date, infrastructure_check_date, verified_position
+SELECT id, name, short_name, locality, street, door, lat, lon, external_id, notes, updater, update_date,
+    parish, tags, accessibility_meta as "a11y!: sqlx::types::Json<stops::A11yMeta>",
+    deleted_upstream, verification_level, service_check_date, infrastructure_check_date, verified_position
 FROM Stops
 WHERE id IN (
     SELECT DISTINCT stop_id
@@ -117,6 +133,7 @@ WHERE id IN (
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?
     .into_iter()
     .map(|r| {
+        let sqlx::types::Json(a11y) = r.a11y;
         Ok(responses::FullStop {
             stop: stops::Stop {
                 id: r.id,
@@ -130,12 +147,7 @@ WHERE id IN (
                 notes: r.notes,
                 parish: r.parish,
                 tags: r.tags,
-                a11y: serde_json::from_value(r.accessibility_meta).map_err(
-                    |e| {
-                        log::error!("Error deserializing: {}", e);
-                        Error::DatabaseDeserialization
-                    },
-                )?,
+                a11y,
                 verification_level: if r.verified_position {
                     r.verification_level as u8 | 0b1100_0000
                 } else {
