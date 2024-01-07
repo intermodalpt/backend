@@ -50,6 +50,21 @@ pub(crate) async fn get_full_stops(
     Ok(Json(sql::fetch_full_stops(&state.pool, region_id).await?))
 }
 
+pub(crate) async fn get_all_stops(
+    State(state): State<AppState>,
+    claims: Option<auth::Claims>,
+) -> Result<Json<Vec<responses::Stop>>, Error> {
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
+    Ok(Json(sql::fetch_all_detailed_stops(&state.pool).await?))
+}
+
 #[utoipa::path(
     get,
     path = "/v1/stop/{id}",

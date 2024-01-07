@@ -88,6 +88,10 @@ pub fn build_paths(state: AppState) -> Router {
         .route("/v1/stops/:stop_id", get(stops::handlers::get_stop))
         .route("/v1/stops/create", post(stops::handlers::create_stop))
         .route(
+            "/v1/stops/all",
+            patch(stops::handlers::get_all_stops),
+        )
+        .route(
             "/v1/stops/update/:stop_id",
             patch(stops::handlers::patch_stop),
         )
