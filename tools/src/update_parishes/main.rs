@@ -1,6 +1,6 @@
 /*
     Intermodal, transportation information aggregator
-    Copyright (C) 2023  Cláudio Pereira
+    Copyright (C) 2024  Cláudio Pereira
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -16,43 +16,128 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-mod sql;
+mod api;
+mod utils;
 
+use std::collections::HashSet;
+use std::io;
 use std::sync::Mutex;
 
-use config::Config;
-use geo::{Contains, LineString, MultiPolygon, Polygon};
+use geo::{BoundingRect, Contains, Coord, Point, Rect};
 use rayon::prelude::*;
-use sqlx::postgres::PgPool;
 
-use commons::models::geo::{Geojson, GeojsonGeometry};
+use commons::models::geo::Geojson;
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 #[tokio::main]
 async fn main() {
-    let settings = Config::builder()
-        .add_source(config::File::with_name("./settings.toml"))
-        .add_source(config::Environment::with_prefix("SETTINGS"))
-        .build()
-        .unwrap();
-
-    let pool = PgPool::connect(&settings.get_string("db").expect("db not set"))
-        .await
-        .expect("Unable to connect to the database");
-
-    match update_parishes(&pool).await {
+    match update_stop_regions().await {
         Ok(_) => {
-            println!("Done");
+            println!("Done updating the regions");
         }
         Err(e) => {
-            eprintln!("Error: {}", e);
+            eprintln!("Error updating regions: {}", e);
+        }
+    }
+
+    match update_parishes().await {
+        Ok(_) => {
+            println!("Done updating the parishes");
+        }
+        Err(e) => {
+            eprintln!("Error updating parishes: {}", e);
         }
     }
 }
 
-async fn update_parishes(pool: &PgPool) -> Result<()> {
-    let parishes = sql::fetch_parishes(pool).await?;
+fn expand_rect(rect: &Rect) -> Rect {
+    let offset = Coord::<f64>::from((1.0, 1.0));
+
+    Rect::new(rect.min() - offset, rect.max() + offset)
+}
+
+async fn update_stop_regions() -> Result<()> {
+    let regions = api::fetch_regions().await.unwrap();
+
+    for region in regions {
+        let region_multipoly = utils::multipoly_from_geometry(region.geometry);
+        let bbox = region_multipoly.bounding_rect().unwrap();
+        let expanded_bbox = expand_rect(&bbox);
+
+        let region_stops = api::fetch_region_stops(region.id).await?;
+        let region_stops_id =
+            region_stops.iter().map(|s| s.id).collect::<HashSet<_>>();
+
+        let near_region_stops = api::fetch_area_stops(
+            expanded_bbox.min().x,
+            expanded_bbox.max().y,
+            expanded_bbox.max().x,
+            expanded_bbox.min().y,
+        )
+        .await
+        .unwrap();
+
+        let mut in_region = 0;
+        let mut out_region = 0;
+        for stop in near_region_stops {
+            let point = Point::new(stop.lon, stop.lat);
+            if region_multipoly.contains(&point) {
+                in_region += 1;
+                if !region_stops_id.contains(&stop.id) {
+                    println!(
+                        "Add stop {} ({}) to region {} ({})? [y/N]",
+                        stop.name.as_ref().unwrap_or(&"?".to_string()),
+                        stop.id,
+                        region.name,
+                        region.id
+                    );
+                    let mut input = String::new();
+                    io::stdin().read_line(&mut input)?;
+                    if input.trim().to_lowercase() == "y" {
+                        api::attach_stop_to_region(region.id, stop.id).await?;
+                        println!("Added");
+                    } else {
+                        println!("Skipped");
+                        continue;
+                    }
+                }
+            } else {
+                out_region += 1;
+                if region_stops_id.contains(&stop.id) {
+                    println!(
+                        "Remove stop {} ({}) from region {} ({})? [y/N]",
+                        stop.name.as_ref().unwrap_or(&"?".to_string()),
+                        stop.id,
+                        region.name,
+                        region.id
+                    );
+                    let mut input = String::new();
+                    io::stdin().read_line(&mut input)?;
+                    if input.trim().to_lowercase() == "y" {
+                        api::detach_stop_from_region(stop.id).await?;
+                        println!("Removed");
+                    } else {
+                        println!("Skipped");
+                        continue;
+                    }
+                }
+            }
+        }
+
+        println!(
+            "{} stops in region, {} stops out of region",
+            in_region, out_region
+        );
+
+        break;
+    }
+
+    Ok(())
+}
+
+async fn update_parishes() -> Result<()> {
+    let parishes = api::fetch_parishes().await?;
 
     let polygons = parishes
         .into_iter()
@@ -63,25 +148,13 @@ async fn update_parishes(pool: &PgPool) -> Result<()> {
                 })
                 .unwrap();
 
-            let multipoly = match geojson.geometry {
-                GeojsonGeometry::Polygon { coordinates } => {
-                    MultiPolygon::from(vec![poly_from_coords(coordinates)])
-                }
-                GeojsonGeometry::MultiPolygon { coordinates } => {
-                    MultiPolygon::from(
-                        coordinates
-                            .into_iter()
-                            .map(poly_from_coords)
-                            .collect::<Vec<_>>(),
-                    )
-                }
-            };
+            let multipoly = utils::multipoly_from_geometry(geojson.geometry);
 
             (p.id, p.name, multipoly)
         })
         .collect::<Vec<_>>();
 
-    let stops = sql::fetch_stops(pool).await?;
+    let stops = api::fetch_region_stops(0).await?;
 
     let stop_parish_pairs = Mutex::new(vec![]);
 
@@ -106,18 +179,14 @@ async fn update_parishes(pool: &PgPool) -> Result<()> {
         }
     });
 
-    // for (stop_id, parish_id) in stop_parish_pairs.into_inner().unwrap() {
-    //     sql::update_stop_parish(&pool, stop_id, parish_id).await?;
-    // }
-
     for stop in stops {
         if stop.parish.is_some() {
             continue;
         }
-        let point = geo::Point::new(stop.lon, stop.lat);
+        let point = Point::new(stop.lon, stop.lat);
         for (id, name, multipoly) in &polygons {
             if multipoly.contains(&point) {
-                sql::update_stop_parish(pool, stop.id, *id).await?;
+                api::update_stop_parish(stop.id, *id).await?;
                 println!(
                     "Stop {} ({}) is in parish {}",
                     stop.name.unwrap(),
@@ -130,25 +199,4 @@ async fn update_parishes(pool: &PgPool) -> Result<()> {
     }
 
     Ok(())
-}
-
-fn poly_from_coords(coordinates: Vec<Vec<Vec<f64>>>) -> Polygon {
-    let mut polygons = coordinates.into_iter();
-    let outer_coords = polygons.next().unwrap();
-    let outer_line = LineString::from(
-        outer_coords
-            .into_iter()
-            .map(|p| (p[0], p[1]))
-            .collect::<Vec<_>>(),
-    );
-
-    let inner_lines = polygons
-        .map(|p| {
-            LineString::from(
-                p.into_iter().map(|p| (p[0], p[1])).collect::<Vec<_>>(),
-            )
-        })
-        .collect::<Vec<_>>();
-
-    Polygon::new(outer_line, inner_lines)
 }
