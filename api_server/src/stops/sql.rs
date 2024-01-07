@@ -1,6 +1,6 @@
 /*
     Intermodal, transportation information aggregator
-    Copyright (C) 2022 - 2023  Cláudio Pereira
+    Copyright (C) 2022 - 2024  Cláudio Pereira
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -21,7 +21,7 @@ use std::collections::{hash_map, HashMap};
 use chrono::Utc;
 use sqlx::PgPool;
 
-use commons::models::{routes, stops};
+use commons::models::{osm, routes, stops};
 
 use super::models;
 use crate::stops::models::responses;
@@ -414,4 +414,38 @@ ORDER BY subroute_stops.idx"#,
         subroutes,
         stops,
     })
+}
+
+pub(crate) async fn fetch_stops_osm_meta(
+    pool: &PgPool,
+) -> Result<HashMap<i32, responses::StopOsmMeta>> {
+    sqlx::query!(
+r#"SELECT id, external_id, deleted_upstream, osm_name, osm_lon, osm_lat, osm_author, osm_differs, osm_version,
+    osm_sync_time, osm_map_quality, osm_history as "osm_history!: sqlx::types::Json<osm::StoredStopMeta>"
+FROM stops
+"#
+    )
+        .fetch_all(pool)
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+        .into_iter()
+        .map(|r| {
+            Ok((
+                r.id,
+                responses::StopOsmMeta {
+                    external_id: r.external_id,
+                    osm_name: r.osm_name,
+                    osm_lon: r.osm_lon,
+                    osm_lat: r.osm_lat,
+                    osm_author: r.osm_author,
+                    osm_differs: r.osm_differs,
+                    osm_version: r.osm_version,
+                    osm_sync_time: r.osm_sync_time,
+                    osm_map_quality: r.osm_map_quality,
+                    osm_history: r.osm_history,
+                    deleted_upstream: r.deleted_upstream,
+                },
+            ))
+        })
+        .collect()
 }

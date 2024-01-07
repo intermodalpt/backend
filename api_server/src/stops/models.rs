@@ -267,6 +267,7 @@ pub(crate) mod responses {
     use utoipa::ToSchema;
 
     use commons::models::stops;
+    use commons::models::osm;
 
     #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
     pub struct OperatorStop {
@@ -350,6 +351,21 @@ pub(crate) mod responses {
         pub deleted_upstream: bool,
         pub verified_position: bool,
         pub update_date: DateTime<Utc>,
+    }
+
+    #[derive(Serialize, ToSchema)]
+    pub struct StopOsmMeta {
+        pub external_id: String,
+        pub osm_name: Option<String>,
+        pub osm_lat: Option<f64>,
+        pub osm_lon: Option<f64>,
+        pub osm_author: Option<String>,
+        pub osm_differs: Option<bool>,
+        pub osm_sync_time: Option<DateTime<Utc>>,
+        pub osm_version: i32,
+        pub osm_map_quality: Option<bool>,
+        pub osm_history: sqlx::types::Json<osm::StoredStopMeta>,
+        pub deleted_upstream: bool,
     }
 
     #[derive(Serialize, ToSchema)]

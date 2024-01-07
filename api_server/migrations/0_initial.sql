@@ -120,7 +120,6 @@ CREATE TABLE stops
     update_date               timestamp with time zone DEFAULT now()            NOT NULL,
     tags                      text[]                   DEFAULT ARRAY []::text[] NOT NULL,
     accessibility_meta        jsonb                    DEFAULT '{}'::jsonb      NOT NULL,
-    deleted_upstream          boolean                  DEFAULT false            NOT NULL,
     verification_date         timestamp with time zone,
     verification_level        smallint                 DEFAULT 0                NOT NULL,
     service_check_date        date,
@@ -130,12 +129,15 @@ CREATE TABLE stops
 
 -- TODO Rename this to osm_id later on (going to be a breaking change)
     external_id               text                                              NOT NULL,
+-- TODO Rename this to osm_deleted later on (going to be a breaking change)
+    deleted_upstream          boolean                  DEFAULT false            NOT NULL,
     osm_name                  text,
     osm_lon                   double precision,
     osm_lat                   double precision,
     osm_author                text,
     osm_differs               boolean                  DEFAULT false            NOT NULL,
-    osm_sync_time             timestamp with time zone                          NOT NULL,
+    osm_sync_time             timestamp with time zone,
+    osm_version               integer                  DEFAULT 0                NOT NULL,
     osm_map_quality           boolean,
     osm_history               jsonb                    DEFAULT '{}'::jsonb      NOT NULL
 );

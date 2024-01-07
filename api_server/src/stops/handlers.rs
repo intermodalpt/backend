@@ -216,3 +216,18 @@ pub(crate) async fn get_stops_spider(
 ) -> Result<Json<responses::SpiderMap>, Error> {
     Ok(Json(sql::fetch_stop_spider(&state.pool, &stops).await?))
 }
+
+pub(crate) async fn get_stops_osm_meta(
+    State(state): State<AppState>,
+    claims: Option<auth::Claims>,
+) -> Result<Json<HashMap<i32, responses::StopOsmMeta>>, Error> {
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
+    Ok(Json(sql::fetch_stops_osm_meta(&state.pool).await?))
+}
