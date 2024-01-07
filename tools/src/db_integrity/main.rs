@@ -21,7 +21,7 @@ mod sql;
 use config::Config;
 use sqlx::PgPool;
 
-use crate::sql::{fetch_faulty_changeset_logs, JsonParseResult};
+use crate::sql::JsonParseResult;
 
 #[tokio::main]
 async fn main() {
@@ -37,8 +37,17 @@ async fn main() {
         .await
         .expect("Unable to connect to the database");
 
-    let logs = fetch_faulty_changeset_logs(&pool).await;
+    let logs = sql::fetch_faulty_changeset_logs(&pool).await;
+    list_collection(&logs);
+    let history_logs = sql::fetch_faulty_osm_history(&pool).await;
+    list_collection(&history_logs);
+}
 
+fn list_collection<OkData, ErrData>(logs: &[JsonParseResult<OkData, ErrData>])
+where
+    OkData: std::fmt::Debug,
+    ErrData: std::fmt::Debug,
+{
     let mut ok_count = 0;
     let mut nok_count = 0;
     for log in logs {

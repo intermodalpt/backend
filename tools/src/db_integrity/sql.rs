@@ -19,6 +19,7 @@
 use chrono::Local;
 
 use commons::models::history;
+use commons::models::osm;
 
 pub(crate) enum JsonParseResult<OkData, ErrData> {
     Ok(OkData),
@@ -102,4 +103,44 @@ WHERE id=$2
     .execute(executor)
     .await
     .map_err(|err| dbg!(err));
+}
+
+pub(crate) async fn fetch_faulty_osm_history<'c, E>(
+    executor: E,
+) -> Vec<JsonParseResult<osm::StoredStopMeta, ()>>
+where
+    E: sqlx::Executor<'c, Database = sqlx::Postgres>,
+{
+    let mut successes = 0;
+    let errors = sqlx::query!(
+        r#"
+SELECT osm_history
+FROM Stops
+ORDER BY id DESC
+    "#
+    )
+    .fetch_all(executor)
+    .await
+    .unwrap_or_else(|err| panic!("{}", err.to_string()))
+    .into_iter()
+    .map(|r| {
+        let raw_history = r.osm_history.to_string();
+        let history: Result<osm::StoredStopMeta, _> =
+            serde_json::from_value(r.osm_history);
+        match history {
+            Ok(osm_history) => {
+                successes += 1;
+                JsonParseResult::Ok(osm_history)
+            }
+            Err(err) => JsonParseResult::Err {
+                raw: raw_history,
+                error: err,
+                data: (),
+            },
+        }
+    })
+    .collect::<Vec<_>>();
+
+    println!("Successes: {}", successes);
+    errors
 }

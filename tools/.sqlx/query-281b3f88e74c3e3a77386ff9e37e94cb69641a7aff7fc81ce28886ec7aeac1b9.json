@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT osm_history\nFROM Stops\nORDER BY id DESC\n    ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "osm_history",
+        "type_info": "Jsonb"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "281b3f88e74c3e3a77386ff9e37e94cb69641a7aff7fc81ce28886ec7aeac1b9"
+}
