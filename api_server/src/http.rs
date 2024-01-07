@@ -101,6 +101,11 @@ pub fn build_paths(state: AppState) -> Router {
             get(stops::handlers::get_bounded_stops),
         )
         .route(
+            "/v1/stops/:stop_id/osm_meta",
+            get(stops::handlers::get_stop_osm_meta)
+                .patch(stops::handlers::patch_stop_osm_meta),
+        )
+        .route(
             "/v1/stops/:stop_id/pictures",
             get(pics::handlers::get_public_stop_pictures),
         )

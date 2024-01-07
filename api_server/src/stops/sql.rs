@@ -19,12 +19,13 @@
 use std::collections::{hash_map, HashMap};
 
 use chrono::Utc;
+use sqlx::types::Json;
 use sqlx::PgPool;
 
 use commons::models::{osm, routes, stops};
 
 use super::models;
-use crate::stops::models::responses;
+use crate::stops::models::{requests, responses};
 use crate::Error;
 
 type Result<T> = std::result::Result<T, Error>;
@@ -448,4 +449,51 @@ FROM stops
             ))
         })
         .collect()
+}
+
+pub(crate) async fn fetch_stop_osm_meta(
+    pool: &PgPool,
+    stop_id: i32,
+) -> Result<Option<responses::StopOsmMeta>> {
+    sqlx::query_as!(
+        responses::StopOsmMeta,
+r#"SELECT external_id, deleted_upstream, osm_name, osm_lon, osm_lat, osm_author, osm_differs, osm_version,
+    osm_sync_time, osm_map_quality, osm_history as "osm_history!: sqlx::types::Json<osm::StoredStopMeta>"
+FROM stops
+WHERE id = $1
+"#
+        , stop_id
+    )
+        .fetch_optional(pool)
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+}
+
+pub(crate) async fn update_stop_osm_meta(
+    pool: &PgPool,
+    stop_id: i32,
+    change: requests::ChangeStopOsmMeta,
+) -> Result<()> {
+    sqlx::query!(
+r#"UPDATE stops
+SET osm_name = $1, osm_lon = $2, osm_lat = $3, osm_author = $4, osm_differs = $5, osm_version = $6,
+    osm_sync_time = $7, osm_history = $8, deleted_upstream = $9
+WHERE id = $10
+"#,
+        change.osm_name,
+        change.osm_lon,
+        change.osm_lat,
+        change.osm_author,
+        change.osm_differs,
+        change.osm_version,
+        change.osm_sync_time,
+        Json(change.osm_history) as _,
+        change.deleted_upstream,
+        stop_id
+    )
+        .execute(pool)
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    Ok(())
 }

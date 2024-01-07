@@ -24,7 +24,7 @@ use axum::Json;
 use commons::models::{history, routes, stops};
 
 use super::{models, sql};
-use crate::stops::models::responses;
+use crate::stops::models::{requests, responses};
 use crate::{auth, contrib, AppState, Error};
 
 pub(crate) async fn get_stops(
@@ -133,7 +133,7 @@ pub(crate) async fn patch_stop(
     State(state): State<AppState>,
     claims: Option<auth::Claims>,
     Path(stop_id): Path<i32>,
-    Json(changes): Json<models::requests::ChangeStop>,
+    Json(changes): Json<requests::ChangeStop>,
 ) -> Result<Json<stops::Stop>, Error> {
     if claims.is_none() {
         return Err(Error::Forbidden);
@@ -230,4 +230,33 @@ pub(crate) async fn get_stops_osm_meta(
     }
 
     Ok(Json(sql::fetch_stops_osm_meta(&state.pool).await?))
+}
+
+pub(crate) async fn get_stop_osm_meta(
+    State(state): State<AppState>,
+    Path(stop_id): Path<i32>,
+) -> Result<Json<responses::StopOsmMeta>, Error> {
+    match sql::fetch_stop_osm_meta(&state.pool, stop_id).await? {
+        Some(meta) => Ok(Json(meta)),
+        None => Err(Error::NotFoundUpstream),
+    }
+}
+
+pub(crate) async fn patch_stop_osm_meta(
+    State(state): State<AppState>,
+    Path(stop_id): Path<i32>,
+    claims: Option<auth::Claims>,
+    Json(changes): Json<requests::ChangeStopOsmMeta>,
+) -> Result<(), Error> {
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
+    sql::update_stop_osm_meta(&state.pool, stop_id, changes).await?;
+
+    Ok(())
 }

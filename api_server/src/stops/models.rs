@@ -17,11 +17,11 @@
 */
 
 pub(crate) mod requests {
-    use chrono::NaiveDate;
+    use chrono::{DateTime, NaiveDate, Utc};
     use serde::Deserialize;
     use utoipa::ToSchema;
 
-    use commons::models::{history, stops};
+    use commons::models::{history, osm, stops};
 
     #[derive(Deserialize, ToSchema)]
     pub struct NewStop {
@@ -258,6 +258,19 @@ pub(crate) mod requests {
             patch
         }
     }
+
+    #[derive(Deserialize, ToSchema)]
+    pub struct ChangeStopOsmMeta {
+        pub osm_name: Option<String>,
+        pub osm_lat: Option<f64>,
+        pub osm_lon: Option<f64>,
+        pub osm_author: Option<String>,
+        pub osm_differs: Option<bool>,
+        pub osm_sync_time: Option<DateTime<Utc>>,
+        pub osm_version: i32,
+        pub osm_history: sqlx::types::Json<osm::StoredStopMeta>,
+        pub deleted_upstream: bool,
+    }
 }
 
 pub(crate) mod responses {
@@ -266,8 +279,8 @@ pub(crate) mod responses {
     use std::collections::HashMap;
     use utoipa::ToSchema;
 
-    use commons::models::stops;
     use commons::models::osm;
+    use commons::models::stops;
 
     #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
     pub struct OperatorStop {
