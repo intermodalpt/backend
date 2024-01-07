@@ -18,77 +18,279 @@
 
 use std::collections::HashMap;
 
-use config::Config;
-use sqlx::PgPool;
+use itertools::Itertools;
+
+use commons::models::osm;
+use commons::models::osm::NodeVersion;
+
+use crate::api::StopOsmMeta;
 
 mod api;
 mod models;
-mod sql;
 
 const FLOAT_TOLERANCE: f64 = 0.000_001;
 
 #[tokio::main]
 async fn main() {
-    let settings = Config::builder()
-        .add_source(config::File::with_name("./settings.toml"))
-        .add_source(config::Environment::with_prefix("SETTINGS"))
-        .build()
-        .unwrap();
+    let mut args = pico_args::Arguments::from_env();
 
-    let pool = PgPool::connect(&settings.get_string("db").expect("db not set"))
-        .await
-        .expect("Unable to connect to the database");
+    match args.opt_value_from_str::<_, String>("--jwt").unwrap() {
+        Some(jwt) => {
+            api::TOKEN
+                .set(Box::leak(Box::new(jwt.to_string())))
+                .unwrap();
+        }
+        None => {
+            eprintln!("No JWT provided");
+            std::process::exit(0);
+        }
+    }
+    import().await.unwrap();
+}
 
-    let counts = import(&pool).await.unwrap();
-
-    println!("New stops: {}", counts.0);
-    println!("Updated stops: {}", counts.1);
+struct StopMetaPairing {
+    stop: api::Stop,
+    iml_osm_meta: Option<api::StopOsmMeta>,
+    osm_stop: Option<models::OverpassStop>,
 }
 
 pub(crate) async fn import(
-    db_pool: &PgPool,
 ) -> Result<(usize, usize), Box<dyn std::error::Error>> {
-    let mut new_stops = vec![];
-    let mut updated_stops = vec![];
+    let stops = api::fetch_all_iml_stops().await.unwrap();
+    let iml_osm_meta = api::fetch_iml_stops_osm_meta().await.unwrap();
+    let osm_stops = api::fetch_osm_stops().await.unwrap();
 
-    let stops = sql::fetch_stops(db_pool).await?;
+    let mut authors = HashMap::new();
 
-    let stop_index = stops
+    let mut stop_meta_pairing = stops
         .into_iter()
-        .map(|stop| (stop.external_id.clone(), stop))
-        .collect::<HashMap<String, models::Stop>>();
+        .map(|stop| {
+            (
+                stop.id,
+                StopMetaPairing {
+                    stop,
+                    iml_osm_meta: None,
+                    osm_stop: None,
+                },
+            )
+        })
+        .collect::<HashMap<i32, StopMetaPairing>>();
+
+    iml_osm_meta.into_iter().for_each(|(id, meta)| {
+        if let Some(history) = &meta.osm_history {
+            authors
+                .entry(history.pos_author_uid)
+                .or_insert(history.pos_author_uname.clone());
+        }
+        // Add meta to the pairing
+        if let Some(pairing) = stop_meta_pairing.get_mut(&id) {
+            pairing.iml_osm_meta = Some(meta);
+        } else {
+            panic!("Stop {} not returned by IML", id);
+        }
+    });
+
+    let osm_to_iml_id = stop_meta_pairing
+        .values()
+        .map(|pairing| (pairing.stop.external_id.clone(), pairing.stop.id))
+        .collect::<HashMap<String, i32>>();
+
+    let mut unmatched_osm_stops = vec![];
 
     let mut osm_stop_ids = vec![];
-    api::fetch_osm_stops()
-        .await?
+    osm_stops
         .nodes
         .into_iter()
         .filter_map(|node| {
             if let models::XmlNodeTypes::Node(node) = node {
-                Some(models::Stop::from(node))
+                Some(models::OverpassStop::from(node))
             } else {
                 None
             }
         })
-        .for_each(|mut osm_stop| {
-            osm_stop_ids.push(osm_stop.external_id.clone());
-            if let Some(stop) = stop_index.get(&osm_stop.external_id) {
-                osm_stop.id = stop.id;
-                if (stop.lat - osm_stop.lat).abs() > FLOAT_TOLERANCE
-                    || (stop.lon - osm_stop.lon).abs() > FLOAT_TOLERANCE
-                    || stop.osm_name != osm_stop.osm_name
-                {
-                    updated_stops.push(osm_stop);
-                }
+        .for_each(|osm_stop| {
+            authors
+                .entry(osm_stop.uid.parse::<i32>().unwrap())
+                .or_insert(osm_stop.user.clone());
+            osm_stop_ids.push(osm_stop.id.clone());
+            if let Some(stop_id) = osm_to_iml_id.get(osm_stop.id.as_str()) {
+                stop_meta_pairing.get_mut(stop_id).map(|stop| {
+                    stop.osm_stop = Some(osm_stop);
+                });
             } else {
-                new_stops.push(osm_stop);
+                unmatched_osm_stops.push(osm_stop);
             }
         });
 
-    let counts = (new_stops.len(), updated_stops.len());
+    let mut updated_stops = calc_updated_stops(stop_meta_pairing);
+    updated_stops.sort_by_key(|(id, _, _, _)| *id);
 
-    sql::update_stops(db_pool, updated_stops).await?;
-    sql::insert_stops(db_pool, new_stops).await?;
-    sql::tag_missing_stops(db_pool, osm_stop_ids).await?;
+    let mut updates = 0;
+    let mut osm_calls = 0;
+
+    let updated_count = updated_stops.len();
+    for (stop_id, mut meta, mut changed, history_complete) in updated_stops {
+        if !changed {
+            if let Some(history) = meta.osm_history.as_mut() {
+                let pos_author_uid = get_position_author(&history.versions);
+                if history.pos_author_uid != pos_author_uid {
+                    let author_uname = authors.get(&pos_author_uid).unwrap();
+                    meta.osm_author = Some(author_uname.clone());
+                    history.pos_author_uname = author_uname.clone();
+                    history.pos_author_uid = pos_author_uid;
+                    changed = true;
+                } else {
+                    continue;
+                };
+            } else {
+                continue;
+            }
+        }
+        if !history_complete {
+            osm_calls += 1;
+            let (node_versions, authors) =
+                api::fetch_osm_stop_versions(&meta.external_id)
+                    .await
+                    .unwrap();
+            // Sleep for 5s to be respectful of the OSM API
+            tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+
+            let last_version = node_versions.last().unwrap();
+            let pos_author_uid = get_position_author(&node_versions);
+
+            // Highly unlikely it is deleted. We just got it from overpass
+            assert!(!last_version.deleted);
+            meta.osm_history = Some(osm::StoredStopMeta {
+                pos_author_uid,
+                pos_author_uname: authors.get(&pos_author_uid).unwrap().clone(),
+                deleted: false,
+                last_version: last_version.version,
+                versions: node_versions,
+            });
+        } else {
+            assert!(meta.osm_history.is_some());
+            updates += 1;
+        }
+
+        api::patch_iml_stop(stop_id, &meta).await?;
+    }
+
+    println!("{} call-less updates", updates);
+    println!("{} updates requiring OSM calls", osm_calls);
+    println!("New stops: {}", unmatched_osm_stops.len());
+    let counts = (unmatched_osm_stops.len(), updated_count);
+
     Ok(counts)
+}
+
+fn get_position_author(versions: &Vec<NodeVersion>) -> i32 {
+    let mut coord_author = -1;
+    let mut lat = 0.0;
+    let mut lon = 0.0;
+    for version in versions.iter() {
+        if version.lat != lat || version.lon != lon {
+            coord_author = version.author;
+            lat = version.lat;
+            lon = version.lon;
+        }
+    }
+    coord_author
+}
+
+fn calc_updated_stops(
+    stop_meta_pairing: HashMap<i32, StopMetaPairing>,
+) -> Vec<(i32, StopOsmMeta, bool, bool)> {
+    let mut updated_stops = vec![];
+    stop_meta_pairing
+        .into_iter()
+        .sorted_by_key(|(id, _)| *id)
+        .for_each(|(id, pairing)| {
+            let stop = pairing.stop;
+            let mut iml_osm_meta = pairing.iml_osm_meta.unwrap();
+            let mut changed;
+            let mut coord_author_changed = false;
+            let mut can_guess_history = true;
+
+            if let Some(osm_stop) = pairing.osm_stop {
+                // Check for a difference between OSM upstream and IML upstream coords
+                if (stop.lat - osm_stop.lat).abs() > FLOAT_TOLERANCE
+                    || (stop.lon - osm_stop.lon).abs() > FLOAT_TOLERANCE
+                {
+                    changed = !iml_osm_meta.osm_differs;
+                    iml_osm_meta.osm_differs = true;
+                } else {
+                    changed = iml_osm_meta.osm_differs;
+                    iml_osm_meta.osm_differs = false;
+                }
+
+                // Check for a difference between OSM upstream and the cached OSM coords
+                if let (Some(prev_osm_lon), Some(prev_osm_lat)) =
+                    (iml_osm_meta.osm_lon, iml_osm_meta.osm_lat)
+                {
+                    if (prev_osm_lat - osm_stop.lat).abs() > FLOAT_TOLERANCE
+                        || (prev_osm_lon - osm_stop.lon).abs() > FLOAT_TOLERANCE
+                    {
+                        changed = true;
+                        coord_author_changed = true;
+                        iml_osm_meta.osm_lat = Some(osm_stop.lat);
+                        iml_osm_meta.osm_lon = Some(osm_stop.lon);
+                    }
+                } else {
+                    changed = true;
+                    iml_osm_meta.osm_lat = Some(osm_stop.lat);
+                    iml_osm_meta.osm_lon = Some(osm_stop.lon);
+                }
+
+                // Check for a difference between OSM upstream and the cached OSM name
+                if iml_osm_meta.osm_name != osm_stop.name {
+                    changed = true;
+                    iml_osm_meta.osm_name = osm_stop.name;
+                }
+
+                if iml_osm_meta.osm_version != osm_stop.version {
+                    if iml_osm_meta.osm_version + 1 == osm_stop.version {
+                        // We can figure without hitting the OSM API
+                        let last_version_uid =
+                            osm_stop.uid.parse::<i32>().unwrap();
+                        if let Some(history) = &mut iml_osm_meta.osm_history {
+                            history.deleted = false;
+                            history.last_version = osm_stop.version;
+                            history.versions.push(NodeVersion {
+                                version: osm_stop.version,
+                                author: last_version_uid,
+                                lat: osm_stop.lat,
+                                lon: osm_stop.lon,
+                                attributes: osm_stop.attributes,
+                                deleted: false,
+                            });
+
+                            if coord_author_changed {
+                                history.pos_author_uid =
+                                    osm_stop.uid.parse::<i32>().expect(
+                                        "Received a non-i32 uid from Overpass",
+                                    );
+                                history.pos_author_uname =
+                                    osm_stop.user.clone();
+                            }
+                        } else {
+                            can_guess_history = false;
+                        }
+                    } else {
+                        can_guess_history = false;
+                    }
+
+                    changed = true;
+                    iml_osm_meta.osm_version = osm_stop.version;
+                    iml_osm_meta.osm_author = Some(osm_stop.user);
+                }
+
+                updated_stops.push((
+                    stop.id,
+                    iml_osm_meta,
+                    changed,
+                    can_guess_history,
+                ));
+            }
+        });
+    return updated_stops;
 }

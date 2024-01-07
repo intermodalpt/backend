@@ -1,6 +1,6 @@
 /*
     Intermodal, transportation information aggregator
-    Copyright (C) 2022 - 2023  Cláudio Pereira
+    Copyright (C) 2022 - 2024  Cláudio Pereira
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -16,11 +16,12 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub(crate) struct XmlOsm {
-    #[serde(rename = "$value")]
+    #[serde(rename = "$value", default)]
     pub(crate) nodes: Vec<XmlNodeTypes>,
 }
 
@@ -43,48 +44,59 @@ pub(crate) struct XmlNote {}
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename = "node")]
 pub(crate) struct XmlNode {
-    id: i64,
-    lon: f64,
-    lat: f64,
-    #[serde(rename = "$value")]
-    tags: Vec<XMLTag>,
+    pub(crate) id: i64,
+    pub(crate) visible: Option<bool>,
+    pub(crate) lon: Option<f64>,
+    pub(crate) lat: Option<f64>,
+    pub(crate) version: i32,
+    pub(crate) user: String,
+    pub(crate) uid: String,
+    #[serde(rename = "$value", default)]
+    pub(crate) tags: Vec<XMLTag>,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename = "tag")]
 pub(crate) struct XMLTag {
-    k: String,
-    v: String,
+    pub(crate) k: String,
+    pub(crate) v: String,
 }
 
-pub(crate) struct Stop {
-    pub id: i32,
+pub(crate) struct OverpassStop {
+    pub id: String,
     pub name: Option<String>,
     pub lat: f64,
     pub lon: f64,
-
-    pub osm_name: Option<String>,
-    pub external_id: String,
+    pub version: i32,
+    pub uid: String,
+    pub user: String,
+    pub attributes: Vec<(String, String)>,
 }
 
-impl From<XmlNode> for Stop {
+impl From<XmlNode> for OverpassStop {
     fn from(node: XmlNode) -> Self {
-        let mut res = Self {
-            id: -1,
-            name: None,
-            osm_name: None,
-            lat: node.lat,
-            lon: node.lon,
-            external_id: node.id.to_string(),
-        };
+        let mut name = None;
 
-        for tag in node.tags {
+        for tag in &node.tags {
             match tag.k.as_str() {
-                "name" => res.osm_name = Some(tag.v),
+                "name" => name = Some(tag.v.to_string()),
                 _ => {}
             }
         }
 
-        res
+        Self {
+            name,
+            lat: node.lat.expect("Overpass returned a node without a lat"),
+            lon: node.lon.expect("Overpass returned a node without a lon"),
+            version: node.version,
+            id: node.id.to_string(),
+            user: node.user,
+            uid: node.uid,
+            attributes: node
+                .tags
+                .into_iter()
+                .map(|tag| (tag.k, tag.v))
+                .collect_vec(),
+        }
     }
 }
