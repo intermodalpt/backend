@@ -176,6 +176,23 @@ JOIN municipalities ON parishes.municipality = municipalities.id
     .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
+pub(crate) async fn update_stop_parish(
+    pool: &PgPool,
+    stop_id: i32,
+    parish: i32,
+) -> Result<()> {
+    sqlx::query!(
+        "UPDATE stops SET parish = $1 WHERE id = $2",
+        parish,
+        stop_id
+    )
+    .execute(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    Ok(())
+}
+
 pub(crate) async fn fetch_region_osm_quality(
     pool: &PgPool,
     region_id: i32,

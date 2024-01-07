@@ -59,11 +59,6 @@ pub fn build_paths(state: AppState) -> Router {
             get(stops::handlers::get_stops),
         )
         .route(
-            "/v1/regions/:region_id/stops/:stop_id",
-            get(geo::handlers::put_stop_into_region)
-                .delete(geo::handlers::delete_stop_from_region),
-        )
-        .route(
             "/v1/regions/:region_id/stops/detailed",
             get(stops::handlers::get_detailed_stops),
         )
@@ -72,19 +67,23 @@ pub fn build_paths(state: AppState) -> Router {
             get(stops::handlers::get_full_stops),
         )
         .route(
+            "/v1/regions/:region_id/stops/:stop_id",
+            put(geo::handlers::put_stop_into_region)
+                .delete(geo::handlers::delete_stop_from_region),
+        )
+        .route(
             "/v1/regions/:region_id/operators/:operator_id",
-            get(geo::handlers::put_operator_into_region)
+            put(geo::handlers::put_operator_into_region)
                 .delete(geo::handlers::delete_operator_from_region),
         )
         .route(
             "/v1/regions/:region_id/routes/:route_id",
-            get(geo::handlers::put_route_into_region)
+            put(geo::handlers::put_route_into_region)
                 .delete(geo::handlers::delete_route_from_region),
         )
         .route(
             "/v1/regions/:region_id/osm_stops_quality",
-            get(geo::handlers::put_route_into_region)
-                .delete(geo::handlers::delete_route_from_region),
+            get(geo::handlers::get_region_stops_osm_quality),
         )
         .route("/v1/stops/:stop_id", get(stops::handlers::get_stop))
         .route("/v1/stops/create", post(stops::handlers::create_stop))
@@ -111,6 +110,10 @@ pub fn build_paths(state: AppState) -> Router {
         .route(
             "/v1/stops/:stop_id/routes",
             get(stops::handlers::get_stop_routes),
+        )
+        .route(
+            "/v1/stops/:stop_id/parish",
+            put(geo::handlers::put_stop_parish),
         )
         .route(
             "/v1/stops/:stop_id/spider",

@@ -31,14 +31,6 @@ pub(crate) async fn get_regions(
     Ok(Json(sql::fetch_regions(&state.pool).await?))
 }
 
-pub(crate) async fn get_parishes(
-    State(state): State<AppState>,
-    Path(region_id): Path<i32>,
-) -> Result<Json<Vec<geo::Parish>>, Error> {
-    // TODO filter by region
-    Ok(Json(sql::fetch_parishes(&state.pool).await?))
-}
-
 pub(crate) async fn put_operator_into_region(
     State(state): State<AppState>,
     Path((region_id, operator_id)): Path<(i32, i32)>,
@@ -160,4 +152,21 @@ pub(crate) async fn get_region_stops_osm_quality(
     Ok(Json(
         sql::fetch_region_osm_quality(&state.pool, region_id).await?,
     ))
+}
+
+pub(crate) async fn get_parishes(
+    State(state): State<AppState>,
+    Path(region_id): Path<i32>,
+) -> Result<Json<Vec<geo::Parish>>, Error> {
+    // TODO filter by region
+    Ok(Json(sql::fetch_parishes(&state.pool).await?))
+}
+
+pub(crate) async fn put_stop_parish(
+    State(state): State<AppState>,
+    Path(stop_id): Path<i32>,
+    Path(parish_id): Path<i32>,
+) -> Result<(), Error> {
+    sql::update_stop_parish(&state.pool, stop_id, parish_id).await?;
+    Ok(())
 }
