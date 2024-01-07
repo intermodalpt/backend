@@ -24,7 +24,7 @@ path = "src/linter/main.rs"
 
 [[bin]]
 name = "update_parishes"
-path = "src/update_parishes/main.rs"
+path = "src/update_geo_divisions/main.rs"
 
 [[bin]]
 name = "db_integrity"
