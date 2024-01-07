@@ -116,7 +116,7 @@ pub fn build_paths(state: AppState) -> Router {
             get(stops::handlers::get_stop_routes),
         )
         .route(
-            "/v1/stops/:stop_id/parish",
+            "/v1/stops/:stop_id/parish/:parish_id",
             put(geo::handlers::put_stop_parish),
         )
         .route(

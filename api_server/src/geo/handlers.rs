@@ -20,6 +20,7 @@ use axum::extract::{Path, State};
 use axum::Json;
 use std::collections::HashMap;
 
+use crate::auth;
 use commons::models::geo;
 
 use super::sql;
@@ -34,7 +35,16 @@ pub(crate) async fn get_regions(
 pub(crate) async fn put_operator_into_region(
     State(state): State<AppState>,
     Path((region_id, operator_id)): Path<(i32, i32)>,
+    claims: Option<auth::Claims>,
 ) -> Result<(), Error> {
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
     let mut transaction = state
         .pool
         .begin()
@@ -53,7 +63,16 @@ pub(crate) async fn put_operator_into_region(
 pub(crate) async fn delete_operator_from_region(
     State(state): State<AppState>,
     Path((region_id, operator_id)): Path<(i32, i32)>,
+    claims: Option<auth::Claims>,
 ) -> Result<(), Error> {
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
     let mut transaction = state
         .pool
         .begin()
@@ -72,7 +91,16 @@ pub(crate) async fn delete_operator_from_region(
 pub(crate) async fn put_route_into_region(
     State(state): State<AppState>,
     Path((region_id, route_id)): Path<(i32, i32)>,
+    claims: Option<auth::Claims>,
 ) -> Result<(), Error> {
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
     let mut transaction = state
         .pool
         .begin()
@@ -91,7 +119,16 @@ pub(crate) async fn put_route_into_region(
 pub(crate) async fn delete_route_from_region(
     State(state): State<AppState>,
     Path((region_id, route_id)): Path<(i32, i32)>,
+    claims: Option<auth::Claims>,
 ) -> Result<(), Error> {
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
     let mut transaction = state
         .pool
         .begin()
@@ -110,7 +147,16 @@ pub(crate) async fn delete_route_from_region(
 pub(crate) async fn put_stop_into_region(
     State(state): State<AppState>,
     Path((region_id, stop_id)): Path<(i32, i32)>,
+    claims: Option<auth::Claims>,
 ) -> Result<(), Error> {
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
     let mut transaction = state
         .pool
         .begin()
@@ -128,7 +174,16 @@ pub(crate) async fn put_stop_into_region(
 pub(crate) async fn delete_stop_from_region(
     State(state): State<AppState>,
     Path((region_id, stop_id)): Path<(i32, i32)>,
+    claims: Option<auth::Claims>,
 ) -> Result<(), Error> {
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
     let mut transaction = state
         .pool
         .begin()
@@ -164,9 +219,17 @@ pub(crate) async fn get_parishes(
 
 pub(crate) async fn put_stop_parish(
     State(state): State<AppState>,
-    Path(stop_id): Path<i32>,
-    Path(parish_id): Path<i32>,
+    Path((stop_id, parish_id)): Path<(i32, i32)>,
+    claims: Option<auth::Claims>,
 ) -> Result<(), Error> {
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
     sql::update_stop_parish(&state.pool, stop_id, parish_id).await?;
     Ok(())
 }
