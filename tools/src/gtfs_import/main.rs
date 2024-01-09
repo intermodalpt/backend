@@ -16,14 +16,18 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+use config::Config;
 use itertools::Itertools;
+use serde_derive::Deserialize;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
+use std::process::exit;
 
 use crate::gtfs::load_gtfs;
 use crate::iml::load_base_data;
 use crate::linter::lint_gtfs;
 use crate::matcher::match_gtfs_routes;
+use commons::models::gtfs as gtfs_commons;
 
 mod error;
 mod gtfs;
@@ -34,46 +38,168 @@ mod matcher;
 mod tests;
 mod utils;
 
+pub(crate) static GTFS_TMP_SUPRESS: [&'static str; 8] = [
+    "040151", // Póvoa da Galega, WTF
+    "081003", "081031", "081032", "140288", "160425",
+    // Marquesa, Penalva
+    "130813", "130814",
+];
+pub(crate) static GTFS_TMP_STICK_TO_ORIGINALS: [&'static str; 46] = [
+    // Campo grande
+    "060301", "060303", "060155", "060306", "060302", "060311", "060226",
+    "060308", "060305", "060316", "060341", "060339", "060156", "060312",
+    "060259", "060314", "060171", "060337", "060304", "060310", "060369",
+    "060286", "061200", // Oriente
+    "060001", "060002", "060009", "060011", "060321", "060322", "060253",
+    "060207", "060327", "060323", "060325", "060361",
+    // Terminal de Mafra
+    "080207", "082320", "082321", "080208", "082322",
+    // Terminal da Pontinha
+    "110695", "110859", // Avelar Brotero
+    "110401", "110402", "110109", // TF Seixal
+    "140073",
+];
+pub(crate) static GTFS_TMP_OVERRIDES: [(&'static str, iml::StopId); 100] = [
+    ("020006", 25584),
+    ("020027", 348),
+    ("020219", 7693),
+    ("020363", 7696),
+    ("021009", 7693),
+    ("030819", 17102),
+    ("030857", 16528),
+    ("040025", 12959),
+    ("040142", 1066),
+    ("060368", 11432),
+    ("060061", 11432),
+    ("060156", 10514),
+    ("060345", 23648),
+    ("060347", 25412),
+    ("060351", 23645),
+    ("070363", 23325),
+    ("070483", 23206),
+    ("070523", 23207),
+    ("070553", 23183),
+    ("071005", 22460),
+    ("071006", 22461),
+    ("071080", 22808),
+    ("071084", 22804),
+    ("071049", 22779),
+    ("071050", 22780),
+    ("071100", 22778),
+    ("071101", 22780),
+    ("071102", 22779),
+    ("071106", 22783),
+    ("071107", 22784),
+    ("071144", 22752),
+    ("071427", 23207),
+    ("080269", 22036),
+    ("080273", 22107),
+    ("080274", 22119),
+    ("080275", 22119),
+    ("080276", 22107),
+    ("080351", 22036),
+    ("080405", 21342),
+    ("080406", 21342),
+    ("080485", 21910),
+    ("080583", 21910),
+    ("080901", 21570),
+    ("080913", 21570),
+    ("080943", 21534),
+    ("080986", 21426),
+    ("082202", 21342),
+    ("090275", 1444),
+    ("100166", 14993),
+    ("100407", 13080),
+    ("100408", 13080),
+    ("110783", 20775),
+    ("110554", 20890),
+    ("130157", 14234),
+    ("130158", 14333),
+    ("130230", 13707),
+    ("130276", 14333),
+    ("130277", 14333),
+    ("130278", 14333),
+    ("130716", 25207),
+    ("140075", 1429),
+    ("140273", 976),
+    ("140469", 940),
+    ("140470", 939),
+    ("140554", 14502),
+    ("140557", 1002),
+    ("140561", 620),
+    ("140788", 7685),
+    ("150028", 12010),
+    ("150051", 13814),
+    ("150089", 902),
+    ("160052", 118),
+    ("160071", 118),
+    ("160246", 14671),
+    ("160296", 13345),
+    ("160306", 13345),
+    ("160327", 14717),
+    ("160349", 95),
+    ("160501", 14623),
+    ("160566", 1521),
+    ("160983", 15192),
+    ("171290", 17765),
+    ("171299", 17570),
+    ("171301", 17569),
+    ("171302", 17568),
+    ("171543", 15406),
+    ("171544", 16000),
+    ("171307", 15406),
+    ("171308", 16000),
+    ("171313", 16006),
+    ("172625", 17765),
+    ("180473", 20087),
+    ("180515", 20087),
+    ("180711", 19827),
+    ("180847", 19827),
+    ("180997", 20250),
+    ("180998", 20165),
+    // THESE ARE WROOOONG
+    ("110402", 21048),
+    ("110695", 20722),
+    ("140073", 854),
+];
+
+#[derive(Default, Deserialize)]
+struct AppConfig {
+    jwt: String,
+}
+
 #[tokio::main]
 async fn main() {
+    let config = Config::builder()
+        .add_source(
+            config::Environment::with_prefix("IML")
+                .try_parsing(true)
+                .separator("_"),
+        )
+        .build()
+        .unwrap();
+
+    if let Ok(config) = config.try_deserialize() {
+        let config: AppConfig = config;
+        iml::TOKEN.set(Box::leak(Box::new(config.jwt))).unwrap();
+    } else {
+        eprintln!("Token not found in the environment");
+        exit(-1);
+    }
+
     let gtfs = load_gtfs(&PathBuf::from("./data/operators/1/gtfs")).unwrap();
     let lints = lint_gtfs(&gtfs);
-    for lint in lints {
-        println!("{:?}", lint);
-    }
+
+    iml::put_operator_validation(
+        1,
+        iml::OperatorValidationData { gtfs_lints: lints },
+    )
+    .await
+    .unwrap();
 
     let iml = load_base_data().await.unwrap();
 
-    let iml_to_gtfs_stops = iml
-        .stops
-        .iter()
-        .filter_map(|(iml_id, iml_stop)| {
-            let gtfs_id = iml_stop
-                .operators
-                .iter()
-                .find(|rel| rel.operator_id == 1)
-                .map(|rel| rel.stop_ref.as_ref().unwrap().clone());
-
-            if let Some(id) = &gtfs_id {
-                if !gtfs.stops.contains_key(id) {
-                    println!("Missing GTFS stop {}", id);
-                    // TODO add hint to unlink
-                    return None;
-                }
-            }
-
-            gtfs_id.map(|gtfs_id| (iml_id.clone(), gtfs_id))
-        })
-        .collect::<HashMap<i32, gtfs::StopId>>();
-
-    let gtfs_to_iml_stops = iml_to_gtfs_stops
-        .iter()
-        .map(|(iml_id, gtfs_id)| (gtfs_id.clone(), *iml_id))
-        .collect::<HashMap<gtfs::StopId, i32>>();
-
-    let mut matches = match_gtfs_routes(&gtfs, &iml, &gtfs_to_iml_stops)
-        .await
-        .unwrap();
+    let mut matches = match_gtfs_routes(&gtfs, &iml).await.unwrap();
 
     // Sorting for determinism
     matches.sort_by(|m1, m2| {
@@ -90,6 +216,24 @@ async fn main() {
     for res in matches {
         let route = iml.routes.get(&res.route_id).unwrap();
         println!("(#{}) - {:?} - {}", route.id, route.code, route.name);
+
+        let route_validation_data = iml::RouteValidationData {
+            validation: gtfs_commons::RouteValidation {
+                unmatched: res
+                    .unpaired_gtfs
+                    .iter()
+                    .map(|pattern| pattern.into())
+                    .collect(),
+            },
+            subroutes: res
+                .pairings
+                .iter()
+                .map(|pairing| (pairing.iml.subroute_id, pairing.into()))
+                .collect::<HashMap<i32, gtfs_commons::SubrouteValidation>>(),
+        };
+        iml::put_route_validation(res.route_id, route_validation_data)
+            .await
+            .unwrap();
 
         let mut conflicts = false;
 

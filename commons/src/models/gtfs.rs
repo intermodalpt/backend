@@ -117,6 +117,7 @@ pub struct PatternCluster {
 pub struct SubrouteValidation {
     pub gtfs_pattern_ids: Vec<PatternId>,
     pub gtfs_trip_ids: Vec<TripId>,
+    pub gtfs_headsigns: Vec<String>,
     pub iml_stops: Vec<i32>,
     pub gtfs_stops: Vec<StopId>,
 }

@@ -21,9 +21,11 @@ use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 use strsim::normalized_levenshtein;
 
+use commons::models::gtfs as gtfs_commons;
+
 use crate::error::Error;
 use crate::utils::stop_seq_error;
-use crate::{gtfs, iml, GTFS_TMP_SUPRESS};
+use crate::{gtfs, iml, GTFS_TMP_OVERRIDES, GTFS_TMP_SUPRESS};
 
 pub(crate) struct RouteSummary<'iml, 'gtfs> {
     // Some of these fields are unnecessary since the subroute has a ref
@@ -75,8 +77,34 @@ pub(crate) struct GtfsPatternData<'gtfs> {
     pub(crate) stop_ids: &'gtfs [gtfs::StopId],
     pub(crate) route_id: &'gtfs gtfs::RouteId,
     pub(crate) pattern_ids: Vec<gtfs::PatternId>,
+    pub(crate) headsigns: Vec<String>,
     pub(crate) trip_ids: Vec<gtfs::TripId>,
     pub(crate) iml_stop_ids: Vec<Option<iml::StopId>>,
+}
+
+impl From<&GtfsPatternData<'_>> for gtfs_commons::PatternCluster {
+    fn from(cluster: &GtfsPatternData<'_>) -> Self {
+        gtfs_commons::PatternCluster {
+            stops: cluster.stop_ids.iter().cloned().collect(),
+            headsigns: cluster.pattern_ids.iter().cloned().collect(),
+            patterns: cluster.pattern_ids.iter().cloned().collect(),
+            trips: cluster.trip_ids.iter().cloned().collect(),
+        }
+    }
+}
+
+impl From<&SubroutePatternPairing<'_, '_>>
+    for gtfs_commons::SubrouteValidation
+{
+    fn from(pairing: &SubroutePatternPairing<'_, '_>) -> Self {
+        gtfs_commons::SubrouteValidation {
+            gtfs_pattern_ids: pairing.gtfs.pattern_ids.clone(),
+            gtfs_trip_ids: pairing.gtfs.trip_ids.clone(),
+            gtfs_headsigns: pairing.gtfs.headsigns.clone(),
+            iml_stops: pairing.iml.stop_ids.iter().cloned().collect_vec(),
+            gtfs_stops: pairing.gtfs.stop_ids.iter().cloned().collect_vec(),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -88,8 +116,34 @@ pub(crate) struct ImlSubrouteData<'iml> {
 pub(crate) async fn match_gtfs_routes<'iml, 'gtfs>(
     gtfs: &'gtfs gtfs::Data,
     iml: &'iml iml::Data,
-    gtfs_to_iml_stops: &HashMap<gtfs::StopId, iml::StopId>,
 ) -> Result<Vec<RoutePairing<'iml, 'gtfs>>, Error> {
+    let iml_to_gtfs_stops = iml
+        .stops
+        .iter()
+        .filter_map(|(iml_id, iml_stop)| {
+            let gtfs_id = iml_stop
+                .operators
+                .iter()
+                .find(|rel| rel.operator_id == 1)
+                .map(|rel| rel.stop_ref.as_ref().unwrap().clone());
+
+            if let Some(id) = &gtfs_id {
+                if !gtfs.stops.contains_key(id) {
+                    println!("Missing GTFS stop {}", id);
+                    // TODO add hint to unlink
+                    return None;
+                }
+            }
+
+            gtfs_id.map(|gtfs_id| (iml_id.clone(), gtfs_id))
+        })
+        .collect::<HashMap<i32, gtfs::StopId>>();
+
+    let mut gtfs_to_iml_stops = iml_to_gtfs_stops
+        .iter()
+        .map(|(iml_id, gtfs_id)| (gtfs_id.clone(), *iml_id))
+        .collect::<HashMap<gtfs::StopId, i32>>();
+
     let gtfs_routes_by_code = gtfs
         .routes
         .values()
@@ -532,6 +586,11 @@ pub(crate) fn pair_patterns_with_subroutes<'iml, 'gtfs>(
                     .iter()
                     .cloned()
                     .collect(),
+                headsigns: patterns[gtfs_idx]
+                    .headsigns
+                    .iter()
+                    .cloned()
+                    .collect(),
                 trip_ids: patterns[gtfs_idx].trips.iter().cloned().collect(),
                 iml_stop_ids: patterns[gtfs_idx].iml_stop_ids.clone(),
             },
@@ -552,6 +611,7 @@ pub(crate) fn pair_patterns_with_subroutes<'iml, 'gtfs>(
             stop_ids: &pattern.gtfs_stop_ids,
             route_id: &pattern.route_id,
             pattern_ids: pattern.patterns.iter().cloned().collect(),
+            headsigns: pattern.headsigns.iter().cloned().collect(),
             trip_ids: pattern.trips.iter().cloned().collect(),
             iml_stop_ids: pattern.iml_stop_ids.clone(),
         })

@@ -19,10 +19,13 @@
 #![allow(dead_code)]
 
 use itertools::Itertools;
-use serde::Deserialize;
+use once_cell::sync::OnceCell;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::io::{Read, Write};
+
+use commons::models::gtfs;
 
 use crate::error::Error;
 
@@ -31,11 +34,13 @@ pub(crate) type StopId = i32;
 pub(crate) type RouteId = i32;
 pub(crate) type SubrouteId = i32;
 
+const API_URL: &str = "https://api.intermodal.pt";
+pub(crate) static TOKEN: OnceCell<&'static str> = OnceCell::new();
+
 #[derive(Deserialize)]
 pub(crate) struct Stop {
     pub(crate) id: i32,
-    name: Option<String>,
-    osm_name: Option<String>,
+    name: String,
     lat: f64,
     lon: f64,
     pub(crate) operators: Vec<StopOperatorRel>,
@@ -79,11 +84,22 @@ pub struct SubrouteStops {
     pub(crate) subroute: SubrouteId,
     pub(crate) stops: Vec<StopId>,
 }
+#[derive(Serialize)]
+pub(crate) struct OperatorValidationData {
+    pub(crate) gtfs_lints: Vec<gtfs::Lint>,
+}
+
+#[derive(Serialize)]
+pub(crate) struct RouteValidationData {
+    pub(crate) validation: gtfs::RouteValidation,
+    pub(crate) subroutes: HashMap<i32, gtfs::SubrouteValidation>,
+}
 
 pub(crate) struct Data {
     pub(crate) stops: HashMap<StopId, Stop>,
     pub(crate) routes: HashMap<RouteId, Route>,
 }
+
 pub(crate) async fn load_base_data() -> Result<Data, Error> {
     let iml_stops = fetch_iml_stops().await.unwrap();
     println!("Downloaded IML stops");
@@ -147,19 +163,29 @@ pub(crate) async fn load_base_data() -> Result<Data, Error> {
 
 pub(crate) async fn fetch_iml_stops(
 ) -> Result<Vec<Stop>, Box<dyn std::error::Error>> {
-    let stops: Vec<Stop> =
-        reqwest::get("https://api.intermodal.pt/v1/stops/full")
-            .await?
-            .json()
-            .await?;
-    Ok(stops)
+    let url = format!("{}/v1/regions/1/stops/full", API_URL);
+    println!("Fetching {}", url);
+    let res = reqwest::Client::new()
+        .get(&url)
+        .bearer_auth(TOKEN.get().unwrap())
+        .send()
+        .await?;
+
+    if res.status().is_success() {
+        let stops: Vec<Stop> = res.json().await?;
+        Ok(stops)
+    } else {
+        Err(Box::new(Error::HTTPError(format!(
+            "Status: {} Response: {}",
+            res.status(),
+            res.text().await?
+        ))))
+    }
 }
 pub(crate) async fn fetch_iml_routes(
 ) -> Result<Vec<Route>, Box<dyn std::error::Error>> {
-    let routes = reqwest::get("https://api.intermodal.pt/v1/routes")
-        .await?
-        .json()
-        .await?;
+    let url = format!("{}/v1/routes/all", API_URL);
+    let routes = reqwest::get(&url).await?.json().await?;
     Ok(routes)
 }
 
@@ -197,15 +223,60 @@ pub(crate) async fn fetch_subroute_stops(
 async fn fetch_route_stops(
     route_id: RouteId,
 ) -> Result<HashMap<SubrouteId, Vec<StopId>>, Box<dyn std::error::Error>> {
-    let subroute_stops: Vec<SubrouteStops> = reqwest::get(&format!(
-        "https://api.intermodal.pt/v1/routes/{route_id}/stops"
-    ))
-    .await?
-    .json()
-    .await?;
+    let url = format!("{}/v1/routes/{}/stops", API_URL, route_id);
+    let subroute_stops: Vec<SubrouteStops> =
+        reqwest::get(&url).await?.json().await?;
 
     Ok(subroute_stops
         .into_iter()
         .map(|ss| (ss.subroute, ss.stops))
         .collect())
+}
+
+pub(crate) async fn put_route_validation(
+    route_id: i32,
+    validation_data: RouteValidationData,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let url = format!("{}/v1/routes/{}/attach_validation", API_URL, route_id);
+    println!("Calling {}", &url);
+    let res = reqwest::Client::new()
+        .put(&url)
+        .bearer_auth(TOKEN.get().unwrap())
+        .json(&validation_data)
+        .send()
+        .await?;
+
+    if res.status().is_success() {
+        Ok(())
+    } else {
+        Err(Box::new(Error::HTTPError(format!(
+            "Status: {}. Response: {}",
+            res.status(),
+            res.text().await?
+        ))))
+    }
+}
+
+pub(crate) async fn put_operator_validation(
+    operator_id: i32,
+    validation_data: OperatorValidationData,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let url =
+        format!("{}/v1/operators/{}/attach_validation", API_URL, operator_id);
+    let res = reqwest::Client::new()
+        .put(&url)
+        .bearer_auth(TOKEN.get().unwrap())
+        .json(&validation_data)
+        .send()
+        .await?;
+
+    if res.status().is_success() {
+        Ok(())
+    } else {
+        Err(Box::new(Error::HTTPError(format!(
+            "Status: {}. Response: {}",
+            res.status(),
+            res.text().await?
+        ))))
+    }
 }
