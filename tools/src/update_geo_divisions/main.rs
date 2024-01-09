@@ -21,17 +21,42 @@ mod utils;
 
 use std::collections::HashSet;
 use std::io;
+use std::process::exit;
 use std::sync::Mutex;
 
+use config::Config;
 use geo::{BoundingRect, Contains, Coord, Point, Rect};
 use rayon::prelude::*;
+use serde_derive::Deserialize;
 
 use commons::models::geo::Geojson;
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
+#[derive(Default, Deserialize)]
+struct AppConfig {
+    jwt: String,
+}
+
 #[tokio::main]
 async fn main() {
+    let config = Config::builder()
+        .add_source(
+            config::Environment::with_prefix("IML")
+                .try_parsing(true)
+                .separator("_"),
+        )
+        .build()
+        .unwrap();
+
+    if let Ok(config) = config.try_deserialize() {
+        let config: AppConfig = config;
+        api::TOKEN.set(Box::leak(Box::new(config.jwt))).unwrap();
+    } else {
+        eprintln!("Token not found in the environment");
+        exit(-1);
+    }
+
     match update_stop_regions().await {
         Ok(_) => {
             println!("Done updating the regions");
@@ -61,13 +86,31 @@ async fn update_stop_regions() -> Result<()> {
     let regions = api::fetch_regions().await.unwrap();
 
     for region in regions {
+        // TODO
+        // - drop stops that aren't in the region any longer
+
         let region_multipoly = utils::multipoly_from_geometry(region.geometry);
         let bbox = region_multipoly.bounding_rect().unwrap();
         let expanded_bbox = expand_rect(&bbox);
 
         let region_stops = api::fetch_region_stops(region.id).await?;
-        let region_stops_id =
+
+        let mut region_stops_id =
             region_stops.iter().map(|s| s.id).collect::<HashSet<_>>();
+
+        let region_route_ids =
+            api::fetch_region_route_ids(region.id).await.unwrap();
+
+        for route in &region_route_ids {
+            let route_stops = api::fetch_route_stops(*route).await.unwrap();
+
+            for stop in route_stops {
+                if !region_stops_id.contains(&stop.id) {
+                    api::attach_stop_to_region(region.id, stop.id).await?;
+                    region_stops_id.insert(stop.id);
+                }
+            }
+        }
 
         let near_region_stops = api::fetch_area_stops(
             expanded_bbox.min().x,
@@ -87,10 +130,7 @@ async fn update_stop_regions() -> Result<()> {
                 if !region_stops_id.contains(&stop.id) {
                     println!(
                         "Add stop {} ({}) to region {} ({})? [y/N]",
-                        stop.name.as_ref().unwrap_or(&"?".to_string()),
-                        stop.id,
-                        region.name,
-                        region.id
+                        &stop.name, stop.id, region.name, region.id
                     );
                     let mut input = String::new();
                     io::stdin().read_line(&mut input)?;
@@ -107,10 +147,7 @@ async fn update_stop_regions() -> Result<()> {
                 if region_stops_id.contains(&stop.id) {
                     println!(
                         "Remove stop {} ({}) from region {} ({})? [y/N]",
-                        stop.name.as_ref().unwrap_or(&"?".to_string()),
-                        stop.id,
-                        region.name,
-                        region.id
+                        stop.name, stop.id, region.name, region.id
                     );
                     let mut input = String::new();
                     io::stdin().read_line(&mut input)?;
@@ -168,11 +205,7 @@ async fn update_parishes() -> Result<()> {
                 stop_parish_pairs.lock().unwrap().push((stop.id, *id));
                 println!(
                     "Stop {} ({}) is in parish {}",
-                    stop.name.as_ref().unwrap_or(
-                        stop.name.as_ref().unwrap_or(&"?".to_string())
-                    ),
-                    stop.id,
-                    name
+                    &stop.name, stop.id, name
                 );
                 break;
             }
@@ -189,9 +222,7 @@ async fn update_parishes() -> Result<()> {
                 api::update_stop_parish(stop.id, *id).await?;
                 println!(
                     "Stop {} ({}) is in parish {}",
-                    stop.name.unwrap(),
-                    stop.id,
-                    name
+                    stop.name, stop.id, name
                 );
                 break;
             }
