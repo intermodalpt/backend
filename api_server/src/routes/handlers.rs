@@ -34,14 +34,16 @@ use crate::{auth, contrib, AppState, Error};
 )]
 pub(crate) async fn get_routes(
     State(state): State<AppState>,
+    Path(region_id): Path<i32>,
 ) -> Result<Json<Vec<responses::Route>>, Error> {
-    Ok(Json(sql::fetch_routes(&state.pool).await?))
+    Ok(Json(sql::fetch_routes(&state.pool, region_id).await?))
 }
 
 pub(crate) async fn get_full_routes(
     State(state): State<AppState>,
+    Path(region_id): Path<i32>,
 ) -> Result<Json<Vec<responses::FullRoute>>, Error> {
-    Ok(Json(sql::fetch_full_routes(&state.pool).await?))
+    Ok(Json(sql::fetch_full_routes(&state.pool, region_id).await?))
 }
 
 pub(crate) async fn get_operator_routes(

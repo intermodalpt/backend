@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT routes.*, route_types.badge_text_color as badge_text, route_types.badge_bg_color as badge_bg\nFROM (\n    SELECT routes.id, routes.code, routes.name, routes.operator, routes.type as type_id,\n        routes.circular, routes.main_subroute, routes.active, routes.parishes,\n        COALESCE(\n            array_agg((subroutes.id, subroutes.group, subroutes.flag, subroutes.headsign, subroutes.origin,\n                subroutes.destination, subroutes.via, subroutes.circular, subroutes.polyline, subroutes.validation))\n            FILTER (WHERE subroutes.id IS NOT NULL),\n            '{}'\n        ) AS \"subroutes!: Vec<responses::FullSubroute>\"\n    FROM routes\n    LEFT JOIN subroutes ON routes.id = subroutes.route\n    GROUP BY routes.id\n    ORDER BY routes.id asc\n) as routes\nJOIN route_types on routes.type_id = route_types.id\n    ",
+  "query": "\nSELECT routes.*, route_types.badge_text_color as badge_text, route_types.badge_bg_color as badge_bg\nFROM (\n    SELECT routes.id, routes.code, routes.name, routes.operator, routes.type as type_id,\n        routes.circular, routes.main_subroute, routes.active, routes.parishes,\n        COALESCE(\n            array_agg((subroutes.id, subroutes.group, subroutes.flag, subroutes.headsign, subroutes.origin,\n                subroutes.destination, subroutes.via, subroutes.circular, subroutes.polyline))\n            FILTER (WHERE subroutes.id IS NOT NULL),\n            '{}'\n        ) AS \"subroutes!: Vec<responses::Subroute>\"\n    FROM routes\n    LEFT JOIN subroutes ON routes.id = subroutes.route\n    GROUP BY routes.id\n    ORDER BY routes.id asc\n) as routes\nJOIN route_types on routes.type_id = route_types.id\nJOIN region_routes on routes.id = region_routes.region_id\nWHERE region_routes.region_id = $1\n",
   "describe": {
     "columns": [
       {
@@ -50,7 +50,7 @@
       },
       {
         "ordinal": 9,
-        "name": "subroutes!: Vec<responses::FullSubroute>",
+        "name": "subroutes!: Vec<responses::Subroute>",
         "type_info": "RecordArray"
       },
       {
@@ -65,7 +65,9 @@
       }
     ],
     "parameters": {
-      "Left": []
+      "Left": [
+        "Int4"
+      ]
     },
     "nullable": [
       false,
@@ -82,5 +84,5 @@
       false
     ]
   },
-  "hash": "af867cabd24bee73b45b9cbe6e88445686e00d6b0f344797c02595476baa8090"
+  "hash": "444d5119fc3cb38b01969e8d4dd2241e6612a4e68e8d7e932ee40cd7b0cf528d"
 }

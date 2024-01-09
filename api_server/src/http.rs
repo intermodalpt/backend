@@ -77,6 +77,14 @@ pub fn build_paths(state: AppState) -> Router {
                 .delete(geo::handlers::delete_operator_from_region),
         )
         .route(
+            "/v1/regions/:region_id/routes",
+            get(routes::handlers::get_routes),
+        )
+        .route(
+            "/v1/regions/:region_id/routes/full",
+            get(routes::handlers::get_full_routes),
+        )
+        .route(
             "/v1/regions/:region_id/routes/:route_id",
             put(geo::handlers::put_route_into_region)
                 .delete(geo::handlers::delete_route_from_region),
@@ -135,12 +143,7 @@ pub fn build_paths(state: AppState) -> Router {
             get(pics::handlers::get_picture_stop_rels),
         )
         .route("/v1/stops/spider", post(stops::handlers::get_stops_spider))
-        .route(
-            "/v1/routes",
-            get(routes::handlers::get_routes)
-                .post(routes::handlers::create_route),
-        )
-        .route("/v1/routes/full", get(routes::handlers::get_full_routes))
+        .route("/v1/routes", post(routes::handlers::create_route))
         .route(
             "/v1/routes/:route_id",
             get(routes::handlers::get_route)

@@ -132,6 +132,7 @@ JOIN route_types on routes.type_id = route_types.id"#,
 
 pub(crate) async fn fetch_routes(
     pool: &PgPool,
+    region_id: i32,
 ) -> Result<Vec<responses::Route>> {
     sqlx::query_as!(
         responses::Route,
@@ -152,7 +153,10 @@ FROM (
     ORDER BY routes.id asc
 ) as routes
 JOIN route_types on routes.type_id = route_types.id
-"#
+JOIN region_routes on routes.id = region_routes.region_id
+WHERE region_routes.region_id = $1
+"#,
+        region_id
     )
         .fetch_all(pool)
         .await
@@ -193,6 +197,7 @@ JOIN route_types on routes.type_id = route_types.id
 
 pub(crate) async fn fetch_full_routes(
     pool: &PgPool,
+    region_id: i32,
 ) -> Result<Vec<responses::FullRoute>> {
     sqlx::query_as!(
         responses::FullRoute,
@@ -213,7 +218,10 @@ FROM (
     ORDER BY routes.id asc
 ) as routes
 JOIN route_types on routes.type_id = route_types.id
-    "#
+JOIN region_routes on routes.id = region_routes.region_id
+WHERE region_routes.region_id = $1
+    "#,
+        region_id
     )
         .fetch_all(pool)
         .await
