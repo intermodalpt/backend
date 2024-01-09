@@ -1,6 +1,6 @@
 /*
     Intermodal, transportation information aggregator
-    Copyright (C) 2023  Cláudio Pereira
+    Copyright (C) 2024  Cláudio Pereira
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -16,9 +16,12 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+use config::Config;
 use std::collections::HashMap;
+use std::process::exit;
 
 use itertools::Itertools;
+use serde_derive::Deserialize;
 
 use commons::models::osm;
 use commons::models::osm::NodeVersion;
@@ -30,21 +33,30 @@ mod models;
 
 const FLOAT_TOLERANCE: f64 = 0.000_001;
 
+#[derive(Default, Deserialize)]
+struct AppConfig {
+    jwt: String,
+}
+
 #[tokio::main]
 async fn main() {
-    let mut args = pico_args::Arguments::from_env();
+    let config = Config::builder()
+        .add_source(
+            config::Environment::with_prefix("IML")
+                .try_parsing(true)
+                .separator("_"),
+        )
+        .build()
+        .unwrap();
 
-    match args.opt_value_from_str::<_, String>("--jwt").unwrap() {
-        Some(jwt) => {
-            api::TOKEN
-                .set(Box::leak(Box::new(jwt.to_string())))
-                .unwrap();
-        }
-        None => {
-            eprintln!("No JWT provided");
-            std::process::exit(0);
-        }
+    if let Ok(config) = config.try_deserialize() {
+        let config: AppConfig = config;
+        api::TOKEN.set(Box::leak(Box::new(config.jwt))).unwrap();
+    } else {
+        eprintln!("Token not found in the environment");
+        exit(-1);
     }
+
     import().await.unwrap();
 }
 
