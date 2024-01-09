@@ -104,10 +104,10 @@ async fn update_stop_regions() -> Result<()> {
         for route in &region_route_ids {
             let route_stops = api::fetch_route_stops(*route).await.unwrap();
 
-            for stop in route_stops {
-                if !region_stops_id.contains(&stop.id) {
-                    api::attach_stop_to_region(region.id, stop.id).await?;
-                    region_stops_id.insert(stop.id);
+            for stop_id in route_stops {
+                if !region_stops_id.contains(&stop_id) {
+                    api::attach_stop_to_region(region.id, stop_id).await?;
+                    region_stops_id.insert(stop_id);
                 }
             }
         }

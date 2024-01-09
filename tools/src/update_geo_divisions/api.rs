@@ -92,10 +92,21 @@ pub(crate) async fn fetch_region_route_ids(
 
 pub(crate) async fn fetch_route_stops(
     route_id: i32,
-) -> Result<Vec<Stop>, Box<dyn std::error::Error>> {
+) -> Result<Vec<i32>, Box<dyn std::error::Error>> {
+    #[derive(Deserialize)]
+    pub struct SubrouteStops {
+        pub(crate) stops: Vec<i32>,
+    }
+
     let url = format!("{}/v1/routes/{}/stops", API_URL, route_id);
     println!("Calling {}", url);
-    let stops: Vec<Stop> = reqwest::get(&url).await?.json().await?;
+    let subroutes: Vec<SubrouteStops> =
+        reqwest::get(&url).await?.json().await?;
+
+    let stops = subroutes
+        .into_iter()
+        .flat_map(|subroute_stops| subroute_stops.stops)
+        .collect();
     Ok(stops)
 }
 
