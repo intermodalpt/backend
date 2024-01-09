@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT id, name, tag\nFROM Operators\n",
+  "query": "\nSELECT id, name, tag, array_remove(array_agg(region_operators.region_id), NULL) as \"regions!: Vec<i32>\"\nFROM operators\nLEFT JOIN region_operators ON region_operators.operator_id = operators.id\nGROUP BY id\n",
   "describe": {
     "columns": [
       {
@@ -17,6 +17,11 @@
         "ordinal": 2,
         "name": "tag",
         "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "regions!: Vec<i32>",
+        "type_info": "Int4Array"
       }
     ],
     "parameters": {
@@ -25,8 +30,9 @@
     "nullable": [
       false,
       false,
-      false
+      false,
+      null
     ]
   },
-  "hash": "30f7a9fb49144c702a9a89ed1372312e7f2af30a2bd6c99dceeff1fc2b88e458"
+  "hash": "054e979569e8a468ce9949f13c0377affdf479e60f04bd814195c974053a5fdc"
 }

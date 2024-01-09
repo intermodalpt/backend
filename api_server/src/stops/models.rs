@@ -463,4 +463,30 @@ pub(crate) mod responses {
             sqlx::postgres::PgTypeInfo::with_name("Stop")
         }
     }
+
+    impl<'r> sqlx::decode::Decode<'r, sqlx::Postgres> for OperatorStop {
+        fn decode(
+            value: sqlx::postgres::PgValueRef<'r>,
+        ) -> Result<Self, Box<dyn ::std::error::Error + 'static + Send + Sync>>
+        {
+            let mut decoder =
+                sqlx::postgres::types::PgRecordDecoder::new(value)?;
+            let operator_id = decoder.try_decode::<i32>()?;
+            let name = decoder.try_decode::<Option<String>>()?;
+            let stop_ref = decoder.try_decode::<Option<String>>()?;
+            let source = decoder.try_decode::<String>()?;
+            Ok(OperatorStop {
+                operator_id,
+                name,
+                stop_ref,
+                source,
+            })
+        }
+    }
+
+    impl sqlx::Type<sqlx::Postgres> for OperatorStop {
+        fn type_info() -> sqlx::postgres::PgTypeInfo {
+            sqlx::postgres::PgTypeInfo::with_name("OperatorStop")
+        }
+    }
 }

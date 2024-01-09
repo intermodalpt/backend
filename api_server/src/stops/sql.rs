@@ -19,7 +19,6 @@
 use std::collections::{hash_map, HashMap};
 
 use chrono::Utc;
-use sqlx::types::Json;
 use sqlx::PgPool;
 
 use commons::models::{osm, routes, stops};
@@ -115,17 +114,26 @@ pub(crate) async fn fetch_full_stops(
     pool: &PgPool,
     region_id: i32,
 ) -> Result<Vec<responses::FullStop>> {
-    let stops = sqlx::query!(
+    sqlx::query!(
         r#"
 SELECT id, name, short_name, locality, street, door, lat, lon, external_id, notes, updater, update_date,
     parish, tags, accessibility_meta as "a11y!: sqlx::types::Json<stops::A11yMeta>",
-    deleted_upstream, verification_level, service_check_date, infrastructure_check_date, verified_position
+    deleted_upstream, verification_level, service_check_date, infrastructure_check_date, verified_position,
+    CASE
+        WHEN count(stop_operators.stop_id) > 0
+        THEN array_agg(
+            ROW(stop_operators.operator_id, stop_operators.stop_ref, stop_operators.official_name,
+                stop_operators.source))
+        ELSE array[]::record[]
+    END as "operators!: Vec<responses::OperatorStop>"
 FROM Stops
+JOIN stop_operators ON stops.id = stop_operators.stop_id
 WHERE id IN (
     SELECT DISTINCT stop_id
     FROM region_stops
     WHERE region_id = $1
 )
+GROUP BY stops.id
         "#,
         region_id
     )
@@ -162,39 +170,10 @@ WHERE id IN (
             deleted_upstream: r.deleted_upstream,
             verified_position: r.verified_position,
             update_date: r.update_date,
-            operators: vec![],
+            operators: r.operators,
         })
     })
-    .collect::<Result<Vec<responses::FullStop>>>()?;
-
-    // Into a map
-    let mut stops = stops
-        .into_iter()
-        .map(|stop| (stop.stop.id, stop))
-        .collect::<HashMap<i32, responses::FullStop>>();
-
-    sqlx::query!(
-        r#"
-SELECT operator_id, stop_id, stop_ref, official_name as name, source
-FROM stop_operators
-        "#,
-    )
-    .fetch_all(pool)
-    .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
-    .into_iter()
-    .for_each(|r| {
-        stops.get_mut(&r.stop_id).unwrap().operators.push(
-            responses::OperatorStop {
-                operator_id: r.operator_id,
-                stop_ref: r.stop_ref,
-                name: r.name,
-                source: r.source,
-            },
-        );
-    });
-
-    Ok(stops.into_values().collect())
+    .collect::<Result<Vec<responses::FullStop>>>()
 }
 
 pub(crate) async fn fetch_bounded_stops(
@@ -487,7 +466,7 @@ WHERE id = $10
         change.osm_differs,
         change.osm_version,
         change.osm_sync_time,
-        Json(change.osm_history) as _,
+        sqlx::types::Json(change.osm_history) as _,
         change.deleted_upstream,
         stop_id
     )

@@ -139,7 +139,7 @@ CREATE TABLE stops
     osm_sync_time             timestamp with time zone,
     osm_version               integer                  DEFAULT 0                NOT NULL,
     osm_map_quality           boolean,
-    osm_history               jsonb                    DEFAULT '{}'::jsonb      NOT NULL
+    osm_history               jsonb                                             NOT NULL
 );
 
 CREATE TABLE route_types
