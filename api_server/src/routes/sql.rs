@@ -148,13 +148,13 @@ FROM (
             '{}'
         ) AS "subroutes!: Vec<responses::Subroute>"
     FROM routes
+    JOIN region_routes on routes.id = region_routes.route_id
     LEFT JOIN subroutes ON routes.id = subroutes.route
+    WHERE region_routes.region_id = $1
     GROUP BY routes.id
     ORDER BY routes.id asc
 ) as routes
 JOIN route_types on routes.type_id = route_types.id
-JOIN region_routes on routes.id = region_routes.region_id
-WHERE region_routes.region_id = $1
 "#,
         region_id
     )
@@ -213,13 +213,13 @@ FROM (
             '{}'
         ) AS "subroutes!: Vec<responses::FullSubroute>"
     FROM routes
+    JOIN region_routes on routes.id = region_routes.route_id
     LEFT JOIN subroutes ON routes.id = subroutes.route
+    WHERE region_routes.region_id = $1
     GROUP BY routes.id
     ORDER BY routes.id asc
 ) as routes
 JOIN route_types on routes.type_id = route_types.id
-JOIN region_routes on routes.id = region_routes.region_id
-WHERE region_routes.region_id = $1
     "#,
         region_id
     )
