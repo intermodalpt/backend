@@ -78,7 +78,7 @@ pub enum AreaParkingLimitation {
 pub struct Stop {
     pub id: i32,
     #[schema(example = "Setúbal (ITS)")]
-    pub name: Option<String>,
+    pub name: String,
     #[schema(example = "Setúbal")]
     pub short_name: Option<String>,
     #[schema(example = "Bairro das bairradas")]

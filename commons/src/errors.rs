@@ -22,4 +22,5 @@ pub enum Error {
     FilesystemFailure(String),
     ExtractionFailure(String),
     PatchingFailure { field: &'static str, value: String },
+    Conversion,
 }

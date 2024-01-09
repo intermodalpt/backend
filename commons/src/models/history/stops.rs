@@ -320,7 +320,7 @@ impl From<current::Stop> for Stop {
     fn from(stop: current::Stop) -> Self {
         Stop {
             id: stop.id,
-            name: stop.name,
+            name: Some(stop.name),
             short_name: stop.short_name,
             locality: stop.locality,
             street: stop.street,
@@ -344,7 +344,7 @@ impl TryFrom<Stop> for current::Stop {
     fn try_from(stop: Stop) -> Result<Self, Self::Error> {
         Ok(current::Stop {
             id: stop.id,
-            name: stop.name,
+            name: stop.name.ok_or(Error::Conversion)?,
             short_name: stop.short_name,
             locality: stop.locality,
             street: stop.street,
@@ -635,12 +635,7 @@ pub struct StopVerification {
 #[allow(clippy::option_option)]
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct StopPatch {
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        with = "::serde_with::rust::double_option"
-    )]
-    pub name: Option<Option<String>>,
+    pub name: Option<String>,
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",

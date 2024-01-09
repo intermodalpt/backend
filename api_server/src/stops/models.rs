@@ -27,7 +27,7 @@ pub(crate) mod requests {
     pub struct NewStop {
         pub lon: f64,
         pub lat: f64,
-        pub name: Option<String>,
+        pub name: String,
         pub short_name: Option<String>,
         pub locality: Option<String>,
         pub street: Option<String>,
@@ -50,7 +50,7 @@ pub(crate) mod requests {
         pub lon: f64,
         pub lat: f64,
 
-        pub name: Option<String>,
+        pub name: String,
         pub short_name: Option<String>,
         pub locality: Option<String>,
         pub street: Option<String>,
@@ -292,10 +292,10 @@ pub(crate) mod responses {
 
     /// Meant to be a minimal stop for the client to fill the UI with
     /// It should request `Stop` from then on
-    #[derive(Debug, Clone, Serialize, PartialEq, sqlx::Type)]
+    #[derive(Debug, Clone, Serialize, PartialEq)]
     pub struct SimpleStop {
         pub id: i32,
-        pub name: Option<String>,
+        pub name: String,
         pub short_name: Option<String>,
         pub lat: f64,
         pub lon: f64,
@@ -305,7 +305,7 @@ pub(crate) mod responses {
     #[derive(Debug, Clone, Serialize, PartialEq)]
     pub struct Stop {
         pub id: i32,
-        pub name: Option<String>,
+        pub name: String,
         pub short_name: Option<String>,
         pub locality: Option<String>,
         pub street: Option<String>,
@@ -397,7 +397,7 @@ pub(crate) mod responses {
 
     #[derive(Serialize, ToSchema)]
     pub struct SpiderStop {
-        pub name: Option<String>,
+        pub name: String,
         pub lat: f64,
         pub lon: f64,
     }
@@ -419,7 +419,7 @@ pub(crate) mod responses {
             let mut decoder =
                 sqlx::postgres::types::PgRecordDecoder::new(value)?;
             let id = decoder.try_decode::<i32>()?;
-            let name = decoder.try_decode::<Option<String>>()?;
+            let name = decoder.try_decode::<String>()?;
             let short_name = decoder.try_decode::<Option<String>>()?;
             let locality = decoder.try_decode::<Option<String>>()?;
             let street = decoder.try_decode::<Option<String>>()?;

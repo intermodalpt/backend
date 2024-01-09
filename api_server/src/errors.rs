@@ -115,6 +115,10 @@ impl From<commons::errors::Error> for Error {
             commons::errors::Error::FilesystemFailure(msg) => {
                 Error::Processing(msg)
             }
+            commons::errors::Error::Conversion => Error::Processing(
+                "Error converting now-incompatible historical object"
+                    .to_string(),
+            ),
             commons::errors::Error::PatchingFailure { field, value } => {
                 Error::Processing(format!(
                     "Patching failure: field `{}` does not accept value `{}`",

@@ -26,7 +26,7 @@ pub struct OSMAuthor {
     pub username: String,
 }
 
-#[derive(PartialEq, Debug, Serialize, Deserialize)]
+#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct StoredStopMeta {
     pub pos_author_uid: i32,
     pub pos_author_uname: String,
@@ -41,7 +41,7 @@ pub struct StopNode {
     pub versions: Vec<NodeVersion>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NodeVersion {
     pub version: i32,
     pub author: i32,
