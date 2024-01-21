@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT id, name, short_name, locality, street, door, lat, lon, external_id, notes, updater, update_date,\n    parish, tags, accessibility_meta as \"a11y!: sqlx::types::Json<stops::A11yMeta>\",\n    deleted_upstream, verification_level, service_check_date, infrastructure_check_date, verified_position,\n    CASE\n        WHEN count(stop_operators.stop_id) > 0\n        THEN array_agg(\n            ROW(stop_operators.operator_id, stop_operators.stop_ref, stop_operators.official_name,\n                stop_operators.source))\n        ELSE array[]::record[]\n    END as \"operators!: Vec<responses::OperatorStop>\"\nFROM Stops\nJOIN stop_operators ON stops.id = stop_operators.stop_id\nWHERE id IN (\n    SELECT DISTINCT stop_id\n    FROM region_stops\n    WHERE region_id = $1\n)\nGROUP BY stops.id\n        ",
+  "query": "\nSELECT id, name, short_name, locality, street, door, lat, lon, external_id, notes, updater, update_date,\n    parish, tags, accessibility_meta as \"a11y!: sqlx::types::Json<stops::A11yMeta>\",\n    deleted_upstream, verification_level, service_check_date, infrastructure_check_date, verified_position,\n    CASE\n        WHEN count(stop_operators.stop_id) > 0\n        THEN array_agg(\n            ROW(stop_operators.operator_id, stop_operators.stop_ref, stop_operators.official_name,\n                stop_operators.source))\n        ELSE array[]::record[]\n    END as \"operators!: Vec<responses::OperatorStop>\"\nFROM Stops\nLEFT JOIN stop_operators ON stops.id = stop_operators.stop_id\nWHERE id IN (\n    SELECT stop_id\n    FROM region_stops\n    WHERE region_id = $1\n)\nGROUP BY stops.id\n        ",
   "describe": {
     "columns": [
       {
@@ -138,5 +138,5 @@
       null
     ]
   },
-  "hash": "3e6cc4a56332a55afd379bbfca3f0066abe967bb00c968222b63057f02cd579c"
+  "hash": "4111cb4fa4fbbbbaebc9742605cedb6e87d43705fd59ae8d39f10602c6681e48"
 }

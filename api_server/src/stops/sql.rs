@@ -127,9 +127,9 @@ SELECT id, name, short_name, locality, street, door, lat, lon, external_id, note
         ELSE array[]::record[]
     END as "operators!: Vec<responses::OperatorStop>"
 FROM Stops
-JOIN stop_operators ON stops.id = stop_operators.stop_id
+LEFT JOIN stop_operators ON stops.id = stop_operators.stop_id
 WHERE id IN (
-    SELECT DISTINCT stop_id
+    SELECT stop_id
     FROM region_stops
     WHERE region_id = $1
 )
