@@ -237,7 +237,7 @@ pub(crate) async fn put_route_validation(
     route_id: i32,
     validation_data: RouteValidationData,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let url = format!("{}/v1/routes/{}/attach_validation", API_URL, route_id);
+    let url = format!("{}/v1/routes/{}/validation", API_URL, route_id);
     println!("Calling {}", &url);
     let res = reqwest::Client::new()
         .put(&url)
@@ -261,8 +261,7 @@ pub(crate) async fn put_operator_validation(
     operator_id: i32,
     validation_data: OperatorValidationData,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let url =
-        format!("{}/v1/operators/{}/attach_validation", API_URL, operator_id);
+    let url = format!("{}/v1/operators/{}/validation", API_URL, operator_id);
     let res = reqwest::Client::new()
         .put(&url)
         .bearer_auth(TOKEN.get().unwrap())

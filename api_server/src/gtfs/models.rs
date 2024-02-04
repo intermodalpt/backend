@@ -19,6 +19,9 @@
 use std::hash::{Hash, Hasher};
 
 use serde::{Deserialize, Serialize};
+use sqlx::types::Json;
+
+use commons::models::gtfs;
 
 #[derive(Debug, Eq, Clone, Serialize, Deserialize)]
 pub struct TMLTrip {
@@ -49,6 +52,12 @@ pub struct TMLRoute {
     pub(crate) trips: Vec<TMLTrip>,
 }
 
+#[derive(Debug, Deserialize, sqlx::Type)]
+pub struct SubrouteValidationPair {
+    pub(crate) id: i32,
+    pub(crate) validation: Option<Json<gtfs::SubrouteValidation>>,
+}
+
 pub(crate) mod requests {
     use serde::Deserialize;
     use std::collections::HashMap;
@@ -59,6 +68,19 @@ pub(crate) mod requests {
     pub(crate) struct ValidateRoute {
         pub(crate) validation: gtfs::RouteValidation,
         pub(crate) subroutes: HashMap<i32, gtfs::SubrouteValidation>,
+    }
+}
+
+pub(crate) mod responses {
+    use serde::Serialize;
+    use std::collections::HashMap;
+
+    use commons::models::gtfs;
+    #[derive(Debug, Serialize)]
+    pub(crate) struct RouteValidation {
+        pub(crate) validation: Option<sqlx::types::Json<gtfs::RouteValidation>>,
+        pub(crate) subroutes:
+            HashMap<i32, Option<sqlx::types::Json<gtfs::SubrouteValidation>>>,
     }
 }
 

@@ -164,8 +164,9 @@ pub fn build_paths(state: AppState) -> Router {
             get(routes::handlers::get_schedule),
         )
         .route(
-            "/v1/routes/:route_id/attach_validation",
-            put(gtfs::handlers::put_route_validation_data),
+            "/v1/routes/:route_id/validation",
+            get(gtfs::handlers::get_route_validation_data)
+                .put(gtfs::handlers::put_route_validation_data),
         )
         .route(
             "/v1/schedules/:subroute_id",
@@ -348,7 +349,7 @@ pub fn build_paths(state: AppState) -> Router {
             get(operators::handlers::get_operator_news),
         )
         .route(
-            "/v1/operators/:operator_id/attach_validation",
+            "/v1/operators/:operator_id/validation",
             put(gtfs::handlers::put_operator_validation_data),
         )
         .route(

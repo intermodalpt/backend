@@ -1,6 +1,6 @@
 /*
     Intermodal, transportation information aggregator
-    Copyright (C) 2022 - 2023  Cláudio Pereira
+    Copyright (C) 2022 - 2024  Cláudio Pereira
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -17,9 +17,12 @@
 */
 
 use sqlx::types::Json;
+use sqlx::PgPool;
 
-use crate::Error;
 use commons::models::gtfs;
+
+use super::models::{self, responses};
+use crate::Error;
 
 type Result<T> = std::result::Result<T, Error>;
 
@@ -42,6 +45,39 @@ WHERE id=$2
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     Ok(())
+}
+
+pub(crate) async fn fetch_route_validation_data(
+    pool: &PgPool,
+    route_id: i32,
+) -> Result<Option<responses::RouteValidation>> {
+    Ok(sqlx::query!(
+        r#"
+SELECT routes.id, routes.validation as "validation!: Option<sqlx::types::Json<gtfs::RouteValidation>>",
+    CASE
+        WHEN count(subroutes.id) > 0
+        THEN array_agg(
+            ROW(subroutes.id, subroutes.validation))
+        ELSE array[]::record[]
+    END as "subroutes!: Vec<models::SubrouteValidationPair>"
+FROM routes
+LEFT JOIN subroutes ON subroutes.route = routes.id
+WHERE routes.id=$1
+GROUP BY routes.id
+    "#,
+        route_id
+    )
+    .fetch_optional(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map(|row| responses::RouteValidation {
+        validation: row.validation,
+        subroutes: row
+            .subroutes
+            .into_iter()
+            .map(|pair| (pair.id, pair.validation))
+            .collect(),
+    }))
 }
 
 pub(crate) async fn update_route_validation_data(

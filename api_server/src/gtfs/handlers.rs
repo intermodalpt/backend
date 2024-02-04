@@ -27,7 +27,7 @@ use commons::utils::gtfs::{
     calculate_gtfs_stop_sequence, calculate_stop_sliding_windows,
 };
 
-use super::models::requests;
+use super::models::{requests, responses};
 use super::sql;
 use super::{loaders, models};
 use crate::operators::import::{update_operator_gtfs, OperatorData};
@@ -195,6 +195,19 @@ pub(crate) async fn put_operator_validation_data(
         .commit()
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))
+}
+
+pub(crate) async fn get_route_validation_data(
+    State(state): State<AppState>,
+    Path(route): Path<i32>,
+) -> Result<Json<responses::RouteValidation>, Error> {
+    let data = sql::fetch_route_validation_data(&state.pool, route).await?;
+
+    if let Some(data) = data {
+        Ok(Json(data))
+    } else {
+        Err(Error::NotFoundUpstream)
+    }
 }
 
 pub(crate) async fn put_route_validation_data(
