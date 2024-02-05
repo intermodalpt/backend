@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT operators.validation as \"validation!: Option<Json<gtfs::OperatorValidation>>\"\nFROM operators\nWHERE operators.id=$1\n    ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "validation!: Option<Json<gtfs::OperatorValidation>>",
+        "type_info": "Jsonb"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "7e92a58dc937e65e936bc8396c94b3962f7b0a7e92626c551e18e3efd640b0cb"
+}

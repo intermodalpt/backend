@@ -164,6 +164,19 @@ pub(crate) async fn get_gtfs_stop_sliding_windows(
     Ok(Json(sliding_windows))
 }
 
+pub(crate) async fn get_operator_validation_data(
+    State(state): State<AppState>,
+    Path(operator): Path<i32>,
+) -> Result<Json<Option<gtfs::OperatorValidation>>, Error> {
+    let data =
+        sql::fetch_operator_validation_data(&state.pool, operator).await?;
+
+    if let Some(data) = data {
+        Ok(Json(data))
+    } else {
+        Err(Error::NotFoundUpstream)
+    }
+}
 pub(crate) async fn put_operator_validation_data(
     State(state): State<AppState>,
     claims: Option<auth::Claims>,

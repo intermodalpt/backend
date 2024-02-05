@@ -350,7 +350,8 @@ pub fn build_paths(state: AppState) -> Router {
         )
         .route(
             "/v1/operators/:operator_id/validation",
-            put(gtfs::handlers::put_operator_validation_data),
+            get(gtfs::handlers::get_operator_validation_data)
+                .put(gtfs::handlers::put_operator_validation_data),
         )
         .route(
             "/v1/actions/migrate_stop/:original_id/:replacement_id",

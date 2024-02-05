@@ -26,6 +26,24 @@ use crate::Error;
 
 type Result<T> = std::result::Result<T, Error>;
 
+pub(crate) async fn fetch_operator_validation_data(
+    pool: &PgPool,
+    operator_id: i32,
+) -> Result<Option<Option<gtfs::OperatorValidation>>> {
+    Ok(sqlx::query!(
+        r#"
+SELECT operators.validation as "validation!: Option<Json<gtfs::OperatorValidation>>"
+FROM operators
+WHERE operators.id=$1
+    "#,
+        operator_id
+    )
+        .fetch_optional(pool)
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+        .map(|r| r.validation.map(|data| data.0)))
+}
+
 pub(crate) async fn update_operator_validation_data(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     route_id: i32,
