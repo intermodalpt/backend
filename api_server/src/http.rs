@@ -130,6 +130,10 @@ pub fn build_paths(state: AppState) -> Router {
             get(stops::handlers::get_stop_routes),
         )
         .route(
+            "/v1/stops/:stop_id/regions",
+            get(geo::handlers::get_stop_regions),
+        )
+        .route(
             "/v1/stops/:stop_id/parish/:parish_id",
             put(geo::handlers::put_stop_parish),
         )
@@ -162,6 +166,10 @@ pub fn build_paths(state: AppState) -> Router {
         .route(
             "/v1/routes/:route_id/schedule",
             get(routes::handlers::get_schedule),
+        )
+        .route(
+            "/v1/routes/:route_id/regions",
+            get(geo::handlers::get_route_regions),
         )
         .route(
             "/v1/routes/:route_id/validation",
@@ -350,6 +358,10 @@ pub fn build_paths(state: AppState) -> Router {
         .route(
             "/v1/operators/:operator_id/routes",
             get(routes::handlers::get_operator_routes),
+        )
+        .route(
+            "/v1/operators/:operator_id/regions",
+            get(geo::handlers::get_operator_regions),
         )
         .route(
             "/v1/operators/:operator_id/news",

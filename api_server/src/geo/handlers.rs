@@ -32,6 +32,24 @@ pub(crate) async fn get_regions(
     Ok(Json(sql::fetch_regions(&state.pool).await?))
 }
 
+pub(crate) async fn get_operator_regions(
+    State(state): State<AppState>,
+    Path(operator_id): Path<i32>,
+    claims: Option<auth::Claims>,
+) -> Result<Json<Vec<i32>>, Error> {
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
+    Ok(Json(
+        sql::fetch_operator_regions(&state.pool, operator_id).await?,
+    ))
+}
+
 pub(crate) async fn put_operator_into_region(
     State(state): State<AppState>,
     Path((region_id, operator_id)): Path<(i32, i32)>,
@@ -88,6 +106,22 @@ pub(crate) async fn delete_operator_from_region(
         .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
+pub(crate) async fn get_route_regions(
+    State(state): State<AppState>,
+    Path(route_id): Path<i32>,
+    claims: Option<auth::Claims>,
+) -> Result<Json<Vec<i32>>, Error> {
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
+    Ok(Json(sql::fetch_route_regions(&state.pool, route_id).await?))
+}
+
 pub(crate) async fn put_route_into_region(
     State(state): State<AppState>,
     Path((region_id, route_id)): Path<(i32, i32)>,
@@ -142,6 +176,22 @@ pub(crate) async fn delete_route_from_region(
         .commit()
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))
+}
+
+pub(crate) async fn get_stop_regions(
+    State(state): State<AppState>,
+    Path(stop_id): Path<i32>,
+    claims: Option<auth::Claims>,
+) -> Result<Json<Vec<i32>>, Error> {
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
+    Ok(Json(sql::fetch_stop_regions(&state.pool, stop_id).await?))
 }
 
 pub(crate) async fn put_stop_into_region(

@@ -38,6 +38,26 @@ FROM regions
     .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
+pub(crate) async fn fetch_operator_regions(
+    pool: &PgPool,
+    operator_id: i32,
+) -> Result<Vec<i32>> {
+    Ok(sqlx::query!(
+        r#"
+SELECT region_id
+FROM region_operators
+WHERE operator_id = $1
+"#,
+        operator_id
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .into_iter()
+    .map(|row| row.region_id)
+    .collect())
+}
+
 pub(crate) async fn upsert_operator_into_region(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     region_id: i32,
@@ -79,6 +99,26 @@ WHERE region_id=$1 AND operator_id=$2;
     Ok(())
 }
 
+pub(crate) async fn fetch_route_regions(
+    pool: &PgPool,
+    route_id: i32,
+) -> Result<Vec<i32>> {
+    Ok(sqlx::query!(
+        r#"
+SELECT region_id
+FROM region_routes
+WHERE route_id = $1
+"#,
+        route_id
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .into_iter()
+    .map(|row| row.region_id)
+    .collect())
+}
+
 pub(crate) async fn upsert_route_into_region(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     region_id: i32,
@@ -118,6 +158,26 @@ WHERE region_id=$1 AND route_id=$2;
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     Ok(())
+}
+
+pub(crate) async fn fetch_stop_regions(
+    pool: &PgPool,
+    stop_id: i32,
+) -> Result<Vec<i32>> {
+    Ok(sqlx::query!(
+        r#"
+SELECT region_id
+FROM region_stops
+WHERE stop_id = $1
+"#,
+        stop_id
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .into_iter()
+    .map(|row| row.region_id)
+    .collect())
 }
 
 pub(crate) async fn upsert_stop_into_region(
