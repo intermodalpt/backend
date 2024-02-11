@@ -24,16 +24,25 @@ pub struct Operator {
     pub id: i32,
     pub name: String,
     pub tag: String,
+    pub logo_sha1: Option<String>,
 }
 
 pub(crate) mod responses {
     use chrono::{DateTime, Local};
-    use serde::Serialize;
+    use serde::{Deserialize, Serialize};
     use sqlx::types::JsonValue;
     use utoipa::ToSchema;
 
     use commons::models::calendar::Calendar;
     use commons::models::operators;
+
+    #[derive(Serialize, Deserialize, ToSchema)]
+    pub struct Operator {
+        pub id: i32,
+        pub name: String,
+        pub tag: String,
+        pub logo_url: Option<String>,
+    }
 
     #[derive(Serialize, ToSchema)]
     pub struct OperatorStop {

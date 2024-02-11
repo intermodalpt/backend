@@ -70,6 +70,7 @@ CREATE TABLE operators
     id         serial PRIMARY KEY,
     name       text NOT NULL,
     tag        text NOT NULL,
+    logo_sha1  character(40),
     validation jsonb
 );
 

@@ -1,6 +1,6 @@
 /*
     Intermodal, transportation information aggregator
-    Copyright (C) 2023  Cláudio Pereira
+    Copyright (C) 2023 - 2024  Cláudio Pereira
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -352,6 +352,10 @@ pub fn build_paths(state: AppState) -> Router {
             "/v1/operators/:operator_id/validation",
             get(gtfs::handlers::get_operator_validation_data)
                 .put(gtfs::handlers::put_operator_validation_data),
+        )
+        .route(
+            "/v1/operators/:operator_id/logo",
+            post(pics::handlers::post_upload_operator_logo),
         )
         .route(
             "/v1/actions/migrate_stop/:original_id/:replacement_id",

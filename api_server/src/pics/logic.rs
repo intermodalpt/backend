@@ -403,3 +403,129 @@ async fn upload_pano_to_storage(
 
     Ok(())
 }
+
+pub(crate) async fn upload_operator_logo(
+    operator_id: i32,
+    bucket: &s3::Bucket,
+    db_pool: &PgPool,
+    filename: &str,
+    content: &Bytes,
+) -> Result<(), Error> {
+    let mut hasher = Sha1::new();
+    hasher.update(content);
+    let hash = hasher.finalize();
+    let hex_hash = base16ct::lower::encode_string(&hash);
+
+    let mut transaction = db_pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    let res =
+        sql::fetch_operator_logo_hash(&mut transaction, operator_id).await?;
+
+    if let Some(Some(existing_hash)) = res {
+        if existing_hash == hex_hash {
+            return Ok(());
+        }
+        delete_operator_pic_from_storage(&bucket, &existing_hash, operator_id)
+            .await?;
+    }
+
+    let path = std::path::Path::new(&filename);
+    let ext = path.extension();
+    if ext.is_none() {
+        return Err(Error::DependenciesNotMet);
+    }
+    let ext = ext.unwrap();
+    // Ensure valid
+    if ext.eq_ignore_ascii_case("svg") {
+        let svg_data = String::from_utf8(content.to_vec()).map_err(|_e| {
+            Error::ValidationFailure("Bad image data".to_string())
+        })?;
+        let _ = svg::read(&svg_data)
+            .map_err(|err| Error::ValidationFailure(err.to_string()))?;
+    } else if ext.eq_ignore_ascii_case("png")
+        || ext.eq_ignore_ascii_case("jpg")
+        || ext.eq_ignore_ascii_case("webp")
+    {
+        // Ensure it is valid
+        let _ = image::load_from_memory(content.as_ref())
+            .map_err(|err| Error::ValidationFailure(err.to_string()))?;
+    } else {
+        return Err(Error::DependenciesNotMet);
+    }
+
+    let mime = mime_guess::from_path(path)
+        .first()
+        .expect("Unable to deduce MIME despite whitelist");
+
+    upload_operator_pic_to_storage(
+        bucket,
+        content,
+        &hex_hash,
+        operator_id,
+        mime.as_ref(),
+    )
+    .await?;
+
+    let db_res = sql::update_operator_logo_hash(
+        &mut transaction,
+        operator_id,
+        Some(&hex_hash),
+    )
+    .await;
+
+    if let Err(db_err) = db_res {
+        let storage_res =
+            delete_operator_pic_from_storage(&bucket, &hex_hash, operator_id)
+                .await;
+        if let Err(storage_err) = storage_res {
+            eprintln!(
+                "Reversion failure.\
+                {hex_hash} was stored into opr. {operator_id}.\
+                Database threw: {db_err}. Storage threw: {storage_err}"
+            )
+        }
+        return Err(db_err);
+    }
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    Ok(())
+}
+
+async fn upload_operator_pic_to_storage(
+    bucket: &s3::Bucket,
+    content: &Bytes,
+    hex_hash: &str,
+    operator_id: i32,
+    mime: &str,
+) -> Result<(), Error> {
+    bucket
+        .put_object_with_content_type(
+            format!("/operators/{operator_id}/{hex_hash}"),
+            content.as_ref(),
+            mime,
+        )
+        .await
+        .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?;
+
+    Ok(())
+}
+
+async fn delete_operator_pic_from_storage(
+    bucket: &s3::Bucket,
+    hex_hash: &str,
+    operator_id: i32,
+) -> Result<(), Error> {
+    bucket
+        .delete_object(format!("/operators/{operator_id}/{hex_hash}"))
+        .await
+        .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?;
+
+    Ok(())
+}

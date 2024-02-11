@@ -533,7 +533,7 @@ pub(crate) async fn upload_pano_picture(
     }
     let claims = claims.unwrap();
 
-    if !(claims.permissions.is_admin) {
+    if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }
 
@@ -552,7 +552,7 @@ pub(crate) async fn upload_pano_picture(
 
     let pic = logic::upload_pano_picture(
         claims.uid,
-        filename.clone(),
+        filename,
         &state.bucket,
         &state.pool,
         &content,
@@ -598,4 +598,44 @@ pub(crate) async fn get_onion_skin(
     }
 
     Ok(Json(sql::fetch_pano_onion(&state.pool, pano_id).await?))
+}
+
+pub(crate) async fn post_upload_operator_logo(
+    State(state): State<AppState>,
+    claims: Option<auth::Claims>,
+    Path(operator_id): Path<i32>,
+    mut multipart: Multipart,
+) -> Result<(), Error> {
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
+    let field = get_exactly_one_field(&mut multipart).await?;
+    let filename = field
+        .file_name()
+        .ok_or_else(|| {
+            Error::ValidationFailure("File without a filename".to_string())
+        })?
+        .to_string();
+
+    let content = field
+        .bytes()
+        .await
+        .map_err(|err| Error::ValidationFailure(err.to_string()))?;
+
+    logic::upload_operator_logo(
+        operator_id,
+        &state.bucket,
+        &state.pool,
+        &filename,
+        &content,
+    )
+    .await?;
+
+    Ok(())
 }

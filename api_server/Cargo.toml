@@ -49,6 +49,7 @@ chrono = { version = "0.4", features = ["serde"] }
 
 image = { version = "0.24", features = ["default"] }
 webp = "0.2"
+svg = "0.15.0"
 kamadak-exif = "0.5"
 mime_guess = "2.0"
 

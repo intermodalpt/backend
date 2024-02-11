@@ -1102,3 +1102,41 @@ LIMIT 10
         successors,
     })
 }
+
+pub(crate) async fn fetch_operator_logo_hash(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    operator_id: i32,
+) -> Result<Option<Option<String>>> {
+    Ok(sqlx::query!(
+        r#"
+SELECT logo_sha1
+FROM operators
+WHERE operators.id=$1
+        "#,
+        operator_id
+    )
+    .fetch_optional(&mut **transaction)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    .map(|res| res.map(|row| row.logo_sha1))?)
+}
+pub(crate) async fn update_operator_logo_hash(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    operator_id: i32,
+    hash: Option<&str>,
+) -> Result<()> {
+    sqlx::query!(
+        r#"
+UPDATE operators
+SET logo_sha1=$1
+WHERE operators.id=$2
+        "#,
+        hash,
+        operator_id
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    Ok(())
+}

@@ -40,3 +40,7 @@ pub(crate) fn get_medium_path(sha: &str) -> String {
 pub(crate) fn get_thumb_path(sha: &str) -> String {
     format!("{}/thumb/{sha}/preview", IMG_ROOT.get().unwrap())
 }
+
+pub(crate) fn get_logo_path(operator_id: i32, sha: &str) -> String {
+    format!("{}/operators/{operator_id}/{sha}", IMG_ROOT.get().unwrap())
+}

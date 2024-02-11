@@ -1,6 +1,6 @@
 /*
     Intermodal, transportation information aggregator
-    Copyright (C) 2022 - 2023  Cláudio Pereira
+    Copyright (C) 2022 - 2024  Cláudio Pereira
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -23,6 +23,7 @@ use commons::models::calendar::Calendar;
 use commons::models::operators;
 
 use super::models::{self, requests, responses};
+use crate::pics::get_logo_path;
 use crate::Error;
 
 type Result<T> = std::result::Result<T, Error>;
@@ -34,7 +35,7 @@ pub(crate) async fn fetch_operator(
     sqlx::query_as!(
         models::Operator,
         r#"
-SELECT id, name, tag
+SELECT id, name, tag, logo_sha1
 FROM Operators
 WHERE id = $1
 "#,
@@ -47,17 +48,24 @@ WHERE id = $1
 
 pub(crate) async fn fetch_operators(
     pool: &PgPool,
-) -> Result<Vec<models::Operator>> {
-    sqlx::query_as!(
-        models::Operator,
+) -> Result<Vec<responses::Operator>> {
+    Ok(sqlx::query!(
         r#"
-SELECT id, name, tag
-FROM Operators
+SELECT id, name, tag, logo_sha1
+FROM operators
 "#
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .into_iter()
+    .map(|row| responses::Operator {
+        id: row.id,
+        name: row.name,
+        tag: row.tag,
+        logo_url: row.logo_sha1.map(|sha1| get_logo_path(row.id, &sha1)),
+    })
+    .collect())
 }
 
 pub(crate) async fn fetch_operator_stops(
