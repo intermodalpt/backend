@@ -67,11 +67,12 @@ CREATE TABLE parishes
 
 CREATE TABLE operators
 (
-    id         serial PRIMARY KEY,
-    name       text NOT NULL,
-    tag        text NOT NULL,
-    logo_sha1  character(40),
-    validation jsonb
+    id          serial PRIMARY KEY,
+    name        text NOT NULL,
+    tag         text NOT NULL,
+    description text,
+    logo_sha1   character(40),
+    validation  jsonb
 );
 
 ALTER TABLE ONLY users

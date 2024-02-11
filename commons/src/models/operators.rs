@@ -31,6 +31,7 @@ pub struct Operator {
     pub id: i32,
     pub name: String,
     pub tag: String,
+    pub description: Option<String>,
     pub validation: Option<gtfs::OperatorValidation>,
 }
 

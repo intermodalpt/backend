@@ -41,6 +41,7 @@ pub(crate) mod responses {
         pub id: i32,
         pub name: String,
         pub tag: String,
+        pub description: Option<String>,
         pub logo_url: Option<String>,
     }
 
@@ -115,6 +116,13 @@ pub(crate) mod requests {
     use commons::models::calendar::Calendar;
     use commons::models::history;
     use commons::models::operators;
+
+    #[derive(Debug, Deserialize, ToSchema)]
+    pub struct ChangeOperator {
+        pub name: String,
+        pub tag: String,
+        pub description: Option<String>,
+    }
 
     fn default_stop_operator_source() -> String {
         "unknown".to_string()

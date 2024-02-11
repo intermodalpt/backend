@@ -51,7 +51,7 @@ pub(crate) async fn fetch_operators(
 ) -> Result<Vec<responses::Operator>> {
     Ok(sqlx::query!(
         r#"
-SELECT id, name, tag, logo_sha1
+SELECT id, name, tag, description, logo_sha1
 FROM operators
 "#
     )
@@ -63,9 +63,97 @@ FROM operators
         id: row.id,
         name: row.name,
         tag: row.tag,
+        description: row.description,
         logo_url: row.logo_sha1.map(|sha1| get_logo_path(row.id, &sha1)),
     })
     .collect())
+}
+
+pub(crate) async fn insert_operator(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    change: requests::ChangeOperator,
+) -> Result<responses::Operator> {
+    // FIXME this is a workaround because SQLX is not figuring the description's Option<String> properly
+    let id = if let Some(description) = &change.description {
+        sqlx::query!(
+            r#"
+INSERT INTO operators(name, tag, description)
+VALUES ($1, $2, $3)
+RETURNING id
+"#,
+            &change.name,
+            &change.tag,
+            description
+        )
+        .fetch_one(&mut **transaction)
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+        .id
+    } else {
+        sqlx::query!(
+            r#"
+INSERT INTO operators(name, tag)
+VALUES ($1, $2)
+RETURNING id
+"#,
+            &change.name,
+            &change.tag
+        )
+        .fetch_one(&mut **transaction)
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+        .id
+    };
+
+    Ok(responses::Operator {
+        id,
+        name: change.name,
+        tag: change.tag,
+        description: change.description,
+        logo_url: None,
+    })
+}
+pub(crate) async fn update_operator(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    operator_id: i32,
+    change: requests::ChangeOperator,
+) -> Result<()> {
+    // FIXME this is a workaround because SQLX is not figuring the description's Option<String> properly
+    if let Some(description) = change.description {
+        sqlx::query!(
+            r#"
+UPDATE operators
+SET name = $1,
+    tag = $2,
+    description = $3
+WHERE id = $4
+ "#,
+            &change.name,
+            &change.tag,
+            &description,
+            operator_id
+        )
+        .fetch_one(&mut **transaction)
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    } else {
+        sqlx::query!(
+            r#"
+UPDATE operators
+SET name = $1,
+    tag = $2
+WHERE id = $3
+ "#,
+            &change.name,
+            &change.tag,
+            operator_id
+        )
+        .fetch_one(&mut **transaction)
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    };
+
+    Ok(())
 }
 
 pub(crate) async fn fetch_operator_stops(

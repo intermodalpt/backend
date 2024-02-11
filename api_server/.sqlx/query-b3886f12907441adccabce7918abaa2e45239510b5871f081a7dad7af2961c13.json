@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT id, name, tag, logo_sha1\nFROM operators\n",
+  "query": "\nSELECT id, name, tag, description, logo_sha1\nFROM operators\n",
   "describe": {
     "columns": [
       {
@@ -20,6 +20,11 @@
       },
       {
         "ordinal": 3,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
         "name": "logo_sha1",
         "type_info": "Bpchar"
       }
@@ -31,8 +36,9 @@
       false,
       false,
       false,
+      true,
       true
     ]
   },
-  "hash": "63a6ef15741b1cfd5f110f0458c04c1429512ed1068abe19cb374387cbd35d4f"
+  "hash": "b3886f12907441adccabce7918abaa2e45239510b5871f081a7dad7af2961c13"
 }

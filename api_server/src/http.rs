@@ -296,8 +296,15 @@ pub fn build_paths(state: AppState) -> Router {
             post(contrib::handlers::post_decline_contrib_data),
         )
         .route("/v1/news", get(operators::handlers::get_news))
-        .route("/v1/operators", get(operators::handlers::get_operators))
-        .route("/v1/calendars", get(operators::handlers::get_calendars))
+        .route(
+            "/v1/operators",
+            get(operators::handlers::get_operators)
+                .post(operators::handlers::post_operator),
+        )
+        .route(
+            "/v1/operators/:operator_id",
+            patch(operators::handlers::patch_operator),
+        )
         .route(
             "/v1/operators/:operator_id/calendars",
             get(operators::handlers::get_operator_calendars)
@@ -357,6 +364,7 @@ pub fn build_paths(state: AppState) -> Router {
             "/v1/operators/:operator_id/logo",
             post(pics::handlers::post_upload_operator_logo),
         )
+        .route("/v1/calendars", get(operators::handlers::get_calendars))
         .route(
             "/v1/actions/migrate_stop/:original_id/:replacement_id",
             post(routes::handlers::post_replace_stop_across_routes),

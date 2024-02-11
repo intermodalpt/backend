@@ -35,6 +35,65 @@ pub(crate) async fn get_operators(
     Ok(Json(sql::fetch_operators(&state.pool).await?))
 }
 
+pub(crate) async fn post_operator(
+    State(state): State<AppState>,
+    claims: Option<auth::Claims>,
+    Json(change): Json<requests::ChangeOperator>,
+) -> Result<Json<responses::Operator>, Error> {
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
+    let mut transaction = state
+        .pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    let operator = sql::insert_operator(&mut transaction, change).await?;
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    Ok(Json(operator))
+}
+
+pub(crate) async fn patch_operator(
+    State(state): State<AppState>,
+    claims: Option<auth::Claims>,
+    Path(operator_id): Path<i32>,
+    Json(change): Json<requests::ChangeOperator>,
+) -> Result<(), Error> {
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
+    let mut transaction = state
+        .pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    sql::update_operator(&mut transaction, operator_id, change).await?;
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    Ok(())
+}
+
 pub(crate) async fn get_operator_stops(
     State(state): State<AppState>,
     Path(operator_id): Path<i32>,
