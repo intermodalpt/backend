@@ -75,7 +75,7 @@ SELECT routes.id, routes.validation as "validation!: Option<sqlx::types::Json<gt
     CASE
         WHEN count(subroutes.id) > 0
         THEN array_agg(
-            ROW(subroutes.id, subroutes.validation))
+            ROW(subroutes.id, NULLIF(subroutes.validation, '{}'::jsonb)))
         ELSE array[]::record[]
     END as "subroutes!: Vec<models::SubrouteValidationPair>"
 FROM routes
