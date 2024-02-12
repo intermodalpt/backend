@@ -285,8 +285,8 @@ pub(crate) mod responses {
     #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
     pub struct OperatorStop {
         pub operator_id: i32,
-        pub name: Option<String>,
         pub stop_ref: Option<String>,
+        pub name: Option<String>,
         pub source: String,
     }
 
@@ -472,8 +472,8 @@ pub(crate) mod responses {
             let mut decoder =
                 sqlx::postgres::types::PgRecordDecoder::new(value)?;
             let operator_id = decoder.try_decode::<i32>()?;
-            let name = decoder.try_decode::<Option<String>>()?;
             let stop_ref = decoder.try_decode::<Option<String>>()?;
+            let name = decoder.try_decode::<Option<String>>()?;
             let source = decoder.try_decode::<String>()?;
             Ok(OperatorStop {
                 operator_id,
