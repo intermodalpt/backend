@@ -187,9 +187,7 @@ SELECT id, name, short_name, locality, street, door, lat, lon, external_id, note
     accessibility_meta as "a11y!: sqlx::types::Json<stops::A11yMeta>", verification_level,
     service_check_date, infrastructure_check_date
 FROM Stops
-WHERE lon >= $1 AND lon <= $2 AND lat <= $3 AND lat >= $4 AND id IN (
-    SELECT DISTINCT stop FROM subroute_stops
-)
+WHERE lon >= $1 AND lon <= $2 AND lat <= $3 AND lat >= $4
         "#,
         x0,
         x1,
