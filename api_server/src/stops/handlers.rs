@@ -85,10 +85,10 @@ pub(crate) async fn get_stop(
     }
 }
 
-pub(crate) async fn create_stop(
+pub(crate) async fn post_stop(
     State(state): State<AppState>,
     claims: Option<auth::Claims>,
-    Json(stop): Json<models::requests::NewStop>,
+    Json(stop): Json<requests::NewStop>,
 ) -> Result<Json<HashMap<String, i32>>, Error> {
     if claims.is_none() {
         return Err(Error::Forbidden);

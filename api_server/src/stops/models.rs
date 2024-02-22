@@ -28,9 +28,13 @@ pub(crate) mod requests {
         pub lon: f64,
         pub lat: f64,
         pub name: String,
+        #[serde(default)]
         pub short_name: Option<String>,
+        #[serde(default)]
         pub locality: Option<String>,
+        #[serde(default)]
         pub street: Option<String>,
+        #[serde(default)]
         pub door: Option<String>,
         #[serde(default)]
         pub notes: Option<String>,
@@ -43,6 +47,9 @@ pub(crate) mod requests {
         pub service_check_date: Option<NaiveDate>,
         #[serde(default)]
         pub infrastructure_check_date: Option<NaiveDate>,
+        // TODO do not have this as a dependency. IML should be independent from OSM
+        pub external_id: String,
+        pub osm_history: sqlx::types::Json<osm::StoredStopMeta>,
     }
 
     #[derive(Clone, Deserialize, ToSchema)]

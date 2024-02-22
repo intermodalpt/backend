@@ -203,7 +203,7 @@ WHERE lon >= $1 AND lon <= $2 AND lat <= $3 AND lat >= $4 AND id IN (
 
 pub(crate) async fn insert_stop(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-    stop: models::requests::NewStop,
+    stop: requests::NewStop,
     user_id: i32,
 ) -> Result<stops::Stop> {
     let update_date = Utc::now();
@@ -212,8 +212,8 @@ pub(crate) async fn insert_stop(
         r#"
 INSERT INTO Stops(name, short_name, locality, street, door, lon, lat, notes, tags,
     accessibility_meta, updater, update_date, verification_level, service_check_date,
-    infrastructure_check_date)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+    infrastructure_check_date, external_id, osm_history)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
 RETURNING id
     "#,
         stop.name,
@@ -230,11 +230,13 @@ RETURNING id
         update_date,
         i16::from(stop.verification_level),
         stop.service_check_date,
-        stop.infrastructure_check_date
+        stop.infrastructure_check_date,
+        stop.external_id,
+        sqlx::types::Json(stop.osm_history) as _
     )
-    .fetch_one(&mut **transaction)
-    .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+        .fetch_one(&mut **transaction)
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     Ok(stops::Stop {
         id: res.id,
