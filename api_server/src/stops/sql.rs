@@ -44,9 +44,9 @@ WHERE id = $1
     "#,
         stop_id
     )
-    .fetch_optional(pool)
-    .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+        .fetch_optional(pool)
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
 pub(crate) async fn fetch_simple_stops(
@@ -89,9 +89,9 @@ WHERE id IN (
 "#,
     region_id
     )
-            .fetch_all(pool)
-            .await
-            .map_err(|err| Error::DatabaseExecution(err.to_string()))
+        .fetch_all(pool)
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
 pub(crate) async fn fetch_all_detailed_stops(
@@ -137,43 +137,43 @@ GROUP BY stops.id
         "#,
         region_id
     )
-    .fetch_all(pool)
-    .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
-    .into_iter()
-    .map(|r| {
-        let sqlx::types::Json(a11y) = r.a11y;
-        Ok(responses::FullStop {
-            stop: stops::Stop {
-                id: r.id,
-                name: r.name,
-                short_name: r.short_name,
-                locality: r.locality,
-                street: r.street,
-                door: r.door,
-                lat: r.lat,
-                lon: r.lon,
-                notes: r.notes,
-                parish: r.parish,
-                tags: r.tags,
-                a11y,
-                verification_level: if r.verified_position {
-                    r.verification_level as u8 | 0b1100_0000
-                } else {
-                    r.verification_level as u8 & 0b0011_1111
+        .fetch_all(pool)
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+        .into_iter()
+        .map(|r| {
+            let sqlx::types::Json(a11y) = r.a11y;
+            Ok(responses::FullStop {
+                stop: stops::Stop {
+                    id: r.id,
+                    name: r.name,
+                    short_name: r.short_name,
+                    locality: r.locality,
+                    street: r.street,
+                    door: r.door,
+                    lat: r.lat,
+                    lon: r.lon,
+                    notes: r.notes,
+                    parish: r.parish,
+                    tags: r.tags,
+                    a11y,
+                    verification_level: if r.verified_position {
+                        r.verification_level as u8 | 0b1100_0000
+                    } else {
+                        r.verification_level as u8 & 0b0011_1111
+                    },
+                    service_check_date: r.service_check_date,
+                    infrastructure_check_date: r.infrastructure_check_date,
                 },
-                service_check_date: r.service_check_date,
-                infrastructure_check_date: r.infrastructure_check_date,
-            },
-            external_id: r.external_id,
-            updater: r.updater,
-            deleted_upstream: r.deleted_upstream,
-            verified_position: r.verified_position,
-            update_date: r.update_date,
-            operators: r.operators,
+                external_id: r.external_id,
+                updater: r.updater,
+                deleted_upstream: r.deleted_upstream,
+                verified_position: r.verified_position,
+                update_date: r.update_date,
+                operators: r.operators,
+            })
         })
-    })
-    .collect::<Result<Vec<responses::FullStop>>>()
+        .collect::<Result<Vec<responses::FullStop>>>()
 }
 
 pub(crate) async fn fetch_bounded_stops(
@@ -194,9 +194,9 @@ WHERE lon >= $1 AND lon <= $2 AND lat <= $3 AND lat >= $4
         y0,
         y1
     )
-    .fetch_all(pool)
-    .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+        .fetch_all(pool)
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
 pub(crate) async fn insert_stop(
@@ -288,9 +288,9 @@ WHERE id=$16
         changes.infrastructure_check_date,
         stop_id
     )
-    .execute(&mut **transaction)
-    .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+        .execute(&mut **transaction)
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     Ok(())
 }
