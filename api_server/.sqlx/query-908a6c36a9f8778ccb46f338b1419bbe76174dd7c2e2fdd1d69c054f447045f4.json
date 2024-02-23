@@ -1,0 +1,58 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT id, name, zapping_cost, board_cost, multi_trip, badge_text_color, badge_bg_color\nFROM route_types\nWHERE operator = $1\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "zapping_cost",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 3,
+        "name": "board_cost",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "multi_trip",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 5,
+        "name": "badge_text_color",
+        "type_info": "Bpchar"
+      },
+      {
+        "ordinal": 6,
+        "name": "badge_bg_color",
+        "type_info": "Bpchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "908a6c36a9f8778ccb46f338b1419bbe76174dd7c2e2fdd1d69c054f447045f4"
+}

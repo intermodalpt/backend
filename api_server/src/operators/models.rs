@@ -67,6 +67,17 @@ pub(crate) mod responses {
     }
 
     #[derive(Debug, Serialize, ToSchema)]
+    pub struct OperatorRouteType {
+        pub id: i32,
+        pub name: Option<String>,
+        pub zapping_cost: i32,
+        pub board_cost: i32,
+        pub multi_trip: bool,
+        pub badge_text_color: String,
+        pub badge_bg_color: String,
+    }
+
+    #[derive(Debug, Serialize, ToSchema)]
     pub struct OperatorCalendar {
         pub id: i32,
         pub name: String,

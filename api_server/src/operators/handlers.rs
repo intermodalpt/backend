@@ -177,6 +177,15 @@ pub(crate) async fn get_issue(
     Ok(Json(sql::fetch_issue(&state.pool, issue_id).await?))
 }
 
+pub(crate) async fn get_operator_route_types(
+    State(state): State<AppState>,
+    Path(operator_id): Path<i32>,
+) -> Result<Json<Vec<responses::OperatorRouteType>>, Error> {
+    Ok(Json(
+        sql::fetch_operator_route_types(&state.pool, operator_id).await?,
+    ))
+}
+
 pub(crate) async fn get_operator_issues(
     State(state): State<AppState>,
     Path(operator_id): Path<i32>,

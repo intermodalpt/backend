@@ -346,6 +346,24 @@ GROUP BY issues.id
     .collect()
 }
 
+pub(crate) async fn fetch_operator_route_types(
+    pool: &PgPool,
+    operator_id: i32,
+) -> Result<Vec<responses::OperatorRouteType>> {
+    sqlx::query_as!(
+        responses::OperatorRouteType,
+        r#"
+SELECT id, name, zapping_cost, board_cost, multi_trip, badge_text_color, badge_bg_color
+FROM route_types
+WHERE operator = $1
+"#,
+        operator_id
+    )
+        .fetch_all(pool)
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+}
+
 pub(crate) async fn fetch_issue_operators(
     pool: &PgPool,
     operator_id: i32,
