@@ -45,6 +45,16 @@ pub(crate) mod responses {
         pub logo_url: Option<String>,
     }
 
+    #[derive(Serialize, Deserialize, ToSchema)]
+    pub struct OperatorWithRegions {
+        pub id: i32,
+        pub name: String,
+        pub tag: String,
+        pub description: Option<String>,
+        pub logo_url: Option<String>,
+        pub regions: Vec<i32>,
+    }
+
     #[derive(Serialize, ToSchema)]
     pub struct OperatorStop {
         pub id: i32,

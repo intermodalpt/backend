@@ -48,25 +48,28 @@ WHERE id = $1
 
 pub(crate) async fn fetch_operators(
     pool: &PgPool,
-) -> Result<Vec<responses::Operator>> {
+) -> Result<Vec<responses::OperatorWithRegions>> {
     Ok(sqlx::query!(
         r#"
-SELECT id, name, tag, description, logo_sha1
+SELECT id, name, tag, description, logo_sha1, array_remove(array_agg(region_id), NULL) as "regions!: Vec<i32>"
 FROM operators
+LEFT JOIN region_operators ON region_operators.operator_id = operators.id
+GROUP BY operators.id
 "#
     )
-    .fetch_all(pool)
-    .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
-    .into_iter()
-    .map(|row| responses::Operator {
-        id: row.id,
-        name: row.name,
-        tag: row.tag,
-        description: row.description,
-        logo_url: row.logo_sha1.map(|sha1| get_logo_path(row.id, &sha1)),
-    })
-    .collect())
+        .fetch_all(pool)
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+        .into_iter()
+        .map(|row| responses::OperatorWithRegions {
+            id: row.id,
+            name: row.name,
+            tag: row.tag,
+            description: row.description,
+            logo_url: row.logo_sha1.map(|sha1| get_logo_path(row.id, &sha1)),
+            regions: row.regions,
+        })
+        .collect())
 }
 
 pub(crate) async fn insert_operator(
@@ -113,6 +116,7 @@ RETURNING id
         logo_url: None,
     })
 }
+
 pub(crate) async fn update_operator(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     operator_id: i32,

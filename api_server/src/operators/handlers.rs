@@ -31,7 +31,7 @@ use crate::{auth, contrib, AppState, Error};
 
 pub(crate) async fn get_operators(
     State(state): State<AppState>,
-) -> Result<Json<Vec<responses::Operator>>, Error> {
+) -> Result<Json<Vec<responses::OperatorWithRegions>>, Error> {
     Ok(Json(sql::fetch_operators(&state.pool).await?))
 }
 
