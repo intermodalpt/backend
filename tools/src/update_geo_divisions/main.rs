@@ -17,6 +17,7 @@
 */
 
 mod api;
+mod error;
 mod utils;
 
 use std::collections::HashSet;
@@ -102,7 +103,8 @@ async fn update_stop_regions() -> Result<()> {
             api::fetch_region_route_ids(region.id).await.unwrap();
 
         for route in &region_route_ids {
-            let route_stops = api::fetch_route_stops(*route).await.unwrap();
+            let route_stops =
+                api::cached_fetch_route_stops(*route).await.unwrap();
 
             for stop_id in route_stops {
                 if !region_stops_id.contains(&stop_id) {
