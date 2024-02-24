@@ -18,6 +18,7 @@
 
 pub(crate) mod requests {
     use serde::Deserialize;
+    use std::collections::HashMap;
     use utoipa::ToSchema;
 
     use commons::models::{history, routes};
@@ -170,6 +171,12 @@ pub(crate) mod requests {
             patch
         }
     }
+
+    #[derive(Deserialize)]
+    pub struct ValidationData {
+        pub root: commons::models::gtfs::RouteValidation,
+        pub subroutes: HashMap<i32, commons::models::gtfs::SubrouteValidation>,
+    }
 }
 
 pub(crate) mod responses {
@@ -227,7 +234,7 @@ pub(crate) mod responses {
         pub(crate) active: bool,
         pub(crate) parishes: Vec<i32>,
         pub(crate) subroutes: Vec<FullSubroute>,
-        // pub(crate) validation: Option<routes::RouteValidationData>,
+        pub(crate) validation: sqlx::types::JsonValue,
 
         //  TODO drop
         pub(crate) main_subroute: Option<i32>,

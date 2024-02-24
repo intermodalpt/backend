@@ -55,7 +55,7 @@ pub(crate) async fn get_operator_routes(
     ))
 }
 
-pub(crate) async fn create_route(
+pub(crate) async fn post_route(
     State(state): State<AppState>,
     claims: Option<auth::Claims>,
     Json(route): Json<requests::ChangeRoute>,
@@ -101,6 +101,19 @@ pub(crate) async fn get_route(
 ) -> Result<Json<responses::Route>, Error> {
     if let Some(route) =
         sql::fetch_route_with_subroutes(&state.pool, route_id).await?
+    {
+        Ok(Json(route))
+    } else {
+        Err(Error::NotFoundUpstream)
+    }
+}
+
+pub(crate) async fn get_route_full(
+    State(state): State<AppState>,
+    Path(route_id): Path<i32>,
+) -> Result<Json<responses::FullRoute>, Error> {
+    if let Some(route) =
+        sql::fetch_full_route_with_subroutes(&state.pool, route_id).await?
     {
         Ok(Json(route))
     } else {

@@ -147,12 +147,16 @@ pub fn build_paths(state: AppState) -> Router {
             get(pics::handlers::get_picture_stop_rels),
         )
         .route("/v1/stops/spider", post(stops::handlers::get_stops_spider))
-        .route("/v1/routes", post(routes::handlers::create_route))
+        .route("/v1/routes", post(routes::handlers::post_route))
         .route(
             "/v1/routes/:route_id",
             get(routes::handlers::get_route)
                 .patch(routes::handlers::patch_route)
                 .delete(routes::handlers::delete_route),
+        )
+        .route(
+            "/v1/routes/:route_id/full",
+            get(routes::handlers::get_route_full)
         )
         .route(
             "/v1/routes/:route_id/create_subroute",
@@ -325,6 +329,10 @@ pub fn build_paths(state: AppState) -> Router {
         .route(
             "/v1/operators/:operator_id/calendars/:calendar_id",
             delete(operators::handlers::delete_operator_calendar),
+        )
+        .route(
+            "/v1/operators/:operator_id/routes/types",
+            get(operators::handlers::get_operator_route_types),
         )
         .route(
             "/v1/operators/:operator_id/issues",

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT routes.*, route_types.badge_text_color as badge_text, route_types.badge_bg_color as badge_bg\nFROM (\n    SELECT routes.id, routes.code, routes.name, routes.operator, routes.type as type_id,\n        routes.circular, routes.main_subroute, routes.active, routes.parishes,\n        COALESCE(\n            array_agg((subroutes.id, subroutes.group, subroutes.flag, subroutes.headsign, subroutes.origin,\n                subroutes.destination, subroutes.via, subroutes.circular, subroutes.polyline, subroutes.validation))\n            FILTER (WHERE subroutes.id IS NOT NULL),\n            '{}'\n        ) AS \"subroutes!: Vec<responses::FullSubroute>\"\n    FROM routes\n    JOIN region_routes on routes.id = region_routes.route_id\n    LEFT JOIN subroutes ON routes.id = subroutes.route\n    WHERE region_routes.region_id = $1\n    GROUP BY routes.id\n    ORDER BY routes.id asc\n) as routes\nJOIN route_types on routes.type_id = route_types.id\n    ",
+  "query": "\nSELECT routes.*, route_types.badge_text_color as badge_text, route_types.badge_bg_color as badge_bg\nFROM (\n    SELECT routes.id, routes.code, routes.name, routes.operator, routes.type as type_id,\n        routes.circular, routes.main_subroute, routes.active, routes.parishes, routes.validation,\n        COALESCE(\n            array_agg((subroutes.id, subroutes.group, subroutes.flag, subroutes.headsign, subroutes.origin,\n                subroutes.destination, subroutes.via, subroutes.circular, subroutes.polyline, subroutes.validation))\n            FILTER (WHERE subroutes.id IS NOT NULL),\n            '{}'\n        ) AS \"subroutes!: Vec<responses::FullSubroute>\"\n    FROM routes\n    LEFT JOIN subroutes ON routes.id = subroutes.route\n    WHERE routes.id = $1\n    GROUP BY routes.id\n    ORDER BY routes.id asc\n) as routes\nJOIN route_types on routes.type_id = route_types.id",
   "describe": {
     "columns": [
       {
@@ -50,16 +50,21 @@
       },
       {
         "ordinal": 9,
+        "name": "validation",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 10,
         "name": "subroutes!: Vec<responses::FullSubroute>",
         "type_info": "RecordArray"
       },
       {
-        "ordinal": 10,
+        "ordinal": 11,
         "name": "badge_text",
         "type_info": "Bpchar"
       },
       {
-        "ordinal": 11,
+        "ordinal": 12,
         "name": "badge_bg",
         "type_info": "Bpchar"
       }
@@ -79,10 +84,11 @@
       true,
       false,
       false,
+      true,
       null,
       false,
       false
     ]
   },
-  "hash": "9fef2dc43401577dde0023a3c5721fc31332c5577962a4bde443760ec07dc590"
+  "hash": "1adcfe014325acf231c0e2d8aa3f521fd96753034148ed85047b6253e3df2796"
 }

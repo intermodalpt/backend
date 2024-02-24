@@ -1,0 +1,94 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT routes.*, route_types.badge_text_color as badge_text, route_types.badge_bg_color as badge_bg\nFROM (\n    SELECT routes.id, routes.code, routes.name, routes.operator, routes.type as type_id,\n        routes.circular, routes.main_subroute, routes.active, routes.parishes, routes.validation,\n        COALESCE(\n            array_agg((subroutes.id, subroutes.group, subroutes.flag, subroutes.headsign, subroutes.origin,\n                subroutes.destination, subroutes.via, subroutes.circular, subroutes.polyline, subroutes.validation))\n            FILTER (WHERE subroutes.id IS NOT NULL),\n            '{}'\n        ) AS \"subroutes!: Vec<responses::FullSubroute>\"\n    FROM routes\n    JOIN region_routes on routes.id = region_routes.route_id\n    LEFT JOIN subroutes ON routes.id = subroutes.route\n    WHERE region_routes.region_id = $1\n    GROUP BY routes.id\n    ORDER BY routes.id asc\n) as routes\nJOIN route_types on routes.type_id = route_types.id\n    ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "code",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "operator",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "type_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 5,
+        "name": "circular",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 6,
+        "name": "main_subroute",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 7,
+        "name": "active",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 8,
+        "name": "parishes",
+        "type_info": "Int4Array"
+      },
+      {
+        "ordinal": 9,
+        "name": "validation",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 10,
+        "name": "subroutes!: Vec<responses::FullSubroute>",
+        "type_info": "RecordArray"
+      },
+      {
+        "ordinal": 11,
+        "name": "badge_text",
+        "type_info": "Bpchar"
+      },
+      {
+        "ordinal": 12,
+        "name": "badge_bg",
+        "type_info": "Bpchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      null,
+      false,
+      false
+    ]
+  },
+  "hash": "f5c64cec148198f9469d5a7783c25b2802cf462b5f01aacc9725cad22d5d06f1"
+}

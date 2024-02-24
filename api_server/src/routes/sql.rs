@@ -130,6 +130,37 @@ JOIN route_types on routes.type_id = route_types.id"#,
         .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
+pub(crate) async fn fetch_full_route_with_subroutes(
+    pool: &PgPool,
+    route_id: i32,
+) -> Result<Option<responses::FullRoute>> {
+    sqlx::query_as!(
+        responses::FullRoute,
+        r#"
+SELECT routes.*, route_types.badge_text_color as badge_text, route_types.badge_bg_color as badge_bg
+FROM (
+    SELECT routes.id, routes.code, routes.name, routes.operator, routes.type as type_id,
+        routes.circular, routes.main_subroute, routes.active, routes.parishes, routes.validation,
+        COALESCE(
+            array_agg((subroutes.id, subroutes.group, subroutes.flag, subroutes.headsign, subroutes.origin,
+                subroutes.destination, subroutes.via, subroutes.circular, subroutes.polyline, subroutes.validation))
+            FILTER (WHERE subroutes.id IS NOT NULL),
+            '{}'
+        ) AS "subroutes!: Vec<responses::FullSubroute>"
+    FROM routes
+    LEFT JOIN subroutes ON routes.id = subroutes.route
+    WHERE routes.id = $1
+    GROUP BY routes.id
+    ORDER BY routes.id asc
+) as routes
+JOIN route_types on routes.type_id = route_types.id"#,
+        route_id
+    )
+        .fetch_optional(pool)
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+}
+
 pub(crate) async fn fetch_routes(
     pool: &PgPool,
     region_id: i32,
@@ -205,7 +236,7 @@ pub(crate) async fn fetch_full_routes(
 SELECT routes.*, route_types.badge_text_color as badge_text, route_types.badge_bg_color as badge_bg
 FROM (
     SELECT routes.id, routes.code, routes.name, routes.operator, routes.type as type_id,
-        routes.circular, routes.main_subroute, routes.active, routes.parishes,
+        routes.circular, routes.main_subroute, routes.active, routes.parishes, routes.validation,
         COALESCE(
             array_agg((subroutes.id, subroutes.group, subroutes.flag, subroutes.headsign, subroutes.origin,
                 subroutes.destination, subroutes.via, subroutes.circular, subroutes.polyline, subroutes.validation))
