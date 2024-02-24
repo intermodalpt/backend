@@ -170,24 +170,42 @@ pub(crate) async fn attach_stop_to_region(
     stop_id: i32,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let url = format!("{}/v1/regions/{}/stops/{}", API_URL, region_id, stop_id);
-    reqwest::Client::builder()
+    let res = reqwest::Client::builder()
         .build()?
         .put(url)
         .bearer_auth(TOKEN.get().unwrap())
         .send()
-        .await?;
-    Ok(())
+        .await
+        .unwrap();
+
+    if res.status().is_success() {
+        Ok(())
+    } else {
+        Err(Box::new(Error::HTTPError(format!(
+            "Failed to attach stop {} to region {}",
+            stop_id, region_id
+        ))))
+    }
 }
 
 pub(crate) async fn detach_stop_from_region(
+    region_id: i32,
     stop_id: i32,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let url = format!("{}/v1/stops/{}/region", API_URL, stop_id);
-    reqwest::Client::builder()
+    let url = format!("{}/v1/regions/{}/stops/{}", API_URL, region_id, stop_id);
+    let res = reqwest::Client::builder()
         .build()?
         .delete(url)
         .bearer_auth(TOKEN.get().unwrap())
         .send()
         .await?;
-    Ok(())
+
+    if res.status().is_success() {
+        Ok(())
+    } else {
+        Err(Box::new(Error::HTTPError(format!(
+            "Failed to dettach stop {} to region {}",
+            stop_id, region_id
+        ))))
+    }
 }

@@ -154,7 +154,8 @@ async fn update_stop_regions() -> Result<()> {
                     let mut input = String::new();
                     io::stdin().read_line(&mut input)?;
                     if input.trim().to_lowercase() == "y" {
-                        api::detach_stop_from_region(stop.id).await?;
+                        api::detach_stop_from_region(region.id, stop.id)
+                            .await?;
                         println!("Removed");
                     } else {
                         println!("Skipped");
