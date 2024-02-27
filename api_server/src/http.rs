@@ -156,7 +156,7 @@ pub fn build_paths(state: AppState) -> Router {
         )
         .route(
             "/v1/routes/:route_id/full",
-            get(routes::handlers::get_route_full)
+            get(routes::handlers::get_route_full),
         )
         .route(
             "/v1/routes/:route_id/create_subroute",
@@ -179,6 +179,10 @@ pub fn build_paths(state: AppState) -> Router {
             "/v1/routes/:route_id/validation",
             get(gtfs::handlers::get_route_validation_data)
                 .put(gtfs::handlers::put_route_validation_data),
+        )
+        .route(
+            "/v1/routes/:route_id/subroute_validation",
+            post(gtfs::handlers::post_assign_subroute_validation),
         )
         .route(
             "/v1/schedules/:subroute_id",

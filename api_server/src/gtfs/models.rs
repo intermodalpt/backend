@@ -63,11 +63,18 @@ pub(crate) mod requests {
     use std::collections::HashMap;
 
     use commons::models::gtfs;
+    use commons::models::gtfs::PatternId;
 
     #[derive(Debug, Deserialize)]
-    pub(crate) struct ValidateRoute {
+    pub(crate) struct RouteSubroutesValidation {
         pub(crate) validation: gtfs::RouteValidation,
         pub(crate) subroutes: HashMap<i32, gtfs::SubrouteValidation>,
+    }
+
+    #[derive(Debug, Deserialize)]
+    pub(crate) struct ValidateSubroute {
+        pub(crate) subroute_id: i32,
+        pub(crate) pattern_id: PatternId,
     }
 }
 

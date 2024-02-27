@@ -65,10 +65,13 @@ WHERE id=$2
     Ok(())
 }
 
-pub(crate) async fn fetch_route_validation_data(
-    pool: &PgPool,
+pub(crate) async fn fetch_route_validation_data<'c, E>(
+    executor: E,
     route_id: i32,
-) -> Result<Option<responses::RouteValidation>> {
+) -> Result<Option<responses::RouteValidation>>
+where
+    E: sqlx::Executor<'c, Database = sqlx::Postgres>,
+{
     Ok(sqlx::query!(
         r#"
 SELECT routes.id, routes.validation as "validation!: Option<sqlx::types::Json<gtfs::RouteValidation>>",
@@ -85,7 +88,7 @@ GROUP BY routes.id
     "#,
         route_id
     )
-    .fetch_optional(pool)
+    .fetch_optional(executor)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?
     .map(|row| responses::RouteValidation {

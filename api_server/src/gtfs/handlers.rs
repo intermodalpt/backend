@@ -227,7 +227,7 @@ pub(crate) async fn put_route_validation_data(
     State(state): State<AppState>,
     claims: Option<auth::Claims>,
     Path(route): Path<i32>,
-    Json(request): Json<requests::ValidateRoute>,
+    Json(request): Json<requests::RouteSubroutesValidation>,
 ) -> Result<(), Error> {
     if claims.is_none() {
         return Err(Error::Forbidden);
@@ -263,4 +263,99 @@ pub(crate) async fn put_route_validation_data(
         .commit()
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))
+}
+
+pub(crate) async fn post_assign_subroute_validation(
+    State(state): State<AppState>,
+    claims: Option<auth::Claims>,
+    Path(route): Path<i32>,
+    Json(request): Json<requests::ValidateSubroute>,
+) -> Result<(), Error> {
+    use crate::routes::sql as routes_sql;
+
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
+    let mut transaction = state
+        .pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    let validation_data =
+        sql::fetch_route_validation_data(&mut *transaction, route)
+            .await?
+            .ok_or(Error::NotFoundUpstream)?;
+
+    // Check if there's an unassigned cluster with the referenced pattern
+    let sqlx::types::Json(route_validation) =
+        validation_data.validation.ok_or(Error::NotFoundUpstream)?;
+
+    let unassigned_cluster = route_validation
+        .unmatched
+        .iter()
+        .find(|cluster| cluster.patterns.contains(&request.pattern_id))
+        .ok_or(Error::NotFoundUpstream)?;
+
+    if let Some(sr_validation) =
+        validation_data.subroutes.get(&request.subroute_id)
+    {
+        // Ensure that the subroute has no assigned cluster
+        if sr_validation.is_some() {
+            return Err(Error::DependenciesNotMet);
+        }
+    }
+
+    let sr_stops =
+        routes_sql::fetch_subroute_stops(&mut transaction, request.subroute_id)
+            .await?;
+
+    sql::update_route_validation_data(
+        &mut transaction,
+        route,
+        gtfs::RouteValidation {
+            unmatched: route_validation
+                .unmatched
+                .iter()
+                .filter(|cluster| {
+                    cluster.patterns != unassigned_cluster.patterns
+                })
+                .cloned()
+                .collect(),
+        },
+    )
+    .await?;
+
+    sql::update_subroute_validation_data(
+        &mut transaction,
+        request.subroute_id,
+        gtfs::SubrouteValidation {
+            gtfs_pattern_ids: unassigned_cluster
+                .patterns
+                .iter()
+                .cloned()
+                .collect(),
+            gtfs_trip_ids: unassigned_cluster.trips.iter().cloned().collect(),
+            gtfs_headsigns: unassigned_cluster
+                .headsigns
+                .iter()
+                .cloned()
+                .collect(),
+            gtfs_stops: unassigned_cluster.stops.clone(),
+            iml_stops: sr_stops,
+        },
+    )
+    .await?;
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    Ok(())
 }
