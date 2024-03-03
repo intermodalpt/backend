@@ -185,6 +185,10 @@ pub fn build_paths(state: AppState) -> Router {
             post(gtfs::handlers::post_assign_subroute_validation),
         )
         .route(
+            "/v1/subroutes/:subroute_id/paired_stops",
+            post(gtfs::handlers::patch_subroute_validation_stops),
+        )
+        .route(
             "/v1/schedules/:subroute_id",
             post(routes::handlers::create_subroute_departure),
         )

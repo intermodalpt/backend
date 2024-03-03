@@ -122,6 +122,28 @@ WHERE id=$2
     Ok(())
 }
 
+pub(crate) async fn fetch_subroute_validation_data<'c, E>(
+    executor: E,
+    subroute_id: i32,
+) -> Result<Option<gtfs::SubrouteValidation>>
+where
+    E: sqlx::Executor<'c, Database = sqlx::Postgres>,
+{
+    let res = sqlx::query!(
+        r#"
+SELECT subroutes.validation as "validation!: Json<gtfs::SubrouteValidation>"
+FROM subroutes
+WHERE subroutes.id=$1
+    "#,
+        subroute_id
+    )
+    .fetch_optional(executor)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    Ok(res.map(|row| row.validation.0))
+}
+
 pub(crate) async fn update_subroute_validation_data(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     subroute_id: i32,

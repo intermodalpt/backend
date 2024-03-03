@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT subroutes.validation as \"validation!: Json<gtfs::SubrouteValidation>\"\nFROM subroutes\nWHERE subroutes.id=$1\n    ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "validation!: Json<gtfs::SubrouteValidation>",
+        "type_info": "Jsonb"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "a4d3208ba448298cf6ce318be420f8fc8f6a4fd28ee52d7f414647426a8dc526"
+}

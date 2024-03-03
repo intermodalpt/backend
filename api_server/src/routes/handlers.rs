@@ -563,9 +563,9 @@ pub(crate) async fn patch_subroute_stops(
 
     sql::update_subroute_stops(
         &mut transaction,
-        route_id,
         subroute_id,
-        request,
+        &request.to.stops,
+        &request.from.stops,
     )
     .await?;
 

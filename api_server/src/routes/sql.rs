@@ -524,19 +524,18 @@ ORDER BY subroutes.id ASC, subroute_stops.idx ASC
 
 pub(crate) async fn update_subroute_stops(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-    route_id: i32,
     subroute_id: i32,
-    request: requests::ChangeSubrouteStops,
+    to_stops: &[i32],
+    from_stops: &[i32],
 ) -> Result<()> {
     let existing_query_res = sqlx::query!(
         r#"
 SELECT subroute_stops.stop as stop
 FROM subroutes
 JOIN subroute_stops on subroute_stops.subroute = subroutes.id
-WHERE subroutes.route=$1 AND subroutes.id=$2
+WHERE subroutes.id=$1
 ORDER BY subroute_stops.idx ASC
     "#,
-        route_id,
         subroute_id
     )
     .fetch_all(&mut **transaction)
@@ -545,8 +544,8 @@ ORDER BY subroute_stops.idx ASC
 
     // Check for the difference from stored to future
     let stored_len = existing_query_res.len();
-    let check_len = request.from.stops.len();
-    let to_store_len = request.to.stops.len() as i16;
+    let check_len = from_stops.len();
+    let to_store_len = to_stops.len() as i16;
     let stored_changes = to_store_len - stored_len as i16;
 
     if check_len != stored_len {
@@ -555,7 +554,7 @@ ORDER BY subroute_stops.idx ASC
 
     let check_matched = existing_query_res
         .iter()
-        .zip(request.from.stops.iter())
+        .zip(from_stops.iter())
         .all(|(row, from_stop)| row.stop == *from_stop);
 
     if !check_matched {
@@ -564,7 +563,7 @@ ORDER BY subroute_stops.idx ASC
 
     let existing_duplicates_count = existing_query_res
         .iter()
-        .zip(request.to.stops.iter())
+        .zip(to_stops.iter())
         .filter(|(row, from_stop)| row.stop == **from_stop)
         .count();
 
@@ -592,8 +591,7 @@ WHERE Subroute=$1 AND idx>=$2
             ));
         }
     } else if stored_changes > 0 {
-        let additional_entries =
-            request.to.stops.iter().skip(stored_len).enumerate();
+        let additional_entries = to_stops.iter().skip(stored_len).enumerate();
 
         for (index, stop) in additional_entries {
             let index = (stored_len + index) as i16;
@@ -614,8 +612,7 @@ VALUES ($1, $2, $3)
 
     if existing_duplicates_count != stored_len {
         // Update the already existing records
-        let overlapping_entries =
-            request.to.stops.iter().take(stored_len).enumerate();
+        let overlapping_entries = to_stops.iter().take(stored_len).enumerate();
 
         for (index, stop) in overlapping_entries {
             let index = index as i16;

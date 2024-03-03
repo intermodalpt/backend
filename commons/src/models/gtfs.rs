@@ -115,11 +115,13 @@ pub struct PatternCluster {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubrouteValidation {
+    // TODO these four fields should become a `matched: PatternCluster` field
     pub gtfs_pattern_ids: Vec<PatternId>,
     pub gtfs_trip_ids: Vec<TripId>,
     pub gtfs_headsigns: Vec<String>,
-    pub iml_stops: Vec<i32>,
     pub gtfs_stops: Vec<StopId>,
+    // IML stops that corresponded at the time the validation was performed
+    pub iml_stops: Vec<i32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

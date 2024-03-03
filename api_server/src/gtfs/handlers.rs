@@ -359,3 +359,74 @@ pub(crate) async fn post_assign_subroute_validation(
 
     Ok(())
 }
+
+pub(crate) async fn patch_subroute_validation_stops(
+    State(state): State<AppState>,
+    claims: Option<auth::Claims>,
+    Path(subroute_id): Path<i32>,
+    Json(request): Json<requests::UpdateSubrouteValidationStops>,
+) -> Result<(), Error> {
+    use crate::routes::sql as routes_sql;
+
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
+    let mut transaction = state
+        .pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    let sr_validation_data =
+        sql::fetch_subroute_validation_data(&mut *transaction, subroute_id)
+            .await?
+            .ok_or(Error::NotFoundUpstream)?;
+
+    sr_validation_data
+        .gtfs_pattern_ids
+        .contains(&request.pattern_id)
+        .then(|| ())
+        .ok_or(Error::ValidationFailure(format!(
+            "Unrecognized pattern '{}' for subroute {}",
+            request.pattern_id, subroute_id
+        )))?;
+
+    let sr_stops =
+        routes_sql::fetch_subroute_stops(&mut transaction, subroute_id).await?;
+
+    if request.from_stop_ids != sr_stops {
+        return Err(Error::DependenciesNotMet);
+    }
+
+    if request.from_stop_ids != request.to_stop_ids {
+        routes_sql::update_subroute_stops(
+            &mut transaction,
+            subroute_id,
+            &request.to_stop_ids,
+            &request.from_stop_ids,
+        )
+        .await?;
+    }
+
+    sql::update_subroute_validation_data(
+        &mut transaction,
+        subroute_id,
+        gtfs::SubrouteValidation {
+            iml_stops: request.to_stop_ids,
+            ..sr_validation_data
+        },
+    )
+    .await?;
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    Ok(())
+}

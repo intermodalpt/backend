@@ -76,6 +76,13 @@ pub(crate) mod requests {
         pub(crate) subroute_id: i32,
         pub(crate) pattern_id: PatternId,
     }
+
+    #[derive(Debug, Deserialize)]
+    pub(crate) struct UpdateSubrouteValidationStops {
+        pub(crate) pattern_id: PatternId,
+        pub(crate) from_stop_ids: Vec<i32>,
+        pub(crate) to_stop_ids: Vec<i32>,
+    }
 }
 
 pub(crate) mod responses {
