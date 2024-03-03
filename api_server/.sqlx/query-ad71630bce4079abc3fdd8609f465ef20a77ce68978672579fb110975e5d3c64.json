@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nUPDATE operators\nSET name = $1,\n    tag = $2,\n    description = $3\nWHERE id = $4\n ",
+  "query": "\nUPDATE operators\nSET name = $1,\n    tag = $2,\n    description = $3\nWHERE id = $4\n",
   "describe": {
     "columns": [],
     "parameters": {
@@ -13,5 +13,5 @@
     },
     "nullable": []
   },
-  "hash": "abb2bc856dd3515d513405bdc86b8c9682e42f14955bf72b0137db2a4d7f9009"
+  "hash": "ad71630bce4079abc3fdd8609f465ef20a77ce68978672579fb110975e5d3c64"
 }

@@ -340,7 +340,12 @@ pub fn build_paths(state: AppState) -> Router {
         )
         .route(
             "/v1/operators/:operator_id/routes/types",
-            get(operators::handlers::get_operator_route_types),
+            get(operators::handlers::get_operator_route_types)
+                .post(operators::handlers::post_operator_route_type),
+        )
+        .route(
+            "/v1/operators/:operator_id/routes/types/:type_id",
+            patch(operators::handlers::patch_operator_route_type),
         )
         .route(
             "/v1/operators/:operator_id/issues",

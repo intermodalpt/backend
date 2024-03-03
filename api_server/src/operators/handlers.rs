@@ -186,6 +186,60 @@ pub(crate) async fn get_operator_route_types(
     ))
 }
 
+pub(crate) async fn post_operator_route_type(
+    State(state): State<AppState>,
+    Path(operator_id): Path<i32>,
+    Json(type_id): Json<requests::ChangeOperatorRouteType>,
+) -> Result<Json<i32>, Error> {
+    let mut transaction = state
+        .pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    let id =
+        sql::insert_operator_route_type(&mut transaction, operator_id, type_id)
+            .await?;
+
+    // TODO log
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    Ok(Json(id))
+}
+
+pub(crate) async fn patch_operator_route_type(
+    State(state): State<AppState>,
+    Path((operator_id, type_id)): Path<(i32, i32)>,
+    Json(route_type): Json<requests::ChangeOperatorRouteType>,
+) -> Result<(), Error> {
+    let mut transaction = state
+        .pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    sql::update_operator_route_type(
+        &mut transaction,
+        operator_id,
+        type_id,
+        route_type,
+    )
+    .await?;
+
+    // TODO log
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    Ok(())
+}
+
 pub(crate) async fn get_operator_issues(
     State(state): State<AppState>,
     Path(operator_id): Path<i32>,

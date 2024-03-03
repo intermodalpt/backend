@@ -158,6 +158,16 @@ pub(crate) mod requests {
     }
 
     #[derive(Debug, Deserialize, ToSchema)]
+    pub struct ChangeOperatorRouteType {
+        pub name: Option<String>,
+        pub zapping_cost: i32,
+        pub board_cost: i32,
+        pub multi_trip: bool,
+        pub badge_text_color: String,
+        pub badge_bg_color: String,
+    }
+
+    #[derive(Debug, Deserialize, ToSchema)]
     pub struct NewOperatorCalendar {
         pub name: String,
         pub calendar: Calendar,

@@ -131,7 +131,7 @@ SET name = $1,
     tag = $2,
     description = $3
 WHERE id = $4
- "#,
+"#,
             &change.name,
             &change.tag,
             &description,
@@ -147,7 +147,7 @@ UPDATE operators
 SET name = $1,
     tag = $2
 WHERE id = $3
- "#,
+"#,
             &change.name,
             &change.tag,
             operator_id
@@ -293,6 +293,82 @@ pub(crate) async fn delete_operator_stop(
     Ok(())
 }
 
+pub(crate) async fn fetch_operator_route_types(
+    pool: &PgPool,
+    operator_id: i32,
+) -> Result<Vec<responses::OperatorRouteType>> {
+    sqlx::query_as!(
+        responses::OperatorRouteType,
+        r#"
+SELECT id, name, zapping_cost, board_cost, multi_trip, badge_text_color, badge_bg_color
+FROM route_types
+WHERE operator = $1
+"#,
+        operator_id
+    )
+        .fetch_all(pool)
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+}
+
+pub(crate) async fn insert_operator_route_type(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    operator_id: i32,
+    change: requests::ChangeOperatorRouteType,
+) -> Result<i32> {
+    let res = sqlx::query!(
+        r#"
+INSERT INTO route_types (operator, name, zapping_cost, board_cost, multi_trip, badge_text_color, badge_bg_color)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING id
+"#,
+        operator_id,
+        change.name,
+        change.zapping_cost,
+        change.board_cost,
+        change.multi_trip,
+        change.badge_text_color,
+        change.badge_bg_color
+    )
+        .fetch_one(&mut **transaction)
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    Ok(res.id)
+}
+pub(crate) async fn update_operator_route_type(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    operator_id: i32,
+    type_id: i32,
+    change: requests::ChangeOperatorRouteType,
+) -> Result<()> {
+    sqlx::query!(
+        r#"
+UPDATE route_types
+SET name = $1,
+    zapping_cost = $2,
+    board_cost = $3,
+    multi_trip = $4,
+    badge_text_color = $5,
+    badge_bg_color = $6
+WHERE operator = $7 AND id = $8
+"#,
+        change.name,
+        change.zapping_cost,
+        change.board_cost,
+        change.multi_trip,
+        change.badge_text_color,
+        change.badge_bg_color,
+        operator_id,
+        type_id
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    Ok(())
+}
+
 pub(crate) async fn fetch_issues(
     pool: &PgPool,
 ) -> Result<Vec<operators::Issue>> {
@@ -344,24 +420,6 @@ GROUP BY issues.id
         })
     })
     .collect()
-}
-
-pub(crate) async fn fetch_operator_route_types(
-    pool: &PgPool,
-    operator_id: i32,
-) -> Result<Vec<responses::OperatorRouteType>> {
-    sqlx::query_as!(
-        responses::OperatorRouteType,
-        r#"
-SELECT id, name, zapping_cost, board_cost, multi_trip, badge_text_color, badge_bg_color
-FROM route_types
-WHERE operator = $1
-"#,
-        operator_id
-    )
-        .fetch_all(pool)
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
 pub(crate) async fn fetch_issue_operators(
