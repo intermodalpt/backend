@@ -189,8 +189,17 @@ pub(crate) async fn get_operator_route_types(
 pub(crate) async fn post_operator_route_type(
     State(state): State<AppState>,
     Path(operator_id): Path<i32>,
+    claims: Option<auth::Claims>,
     Json(type_id): Json<requests::ChangeOperatorRouteType>,
 ) -> Result<Json<i32>, Error> {
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
     let mut transaction = state
         .pool
         .begin()
@@ -214,8 +223,17 @@ pub(crate) async fn post_operator_route_type(
 pub(crate) async fn patch_operator_route_type(
     State(state): State<AppState>,
     Path((operator_id, type_id)): Path<(i32, i32)>,
+    claims: Option<auth::Claims>,
     Json(route_type): Json<requests::ChangeOperatorRouteType>,
 ) -> Result<(), Error> {
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
     let mut transaction = state
         .pool
         .begin()
@@ -229,6 +247,38 @@ pub(crate) async fn patch_operator_route_type(
         route_type,
     )
     .await?;
+
+    // TODO log
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    Ok(())
+}
+
+pub(crate) async fn delete_operator_route_type(
+    State(state): State<AppState>,
+    Path((operator_id, type_id)): Path<(i32, i32)>,
+    claims: Option<auth::Claims>,
+) -> Result<(), Error> {
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
+    let mut transaction = state
+        .pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    sql::delete_operator_route_type(&mut transaction, operator_id, type_id)
+        .await?;
 
     // TODO log
 

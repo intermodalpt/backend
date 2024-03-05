@@ -369,6 +369,43 @@ WHERE operator = $7 AND id = $8
     Ok(())
 }
 
+pub(crate) async fn delete_operator_route_type(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    operator_id: i32,
+    type_id: i32,
+) -> Result<()> {
+    let uses = sqlx::query!(
+        r#"
+SELECT count(*) as cnt FROM routes
+WHERE type = $1
+"#,
+        type_id
+    )
+    .fetch_one(&mut **transaction)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .cnt
+    .unwrap_or(0);
+
+    if uses > 0 {
+        return Err(Error::DependenciesNotMet);
+    }
+
+    sqlx::query!(
+        r#"
+DELETE FROM route_types
+WHERE operator = $1 AND id = $2
+"#,
+        operator_id,
+        type_id
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    Ok(())
+}
+
 pub(crate) async fn fetch_issues(
     pool: &PgPool,
 ) -> Result<Vec<operators::Issue>> {

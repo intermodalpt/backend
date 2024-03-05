@@ -345,7 +345,8 @@ pub fn build_paths(state: AppState) -> Router {
         )
         .route(
             "/v1/operators/:operator_id/routes/types/:type_id",
-            patch(operators::handlers::patch_operator_route_type),
+            patch(operators::handlers::patch_operator_route_type)
+                .delete(operators::handlers::delete_operator_route_type),
         )
         .route(
             "/v1/operators/:operator_id/issues",
