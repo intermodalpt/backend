@@ -139,8 +139,10 @@ pub(crate) async fn fetch_full_route_with_subroutes(
         r#"
 SELECT routes.*, route_types.badge_text_color as badge_text, route_types.badge_bg_color as badge_bg
 FROM (
-    SELECT routes.id, routes.code, routes.name, routes.operator, routes.type as type_id,
-        routes.circular, routes.main_subroute, routes.active, routes.parishes, routes.validation,
+    SELECT routes.id, routes.code, routes.name, routes.operator,
+        routes.type as type_id, routes.circular, routes.main_subroute,
+        routes.active, routes.parishes, routes.validation,
+        array_remove(array_agg(region_id), NULL) as "regions!: Vec<i32>",
         COALESCE(
             array_agg((subroutes.id, subroutes.group, subroutes.flag, subroutes.headsign, subroutes.origin,
                 subroutes.destination, subroutes.via, subroutes.circular, subroutes.polyline, subroutes.validation))
@@ -149,6 +151,7 @@ FROM (
         ) AS "subroutes!: Vec<responses::FullSubroute>"
     FROM routes
     LEFT JOIN subroutes ON routes.id = subroutes.route
+    LEFT JOIN region_routes on routes.id = region_routes.route_id
     WHERE routes.id = $1
     GROUP BY routes.id
     ORDER BY routes.id asc
@@ -235,8 +238,10 @@ pub(crate) async fn fetch_full_routes(
         r#"
 SELECT routes.*, route_types.badge_text_color as badge_text, route_types.badge_bg_color as badge_bg
 FROM (
-    SELECT routes.id, routes.code, routes.name, routes.operator, routes.type as type_id,
-        routes.circular, routes.main_subroute, routes.active, routes.parishes, routes.validation,
+    SELECT routes.id, routes.code, routes.name, routes.operator,
+        routes.type as type_id, routes.circular, routes.main_subroute,
+        routes.active, routes.parishes, routes.validation,
+        array_remove(array_agg(region_id), NULL) as "regions!: Vec<i32>",
         COALESCE(
             array_agg((subroutes.id, subroutes.group, subroutes.flag, subroutes.headsign, subroutes.origin,
                 subroutes.destination, subroutes.via, subroutes.circular, subroutes.polyline, subroutes.validation))
@@ -253,6 +258,41 @@ FROM (
 JOIN route_types on routes.type_id = route_types.id
     "#,
         region_id
+    )
+        .fetch_all(pool)
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+}
+
+pub(crate) async fn fetch_operator_full_routes(
+    pool: &PgPool,
+    operator_id: i32,
+) -> Result<Vec<responses::FullRoute>> {
+    sqlx::query_as!(
+        responses::FullRoute,
+        r#"
+SELECT routes.*, route_types.badge_text_color as badge_text, route_types.badge_bg_color as badge_bg
+FROM (
+    SELECT routes.id, routes.code, routes.name, routes.operator,
+        routes.type as type_id, routes.circular, routes.main_subroute,
+        routes.active, routes.parishes, routes.validation,
+        array_remove(array_agg(region_id), NULL) as "regions!: Vec<i32>",
+        COALESCE(
+            array_agg((subroutes.id, subroutes.group, subroutes.flag, subroutes.headsign, subroutes.origin,
+                subroutes.destination, subroutes.via, subroutes.circular, subroutes.polyline, subroutes.validation))
+            FILTER (WHERE subroutes.id IS NOT NULL),
+            '{}'
+        ) AS "subroutes!: Vec<responses::FullSubroute>"
+    FROM routes
+    LEFT JOIN region_routes on routes.id = region_routes.route_id
+    LEFT JOIN subroutes ON routes.id = subroutes.route
+    WHERE routes.operator = $1
+    GROUP BY routes.id
+    ORDER BY routes.id asc
+) as routes
+JOIN route_types on routes.type_id = route_types.id
+    "#,
+        operator_id
     )
         .fetch_all(pool)
         .await

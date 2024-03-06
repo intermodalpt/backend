@@ -339,6 +339,14 @@ pub fn build_paths(state: AppState) -> Router {
             delete(operators::handlers::delete_operator_calendar),
         )
         .route(
+            "/v1/operators/:operator_id/routes",
+            get(routes::handlers::get_operator_routes),
+        )
+        .route(
+            "/v1/operators/:operator_id/routes/full",
+            get(routes::handlers::get_operator_routes),
+        )
+        .route(
             "/v1/operators/:operator_id/routes/types",
             get(operators::handlers::get_operator_route_types)
                 .post(operators::handlers::post_operator_route_type),
@@ -376,10 +384,6 @@ pub fn build_paths(state: AppState) -> Router {
         .route(
             "/v1/operators/:operator_id/gtfs/update",
             post(gtfs::handlers::post_update_operator_gtfs),
-        )
-        .route(
-            "/v1/operators/:operator_id/routes",
-            get(routes::handlers::get_operator_routes),
         )
         .route(
             "/v1/operators/:operator_id/regions",

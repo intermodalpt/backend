@@ -23,7 +23,7 @@ pub(crate) mod requests {
 
     use commons::models::{history, routes};
 
-    #[derive(Deserialize, ToSchema)]
+    #[derive(Debug, Deserialize, ToSchema)]
     pub struct ChangeRoute {
         pub code: Option<String>,
         pub name: String,
@@ -81,7 +81,7 @@ pub(crate) mod requests {
         }
     }
 
-    #[derive(Deserialize, ToSchema)]
+    #[derive(Debug, Deserialize, ToSchema)]
     pub struct ChangeSubroute {
         pub group: i32,
         pub origin: String,
@@ -233,7 +233,9 @@ pub(crate) mod responses {
         pub(crate) badge_bg: String,
         pub(crate) active: bool,
         pub(crate) parishes: Vec<i32>,
+        pub(crate) regions: Vec<i32>,
         pub(crate) subroutes: Vec<FullSubroute>,
+
         pub(crate) validation: sqlx::types::JsonValue,
 
         //  TODO drop
