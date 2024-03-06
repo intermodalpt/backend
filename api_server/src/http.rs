@@ -27,7 +27,9 @@ use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
 use crate::state::AppState;
-use crate::{auth, contrib, geo, gtfs, misc, operators, pics, routes, stops};
+use crate::{
+    auth, contrib, geo, gtfs, misc, operators, osm, pics, routes, stops,
+};
 
 #[allow(clippy::too_many_lines)]
 pub fn build_paths(state: AppState) -> Router {
@@ -403,6 +405,16 @@ pub fn build_paths(state: AppState) -> Router {
             post(pics::handlers::post_upload_operator_logo),
         )
         .route("/v1/calendars", get(operators::handlers::get_calendars))
+        .route(
+            "/v1/osm/stops",
+            get(osm::handlers::get_osm_stops)
+                .patch(osm::handlers::patch_osm_stops),
+        )
+        .route(
+            "/v1/osm/stops/:id",
+            get(osm::handlers::get_osm_stop_history)
+                .delete(osm::handlers::delete_osm_stop),
+        )
         .route(
             "/v1/actions/migrate_stop/:original_id/:replacement_id",
             post(routes::handlers::post_replace_stop_across_routes),

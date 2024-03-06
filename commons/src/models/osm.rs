@@ -17,6 +17,7 @@
 */
 
 use std::cmp::Ordering;
+use chrono::{DateTime, Utc};
 
 use serde::{Deserialize, Serialize};
 
@@ -28,10 +29,7 @@ pub struct OSMAuthor {
 
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct StoredStopMeta {
-    pub pos_author_uid: i32,
-    pub pos_author_uname: String,
     pub deleted: bool,
-    pub last_version: i32,
     pub versions: Vec<NodeVersion>,
 }
 
@@ -41,13 +39,17 @@ pub struct StopNode {
     pub versions: Vec<NodeVersion>,
 }
 
+pub type NodeHistory = Vec<NodeVersion>;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NodeVersion {
     pub version: i32,
-    pub author: i32,
+    pub author: i64,
+    pub author_uname: String,
     pub lat: f64,
     pub lon: f64,
     pub attributes: Vec<(String, String)>,
+    pub timestamp: DateTime<Utc>,
     pub deleted: bool,
 }
 

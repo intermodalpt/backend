@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nDELETE FROM osm_stops\nWHERE id=$1\n    ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "f72420bbfef09b5981a79c0b389a8517fee5fd1150f2bb2343cd19434b374de7"
+}

@@ -1,0 +1,74 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT id, lat, lon, name, pos_author, last_author, creation, modification,\n    version, deleted\nFROM osm_stops\n    ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "lat",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 2,
+        "name": "lon",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 3,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "pos_author",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "last_author",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "creation",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 7,
+        "name": "modification",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 8,
+        "name": "version",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 9,
+        "name": "deleted",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "5207daeb57e586e8ccafa5111951532d02651a1f1f07e3a6be9e3af6395f8b35"
+}

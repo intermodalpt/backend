@@ -144,6 +144,22 @@ CREATE TABLE stops
     osm_history               jsonb                                             NOT NULL
 );
 
+CREATE TABLE osm_stops
+(
+    id           text PRIMARY KEY,
+    history      jsonb                    NOT NULL,
+    -- Cached
+    lon          double precision         NOT NULL,
+    lat          double precision         NOT NULL,
+    name         text,
+    pos_author   text                     NOT NULL,
+    last_author  text                     NOT NULL,
+    creation     timestamp with time zone NOT NULL,
+    modification timestamp with time zone NOT NULL,
+    version      integer                  NOT NULL,
+    deleted      boolean                  NOT NULL
+);
+
 CREATE TABLE route_types
 (
     id               serial PRIMARY KEY,

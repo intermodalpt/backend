@@ -33,6 +33,7 @@ pub(crate) mod gtfs;
 mod http;
 pub(crate) mod misc;
 mod operators;
+mod osm;
 mod pics;
 mod responses;
 mod routes;

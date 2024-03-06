@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT history as \"history!: Json<osm::NodeHistory>\"\nFROM osm_stops\nWHERE id=$1\n    ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "history!: Json<osm::NodeHistory>",
+        "type_info": "Jsonb"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "5738ebf46abb0fe3f5a01864b6cf40630842257d27d5699136884de71e436134"
+}
