@@ -10,7 +10,7 @@ use commons::models::stops::{
 
 static STOP1: Lazy<Stop> = Lazy::new(|| Stop {
     id: 1,
-    name: Some("name".to_string()),
+    name: "name".to_string(),
     short_name: Some("short_name".to_string()),
 
     // TODO, continue from here
@@ -58,20 +58,9 @@ static STOP1: Lazy<Stop> = Lazy::new(|| Stop {
 });
 
 #[test]
-fn keeps_name() {
-    let mut patch = StopPatch {
-        name: Some(None),
-        ..StopPatch::default()
-    };
-
-    assert!(patch.drop_noops(&STOP1).is_ok());
-    assert!(!patch.is_empty());
-}
-
-#[test]
 fn drops_name() {
     let mut patch = StopPatch {
-        name: Some(Some("name".to_string())),
+        name: Some("name".to_string()),
         ..StopPatch::default()
     };
 

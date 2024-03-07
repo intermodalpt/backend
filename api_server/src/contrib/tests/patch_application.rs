@@ -1,4 +1,4 @@
-use chrono::{NaiveDate, Utc};
+use chrono::NaiveDate;
 use once_cell::sync::Lazy;
 
 use commons::models::history::stops::StopPatch;
@@ -9,7 +9,7 @@ use crate::errors::Error;
 
 static STOP1: Lazy<stops::Stop> = Lazy::new(|| stops::Stop {
     id: 1,
-    name: Some("name".to_string()),
+    name: "name".to_string(),
     short_name: Some("short_name".to_string()),
 
     // TODO, continue from here
@@ -142,19 +142,19 @@ fn err_only_patches_ignored_fields() {
 #[test]
 fn err_repeated_patch_application() {
     let mut patch = StopPatch {
-        name: Some(Some("changed".to_string())),
+        name: Some("changed".to_string()),
         ..Default::default()
     };
 
     let current = STOP1.clone();
 
-    assert_eq!(current.name, Some("name".to_string()));
+    assert_eq!(current.name, "name".to_string());
     assert_eq!(current.verification_level, 0);
 
     let resulting_stop =
         logic::accept_stop_contribution(current, &mut patch, true, &None)
             .unwrap();
-    assert_eq!(resulting_stop.name, Some("changed".to_string()));
+    assert_eq!(resulting_stop.name, "changed".to_string());
     assert_eq!(resulting_stop.verification_level, 0);
 
     let error = logic::accept_stop_contribution(

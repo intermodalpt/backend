@@ -4,7 +4,7 @@ use commons::models::history::{self, stops::StopPatch};
 #[test]
 fn stop_patch_drop_name() {
     let mut patch = StopPatch {
-        name: Some(Some("foo".to_string())),
+        name: Some("foo".to_string()),
         ..Default::default()
     };
 

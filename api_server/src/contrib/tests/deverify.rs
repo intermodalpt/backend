@@ -108,7 +108,7 @@ fn stop_patch_deverify_patch_with_infra_changes() {
 #[test]
 fn stop_patch_deverify_full_patch() {
     let mut patch = StopPatch {
-        name: Some(None),
+        name: None,
         short_name: Some(None),
         locality: Some(None),
         street: Some(None),

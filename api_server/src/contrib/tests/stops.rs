@@ -13,7 +13,7 @@ use crate::stops::models::requests::ChangeStop;
 
 static STOP1: Lazy<Stop> = Lazy::new(|| Stop {
     id: 1,
-    name: Some("Original".to_string()),
+    name: "Original".to_string(),
     short_name: Some("Original short".to_string()),
     locality: Some("Fooland".to_string()),
     street: Some("Barstreet".to_string()),
@@ -85,7 +85,7 @@ static STOP1_NOOP_CHANGE: Lazy<ChangeStop> = Lazy::new(|| ChangeStop {
 #[test]
 fn ok_derive_name_patch() {
     let mut change: ChangeStop = STOP1_NOOP_CHANGE.clone();
-    let new_val = Some("New name".to_string());
+    let new_val = "New name".to_string();
 
     change.name = new_val.clone();
 
@@ -109,7 +109,7 @@ fn ok_noop_name_change() {
 #[test]
 fn ok_apply_name_patch() {
     let mut stop: Stop = STOP1.clone();
-    let new_val = Some("New name".to_string());
+    let new_val = "New name".to_string();
 
     let mut patch = StopPatch::default();
     patch.name = Some(new_val.clone());
@@ -125,12 +125,12 @@ fn ok_apply_name_patch() {
 #[test]
 fn ok_derive_short_name_patch() {
     let mut change: ChangeStop = STOP1_NOOP_CHANGE.clone();
-    let new_val = Some("New name".to_string());
+    let new_val = "New name".to_string();
 
-    change.short_name = new_val.clone();
+    change.short_name = Some(new_val.clone());
 
     let mut patch = change.derive_patch(&STOP1);
-    assert_eq!(patch.short_name, Some(new_val));
+    assert_eq!(patch.short_name, Some(Some(new_val)));
 
     // Ensure that the patch is only about this attribute
     patch.short_name = None;
