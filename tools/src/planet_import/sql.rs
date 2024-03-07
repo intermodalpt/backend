@@ -72,10 +72,7 @@ where
         !last_version.attributes.iter().any(|(k, _)| k == "fixme");
 
     let meta = osm::StoredStopMeta {
-        pos_author_uid: coord_author,
-        pos_author_uname: authors.get(&coord_author).unwrap().clone(),
         deleted,
-        last_version: last_version.version,
         versions: node.versions,
     };
 

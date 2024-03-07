@@ -1,6 +1,6 @@
 /*
     Intermodal, transportation information aggregator
-    Copyright (C) 2023  Cláudio Pereira
+    Copyright (C) 2023 - 2024  Cláudio Pereira
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -16,108 +16,111 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-mod models;
-mod sql;
+mod api;
 
+use chrono::{DateTime, Utc};
 use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet};
 use std::io::BufReader;
+use std::process::exit;
 
 use config::Config;
 use osmpbf::{Element, ElementReader};
-use sqlx::postgres::PgPool;
+use serde_derive::Deserialize;
 
 use commons::models::osm;
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
+#[derive(Default, Deserialize)]
+struct AppConfig {
+    jwt: String,
+}
+
 #[tokio::main]
 async fn main() {
-    let settings = Config::builder()
-        .add_source(config::File::with_name("./settings.toml"))
-        .add_source(config::Environment::with_prefix("SETTINGS"))
+    let config = Config::builder()
+        .add_source(
+            config::Environment::with_prefix("IML")
+                .try_parsing(true)
+                .separator("_"),
+        )
         .build()
         .unwrap();
 
-    let pool = PgPool::connect(&settings.get_string("db").expect("db not set"))
-        .await
-        .expect("Unable to connect to the database");
+    if let Ok(config) = config.try_deserialize() {
+        let config: AppConfig = config;
+        api::TOKEN.set(Box::leak(Box::new(config.jwt))).unwrap();
+    } else {
+        eprintln!("Token not found in the environment");
+        exit(-1);
+    }
 
-    let stops = sql::fetch_stops(&pool).await.unwrap();
+    let cached_versions = api::fetch_cached_osm_stop_versions().await.unwrap();
 
-    let id_set = stops
-        .iter()
-        .map(|s| s.external_id.parse::<i64>().unwrap())
-        .collect::<HashSet<i64>>();
+    let node_set = cached_versions.keys().copied().collect::<HashSet<i64>>();
 
     let f = std::fs::File::open("history-230724.osm.pbf").unwrap();
     let reader = BufReader::new(f);
 
-    // let (nodes, authors) = par_extract_changesets(id_set, reader)
-    let (nodes, authors) = extract_changesets(id_set, reader)
+    let nodes_versions = extract_node_versions(node_set, reader)
         .expect("Unable to extract changesets");
+    // let nodes_versions = par_extract_node_versions(node_set, reader)
+    //     .expect("Unable to extract changesets");
 
-    let author_names: HashMap<i32, String> =
-        authors.into_iter().map(|a| (a.uid, a.username)).collect();
+    let patch = nodes_versions
+        .into_iter()
+        .filter(|(id, history)| {
+            let current_cnt = history.len();
+            let last_current = history.last().unwrap();
 
-    let mut transaction = pool.begin().await.unwrap();
+            let cached_versions = cached_versions.get(&id).unwrap();
+            let cached_cnt = cached_versions.len();
+            let last_cached = history.last().unwrap();
 
-    let mut updated = 0;
-    for node in nodes.into_iter() {
-        if updated % 100 == 0 {
-            println!("Updated {} stops", updated);
-        }
-        updated += 1;
-        sql::update_stop_osm_versions(&mut *transaction, node, &author_names)
-            .await
-            .unwrap();
-    }
+            last_cached.version as usize != cached_cnt + 1
+                || cached_cnt != current_cnt
+                || last_current.version != last_cached.version
+        })
+        .map(|(id, history)| api::OsmHistoryPatch { id, history })
+        .collect::<Vec<api::OsmHistoryPatch>>();
 
-    transaction.commit().await.unwrap();
+    api::patch_osm_stops_history(&patch).await.unwrap();
 }
 
-fn extract_changesets(
+fn extract_node_versions(
     id_set: HashSet<i64>,
     reader: BufReader<std::fs::File>,
-) -> Result<(Vec<osm::StopNode>, Vec<osm::OSMAuthor>)> {
+) -> Result<HashMap<i64, osm::NodeHistory>> {
     let reader = ElementReader::new(reader);
 
-    let mut authors: HashMap<i32, osm::OSMAuthor> = HashMap::new();
-    let mut nodes: HashMap<i64, osm::StopNode> = HashMap::new();
+    let mut node_versions: HashMap<i64, osm::NodeHistory> = HashMap::new();
 
     reader.for_each(|element| match element {
         Element::DenseNode(n) => {
             let id = n.id();
             if id_set.contains(&id) {
                 if let Some(info) = n.info() {
-                    let author_uid = info.uid();
-                    authors.entry(author_uid).or_insert(osm::OSMAuthor {
-                        uid: author_uid,
-                        username: info.user().unwrap_or("").to_string(),
-                    });
-
                     let version = osm::NodeVersion {
                         version: info.version(),
-                        author: author_uid,
+                        author: info.uid(),
+                        author_uname: info.user().unwrap_or("?").to_string(),
                         lat: n.lat(),
                         lon: n.lon(),
                         attributes: n
                             .tags()
                             .map(|(k, v)| (k.to_string(), v.to_string()))
                             .collect(),
+                        timestamp: millis_to_datetime(info.milli_timestamp()),
                         deleted: info.deleted(),
                     };
 
-                    match nodes.entry(id) {
+                    match node_versions.entry(id) {
                         Entry::Occupied(e) => {
-                            let node = e.into_mut();
-                            node.versions.push(version);
+                            e.into_mut().push(version);
                         }
                         Entry::Vacant(e) => {
-                            e.insert(osm::StopNode {
-                                id,
-                                versions: vec![version],
-                            });
+                            e.insert(vec![version]);
                         }
                     }
                 } else {
@@ -128,26 +131,25 @@ fn extract_changesets(
         _ => {}
     })?;
 
-    nodes.values_mut().for_each(|node| {
-        node.versions.sort();
+    node_versions.values_mut().for_each(|versions| {
+        versions.sort_by_key(|v| v.version);
     });
 
-    Ok((
-        nodes.into_values().collect(),
-        authors.into_values().collect(),
-    ))
+    Ok(node_versions)
 }
 
-/*
-This function requires an unmerged patched version of OSMPBF
-fn par_extract_changesets(
+fn millis_to_datetime(millis: i64) -> DateTime<Utc> {
+    DateTime::from_timestamp_millis(millis).expect("invalid timestamp")
+}
+
+// This function requires an unmerged patched version of OSMPBF
+fn par_extract_node_versions(
     id_set: HashSet<i64>,
     reader: BufReader<std::fs::File>,
-) -> Result<(Vec<osm::StopNode>, Vec<osm::OSMAuthor>)> {
+) -> Result<HashMap<i64, osm::NodeHistory>> {
     let reader = ElementReader::new(reader);
 
-    let mut authors: HashMap<i32, osm::OSMAuthor> = HashMap::new();
-    let mut nodes: HashMap<i64, osm::StopNode> = HashMap::new();
+    let mut node_versions: HashMap<i64, osm::NodeHistory> = HashMap::new();
 
     struct RawNode {
         id: i64,
@@ -155,17 +157,19 @@ fn par_extract_changesets(
         lon: f64,
         tags: Vec<(String, String)>,
         version: i32,
-        uid: i32,
-        username: String,
+        author: i32,
+        author_uname: String,
+        timestamp: DateTime<Utc>,
         deleted: bool,
     }
 
     let raw_nodes = reader.par_filter_map(|e| match e {
         Element::DenseNode(n) => {
-            if id_set.contains(&n.id()) {
+            let id = n.id();
+            if id_set.contains(&id) {
                 let info = n.info().unwrap();
                 Some(RawNode {
-                    id: n.id(),
+                    id,
                     lat: n.lat(),
                     lon: n.lon(),
                     tags: n
@@ -173,8 +177,9 @@ fn par_extract_changesets(
                         .map(|(k, v)| (k.to_string(), v.to_string()))
                         .collect(),
                     version: info.version(),
-                    uid: info.uid(),
-                    username: info.user().unwrap().to_string(),
+                    author: info.uid(),
+                    author_uname: info.user().unwrap().to_string(),
+                    timestamp: millis_to_datetime(info.milli_timestamp()),
                     deleted: info.deleted(),
                 })
             } else {
@@ -185,41 +190,30 @@ fn par_extract_changesets(
     });
 
     raw_nodes.into_iter().for_each(|node| {
-        authors.entry(node.uid).or_insert(osm::OSMAuthor {
-            uid: node.uid,
-            username: node.username,
-        });
-
         let version = osm::NodeVersion {
             version: node.version,
-            author: node.uid,
+            author: node.author,
+            author_uname: node.author_uname,
             lat: node.lat,
             lon: node.lon,
             attributes: node.tags,
+            timestamp: node.timestamp,
             deleted: node.deleted,
         };
 
-        match nodes.entry(node.id) {
+        match node_versions.entry(node.id) {
             Entry::Occupied(e) => {
-                let node = e.into_mut();
-                node.versions.push(version);
+                e.into_mut().push(version);
             }
             Entry::Vacant(e) => {
-                e.insert(osm::StopNode {
-                    id: node.id,
-                    versions: vec![version],
-                });
+                e.insert(vec![version]);
             }
         }
     });
 
-    nodes.values_mut().for_each(|node| {
-        node.versions.sort();
+    node_versions.values_mut().for_each(|versions| {
+        versions.sort();
     });
 
-    Ok((
-        nodes.into_values().collect(),
-        authors.into_values().collect(),
-    ))
+    Ok(node_versions)
 }
-*/
