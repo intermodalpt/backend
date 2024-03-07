@@ -416,6 +416,10 @@ pub fn build_paths(state: AppState) -> Router {
                 .delete(osm::handlers::delete_osm_stop),
         )
         .route(
+            "/v1/osm/stops/versions",
+            get(osm::handlers::get_osm_stop_versions),
+        )
+        .route(
             "/v1/actions/migrate_stop/:original_id/:replacement_id",
             post(routes::handlers::post_replace_stop_across_routes),
         )

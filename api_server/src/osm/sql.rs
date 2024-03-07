@@ -189,3 +189,21 @@ WHERE id=$1
 
     Ok(())
 }
+
+pub(crate) async fn fetch_osm_stop_versions(
+    pool: &PgPool,
+) -> Result<HashMap<i64, Vec<i32>>> {
+    Ok(sqlx::query!(
+        r#"
+SELECT id, array_agg(versions->'version')::int[] as "versions!: Vec<i32>"
+FROM osm_stops, jsonb_array_elements(osm_stops.history) as versions
+GROUP BY id
+    "#,
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .into_iter()
+    .map(|r| (r.id, r.versions))
+    .collect())
+}

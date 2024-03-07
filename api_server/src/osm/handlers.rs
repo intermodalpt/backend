@@ -19,6 +19,7 @@
 use axum::extract::{Path, State};
 use axum::Json;
 use itertools::Itertools;
+use std::collections::HashMap;
 
 use commons::models::osm;
 
@@ -114,4 +115,10 @@ pub(crate) async fn delete_osm_stop(
     }
 
     sql::delete_osm_stop(&state.pool, id).await
+}
+
+pub(crate) async fn get_osm_stop_versions(
+    State(state): State<AppState>,
+) -> Result<Json<HashMap<i64, Vec<i32>>>, Error> {
+    Ok(Json(sql::fetch_osm_stop_versions(&state.pool).await?))
 }

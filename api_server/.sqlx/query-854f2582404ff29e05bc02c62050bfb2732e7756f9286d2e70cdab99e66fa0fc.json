@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT id, array_agg(versions->'version')::int[] as \"versions!: Vec<i32>\"\nFROM osm_stops, jsonb_array_elements(osm_stops.history) as versions\nGROUP BY id\n    ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "versions!: Vec<i32>",
+        "type_info": "Int4Array"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      null
+    ]
+  },
+  "hash": "854f2582404ff29e05bc02c62050bfb2732e7756f9286d2e70cdab99e66fa0fc"
+}
