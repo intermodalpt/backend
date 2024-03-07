@@ -35,16 +35,7 @@ pub(crate) async fn get_regions(
 pub(crate) async fn get_operator_regions(
     State(state): State<AppState>,
     Path(operator_id): Path<i32>,
-    claims: Option<auth::Claims>,
 ) -> Result<Json<Vec<i32>>, Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     Ok(Json(
         sql::fetch_operator_regions(&state.pool, operator_id).await?,
     ))
@@ -181,16 +172,7 @@ pub(crate) async fn delete_route_from_region(
 pub(crate) async fn get_stop_regions(
     State(state): State<AppState>,
     Path(stop_id): Path<i32>,
-    claims: Option<auth::Claims>,
 ) -> Result<Json<Vec<i32>>, Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     Ok(Json(sql::fetch_stop_regions(&state.pool, stop_id).await?))
 }
 
