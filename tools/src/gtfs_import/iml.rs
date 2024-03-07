@@ -89,7 +89,7 @@ pub(crate) struct OperatorValidationData {
     pub(crate) gtfs_lints: Vec<gtfs::Lint>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub(crate) struct RouteValidationData {
     pub(crate) validation: gtfs::RouteValidation,
     pub(crate) subroutes: HashMap<i32, gtfs::SubrouteValidation>,
@@ -184,7 +184,8 @@ pub(crate) async fn fetch_iml_stops(
 }
 pub(crate) async fn fetch_iml_routes(
 ) -> Result<Vec<Route>, Box<dyn std::error::Error>> {
-    let url = format!("{}/v1/routes/all", API_URL);
+    let url = format!("{}/v1/regions/1/routes", API_URL);
+    println!("Fetching {}", url);
     let routes = reqwest::get(&url).await?.json().await?;
     Ok(routes)
 }

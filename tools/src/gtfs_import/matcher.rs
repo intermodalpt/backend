@@ -86,7 +86,7 @@ impl From<&GtfsPatternData<'_>> for gtfs_commons::PatternCluster {
     fn from(cluster: &GtfsPatternData<'_>) -> Self {
         gtfs_commons::PatternCluster {
             stops: cluster.stop_ids.iter().cloned().collect(),
-            headsigns: cluster.pattern_ids.iter().cloned().collect(),
+            headsigns: cluster.headsigns.iter().cloned().collect(),
             patterns: cluster.pattern_ids.iter().cloned().collect(),
             trips: cluster.trip_ids.iter().cloned().collect(),
         }
@@ -312,16 +312,16 @@ pub(crate) fn pair_patterns_with_subroutes<'iml, 'gtfs>(
         subroute_stops_len: usize,
         pattern_stops_len: usize,
     ) -> bool {
-        const MIN_STOP_LEN: usize = 5;
+        const MIN_STOP_LEN: usize = 4;
         const MIN_MATCH_RATIO: f32 = 12.0 / 15.0;
         const MAX_MISMATCH_RATIO: f32 = 2.0 / 15.0;
         const MAX_MISMATCHES: usize = 10;
 
-        if subroute_stops_len < MIN_STOP_LEN {
+        if subroute_stops_len < MIN_STOP_LEN || pattern_stops_len < MIN_STOP_LEN
+        {
             return false;
         }
         if pattern_stops_len < MIN_STOP_LEN {
-            eprintln!("Pattern is too short to be  considered a strong match");
             return false;
         }
 
