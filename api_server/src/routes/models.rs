@@ -248,16 +248,17 @@ pub(crate) mod responses {
     pub struct FullSubroute {
         pub(crate) id: i32,
         pub(crate) group: i32,
+
+        // TODO remove flag after transitioned
+        pub(crate) flag: String,
+
         pub(crate) headsign: String,
         pub(crate) origin: String,
         pub(crate) destination: String,
         pub(crate) via: sqlx::types::Json<Vec<routes::SubrouteVia>>,
         pub(crate) circular: bool,
         pub(crate) polyline: Option<String>,
-        pub(crate) validation: sqlx::types::JsonValue,
-
-        // TODO remove flag after transitioned
-        pub(crate) flag: String,
+        pub(crate) validation: Option<sqlx::types::JsonValue>,
     }
 
     #[derive(Serialize, ToSchema)]
@@ -339,7 +340,8 @@ pub(crate) mod responses {
                 .try_decode::<sqlx::types::Json<Vec<routes::SubrouteVia>>>()?;
             let circular = decoder.try_decode::<bool>()?;
             let polyline = decoder.try_decode::<Option<String>>()?;
-            let validation = decoder.try_decode::<sqlx::types::JsonValue>()?;
+            let validation =
+                decoder.try_decode::<Option<sqlx::types::JsonValue>>()?;
             Ok(FullSubroute {
                 id,
                 group,
