@@ -68,7 +68,7 @@ pub(crate) struct XMLTag {
 
 #[derive(Debug)]
 pub(crate) struct OverpassStop {
-    pub id: String,
+    pub id: i64,
     pub lat: f64,
     pub lon: f64,
     pub version: i32,
@@ -84,7 +84,7 @@ impl From<XmlNode> for OverpassStop {
             lat: node.lat.expect("Overpass returned a node without a lat"),
             lon: node.lon.expect("Overpass returned a node without a lon"),
             version: node.version,
-            id: node.id.to_string(),
+            id: node.id,
             user: node.user,
             uid: node.uid,
             attributes: node

@@ -34,7 +34,7 @@ pub(crate) async fn get_osm_stops(
 
 pub(crate) async fn get_osm_stop_history(
     State(state): State<AppState>,
-    Path(id): Path<String>,
+    Path(id): Path<i64>,
 ) -> Result<Json<osm::NodeHistory>, Error> {
     Ok(Json(sql::fetch_osm_stop_history(&state.pool, id).await?))
 }
@@ -102,7 +102,7 @@ pub(crate) async fn patch_osm_stops(
 
 pub(crate) async fn delete_osm_stop(
     State(state): State<AppState>,
-    Path(id): Path<String>,
+    Path(id): Path<i64>,
     claims: Option<auth::Claims>,
 ) -> Result<(), Error> {
     if claims.is_none() {

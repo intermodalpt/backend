@@ -146,7 +146,7 @@ CREATE TABLE stops
 
 CREATE TABLE osm_stops
 (
-    id           text PRIMARY KEY,
+    id           bigint PRIMARY KEY,
     history      jsonb                    NOT NULL,
     -- Cached
     lon          double precision         NOT NULL,

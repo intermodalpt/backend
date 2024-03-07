@@ -16,8 +16,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use std::cmp::Ordering;
 use chrono::{DateTime, Utc};
+use std::cmp::Ordering;
 
 use serde::{Deserialize, Serialize};
 

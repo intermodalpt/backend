@@ -72,7 +72,8 @@ pub(crate) async fn import() -> Result<ImportStats, Box<dyn std::error::Error>>
 
     let mut new_stops = vec![];
 
-    let mut unreturned_ids = stop_versions.keys().collect::<HashSet<&String>>();
+    let mut unreturned_ids =
+        stop_versions.keys().copied().collect::<HashSet<_>>();
     let mut ids_pending_history = vec![];
 
     let mut stats = ImportStats::default();
@@ -140,7 +141,7 @@ pub(crate) async fn import() -> Result<ImportStats, Box<dyn std::error::Error>>
             if overpass_stop.version > *cached_version {
                 if overpass_stop.version == cached_version + 1 {
                     let mut history =
-                        api::fetch_cached_osm_stop_history(&overpass_stop.id)
+                        api::fetch_cached_osm_stop_history(overpass_stop.id)
                             .await?;
 
                     let id = overpass_stop.id.clone();
@@ -174,7 +175,7 @@ pub(crate) async fn import() -> Result<ImportStats, Box<dyn std::error::Error>>
 
     // Update the old stops that need history-queries
     for id in ids_pending_history {
-        let history = api::fetch_osm_node_versions(&id).await.unwrap();
+        let history = api::fetch_osm_node_versions(id).await.unwrap();
 
         api::patch_osm_stops_history(&[api::OsmHistoryPatch { id, history }])
             .await?;
@@ -187,10 +188,10 @@ pub(crate) async fn import() -> Result<ImportStats, Box<dyn std::error::Error>>
 
     // Add the new stops that need history-queries
     for stop in new_stops.iter().filter(|stop| stop.version > 1) {
-        let history = api::fetch_osm_node_versions(&stop.id).await.unwrap();
+        let history = api::fetch_osm_node_versions(stop.id).await.unwrap();
 
         api::patch_osm_stops_history(&[api::OsmHistoryPatch {
-            id: stop.id.clone(),
+            id: stop.id,
             history,
         }])
         .await?;
@@ -227,13 +228,10 @@ pub(crate) async fn import() -> Result<ImportStats, Box<dyn std::error::Error>>
 
     // Update deleted stops
     for id in unreturned_ids {
-        let history = api::fetch_osm_node_versions(&id).await.unwrap();
+        let history = api::fetch_osm_node_versions(id).await.unwrap();
 
-        api::patch_osm_stops_history(&[api::OsmHistoryPatch {
-            id: id.to_string(),
-            history,
-        }])
-        .await?;
+        api::patch_osm_stops_history(&[api::OsmHistoryPatch { id, history }])
+            .await?;
 
         // Sleep for 5s to be respectful of the OSM API
         tokio::time::sleep(std::time::Duration::from_secs(5)).await;

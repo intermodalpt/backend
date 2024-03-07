@@ -27,39 +27,25 @@ use commons::models::osm;
 
 use crate::models;
 
-const API_URL: &str = "https://api.intermodal.pt";
+// const API_URL: &str = "https://api.intermodal.pt";
+const API_URL: &str = "http://localhost:1893";
 
 pub(crate) static TOKEN: OnceCell<&'static str> = OnceCell::new();
 
 #[derive(Deserialize)]
 pub struct OsmStop {
-    pub id: String,
+    pub id: i64,
     pub version: i32,
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct StopOsmMeta {
-    pub external_id: String,
-    pub osm_name: Option<String>,
-    pub osm_lat: Option<f64>,
-    pub osm_lon: Option<f64>,
-    pub osm_author: Option<String>,
-    pub osm_differs: bool,
-    pub osm_sync_time: Option<DateTime<Utc>>,
-    pub osm_version: i32,
-    pub osm_map_quality: Option<bool>,
-    pub osm_history: Option<osm::StoredStopMeta>,
-    pub deleted_upstream: bool,
-}
-
-#[derive(Serialize, Deserialize)]
 pub struct OsmHistoryPatch {
-    pub id: String,
+    pub id: i64,
     pub history: osm::NodeHistory,
 }
 
 pub(crate) async fn fetch_cached_osm_stop_versions(
-) -> Result<HashMap<String, i32>, Box<dyn std::error::Error>> {
+) -> Result<HashMap<i64, i32>, Box<dyn std::error::Error>> {
     let url = format!("{}/v1/osm/stops", API_URL);
     println!("Fetching {}", url);
     let res = reqwest::Client::new()
@@ -82,7 +68,7 @@ pub(crate) async fn fetch_cached_osm_stop_versions(
 }
 
 pub(crate) async fn fetch_cached_osm_stop_history(
-    stop_id: &str,
+    stop_id: i64,
 ) -> Result<osm::NodeHistory, Box<dyn std::error::Error>> {
     let url = format!("{}/v1/osm/stop/{}", API_URL, stop_id);
     println!("Fetching {}", url);
@@ -146,7 +132,7 @@ pub(crate) async fn fetch_osm_stops(
 }
 
 pub(crate) async fn fetch_osm_node_versions(
-    osm_node_id: &str,
+    osm_node_id: i64,
 ) -> Result<Vec<osm::NodeVersion>, Box<dyn std::error::Error>> {
     let osm_query_url = format!(
         "https://www.openstreetmap.org/api/0.6/node/{}/history",

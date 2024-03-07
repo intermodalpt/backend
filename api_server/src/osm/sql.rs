@@ -46,7 +46,7 @@ FROM osm_stops
 
 pub(crate) async fn fetch_osm_stop_history(
     pool: &PgPool,
-    id: String,
+    id: i64,
 ) -> Result<osm::NodeHistory> {
     sqlx::query!(
         r#"
@@ -64,7 +64,7 @@ WHERE id=$1
 
 pub(crate) async fn fetch_osm_stop_histories(
     pool: &PgPool,
-) -> Result<HashMap<String, osm::NodeHistory>> {
+) -> Result<HashMap<i64, osm::NodeHistory>> {
     Ok(sqlx::query!(
         r#"
 SELECT id, history as "history!: Json<osm::NodeHistory>"
@@ -163,7 +163,7 @@ pub(crate) async fn upsert_osm_stops(
             creation = EXCLUDED.creation,
             modification = EXCLUDED.modification,
             version = EXCLUDED.version,
-            deleted = EXCLUDED.deleted"
+            deleted = EXCLUDED.deleted",
     );
 
     let query = qb.build();
@@ -175,7 +175,7 @@ pub(crate) async fn upsert_osm_stops(
     Ok(())
 }
 
-pub(crate) async fn delete_osm_stop(pool: &PgPool, id: String) -> Result<()> {
+pub(crate) async fn delete_osm_stop(pool: &PgPool, id: i64) -> Result<()> {
     sqlx::query!(
         r#"
 DELETE FROM osm_stops
