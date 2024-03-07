@@ -368,6 +368,7 @@ pub(crate) async fn upload_pano_picture(
     let inserted_pic =
         sql::insert_pano(&mut transaction, stop_pic_entry).await?;
 
+    // TODO log
     /*contrib::sql::insert_changeset_log(
         &mut *transaction,
         claims.uid,

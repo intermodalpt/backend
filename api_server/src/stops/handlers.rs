@@ -23,8 +23,8 @@ use axum::Json;
 
 use commons::models::{history, routes, stops};
 
-use super::{models, sql};
-use crate::stops::models::{requests, responses};
+use super::sql;
+use super::models::{requests, responses};
 use crate::{auth, contrib, AppState, Error};
 
 pub(crate) async fn get_stops(
