@@ -132,7 +132,7 @@ pub(crate) async fn fetch_osm_stops(
 }
 
 pub(crate) async fn fetch_osm_node_versions(
-    osm_node_id: i64,
+    osm_node_id: &str,
 ) -> Result<Vec<osm::NodeVersion>, Box<dyn std::error::Error>> {
     let osm_query_url = format!(
         "https://www.openstreetmap.org/api/0.6/node/{}/history",
