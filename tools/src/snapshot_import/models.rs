@@ -16,8 +16,11 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+use chrono::{DateTime, Utc};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
+
+use commons::models::osm;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub(crate) struct XmlOsm {
@@ -50,7 +53,8 @@ pub(crate) struct XmlNode {
     pub(crate) lat: Option<f64>,
     pub(crate) version: i32,
     pub(crate) user: String,
-    pub(crate) uid: String,
+    pub(crate) uid: i32,
+    pub(crate) timestamp: DateTime<Utc>,
     #[serde(rename = "$value", default)]
     pub(crate) tags: Vec<XMLTag>,
 }
@@ -62,30 +66,21 @@ pub(crate) struct XMLTag {
     pub(crate) v: String,
 }
 
+#[derive(Debug)]
 pub(crate) struct OverpassStop {
     pub id: String,
-    pub name: Option<String>,
     pub lat: f64,
     pub lon: f64,
     pub version: i32,
-    pub uid: String,
+    pub uid: i32,
     pub user: String,
     pub attributes: Vec<(String, String)>,
+    pub timestamp: DateTime<Utc>,
 }
 
 impl From<XmlNode> for OverpassStop {
     fn from(node: XmlNode) -> Self {
-        let mut name = None;
-
-        for tag in &node.tags {
-            match tag.k.as_str() {
-                "name" => name = Some(tag.v.to_string()),
-                _ => {}
-            }
-        }
-
         Self {
-            name,
             lat: node.lat.expect("Overpass returned a node without a lat"),
             lon: node.lon.expect("Overpass returned a node without a lon"),
             version: node.version,
@@ -97,6 +92,21 @@ impl From<XmlNode> for OverpassStop {
                 .into_iter()
                 .map(|tag| (tag.k, tag.v))
                 .collect_vec(),
+            timestamp: node.timestamp,
+        }
+    }
+}
+impl From<OverpassStop> for osm::NodeVersion {
+    fn from(overpass_stop: OverpassStop) -> Self {
+        osm::NodeVersion {
+            version: overpass_stop.version,
+            author: overpass_stop.uid,
+            author_uname: overpass_stop.user,
+            lat: overpass_stop.lat,
+            lon: overpass_stop.lon,
+            attributes: overpass_stop.attributes,
+            timestamp: overpass_stop.timestamp,
+            deleted: false,
         }
     }
 }

@@ -456,7 +456,7 @@ mod test {
     fn serialize_deserialize_stop() {
         let stop = Stop {
             id: 1,
-            name: Some("Test".to_string()),
+            name: "Test".to_string(),
             short_name: None,
             locality: None,
             street: None,

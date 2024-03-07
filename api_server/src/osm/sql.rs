@@ -19,6 +19,7 @@
 use sqlx::types::Json;
 use sqlx::{PgPool, QueryBuilder};
 use std::borrow::Cow;
+use std::collections::HashMap;
 
 use commons::models::osm;
 
@@ -59,6 +60,23 @@ WHERE id=$1
     .await
     .map(|r| r.history.0)
     .map_err(|err| Error::DatabaseExecution(err.to_string()))
+}
+
+pub(crate) async fn fetch_osm_stop_histories(
+    pool: &PgPool,
+) -> Result<HashMap<String, osm::NodeHistory>> {
+    Ok(sqlx::query!(
+        r#"
+SELECT id, history as "history!: Json<osm::NodeHistory>"
+FROM osm_stops
+    "#,
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .into_iter()
+    .map(|r| (r.id, r.history.0))
+    .collect())
 }
 
 pub(crate) async fn upsert_osm_stops(
@@ -145,7 +163,7 @@ pub(crate) async fn upsert_osm_stops(
             creation = EXCLUDED.creation,
             modification = EXCLUDED.modification,
             version = EXCLUDED.version,
-            deleted = EXCLUDED.deleted",
+            deleted = EXCLUDED.deleted"
     );
 
     let query = qb.build();

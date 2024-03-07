@@ -44,7 +44,7 @@ pub type NodeHistory = Vec<NodeVersion>;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NodeVersion {
     pub version: i32,
-    pub author: i64,
+    pub author: i32,
     pub author_uname: String,
     pub lat: f64,
     pub lon: f64,
