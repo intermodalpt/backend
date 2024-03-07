@@ -346,7 +346,7 @@ pub fn build_paths(state: AppState) -> Router {
         )
         .route(
             "/v1/operators/:operator_id/routes/full",
-            get(routes::handlers::get_operator_routes),
+            get(routes::handlers::get_operator_full_routes),
         )
         .route(
             "/v1/operators/:operator_id/routes/types",
