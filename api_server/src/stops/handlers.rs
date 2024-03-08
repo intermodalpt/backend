@@ -208,3 +208,16 @@ pub(crate) async fn get_stops_spider(
 ) -> Result<Json<responses::SpiderMap>, Error> {
     Ok(Json(sql::fetch_stop_spider(&state.pool, &stops).await?))
 }
+
+pub(crate) async fn get_osm_paired_stop(
+    State(state): State<AppState>,
+    Path(osm_id): Path<i64>,
+) -> Result<Json<responses::SimpleStop>, Error> {
+    let stop = sql::fetch_paired_stop(&state.pool, osm_id).await?;
+
+    if let Some(stop) = stop {
+        Ok(Json(stop))
+    } else {
+        Err(Error::NotFoundUpstream)
+    }
+}

@@ -47,6 +47,22 @@ WHERE id = $1"#,
     .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
+pub(crate) async fn fetch_paired_stop(
+    pool: &PgPool,
+    osm_id: i64,
+) -> Result<Option<responses::SimpleStop>> {
+    sqlx::query_as!(
+        responses::SimpleStop,
+        r#"SELECT id, name, short_name, lat, lon
+FROM Stops
+WHERE osm_id = $1"#,
+        osm_id
+    )
+    .fetch_optional(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+}
+
 pub(crate) async fn fetch_simple_stops(
     pool: &PgPool,
     region_id: i32,

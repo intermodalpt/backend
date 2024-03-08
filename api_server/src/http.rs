@@ -405,6 +405,10 @@ pub fn build_paths(state: AppState) -> Router {
                 .delete(osm::handlers::delete_osm_stop),
         )
         .route(
+            "/v1/osm/stops/:id/paired",
+            get(stops::handlers::get_osm_paired_stop),
+        )
+        .route(
             "/v1/osm/stops/versions",
             get(osm::handlers::get_osm_stop_versions),
         )
