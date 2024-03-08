@@ -25,13 +25,6 @@ use super::models::{requests, responses};
 use super::sql;
 use crate::{auth, contrib, AppState, Error};
 
-#[utoipa::path(
-    get,
-    path = "/v1/routes",
-    responses(
-        (status = 200, description = "List of routes", body = [Route]),
-    )
-)]
 pub(crate) async fn get_routes(
     State(state): State<AppState>,
     Path(region_id): Path<i32>,
@@ -521,27 +514,6 @@ pub(crate) async fn delete_subroute_departure(
     Ok(())
 }
 
-#[utoipa::path(
-    get,
-    path = "/v1/routes/{route_id}/stops",
-    params(
-        (
-            "route_id",
-            Path,
-            description = "Route identifier"
-        ),
-    ),
-    responses(
-        (
-            status = 200,
-            description = "Stops a route makes along its subroutes",
-        ),
-        (
-            status = 404,
-            description = "Route does not exist"
-        ),
-    )
-)]
 pub(crate) async fn get_route_stops(
     State(state): State<AppState>,
     Path(route_id): Path<i32>,
@@ -587,28 +559,6 @@ pub(crate) async fn patch_subroute_stops(
     Ok(())
 }
 
-#[utoipa::path(
-    get,
-    path = "/v1/routes/{route_id}/schedule",
-    params(
-        (
-            "route_id",
-            Path,
-            description = "Route identifier"
-        ),
-    ),
-    responses(
-        (
-            status = 200,
-            description = "Route schedule",
-            body = [Departure]
-        ),
-        (
-            status = 404,
-            description = "Route does not exist"
-        ),
-    )
-)]
 pub(crate) async fn get_schedule(
     State(state): State<AppState>,
     Path(route_id): Path<i32>,

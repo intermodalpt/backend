@@ -18,11 +18,10 @@
 
 pub(crate) mod requests {
     use serde::Deserialize;
-    use utoipa::ToSchema;
 
     use commons::models::{history::pics as history, pics};
 
-    #[derive(Debug, Deserialize, ToSchema)]
+    #[derive(Debug, Deserialize)]
     pub struct ChangeStopPic {
         pub public: bool,
         pub sensitive: bool,
@@ -74,7 +73,6 @@ pub(crate) mod requests {
 pub(crate) mod responses {
     use chrono::{DateTime, NaiveDateTime, Utc};
     use serde::Serialize;
-    use utoipa::ToSchema;
 
     use commons::models::pics;
 
@@ -82,7 +80,7 @@ pub(crate) mod responses {
         get_full_path, get_medium_path, get_original_path, get_thumb_path,
     };
 
-    #[derive(Debug, Serialize, ToSchema)]
+    #[derive(Debug, Serialize)]
     pub struct MinimalPic {
         pub id: i32,
         pub url_full: String,
@@ -90,7 +88,7 @@ pub(crate) mod responses {
         pub url_thumb: String,
     }
 
-    #[derive(Debug, Serialize, ToSchema)]
+    #[derive(Debug, Serialize)]
     pub struct PublicStopPic {
         pub id: i32,
         // TODO deprecate
@@ -124,7 +122,7 @@ pub(crate) mod responses {
         }
     }
 
-    #[derive(Debug, Serialize, ToSchema)]
+    #[derive(Debug, Serialize)]
     pub struct PicWithStops {
         pub id: i32,
         pub original_filename: String,
@@ -183,7 +181,7 @@ pub(crate) mod responses {
         }
     }
 
-    #[derive(Debug, Serialize, ToSchema)]
+    #[derive(Debug, Serialize)]
     pub struct UntaggedStopPic {
         pub id: i32,
         pub original_filename: String,
@@ -206,7 +204,7 @@ pub(crate) mod responses {
         pub url_thumb: String,
     }
 
-    #[derive(Debug, Serialize, ToSchema)]
+    #[derive(Debug, Serialize)]
     pub struct MinimalPicWithStops {
         pub id: i32,
         pub public: bool,
@@ -218,7 +216,7 @@ pub(crate) mod responses {
         pub tagged: bool,
     }
 
-    #[derive(Debug, Clone, Serialize, ToSchema)]
+    #[derive(Debug, Clone, Serialize)]
     pub struct FullPanoPic {
         pub id: i32,
         pub original_filename: String,
@@ -232,7 +230,7 @@ pub(crate) mod responses {
         pub sensitive: bool,
     }
 
-    #[derive(Debug, Clone, Serialize, ToSchema)]
+    #[derive(Debug, Clone, Serialize)]
     pub struct PanoPic {
         pub id: i32,
         pub sha1: String,
@@ -242,7 +240,7 @@ pub(crate) mod responses {
         pub capture_date: Option<NaiveDateTime>,
     }
 
-    #[derive(Debug, Serialize, ToSchema)]
+    #[derive(Debug, Serialize)]
     pub struct PanoOnion {
         pub predecessors: Vec<MinimalPicWithStops>,
         pub successors: Vec<MinimalPicWithStops>,

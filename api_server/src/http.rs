@@ -23,8 +23,6 @@ use axum::Router;
 use axum_client_ip::SecureClientIpSource;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::limit::RequestBodyLimitLayer;
-use utoipa::OpenApi;
-use utoipa_swagger_ui::SwaggerUi;
 
 use crate::state::AppState;
 use crate::{
@@ -47,10 +45,6 @@ pub fn build_paths(state: AppState) -> Router {
         .allow_origin(Any);
 
     Router::new()
-        .merge(
-            SwaggerUi::new("/docs")
-                .url("/api-doc/openapi.json", ApiDoc::openapi()),
-        )
         .route("/v1/regions", get(geo::handlers::get_regions))
         .route(
             "/v1/regions/:region_id/parishes",
@@ -441,7 +435,3 @@ pub fn build_paths(state: AppState) -> Router {
         .layer(SecureClientIpSource::ConnectInfo.into_extension())
         .layer(cors)
 }
-
-#[derive(OpenApi)]
-#[openapi(paths(), components(schemas()), tags())]
-struct ApiDoc;

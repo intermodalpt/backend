@@ -22,7 +22,6 @@ use chrono::{Datelike, NaiveDate};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
-use utoipa::ToSchema;
 
 use crate::utils::calendar::within_dates;
 
@@ -73,17 +72,9 @@ pub static SCHOOL_PERIODS: [[(u8, u8); 2]; 3] = [
 ];
 
 #[derive(
-    Serialize_repr,
-    Deserialize_repr,
-    PartialEq,
-    Eq,
-    Clone,
-    Copy,
-    Debug,
-    ToSchema,
+    Serialize_repr, Deserialize_repr, PartialEq, Eq, Clone, Copy, Debug,
 )]
 #[repr(u8)]
-#[schema(example = 4)]
 pub enum Weekday {
     Monday = 0,
     Tuesday = 1,
@@ -123,7 +114,7 @@ impl From<u8> for Weekday {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Calendar {
     pub weekdays: Vec<Weekday>,
     pub only_if: Vec<Condition>,
@@ -290,8 +281,6 @@ impl fmt::Display for Calendar {
     }
 }
 
-// https://github.com/juhaku/utoipa/issues/176
-// #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "condition")]
 pub enum Condition {

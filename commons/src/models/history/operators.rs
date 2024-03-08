@@ -19,20 +19,19 @@
 use chrono::{DateTime, Local};
 use serde::{Deserialize, Serialize};
 use serde_repr::Serialize_repr;
-use utoipa::ToSchema;
 
 use super::calendar::Calendar;
 use crate::errors::Error;
 use crate::models::operators as current;
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Serialize)]
 pub struct Operator {
     pub id: i32,
     pub name: String,
     pub tag: String,
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Serialize)]
 pub struct OperatorCalendar {
     pub id: i32,
     pub operator: i32,
@@ -40,7 +39,7 @@ pub struct OperatorCalendar {
     pub calendar: Calendar,
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Serialize)]
 pub struct OperatorVehicle {
     pub id: i32,
     pub name: String,
@@ -56,7 +55,7 @@ pub struct OperatorVehicle {
     // TODO complete
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Serialize)]
 pub struct Reseller {
     pub id: i32,
     pub name: String,

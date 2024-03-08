@@ -21,12 +21,11 @@ use std::fmt;
 use chrono::{DateTime, Local};
 use serde::{Deserialize, Serialize};
 use serde_repr::Serialize_repr;
-use utoipa::ToSchema;
 
 use super::calendar::Calendar;
 use super::gtfs;
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Serialize)]
 pub struct Operator {
     pub id: i32,
     pub name: String,
@@ -35,7 +34,7 @@ pub struct Operator {
     pub validation: Option<gtfs::OperatorValidation>,
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Serialize)]
 pub struct OperatorCalendar {
     pub id: i32,
     pub operator: i32,
@@ -43,7 +42,7 @@ pub struct OperatorCalendar {
     pub calendar: Calendar,
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Serialize)]
 pub struct OperatorVehicle {
     pub id: i32,
     pub name: String,
@@ -59,7 +58,7 @@ pub struct OperatorVehicle {
     // TODO complete
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Serialize)]
 pub struct Reseller {
     pub id: i32,
     pub name: String,
@@ -201,7 +200,7 @@ pub struct TicketComment {
     pub user_id: i32,
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Serialize)]
 pub struct NewsItem {
     pub id: i32,
     pub operator_id: Option<i32>,

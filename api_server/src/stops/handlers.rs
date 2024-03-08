@@ -65,13 +65,6 @@ pub(crate) async fn get_all_stops(
     Ok(Json(sql::fetch_all_detailed_stops(&state.pool).await?))
 }
 
-#[utoipa::path(
-    get,
-    path = "/v1/stop/{id}",
-    responses(
-        (status = 200, description = "Stop information", body = Stop)
-    )
-)]
 pub(crate) async fn get_stop(
     State(state): State<AppState>,
     Path(stop_id): Path<i32>,
@@ -202,7 +195,6 @@ pub(crate) async fn get_stop_routes(
     Ok(Json(sql::fetch_stop_routes(&state.pool, stop_id).await?))
 }
 
-#[utoipa::path(get, path = "/v1/stops/{stop_id}/spider")]
 pub(crate) async fn get_stop_spider(
     State(state): State<AppState>,
     Path(stop_id): Path<i32>,

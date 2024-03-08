@@ -19,7 +19,6 @@
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
-use utoipa::ToSchema;
 
 #[repr(u8)]
 #[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug, Clone, Copy)]
@@ -74,24 +73,17 @@ pub enum AreaParkingLimitation {
     High = 6,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Stop {
     pub id: i32,
-    #[schema(example = "Setúbal (ITS)")]
     pub name: String,
-    #[schema(example = "Setúbal")]
     pub short_name: Option<String>,
-    #[schema(example = "Bairro das bairradas")]
     pub locality: Option<String>,
-    #[schema(example = "Rua do Não Sei Decor")]
     pub street: Option<String>,
-    #[schema(example = "123-A")]
     pub door: Option<String>,
     pub parish: Option<i32>,
-    #[schema(example = 38.123_456)]
     #[serde(default)]
     pub lat: f64,
-    #[schema(example = -9.654_321)]
     #[serde(default)]
     pub lon: f64,
     #[serde(default)]
@@ -119,9 +111,7 @@ impl Stop {
     }
 }
 
-#[derive(
-    Debug, Clone, Serialize, Deserialize, ToSchema, Default, PartialEq,
-)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
 pub struct A11yMeta {
     #[serde(default)]
     pub schedules: Option<Vec<Schedule>>,
@@ -186,16 +176,14 @@ pub struct A11yMeta {
     pub tmp_issues: Vec<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Flag {
     pub id: String,
     pub name: Option<String>,
     pub route_codes: Vec<String>,
 }
 
-#[derive(
-    Debug, Clone, Copy, Serialize, Deserialize, ToSchema, PartialEq, Eq, Hash,
-)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "snake_case")]
 pub enum ScheduleType {
     Origin,
@@ -203,7 +191,7 @@ pub enum ScheduleType {
     Frequency,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Schedule {
     pub code: Option<String>,
     pub discriminator: Option<String>,

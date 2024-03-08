@@ -19,11 +19,10 @@
 pub(crate) mod requests {
     use serde::Deserialize;
     use std::collections::HashMap;
-    use utoipa::ToSchema;
 
     use commons::models::{history, routes};
 
-    #[derive(Debug, Deserialize, ToSchema)]
+    #[derive(Debug, Deserialize)]
     pub struct ChangeRoute {
         pub code: Option<String>,
         pub name: String,
@@ -81,7 +80,7 @@ pub(crate) mod requests {
         }
     }
 
-    #[derive(Debug, Deserialize, ToSchema)]
+    #[derive(Debug, Deserialize)]
     pub struct ChangeSubroute {
         pub group: i32,
         pub origin: String,
@@ -139,18 +138,18 @@ pub(crate) mod requests {
         }
     }
 
-    #[derive(Deserialize, ToSchema)]
+    #[derive(Deserialize)]
     pub struct SubrouteStops {
         pub stops: Vec<i32>,
     }
 
-    #[derive(Deserialize, ToSchema)]
+    #[derive(Deserialize)]
     pub struct ChangeSubrouteStops {
         pub from: SubrouteStops,
         pub to: SubrouteStops,
     }
 
-    #[derive(Debug, Deserialize, ToSchema)]
+    #[derive(Debug, Deserialize)]
     pub struct ChangeDeparture {
         pub time: i16,
         pub calendar_id: i32,
@@ -181,20 +180,17 @@ pub(crate) mod requests {
 
 pub(crate) mod responses {
     use serde::Serialize;
-    use utoipa::ToSchema;
 
     use commons::models::routes;
 
     /// This is an extension of `commons::Route` that includes parishes
-    #[derive(Serialize, ToSchema)]
+    #[derive(Serialize)]
     pub struct Route {
         pub(crate) id: i32,
         pub(crate) type_id: i32,
         pub(crate) operator: i32,
-        #[schema(example = "Azeitão (Circular)")]
         pub(crate) code: Option<String>,
         pub(crate) name: String,
-        #[schema(example = true)]
         pub(crate) circular: bool,
         pub(crate) badge_text: String,
         pub(crate) badge_bg: String,
@@ -205,7 +201,7 @@ pub(crate) mod responses {
         pub(crate) main_subroute: Option<i32>,
     }
 
-    #[derive(Debug, Serialize, ToSchema)]
+    #[derive(Debug, Serialize)]
     pub struct Subroute {
         pub(crate) id: i32,
         pub(crate) group: i32,
@@ -261,24 +257,22 @@ pub(crate) mod responses {
         pub(crate) validation: Option<sqlx::types::JsonValue>,
     }
 
-    #[derive(Serialize, ToSchema)]
+    #[derive(Serialize)]
     pub struct Departure {
         pub id: i32,
         pub subroute: i32,
         // Departure time in minutes starting at midnight
-        #[schema(example = 480)]
         pub time: i16,
         pub calendar_id: i32,
     }
 
-    #[derive(Serialize, ToSchema)]
+    #[derive(Serialize)]
     pub struct DateDeparture {
         pub subroute: i32,
-        #[schema(example = 480)]
         pub time: i16,
     }
 
-    #[derive(Serialize, ToSchema)]
+    #[derive(Serialize)]
     pub struct SubrouteStops {
         pub subroute: i32,
         pub stops: Vec<i32>,

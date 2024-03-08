@@ -19,11 +19,10 @@
 pub(crate) mod requests {
     use chrono::NaiveDate;
     use serde::Deserialize;
-    use utoipa::ToSchema;
 
     use commons::models::{history, stops};
 
-    #[derive(Deserialize, ToSchema)]
+    #[derive(Deserialize)]
     pub struct NewStop {
         pub lon: f64,
         pub lat: f64,
@@ -49,7 +48,7 @@ pub(crate) mod requests {
         pub infrastructure_check_date: Option<NaiveDate>,
     }
 
-    #[derive(Clone, Deserialize, ToSchema)]
+    #[derive(Clone, Deserialize)]
     pub struct ChangeStop {
         pub lon: f64,
         pub lat: f64,
@@ -268,7 +267,6 @@ pub(crate) mod responses {
     use chrono::{DateTime, NaiveDate, Utc};
     use serde::{Deserialize, Serialize};
     use std::collections::HashMap;
-    use utoipa::ToSchema;
 
     use commons::models::stops;
 
@@ -355,28 +353,28 @@ pub(crate) mod responses {
         pub update_date: DateTime<Utc>,
     }
 
-    #[derive(Serialize, ToSchema)]
+    #[derive(Serialize)]
     pub struct SpiderRoute {
         pub code: Option<String>,
         pub name: String,
         pub circular: bool,
     }
 
-    #[derive(Serialize, ToSchema)]
+    #[derive(Serialize)]
     pub struct SpiderSubroute {
         pub route: i32,
         pub flag: String,
         pub stop_sequence: Vec<i32>,
     }
 
-    #[derive(Serialize, ToSchema)]
+    #[derive(Serialize)]
     pub struct SpiderStop {
         pub name: String,
         pub lat: f64,
         pub lon: f64,
     }
 
-    #[derive(Serialize, ToSchema)]
+    #[derive(Serialize)]
     pub struct SpiderMap {
         pub routes: HashMap<i32, SpiderRoute>,
         pub subroutes: HashMap<i32, SpiderSubroute>,

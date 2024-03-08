@@ -17,24 +17,20 @@
 */
 
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 
-#[derive(Serialize, ToSchema)]
+#[derive(Serialize)]
 pub struct Region {
     pub id: i32,
     pub name: String,
     pub geometry: serde_json::Value,
 }
 
-#[derive(Serialize, ToSchema)]
+#[derive(Serialize, Deserialize)]
 pub struct Parish {
     pub id: i32,
-    #[schema(example = "Quinta do Conde")]
     pub name: String,
     pub short_name: String,
-    #[schema(example = "Sesimbra")]
     pub municipality: String,
-    #[schema(example = 3)]
     pub zone: i32,
     // TODO deprecate
     pub polygon: Option<String>,

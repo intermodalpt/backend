@@ -17,9 +17,8 @@
 */
 
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 
-#[derive(Serialize, Deserialize, ToSchema)]
+#[derive(Serialize, Deserialize)]
 pub struct Operator {
     pub id: i32,
     pub name: String,
@@ -31,12 +30,11 @@ pub(crate) mod responses {
     use chrono::{DateTime, Local};
     use serde::{Deserialize, Serialize};
     use sqlx::types::JsonValue;
-    use utoipa::ToSchema;
 
     use commons::models::calendar::Calendar;
     use commons::models::operators;
 
-    #[derive(Serialize, Deserialize, ToSchema)]
+    #[derive(Serialize, Deserialize)]
     pub struct Operator {
         pub id: i32,
         pub name: String,
@@ -45,7 +43,7 @@ pub(crate) mod responses {
         pub logo_url: Option<String>,
     }
 
-    #[derive(Serialize, Deserialize, ToSchema)]
+    #[derive(Serialize, Deserialize)]
     pub struct OperatorWithRegions {
         pub id: i32,
         pub name: String,
@@ -55,7 +53,7 @@ pub(crate) mod responses {
         pub regions: Vec<i32>,
     }
 
-    #[derive(Serialize, ToSchema)]
+    #[derive(Serialize)]
     pub struct OperatorStop {
         pub id: i32,
         pub official_name: Option<String>,
@@ -66,7 +64,7 @@ pub(crate) mod responses {
         pub lon: Option<f64>,
     }
 
-    #[derive(Debug, Serialize, ToSchema)]
+    #[derive(Debug, Serialize)]
     pub struct OperatorRouteType {
         pub id: i32,
         pub name: Option<String>,
@@ -77,7 +75,7 @@ pub(crate) mod responses {
         pub badge_bg_color: String,
     }
 
-    #[derive(Debug, Serialize, ToSchema)]
+    #[derive(Debug, Serialize)]
     pub struct OperatorCalendar {
         pub id: i32,
         pub name: String,
@@ -85,7 +83,7 @@ pub(crate) mod responses {
         pub operator_id: i32,
     }
 
-    #[derive(Debug, Serialize, ToSchema)]
+    #[derive(Debug, Serialize)]
     pub struct OperatorNewsItem {
         pub id: i32,
         pub summary: String,
@@ -95,7 +93,7 @@ pub(crate) mod responses {
         pub visible: bool,
     }
 
-    #[derive(Debug, Serialize, ToSchema)]
+    #[derive(Debug, Serialize)]
     pub struct Issue {
         pub id: i32,
         pub title: String,
@@ -113,7 +111,7 @@ pub(crate) mod responses {
         pub stop_ids: Vec<i32>,
     }
 
-    #[derive(Debug, Serialize, ToSchema)]
+    #[derive(Debug, Serialize)]
     pub struct Abnormally {
         pub id: i32,
         pub summary: String,
@@ -132,13 +130,12 @@ pub(crate) mod requests {
     use chrono::{DateTime, Local};
     use serde::Deserialize;
     use sqlx::types::JsonValue;
-    use utoipa::ToSchema;
 
     use commons::models::calendar::Calendar;
     use commons::models::history;
     use commons::models::operators;
 
-    #[derive(Debug, Deserialize, ToSchema)]
+    #[derive(Debug, Deserialize)]
     pub struct ChangeOperator {
         pub name: String,
         pub tag: String,
@@ -149,7 +146,7 @@ pub(crate) mod requests {
         "unknown".to_string()
     }
 
-    #[derive(Debug, Deserialize, ToSchema)]
+    #[derive(Debug, Deserialize)]
     pub struct ChangeOperatorStop {
         pub official_name: Option<String>,
         pub stop_ref: Option<String>,
@@ -157,7 +154,7 @@ pub(crate) mod requests {
         pub source: String,
     }
 
-    #[derive(Debug, Deserialize, ToSchema)]
+    #[derive(Debug, Deserialize)]
     pub struct ChangeOperatorRouteType {
         pub name: Option<String>,
         pub zapping_cost: i32,
@@ -167,13 +164,13 @@ pub(crate) mod requests {
         pub badge_bg_color: String,
     }
 
-    #[derive(Debug, Deserialize, ToSchema)]
+    #[derive(Debug, Deserialize)]
     pub struct NewOperatorCalendar {
         pub name: String,
         pub calendar: Calendar,
     }
 
-    #[derive(Debug, Deserialize, ToSchema)]
+    #[derive(Debug, Deserialize)]
     pub struct NewIssue {
         pub title: String,
         pub message: String,
@@ -210,7 +207,7 @@ pub(crate) mod requests {
         }
     }
 
-    #[derive(Debug, Deserialize, ToSchema)]
+    #[derive(Debug, Deserialize)]
     pub struct ChangeIssue {
         pub title: String,
         pub message: String,
@@ -279,7 +276,7 @@ pub(crate) mod requests {
         }
     }
 
-    #[derive(Debug, Deserialize, ToSchema)]
+    #[derive(Debug, Deserialize)]
     pub struct NewAbnormally {
         pub summary: String,
         pub message: String,
@@ -291,7 +288,7 @@ pub(crate) mod requests {
         pub stop_ids: Vec<i32>,
     }
 
-    #[derive(Debug, Deserialize, ToSchema)]
+    #[derive(Debug, Deserialize)]
     pub struct ChangeAbnormally {
         pub summary: String,
         pub message: String,
