@@ -221,3 +221,13 @@ pub(crate) async fn get_osm_paired_stop(
         Err(Error::NotFoundUpstream)
     }
 }
+
+pub(crate) async fn get_stop_by_operator_ref(
+    State(state): State<AppState>,
+    Path((operator_id, stop_ref)): Path<(i32, String)>,
+) -> Result<Json<Vec<responses::SimpleStop>>, Error> {
+    Ok(Json(
+        sql::fetch_stops_by_operator_ref(&state.pool, operator_id, &stop_ref)
+            .await?,
+    ))
+}

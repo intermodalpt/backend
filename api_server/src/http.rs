@@ -356,6 +356,10 @@ pub fn build_paths(state: AppState) -> Router {
             get(operators::handlers::get_operator_stops),
         )
         .route(
+            "/v1/operators/:operator_id/stop_by_ref/:stop_ref",
+            get(stops::handlers::get_stop_by_operator_ref),
+        )
+        .route(
             "/v1/operators/:operator_id/stops/:stop_id",
             put(operators::handlers::put_operator_stop)
                 .delete(operators::handlers::delete_operator_stop),

@@ -63,6 +63,25 @@ WHERE osm_id = $1"#,
     .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
+pub(crate) async fn fetch_stops_by_operator_ref(
+    pool: &PgPool,
+    operator_id: i32,
+    stop_ref: &str,
+) -> Result<Vec<responses::SimpleStop>> {
+    sqlx::query_as!(
+        responses::SimpleStop,
+        r#"SELECT id, name, short_name, lat, lon
+FROM stops
+JOIN stop_operators ON stops.id = stop_operators.stop_id
+WHERE stop_operators.operator_id= $1 AND stop_operators.stop_ref = $2"#,
+        operator_id,
+        stop_ref
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+}
+
 pub(crate) async fn fetch_simple_stops(
     pool: &PgPool,
     region_id: i32,
