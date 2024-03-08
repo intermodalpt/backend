@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT id, name, short_name, locality, street, door, lat, lon, external_id, notes, updater, update_date,\n    parish, tags, accessibility_meta as \"a11y!: sqlx::types::Json<stops::A11yMeta>\",\n    verification_level, service_check_date, infrastructure_check_date, verified_position,\n    CASE\n        WHEN count(stop_operators.stop_id) > 0\n        THEN array_agg(\n            ROW(stop_operators.operator_id, stop_operators.stop_ref, stop_operators.official_name,\n                stop_operators.source))\n        ELSE array[]::record[]\n    END as \"operators!: Vec<responses::OperatorStop>\"\nFROM Stops\nLEFT JOIN stop_operators ON stops.id = stop_operators.stop_id\nWHERE id IN (\n    SELECT stop_id\n    FROM region_stops\n    WHERE region_id = $1\n)\nGROUP BY stops.id\n        ",
+  "query": "SELECT id, name, short_name, locality, street, door, lat, lon, notes, parish,\n    tags, updater, update_date, verification_level,\n    service_check_date, infrastructure_check_date, verified_position,\n    accessibility_meta as \"a11y!: sqlx::types::Json<stops::A11yMeta>\", osm_id,\n    CASE\n        WHEN count(stop_operators.stop_id) > 0\n        THEN array_agg(\n            ROW(stop_operators.operator_id, stop_operators.stop_ref, stop_operators.official_name,\n                stop_operators.source))\n        ELSE array[]::record[]\n    END as \"operators!: Vec<responses::OperatorStop>\"\nFROM Stops\nLEFT JOIN stop_operators ON stops.id = stop_operators.stop_id\nWHERE id IN (\n    SELECT stop_id\n    FROM region_stops\n    WHERE region_id = $1\n)\nGROUP BY stops.id\n        ",
   "describe": {
     "columns": [
       {
@@ -45,58 +45,58 @@
       },
       {
         "ordinal": 8,
-        "name": "external_id",
-        "type_info": "Text"
-      },
-      {
-        "ordinal": 9,
         "name": "notes",
         "type_info": "Text"
       },
       {
-        "ordinal": 10,
-        "name": "updater",
-        "type_info": "Int4"
-      },
-      {
-        "ordinal": 11,
-        "name": "update_date",
-        "type_info": "Timestamptz"
-      },
-      {
-        "ordinal": 12,
+        "ordinal": 9,
         "name": "parish",
         "type_info": "Int4"
       },
       {
-        "ordinal": 13,
+        "ordinal": 10,
         "name": "tags",
         "type_info": "TextArray"
       },
       {
-        "ordinal": 14,
-        "name": "a11y!: sqlx::types::Json<stops::A11yMeta>",
-        "type_info": "Jsonb"
+        "ordinal": 11,
+        "name": "updater",
+        "type_info": "Int4"
       },
       {
-        "ordinal": 15,
+        "ordinal": 12,
+        "name": "update_date",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 13,
         "name": "verification_level",
         "type_info": "Int2"
       },
       {
-        "ordinal": 16,
+        "ordinal": 14,
         "name": "service_check_date",
         "type_info": "Date"
       },
       {
-        "ordinal": 17,
+        "ordinal": 15,
         "name": "infrastructure_check_date",
         "type_info": "Date"
       },
       {
-        "ordinal": 18,
+        "ordinal": 16,
         "name": "verified_position",
         "type_info": "Bool"
+      },
+      {
+        "ordinal": 17,
+        "name": "a11y!: sqlx::types::Json<stops::A11yMeta>",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 18,
+        "name": "osm_id",
+        "type_info": "Int8"
       },
       {
         "ordinal": 19,
@@ -118,19 +118,19 @@
       true,
       false,
       false,
-      false,
+      true,
       true,
       false,
-      false,
-      true,
       false,
       false,
       false,
       true,
       true,
+      false,
+      false,
       false,
       null
     ]
   },
-  "hash": "2bfad1f6dd449aabfa24cc691d39b52aacad3daa3b1172e2341936033b5981c9"
+  "hash": "9f20836c4204a9bb1754b3029062b3a709a304135b63b2f04670410412595d6f"
 }

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, name, short_name, locality, street, door, lat, lon, external_id, notes, parish, tags,\n    accessibility_meta as \"a11y!: sqlx::types::Json<stops::A11yMeta>\", verification_level, service_check_date,\n    infrastructure_check_date\nFROM stops\n",
+  "query": "SELECT id, name, short_name, locality, street, door, lat, lon, notes, parish,\n    tags, verification_level, service_check_date, infrastructure_check_date,\n    accessibility_meta as \"a11y!: sqlx::types::Json<stops::A11yMeta>\", osm_id\nFROM stops\nWHERE id IN (\n    SELECT DISTINCT stop_id\n    FROM region_stops\n    WHERE region_id = $1\n)",
   "describe": {
     "columns": [
       {
@@ -45,47 +45,49 @@
       },
       {
         "ordinal": 8,
-        "name": "external_id",
-        "type_info": "Text"
-      },
-      {
-        "ordinal": 9,
         "name": "notes",
         "type_info": "Text"
       },
       {
-        "ordinal": 10,
+        "ordinal": 9,
         "name": "parish",
         "type_info": "Int4"
       },
       {
-        "ordinal": 11,
+        "ordinal": 10,
         "name": "tags",
         "type_info": "TextArray"
       },
       {
-        "ordinal": 12,
-        "name": "a11y!: sqlx::types::Json<stops::A11yMeta>",
-        "type_info": "Jsonb"
-      },
-      {
-        "ordinal": 13,
+        "ordinal": 11,
         "name": "verification_level",
         "type_info": "Int2"
       },
       {
-        "ordinal": 14,
+        "ordinal": 12,
         "name": "service_check_date",
         "type_info": "Date"
       },
       {
-        "ordinal": 15,
+        "ordinal": 13,
         "name": "infrastructure_check_date",
         "type_info": "Date"
+      },
+      {
+        "ordinal": 14,
+        "name": "a11y!: sqlx::types::Json<stops::A11yMeta>",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 15,
+        "name": "osm_id",
+        "type_info": "Int8"
       }
     ],
     "parameters": {
-      "Left": []
+      "Left": [
+        "Int4"
+      ]
     },
     "nullable": [
       false,
@@ -96,15 +98,15 @@
       true,
       false,
       false,
-      false,
       true,
       true,
       false,
       false,
-      false,
       true,
-      true
+      true,
+      false,
+      false
     ]
   },
-  "hash": "6847accbeacce9b389fe8d37c258a4713987a84058cb9a2f2aa85c1a57f96fb8"
+  "hash": "35e3e2de41767239d7854933d6dcd8c69a3a9859d6a75c18fea9761b93f1ee18"
 }

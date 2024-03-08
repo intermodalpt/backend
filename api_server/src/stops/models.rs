@@ -314,8 +314,7 @@ pub(crate) mod responses {
         pub service_check_date: Option<NaiveDate>,
         #[serde(default)]
         pub infrastructure_check_date: Option<NaiveDate>,
-        // TODO rename this to osm_id (going to be breaking)
-        pub external_id: String,
+        pub osm_id: i64,
     }
 
     impl From<Stop> for stops::Stop {
@@ -347,7 +346,7 @@ pub(crate) mod responses {
         #[serde(flatten)]
         pub stop: stops::Stop,
         pub updater: i32,
-        pub external_id: String,
+        pub osm_id: i64,
         pub operators: Vec<OperatorStop>,
         pub verified_position: bool,
         pub update_date: DateTime<Utc>,
@@ -408,7 +407,7 @@ pub(crate) mod responses {
                 decoder.try_decode::<Option<NaiveDate>>()?;
             let infrastructure_check_date =
                 decoder.try_decode::<Option<NaiveDate>>()?;
-            let external_id = decoder.try_decode::<String>()?;
+            let osm_id = decoder.try_decode::<i64>()?;
             Ok(Stop {
                 id,
                 name,
@@ -425,7 +424,7 @@ pub(crate) mod responses {
                 verification_level,
                 service_check_date,
                 infrastructure_check_date,
-                external_id,
+                osm_id,
             })
         }
     }

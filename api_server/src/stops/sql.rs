@@ -35,18 +35,16 @@ pub(crate) async fn fetch_stop(
 ) -> Result<Option<responses::Stop>> {
     sqlx::query_as!(
         responses::Stop,
-        r#"
-SELECT id, name, short_name, locality, street, door, lat, lon, external_id, notes, parish, tags,
-    accessibility_meta as "a11y!: sqlx::types::Json<stops::A11yMeta>", verification_level, service_check_date,
-     infrastructure_check_date
+r#"SELECT id, name, short_name, locality, street, door, lat, lon, notes, parish,
+    tags, verification_level, service_check_date, infrastructure_check_date,
+    accessibility_meta as "a11y!: sqlx::types::Json<stops::A11yMeta>", osm_id
 FROM Stops
-WHERE id = $1
-    "#,
+WHERE id = $1"#,
         stop_id
     )
-        .fetch_optional(pool)
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    .fetch_optional(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
 pub(crate) async fn fetch_simple_stops(
@@ -76,22 +74,21 @@ pub(crate) async fn fetch_detailed_stops(
     region_id: i32,
 ) -> Result<Vec<responses::Stop>> {
     sqlx::query_as!(
-            responses::Stop,
-r#"SELECT id, name, short_name, locality, street, door, lat, lon, external_id, notes, parish, tags,
-    accessibility_meta as "a11y!: sqlx::types::Json<stops::A11yMeta>", verification_level, service_check_date,
-    infrastructure_check_date
+        responses::Stop,
+r#"SELECT id, name, short_name, locality, street, door, lat, lon, notes, parish,
+    tags, verification_level, service_check_date, infrastructure_check_date,
+    accessibility_meta as "a11y!: sqlx::types::Json<stops::A11yMeta>", osm_id
 FROM stops
 WHERE id IN (
     SELECT DISTINCT stop_id
     FROM region_stops
     WHERE region_id = $1
-)
-"#,
-    region_id
+)"#,
+        region_id
     )
-        .fetch_all(pool)
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    .fetch_all(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
 pub(crate) async fn fetch_all_detailed_stops(
@@ -99,11 +96,10 @@ pub(crate) async fn fetch_all_detailed_stops(
 ) -> Result<Vec<responses::Stop>> {
     sqlx::query_as!(
             responses::Stop,
-r#"SELECT id, name, short_name, locality, street, door, lat, lon, external_id, notes, parish, tags,
-    accessibility_meta as "a11y!: sqlx::types::Json<stops::A11yMeta>", verification_level, service_check_date,
-    infrastructure_check_date
-FROM stops
-"#
+r#"SELECT id, name, short_name, locality, street, door, lat, lon, notes, parish,
+    tags, verification_level, service_check_date, infrastructure_check_date,
+    accessibility_meta as "a11y!: sqlx::types::Json<stops::A11yMeta>", osm_id
+FROM stops"#
     )
         .fetch_all(pool)
         .await
@@ -115,10 +111,10 @@ pub(crate) async fn fetch_full_stops(
     region_id: i32,
 ) -> Result<Vec<responses::FullStop>> {
     sqlx::query!(
-        r#"
-SELECT id, name, short_name, locality, street, door, lat, lon, external_id, notes, updater, update_date,
-    parish, tags, accessibility_meta as "a11y!: sqlx::types::Json<stops::A11yMeta>",
-    verification_level, service_check_date, infrastructure_check_date, verified_position,
+r#"SELECT id, name, short_name, locality, street, door, lat, lon, notes, parish,
+    tags, updater, update_date, verification_level,
+    service_check_date, infrastructure_check_date, verified_position,
+    accessibility_meta as "a11y!: sqlx::types::Json<stops::A11yMeta>", osm_id,
     CASE
         WHEN count(stop_operators.stop_id) > 0
         THEN array_agg(
@@ -165,7 +161,7 @@ GROUP BY stops.id
                     service_check_date: r.service_check_date,
                     infrastructure_check_date: r.infrastructure_check_date,
                 },
-                external_id: r.external_id,
+                osm_id: r.osm_id,
                 updater: r.updater,
                 verified_position: r.verified_position,
                 update_date: r.update_date,
@@ -181,10 +177,9 @@ pub(crate) async fn fetch_bounded_stops(
 ) -> Result<Vec<responses::Stop>> {
     sqlx::query_as!(
         responses::Stop,
-        r#"
-SELECT id, name, short_name, locality, street, door, lat, lon, external_id, notes, parish, tags,
-    accessibility_meta as "a11y!: sqlx::types::Json<stops::A11yMeta>", verification_level,
-    service_check_date, infrastructure_check_date
+r#"SELECT id, name, short_name, locality, street, door, lat, lon, notes, parish,
+    tags, verification_level, service_check_date, infrastructure_check_date,
+    accessibility_meta as "a11y!: sqlx::types::Json<stops::A11yMeta>", osm_id
 FROM Stops
 WHERE lon >= $1 AND lon <= $2 AND lat <= $3 AND lat >= $4
         "#,
