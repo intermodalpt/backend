@@ -17,11 +17,11 @@
 */
 
 pub(crate) mod requests {
-    use chrono::{DateTime, NaiveDate, Utc};
+    use chrono::NaiveDate;
     use serde::Deserialize;
     use utoipa::ToSchema;
 
-    use commons::models::{history, osm, stops};
+    use commons::models::{history, stops};
 
     #[derive(Deserialize, ToSchema)]
     pub struct NewStop {
@@ -47,9 +47,6 @@ pub(crate) mod requests {
         pub service_check_date: Option<NaiveDate>,
         #[serde(default)]
         pub infrastructure_check_date: Option<NaiveDate>,
-        // TODO do not have this as a dependency. IML should be independent from OSM
-        pub external_id: String,
-        pub osm_history: sqlx::types::Json<osm::StoredStopMeta>,
     }
 
     #[derive(Clone, Deserialize, ToSchema)]
@@ -265,19 +262,6 @@ pub(crate) mod requests {
             patch
         }
     }
-
-    #[derive(Deserialize, ToSchema)]
-    pub struct ChangeStopOsmMeta {
-        pub osm_name: Option<String>,
-        pub osm_lat: Option<f64>,
-        pub osm_lon: Option<f64>,
-        pub osm_author: Option<String>,
-        pub osm_differs: Option<bool>,
-        pub osm_sync_time: Option<DateTime<Utc>>,
-        pub osm_version: i32,
-        pub osm_history: sqlx::types::Json<osm::StoredStopMeta>,
-        pub deleted_upstream: bool,
-    }
 }
 
 pub(crate) mod responses {
@@ -286,7 +270,6 @@ pub(crate) mod responses {
     use std::collections::HashMap;
     use utoipa::ToSchema;
 
-    use commons::models::osm;
     use commons::models::stops;
 
     #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -368,24 +351,8 @@ pub(crate) mod responses {
         pub updater: i32,
         pub external_id: String,
         pub operators: Vec<OperatorStop>,
-        pub deleted_upstream: bool,
         pub verified_position: bool,
         pub update_date: DateTime<Utc>,
-    }
-
-    #[derive(Serialize, ToSchema)]
-    pub struct StopOsmMeta {
-        pub external_id: String,
-        pub osm_name: Option<String>,
-        pub osm_lat: Option<f64>,
-        pub osm_lon: Option<f64>,
-        pub osm_author: Option<String>,
-        pub osm_differs: Option<bool>,
-        pub osm_sync_time: Option<DateTime<Utc>>,
-        pub osm_version: i32,
-        pub osm_map_quality: Option<bool>,
-        pub osm_history: sqlx::types::Json<osm::StoredStopMeta>,
-        pub deleted_upstream: bool,
     }
 
     #[derive(Serialize, ToSchema)]

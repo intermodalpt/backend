@@ -25,6 +25,7 @@ use commons::models::osm;
 
 use super::models::{requests, responses};
 use super::sql;
+use crate::osm::models::responses::FullOsmStop;
 use crate::{auth, AppState, Error};
 
 pub(crate) async fn get_osm_stops(
@@ -121,4 +122,13 @@ pub(crate) async fn get_osm_stop_versions(
     State(state): State<AppState>,
 ) -> Result<Json<HashMap<i64, Vec<i32>>>, Error> {
     Ok(Json(sql::fetch_osm_stop_versions(&state.pool).await?))
+}
+
+pub(crate) async fn get_paired_osm_stop(
+    State(state): State<AppState>,
+    Path(iml_stop_id): Path<i32>,
+) -> Result<Json<Option<FullOsmStop>>, Error> {
+    Ok(Json(
+        sql::fetch_paired_osm_stop(&state.pool, iml_stop_id).await?,
+    ))
 }

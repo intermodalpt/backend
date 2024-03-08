@@ -207,3 +207,25 @@ GROUP BY id
     .map(|r| (r.id, r.versions))
     .collect())
 }
+
+pub(crate) async fn fetch_paired_osm_stop(
+    pool: &PgPool,
+    iml_stop_id: i32,
+) -> Result<Option<responses::FullOsmStop>> {
+    sqlx::query_as!(
+        responses::FullOsmStop,
+        r#"SELECT osm_stops.id, osm_stops.name, osm_stops.lat, osm_stops.lon,
+    osm_stops.pos_author, osm_stops.last_author, osm_stops.creation,
+    osm_stops.modification, osm_stops.version, osm_stops.deleted,
+    osm_stops.history as "history!: sqlx::types::Json<osm::NodeHistory>",
+    stops.osm_map_quality
+FROM stops
+JOIN osm_stops ON stops.osm_id = osm_stops.id
+WHERE stops.id = $1
+"#,
+        iml_stop_id
+    )
+    .fetch_optional(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+}

@@ -17,8 +17,9 @@
 */
 
 pub(crate) mod requests {
-    use commons::models::osm;
     use serde::Deserialize;
+
+    use commons::models::osm;
 
     #[derive(Deserialize)]
     pub struct OsmStop {
@@ -30,6 +31,8 @@ pub(crate) mod requests {
 pub(crate) mod responses {
     use chrono::{DateTime, Utc};
     use serde::Serialize;
+
+    use commons::models::osm;
 
     #[derive(Serialize)]
     pub struct OsmStop {
@@ -43,6 +46,21 @@ pub(crate) mod responses {
         pub modification: DateTime<Utc>,
         pub version: i32,
         pub deleted: bool,
-        // pub history: sqlx::types::Json<osm::NodeHistory>,
+    }
+
+    #[derive(Serialize)]
+    pub struct FullOsmStop {
+        pub id: i64,
+        pub name: Option<String>,
+        pub lat: f64,
+        pub lon: f64,
+        pub pos_author: String,
+        pub last_author: String,
+        pub creation: DateTime<Utc>,
+        pub modification: DateTime<Utc>,
+        pub version: i32,
+        pub deleted: bool,
+        pub osm_map_quality: bool,
+        pub history: sqlx::types::Json<osm::NodeHistory>,
     }
 }

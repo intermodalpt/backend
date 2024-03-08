@@ -21,7 +21,7 @@ use std::collections::{hash_map, HashMap};
 use chrono::Utc;
 use sqlx::PgPool;
 
-use commons::models::{osm, routes, stops};
+use commons::models::{routes, stops};
 
 use super::models;
 use crate::stops::models::{requests, responses};
@@ -118,7 +118,7 @@ pub(crate) async fn fetch_full_stops(
         r#"
 SELECT id, name, short_name, locality, street, door, lat, lon, external_id, notes, updater, update_date,
     parish, tags, accessibility_meta as "a11y!: sqlx::types::Json<stops::A11yMeta>",
-    deleted_upstream, verification_level, service_check_date, infrastructure_check_date, verified_position,
+    verification_level, service_check_date, infrastructure_check_date, verified_position,
     CASE
         WHEN count(stop_operators.stop_id) > 0
         THEN array_agg(
@@ -167,7 +167,6 @@ GROUP BY stops.id
                 },
                 external_id: r.external_id,
                 updater: r.updater,
-                deleted_upstream: r.deleted_upstream,
                 verified_position: r.verified_position,
                 update_date: r.update_date,
                 operators: r.operators,
@@ -210,8 +209,8 @@ pub(crate) async fn insert_stop(
         r#"
 INSERT INTO Stops(name, short_name, locality, street, door, lon, lat, notes, tags,
     accessibility_meta, updater, update_date, verification_level, service_check_date,
-    infrastructure_check_date, external_id, osm_history)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+    infrastructure_check_date)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 RETURNING id
     "#,
         stop.name,
@@ -228,9 +227,7 @@ RETURNING id
         update_date,
         i16::from(stop.verification_level),
         stop.service_check_date,
-        stop.infrastructure_check_date,
-        stop.external_id,
-        sqlx::types::Json(stop.osm_history) as _
+        stop.infrastructure_check_date
     )
         .fetch_one(&mut **transaction)
         .await
@@ -258,7 +255,7 @@ RETURNING id
 pub(crate) async fn update_stop(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     stop_id: i32,
-    changes: models::requests::ChangeStop,
+    changes: requests::ChangeStop,
     user_id: i32,
 ) -> Result<()> {
     let update_date = Utc::now();
@@ -394,85 +391,4 @@ ORDER BY subroute_stops.idx"#,
         subroutes,
         stops,
     })
-}
-
-pub(crate) async fn fetch_stops_osm_meta(
-    pool: &PgPool,
-) -> Result<HashMap<i32, responses::StopOsmMeta>> {
-    sqlx::query!(
-r#"SELECT id, external_id, deleted_upstream, osm_name, osm_lon, osm_lat, osm_author, osm_differs, osm_version,
-    osm_sync_time, osm_map_quality, osm_history as "osm_history!: sqlx::types::Json<osm::StoredStopMeta>"
-FROM stops
-"#
-    )
-        .fetch_all(pool)
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?
-        .into_iter()
-        .map(|r| {
-            Ok((
-                r.id,
-                responses::StopOsmMeta {
-                    external_id: r.external_id,
-                    osm_name: r.osm_name,
-                    osm_lon: r.osm_lon,
-                    osm_lat: r.osm_lat,
-                    osm_author: r.osm_author,
-                    osm_differs: r.osm_differs,
-                    osm_version: r.osm_version,
-                    osm_sync_time: r.osm_sync_time,
-                    osm_map_quality: r.osm_map_quality,
-                    osm_history: r.osm_history,
-                    deleted_upstream: r.deleted_upstream,
-                },
-            ))
-        })
-        .collect()
-}
-
-pub(crate) async fn fetch_stop_osm_meta(
-    pool: &PgPool,
-    stop_id: i32,
-) -> Result<Option<responses::StopOsmMeta>> {
-    sqlx::query_as!(
-        responses::StopOsmMeta,
-r#"SELECT external_id, deleted_upstream, osm_name, osm_lon, osm_lat, osm_author, osm_differs, osm_version,
-    osm_sync_time, osm_map_quality, osm_history as "osm_history!: sqlx::types::Json<osm::StoredStopMeta>"
-FROM stops
-WHERE id = $1
-"#
-        , stop_id
-    )
-        .fetch_optional(pool)
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))
-}
-
-pub(crate) async fn update_stop_osm_meta(
-    pool: &PgPool,
-    stop_id: i32,
-    change: requests::ChangeStopOsmMeta,
-) -> Result<()> {
-    sqlx::query!(
-r#"UPDATE stops
-SET osm_name = $1, osm_lon = $2, osm_lat = $3, osm_author = $4, osm_differs = $5, osm_version = $6,
-    osm_sync_time = $7, osm_history = $8, deleted_upstream = $9
-WHERE id = $10
-"#,
-        change.osm_name,
-        change.osm_lon,
-        change.osm_lat,
-        change.osm_author,
-        change.osm_differs,
-        change.osm_version,
-        change.osm_sync_time,
-        sqlx::types::Json(change.osm_history) as _,
-        change.deleted_upstream,
-        stop_id
-    )
-        .execute(pool)
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
-
-    Ok(())
 }

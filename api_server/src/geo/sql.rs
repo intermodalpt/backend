@@ -256,7 +256,7 @@ pub(crate) async fn update_stop_parish(
 pub(crate) async fn fetch_region_osm_quality(
     pool: &PgPool,
     region_id: i32,
-) -> Result<HashMap<i32, Option<bool>>> {
+) -> Result<HashMap<i32, bool>> {
     Ok(sqlx::query!(
         r#"
 SELECT stop_id, osm_map_quality

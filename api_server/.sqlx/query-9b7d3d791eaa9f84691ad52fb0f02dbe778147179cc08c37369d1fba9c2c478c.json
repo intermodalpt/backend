@@ -1,0 +1,88 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT osm_stops.id, osm_stops.name, osm_stops.lat, osm_stops.lon,\n    osm_stops.pos_author, osm_stops.last_author, osm_stops.creation,\n    osm_stops.modification, osm_stops.version, osm_stops.deleted,\n    osm_stops.history as \"history!: sqlx::types::Json<osm::NodeHistory>\",\n    stops.osm_map_quality\nFROM stops\nJOIN osm_stops ON stops.osm_id = osm_stops.id\nWHERE stops.id = $1\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "lat",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 3,
+        "name": "lon",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 4,
+        "name": "pos_author",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "last_author",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "creation",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 7,
+        "name": "modification",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 8,
+        "name": "version",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 9,
+        "name": "deleted",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 10,
+        "name": "history!: sqlx::types::Json<osm::NodeHistory>",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 11,
+        "name": "osm_map_quality",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "9b7d3d791eaa9f84691ad52fb0f02dbe778147179cc08c37369d1fba9c2c478c"
+}

@@ -235,7 +235,7 @@ pub(crate) async fn delete_stop_from_region(
 pub(crate) async fn get_region_stops_osm_quality(
     State(state): State<AppState>,
     Path(region_id): Path<i32>,
-) -> Result<Json<HashMap<i32, Option<bool>>>, Error> {
+) -> Result<Json<HashMap<i32, bool>>, Error> {
     Ok(Json(
         sql::fetch_region_osm_quality(&state.pool, region_id).await?,
     ))

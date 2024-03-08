@@ -108,7 +108,7 @@ CREATE TABLE stops
     name                      text                                              NOT NULL,
     short_name                text,
     -- If the name is ours or has been externally sourced (needed to make the name NON NULL)
-    is_name_overridden        boolean,
+    is_name_overridden        boolean                  DEFAULT false,
     locality                  text,
     street                    text,
     door                      text,
@@ -129,19 +129,10 @@ CREATE TABLE stops
     verified_position         boolean                  DEFAULT false            NOT NULL,
     survey_method             int,
 
--- TODO Rename this to osm_id later on (going to be a breaking change)
-    external_id               text                                              NOT NULL,
--- TODO Rename this to osm_deleted later on (going to be a breaking change)
-    deleted_upstream          boolean                  DEFAULT false            NOT NULL,
-    osm_name                  text,
-    osm_lon                   double precision,
-    osm_lat                   double precision,
-    osm_author                text,
-    osm_differs               boolean                  DEFAULT false            NOT NULL,
-    osm_sync_time             timestamp with time zone,
-    osm_version               integer                  DEFAULT 0                NOT NULL,
-    osm_map_quality           boolean,
-    osm_history               jsonb                                             NOT NULL
+    osm_id                    bigint                                            NOT NULL,
+    -- This is bound to the IML stop instead of the OSM stop to prevent volatility
+    -- We're assuring that OSM is in a good shape for this stop
+    osm_map_quality           boolean                  DEFAULT false            NOT NULL
 );
 
 CREATE TABLE osm_stops

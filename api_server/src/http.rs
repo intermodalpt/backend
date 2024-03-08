@@ -99,10 +99,6 @@ pub fn build_paths(state: AppState) -> Router {
         .route("/v1/stops", post(stops::handlers::post_stop))
         .route("/v1/stops/all", get(stops::handlers::get_all_stops))
         .route(
-            "/v1/stops/osm_meta",
-            get(stops::handlers::get_stops_osm_meta),
-        )
-        .route(
             "/v1/stops/update/:stop_id",
             patch(stops::handlers::patch_stop),
         )
@@ -111,9 +107,8 @@ pub fn build_paths(state: AppState) -> Router {
             get(stops::handlers::get_bounded_stops),
         )
         .route(
-            "/v1/stops/:stop_id/osm_meta",
-            get(stops::handlers::get_stop_osm_meta)
-                .patch(stops::handlers::patch_stop_osm_meta),
+            "/v1/stops/:stop_id/osm",
+            get(osm::handlers::get_paired_osm_stop),
         )
         .route(
             "/v1/stops/:stop_id/pictures",
