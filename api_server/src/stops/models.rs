@@ -41,6 +41,7 @@ pub(crate) mod requests {
         pub tags: Vec<String>,
         #[serde(default, flatten)]
         pub a11y: stops::A11yMeta,
+        #[serde(default)]
         pub verification_level: u8,
         #[serde(default)]
         pub service_check_date: Option<NaiveDate>,
@@ -55,9 +56,13 @@ pub(crate) mod requests {
         pub lat: f64,
 
         pub name: String,
+        #[serde(default)]
         pub short_name: Option<String>,
+        #[serde(default)]
         pub locality: Option<String>,
+        #[serde(default)]
         pub street: Option<String>,
+        #[serde(default)]
         pub door: Option<String>,
         #[serde(default)]
         pub notes: Option<String>,
