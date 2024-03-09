@@ -323,6 +323,24 @@ WHERE id=$16
     Ok(())
 }
 
+pub(crate) async fn update_stop_position(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    stop_id: i32,
+    lon: f64,
+    lat: f64,
+) -> Result<bool> {
+    let res = sqlx::query!(
+        "UPDATE stops SET lon=$1, lat=$2 WHERE id = $3",
+        lon,
+        lat,
+        stop_id
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    Ok(res.rows_affected() != 0)
+}
 pub(crate) async fn fetch_stop_routes(
     pool: &PgPool,
     stop_id: i32,

@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE stops SET lon=$1, lat=$2 WHERE id = $3",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Float8",
+        "Float8",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "4d9c24da767a3901e1de728d5e94511af16639019f938020b13d33f6ce6ca193"
+}

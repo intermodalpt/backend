@@ -101,6 +101,10 @@ pub fn build_paths(state: AppState) -> Router {
             get(stops::handlers::get_bounded_stops),
         )
         .route(
+            "/v1/stops/:stop_id/position",
+            post(stops::handlers::post_update_stop_position),
+        )
+        .route(
             "/v1/stops/:stop_id/osm",
             get(osm::handlers::get_paired_osm_stop),
         )

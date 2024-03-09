@@ -262,6 +262,12 @@ pub(crate) mod requests {
             patch
         }
     }
+
+    #[derive(Deserialize)]
+    pub struct Position {
+        pub lon: f64,
+        pub lat: f64,
+    }
 }
 
 pub(crate) mod responses {

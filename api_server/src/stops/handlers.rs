@@ -181,6 +181,48 @@ pub(crate) async fn patch_stop(
     Ok(Json(stop))
 }
 
+pub(crate) async fn post_update_stop_position(
+    State(state): State<AppState>,
+    Path(stop_id): Path<i32>,
+    claims: Option<auth::Claims>,
+    Json(location): Json<requests::Position>,
+) -> Result<(), Error> {
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
+    let mut transaction = state
+        .pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    // TODO log
+
+    let updated = sql::update_stop_position(
+        &mut transaction,
+        stop_id,
+        location.lon,
+        location.lat,
+    )
+    .await?;
+
+    if !updated {
+        return Err(Error::NotFoundUpstream);
+    }
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    Ok(())
+}
+
 pub(crate) async fn get_bounded_stops(
     State(state): State<AppState>,
     Path(boundary): Path<(f64, f64, f64, f64)>,
