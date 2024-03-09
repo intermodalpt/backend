@@ -82,7 +82,7 @@ WHERE stop_operators.operator_id= $1 AND stop_operators.stop_ref = $2"#,
     .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
-pub(crate) async fn fetch_simple_stops(
+pub(crate) async fn fetch_region_simple_stops(
     pool: &PgPool,
     region_id: i32,
 ) -> Result<Vec<responses::SimpleStop>> {
@@ -104,7 +104,7 @@ WHERE id IN (
     .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
-pub(crate) async fn fetch_detailed_stops(
+pub(crate) async fn fetch_region_detailed_stops(
     pool: &PgPool,
     region_id: i32,
 ) -> Result<Vec<responses::Stop>> {
@@ -126,22 +126,7 @@ WHERE id IN (
     .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
-pub(crate) async fn fetch_all_detailed_stops(
-    pool: &PgPool,
-) -> Result<Vec<responses::Stop>> {
-    sqlx::query_as!(
-            responses::Stop,
-r#"SELECT id, name, short_name, locality, street, door, lat, lon, notes, parish,
-    tags, verification_level, service_check_date, infrastructure_check_date,
-    accessibility_meta as "a11y!: sqlx::types::Json<stops::A11yMeta>", osm_id
-FROM stops"#
-    )
-        .fetch_all(pool)
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))
-}
-
-pub(crate) async fn fetch_full_stops(
+pub(crate) async fn fetch_region_full_stops(
     pool: &PgPool,
     region_id: i32,
 ) -> Result<Vec<responses::FullStop>> {
@@ -204,6 +189,33 @@ GROUP BY stops.id
             })
         })
         .collect::<Result<Vec<responses::FullStop>>>()
+}
+
+pub(crate) async fn fetch_all_stops(
+    pool: &PgPool,
+) -> Result<Vec<responses::SimpleStop>> {
+    sqlx::query_as!(
+        responses::SimpleStop,
+        "SELECT id, name, short_name, lat, lon FROM stops"
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+}
+
+pub(crate) async fn fetch_all_detailed_stops(
+    pool: &PgPool,
+) -> Result<Vec<responses::Stop>> {
+    sqlx::query_as!(
+            responses::Stop,
+r#"SELECT id, name, short_name, locality, street, door, lat, lon, notes, parish,
+    tags, verification_level, service_check_date, infrastructure_check_date,
+    accessibility_meta as "a11y!: sqlx::types::Json<stops::A11yMeta>", osm_id
+FROM stops"#
+    )
+        .fetch_all(pool)
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
 pub(crate) async fn fetch_bounded_stops(

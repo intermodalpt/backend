@@ -52,15 +52,15 @@ pub fn build_paths(state: AppState) -> Router {
         )
         .route(
             "/v1/regions/:region_id/stops",
-            get(stops::handlers::get_stops),
+            get(stops::handlers::get_region_stops),
         )
         .route(
             "/v1/regions/:region_id/stops/detailed",
-            get(stops::handlers::get_detailed_stops),
+            get(stops::handlers::get_region_detailed_stops),
         )
         .route(
             "/v1/regions/:region_id/stops/full",
-            get(stops::handlers::get_full_stops),
+            get(stops::handlers::get_region_full_stops),
         )
         .route(
             "/v1/regions/:region_id/stops/:stop_id",
@@ -89,9 +89,16 @@ pub fn build_paths(state: AppState) -> Router {
             "/v1/regions/:region_id/osm_stops_quality",
             get(geo::handlers::get_region_stops_osm_quality),
         )
+        .route(
+            "/v1/stops",
+            get(stops::handlers::get_all_stops)
+                .post(stops::handlers::post_stop),
+        )
+        .route(
+            "/v1/stops/detailed",
+            get(stops::handlers::get_all_detailed_stops),
+        )
         .route("/v1/stops/:stop_id", get(stops::handlers::get_stop))
-        .route("/v1/stops", post(stops::handlers::post_stop))
-        .route("/v1/stops/all", get(stops::handlers::get_all_stops))
         .route(
             "/v1/stops/update/:stop_id",
             patch(stops::handlers::patch_stop),

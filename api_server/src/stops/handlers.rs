@@ -27,30 +27,34 @@ use super::models::{requests, responses};
 use super::sql;
 use crate::{auth, contrib, AppState, Error};
 
-pub(crate) async fn get_stops(
+pub(crate) async fn get_region_stops(
     State(state): State<AppState>,
     Path(region_id): Path<i32>,
 ) -> Result<Json<Vec<responses::SimpleStop>>, Error> {
-    Ok(Json(sql::fetch_simple_stops(&state.pool, region_id).await?))
+    Ok(Json(
+        sql::fetch_region_simple_stops(&state.pool, region_id).await?,
+    ))
 }
 
-pub(crate) async fn get_detailed_stops(
+pub(crate) async fn get_region_detailed_stops(
     State(state): State<AppState>,
     Path(region_id): Path<i32>,
 ) -> Result<Json<Vec<responses::Stop>>, Error> {
     Ok(Json(
-        sql::fetch_detailed_stops(&state.pool, region_id).await?,
+        sql::fetch_region_detailed_stops(&state.pool, region_id).await?,
     ))
 }
 
-pub(crate) async fn get_full_stops(
+pub(crate) async fn get_region_full_stops(
     State(state): State<AppState>,
     Path(region_id): Path<i32>,
 ) -> Result<Json<Vec<responses::FullStop>>, Error> {
-    Ok(Json(sql::fetch_full_stops(&state.pool, region_id).await?))
+    Ok(Json(
+        sql::fetch_region_full_stops(&state.pool, region_id).await?,
+    ))
 }
 
-pub(crate) async fn get_all_stops(
+pub(crate) async fn get_all_detailed_stops(
     State(state): State<AppState>,
     claims: Option<auth::Claims>,
 ) -> Result<Json<Vec<responses::Stop>>, Error> {
@@ -65,6 +69,11 @@ pub(crate) async fn get_all_stops(
     Ok(Json(sql::fetch_all_detailed_stops(&state.pool).await?))
 }
 
+pub(crate) async fn get_all_stops(
+    State(state): State<AppState>,
+) -> Result<Json<Vec<responses::SimpleStop>>, Error> {
+    Ok(Json(sql::fetch_all_stops(&state.pool).await?))
+}
 pub(crate) async fn get_stop(
     State(state): State<AppState>,
     Path(stop_id): Path<i32>,
