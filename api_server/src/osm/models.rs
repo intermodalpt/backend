@@ -24,7 +24,7 @@ pub(crate) mod requests {
     #[derive(Deserialize)]
     pub struct OsmStop {
         pub id: i64,
-        pub history: sqlx::types::Json<osm::NodeHistory>,
+        pub history: osm::NodeHistory,
     }
 }
 

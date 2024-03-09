@@ -88,7 +88,7 @@ pub(crate) async fn patch_osm_stops(
                         .dedup_by(|a, b| a.version == b.version)
                         .cloned()
                         .collect();
-                    osm_stop.history = sqlx::types::Json(merged_history);
+                    osm_stop.history = merged_history;
                 }
             }
         }

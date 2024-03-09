@@ -98,14 +98,14 @@ pub(crate) async fn upsert_osm_stops(
 
         let history = &osm_stop.history;
 
-        let mut coord_author = Cow::Borrowed("");
+        let mut coord_author = "";
         let mut lat = 0.0;
         let mut lon = 0.0;
         for version in history.iter() {
             if (version.lat - lat).abs() > FLOAT_TOLERANCE
                 || (version.lon - lon).abs() > FLOAT_TOLERANCE
             {
-                coord_author = Cow::Owned(version.author.to_string());
+                coord_author = &version.author_uname;
                 lat = version.lat;
                 lon = version.lon;
             }
@@ -117,25 +117,23 @@ pub(crate) async fn upsert_osm_stops(
         let modification;
         let deleted;
 
-        {
-            let last_version = history.as_ref().last().unwrap();
+        let last_version: &osm::NodeVersion = history.last().unwrap();
 
-            name = last_version.attributes.iter().find_map(|(k, v)| {
-                if k == "name" {
-                    Some(v.to_string())
-                } else {
-                    None
-                }
-            });
+        name = last_version.attributes.iter().find_map(|(k, v)| {
+            if k == "name" {
+                Some(v.to_string())
+            } else {
+                None
+            }
+        });
 
-            version = last_version.version;
-            last_author = last_version.author;
-            modification = last_version.timestamp;
-            deleted = last_version.deleted;
-        }
+        version = last_version.version;
+        last_author = &last_version.author_uname;
+        modification = last_version.timestamp;
+        deleted = last_version.deleted;
 
         let creation = {
-            let first_version = history.as_ref().first().unwrap();
+            let first_version = history.first().unwrap();
             first_version.timestamp
         };
 
