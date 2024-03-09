@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nINSERT INTO Stops(name, short_name, locality, street, door, lon, lat, notes, tags,\n    accessibility_meta, updater, update_date, verification_level, service_check_date,\n    infrastructure_check_date)\nVALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)\nRETURNING id\n    ",
+  "query": "\nINSERT INTO Stops(name, short_name, locality, street, door, lon, lat, notes,\n    tags, accessibility_meta, updater, update_date, verification_level,\n    service_check_date, infrastructure_check_date, osm_id)\nVALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)\nRETURNING id\n    ",
   "describe": {
     "columns": [
       {
@@ -25,12 +25,13 @@
         "Timestamptz",
         "Int2",
         "Date",
-        "Date"
+        "Date",
+        "Int8"
       ]
     },
     "nullable": [
       false
     ]
   },
-  "hash": "5759bc3db2ec35f67ed98f60cc13de6c285214b88c9dd6d73a9b09f005b7be31"
+  "hash": "660a13b3cbeaa602681e47202e5dae734cb57ed3d26316651b7f24d454e8059b"
 }

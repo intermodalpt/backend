@@ -237,10 +237,10 @@ pub(crate) async fn insert_stop(
 
     let res = sqlx::query!(
         r#"
-INSERT INTO Stops(name, short_name, locality, street, door, lon, lat, notes, tags,
-    accessibility_meta, updater, update_date, verification_level, service_check_date,
-    infrastructure_check_date)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+INSERT INTO Stops(name, short_name, locality, street, door, lon, lat, notes,
+    tags, accessibility_meta, updater, update_date, verification_level,
+    service_check_date, infrastructure_check_date, osm_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
 RETURNING id
     "#,
         stop.name,
@@ -257,11 +257,12 @@ RETURNING id
         update_date,
         i16::from(stop.verification_level),
         stop.service_check_date,
-        stop.infrastructure_check_date
+        stop.infrastructure_check_date,
+        stop.osm_id
     )
-        .fetch_one(&mut **transaction)
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .fetch_one(&mut **transaction)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     Ok(stops::Stop {
         id: res.id,
