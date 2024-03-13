@@ -41,7 +41,9 @@ SELECT routes.id as id,
     routes.name as name,
     routes.main_subroute as main_subroute,
     routes.circular as circular,
-    routes.active as active
+    routes.active as active,
+    routes.badge_text_color,
+    routes.badge_bg_color
 FROM routes
 WHERE routes.id = $1
 "#,
@@ -106,16 +108,21 @@ pub(crate) async fn fetch_route_with_subroutes(
     sqlx::query_as!(
         responses::Route,
         r#"
-SELECT routes.*, route_types.badge_text_color as badge_text, route_types.badge_bg_color as badge_bg
+SELECT routes.id, routes.code, routes.name, routes.operator, routes.type_id,
+    routes.circular, routes.main_subroute, routes.active, routes.parishes,
+    routes.subroutes AS "subroutes!: Vec<responses::Subroute>",
+    COALESCE(routes.badge_text_color, route_types.badge_text_color) as "badge_text!: String",
+    COALESCE(routes.badge_bg_color, route_types.badge_bg_color) as "badge_bg!: String"
 FROM (
     SELECT routes.id, routes.code, routes.name, routes.operator, routes.type as type_id,
         routes.circular, routes.main_subroute, routes.active, routes.parishes,
+        routes.badge_text_color, routes.badge_bg_color,
         COALESCE(
             array_agg((subroutes.id, subroutes.group, subroutes.flag, subroutes.headsign, subroutes.origin,
                 subroutes.destination, subroutes.via, subroutes.circular, subroutes.polyline))
             FILTER (WHERE subroutes.id IS NOT NULL),
             '{}'
-        ) AS "subroutes!: Vec<responses::Subroute>"
+        ) AS subroutes
     FROM routes
     LEFT JOIN subroutes ON routes.id = subroutes.route
     WHERE routes.id = $1
@@ -137,18 +144,24 @@ pub(crate) async fn fetch_full_route_with_subroutes(
     sqlx::query_as!(
         responses::FullRoute,
         r#"
-SELECT routes.*, route_types.badge_text_color as badge_text, route_types.badge_bg_color as badge_bg
+SELECT routes.id, routes.code, routes.name, routes.operator, routes.type_id,
+    routes.circular, routes.main_subroute, routes.active, routes.parishes,
+    routes.subroutes AS "subroutes!: Vec<responses::FullSubroute>",
+    routes.regions as "regions!: Vec<i32>", routes.validation,
+    COALESCE(routes.badge_text_color, route_types.badge_text_color) as "badge_text!: String",
+    COALESCE(routes.badge_bg_color, route_types.badge_bg_color) as "badge_bg!: String"
 FROM (
     SELECT routes.id, routes.code, routes.name, routes.operator,
         routes.type as type_id, routes.circular, routes.main_subroute,
         routes.active, routes.parishes, routes.validation,
-        array_remove(array_agg(region_id), NULL) as "regions!: Vec<i32>",
+        routes.badge_text_color, routes.badge_bg_color,
+        array_remove(array_agg(region_id), NULL) as regions,
         COALESCE(
             array_agg((subroutes.id, subroutes.group, subroutes.flag, subroutes.headsign, subroutes.origin,
                 subroutes.destination, subroutes.via, subroutes.circular, subroutes.polyline, subroutes.validation))
             FILTER (WHERE subroutes.id IS NOT NULL),
             '{}'
-        ) AS "subroutes!: Vec<responses::FullSubroute>"
+        ) AS subroutes
     FROM routes
     LEFT JOIN subroutes ON routes.id = subroutes.route
     LEFT JOIN region_routes on routes.id = region_routes.route_id
@@ -171,16 +184,21 @@ pub(crate) async fn fetch_routes(
     sqlx::query_as!(
         responses::Route,
         r#"
-SELECT routes.*, route_types.badge_text_color as badge_text, route_types.badge_bg_color as badge_bg
+SELECT routes.id, routes.code, routes.name, routes.operator, routes.type_id,
+    routes.circular, routes.main_subroute, routes.active, routes.parishes,
+    routes.subroutes AS "subroutes!: Vec<responses::Subroute>",
+    COALESCE(routes.badge_text_color, route_types.badge_text_color) as "badge_text!: String",
+    COALESCE(routes.badge_bg_color, route_types.badge_bg_color) as "badge_bg!: String"
 FROM (
     SELECT routes.id, routes.code, routes.name, routes.operator, routes.type as type_id,
         routes.circular, routes.main_subroute, routes.active, routes.parishes,
+        routes.badge_text_color, routes.badge_bg_color,
         COALESCE(
             array_agg((subroutes.id, subroutes.group, subroutes.flag, subroutes.headsign, subroutes.origin,
                 subroutes.destination, subroutes.via, subroutes.circular, subroutes.polyline))
             FILTER (WHERE subroutes.id IS NOT NULL),
             '{}'
-        ) AS "subroutes!: Vec<responses::Subroute>"
+        ) AS subroutes
     FROM routes
     JOIN region_routes on routes.id = region_routes.route_id
     LEFT JOIN subroutes ON routes.id = subroutes.route
@@ -204,16 +222,21 @@ pub(crate) async fn fetch_operator_routes(
     sqlx::query_as!(
         responses::Route,
         r#"
-SELECT routes.*, route_types.badge_text_color as badge_text, route_types.badge_bg_color as badge_bg
+SELECT routes.id, routes.code, routes.name, routes.operator, routes.type_id,
+    routes.circular, routes.main_subroute, routes.active, routes.parishes,
+    routes.subroutes AS "subroutes!: Vec<responses::Subroute>",
+    COALESCE(routes.badge_text_color, route_types.badge_text_color) as "badge_text!: String",
+    COALESCE(routes.badge_bg_color, route_types.badge_bg_color) as "badge_bg!: String"
 FROM (
     SELECT routes.id, routes.code, routes.name, routes.operator, routes.type as type_id,
         routes.circular, routes.main_subroute, routes.active, routes.parishes,
+        routes.badge_text_color, routes.badge_bg_color,
         COALESCE(
             array_agg((subroutes.id, subroutes.group, subroutes.flag, subroutes.headsign, subroutes.origin,
                 subroutes.destination, subroutes.via, subroutes.circular, subroutes.polyline))
             FILTER (WHERE subroutes.id IS NOT NULL),
             '{}'
-        ) AS "subroutes!: Vec<responses::Subroute>"
+        ) AS subroutes
     FROM routes
     LEFT JOIN subroutes ON routes.id = subroutes.route
     WHERE routes.operator = $1
@@ -236,18 +259,24 @@ pub(crate) async fn fetch_full_routes(
     sqlx::query_as!(
         responses::FullRoute,
         r#"
-SELECT routes.*, route_types.badge_text_color as badge_text, route_types.badge_bg_color as badge_bg
+SELECT routes.id, routes.code, routes.name, routes.operator, routes.type_id,
+    routes.circular, routes.main_subroute, routes.active, routes.parishes,
+    routes.subroutes AS "subroutes!: Vec<responses::FullSubroute>",
+    routes.regions as "regions!: Vec<i32>", routes.validation,
+    COALESCE(routes.badge_text_color, route_types.badge_text_color) as "badge_text!: String",
+    COALESCE(routes.badge_bg_color, route_types.badge_bg_color) as "badge_bg!: String"
 FROM (
     SELECT routes.id, routes.code, routes.name, routes.operator,
         routes.type as type_id, routes.circular, routes.main_subroute,
         routes.active, routes.parishes, routes.validation,
-        array_remove(array_agg(region_id), NULL) as "regions!: Vec<i32>",
+        routes.badge_text_color, routes.badge_bg_color,
+        array_remove(array_agg(region_id), NULL) as regions,
         COALESCE(
             array_agg((subroutes.id, subroutes.group, subroutes.flag, subroutes.headsign, subroutes.origin,
                 subroutes.destination, subroutes.via, subroutes.circular, subroutes.polyline, subroutes.validation))
             FILTER (WHERE subroutes.id IS NOT NULL),
             '{}'
-        ) AS "subroutes!: Vec<responses::FullSubroute>"
+        ) AS subroutes
     FROM routes
     JOIN region_routes on routes.id = region_routes.route_id
     LEFT JOIN subroutes ON routes.id = subroutes.route
@@ -271,18 +300,24 @@ pub(crate) async fn fetch_operator_full_routes(
     sqlx::query_as!(
         responses::FullRoute,
         r#"
-SELECT routes.*, route_types.badge_text_color as badge_text, route_types.badge_bg_color as badge_bg
+SELECT routes.id, routes.code, routes.name, routes.operator, routes.type_id,
+    routes.circular, routes.main_subroute, routes.active, routes.parishes,
+    routes.subroutes AS "subroutes!: Vec<responses::FullSubroute>",
+    routes.regions as "regions!: Vec<i32>", routes.validation,
+    COALESCE(routes.badge_text_color, route_types.badge_text_color) as "badge_text!: String",
+    COALESCE(routes.badge_bg_color, route_types.badge_bg_color) as "badge_bg!: String"
 FROM (
     SELECT routes.id, routes.code, routes.name, routes.operator,
         routes.type as type_id, routes.circular, routes.main_subroute,
         routes.active, routes.parishes, routes.validation,
-        array_remove(array_agg(region_id), NULL) as "regions!: Vec<i32>",
+        routes.badge_text_color, routes.badge_bg_color,
+        array_remove(array_agg(region_id), NULL) as regions,
         COALESCE(
             array_agg((subroutes.id, subroutes.group, subroutes.flag, subroutes.headsign, subroutes.origin,
                 subroutes.destination, subroutes.via, subroutes.circular, subroutes.polyline, subroutes.validation))
             FILTER (WHERE subroutes.id IS NOT NULL),
             '{}'
-        ) AS "subroutes!: Vec<responses::FullSubroute>"
+        ) AS subroutes
     FROM routes
     LEFT JOIN region_routes on routes.id = region_routes.route_id
     LEFT JOIN subroutes ON routes.id = subroutes.route
@@ -305,8 +340,10 @@ pub(crate) async fn insert_route(
 ) -> Result<routes::Route> {
     let res = sqlx::query!(
         r#"
-INSERT INTO routes(code, name, main_subroute, operator, circular, active, type)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
+INSERT INTO routes(
+    code, name, main_subroute, operator, circular, active, type,
+    badge_text_color, badge_bg_color)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 RETURNING id
     "#,
         route.code,
@@ -315,7 +352,9 @@ RETURNING id
         route.operator_id,
         route.circular,
         route.active,
-        route.type_id
+        route.type_id,
+        route.badge_text_color,
+        route.badge_bg_color
     )
     .fetch_one(&mut **transaction)
     .await
@@ -330,6 +369,8 @@ RETURNING id
         circular: route.circular,
         main_subroute: route.main_subroute,
         active: route.active,
+        badge_text_color: route.badge_text_color,
+        badge_bg_color: route.badge_bg_color,
     })
 }
 
@@ -341,8 +382,9 @@ pub(crate) async fn update_route(
     let _res = sqlx::query!(
         r#"
 UPDATE Routes
-SET code=$1, name=$2, main_subroute=$3, operator=$4, circular=$5, active=$6, type=$7
-WHERE id=$8
+SET code=$1, name=$2, main_subroute=$3, operator=$4, circular=$5, active=$6,
+    type=$7, badge_text_color=$8, badge_bg_color=$9
+WHERE id=$10
     "#,
         changes.code,
         changes.name,
@@ -351,6 +393,8 @@ WHERE id=$8
         changes.circular,
         changes.active,
         changes.type_id,
+        changes.badge_text_color,
+        changes.badge_bg_color,
         route_id
     )
     .execute(&mut **transaction)

@@ -367,10 +367,13 @@ SELECT routes.id as id,
     routes.name as name,
     routes.circular as circular,
     routes.main_subroute as main_subroute,
-    routes.active as active
+    routes.active as active,
+    COALESCE(routes.badge_text_color, route_types.badge_text_color) as badge_text_color,
+    COALESCE(routes.badge_bg_color, route_types.badge_bg_color) as badge_bg_color
 FROM routes
 JOIN subroutes ON routes.id = subroutes.route
 JOIN subroute_stops ON subroutes.id = subroute_stops.subroute
+JOIN route_types ON routes.type = route_types.id
 WHERE subroute_stops.stop = $1"#,
         &stop_id
     )

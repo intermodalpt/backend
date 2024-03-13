@@ -177,6 +177,8 @@ CREATE TABLE routes
     parishes       integer[] DEFAULT ARRAY []::integer[] NOT NULL,
     main_subroute  integer,
     validation     jsonb,
+    badge_text_color character(7),
+    badge_bg_color   character(7),
 
     -- TODO consider deprecating
     circular       boolean                               NOT NULL

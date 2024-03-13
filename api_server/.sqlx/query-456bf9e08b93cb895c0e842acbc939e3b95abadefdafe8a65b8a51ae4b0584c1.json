@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nINSERT INTO routes(code, name, main_subroute, operator, circular, active, type)\nVALUES ($1, $2, $3, $4, $5, $6, $7)\nRETURNING id\n    ",
+  "query": "\nINSERT INTO routes(\n    code, name, main_subroute, operator, circular, active, type,\n    badge_text_color, badge_bg_color)\nVALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)\nRETURNING id\n    ",
   "describe": {
     "columns": [
       {
@@ -17,12 +17,14 @@
         "Int4",
         "Bool",
         "Bool",
-        "Int4"
+        "Int4",
+        "Bpchar",
+        "Bpchar"
       ]
     },
     "nullable": [
       false
     ]
   },
-  "hash": "87f02c9a82ecf621b8eba131fc324890dee4d4e206974a4ecb773f815b1bf3ee"
+  "hash": "456bf9e08b93cb895c0e842acbc939e3b95abadefdafe8a65b8a51ae4b0584c1"
 }

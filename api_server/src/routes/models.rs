@@ -30,6 +30,8 @@ pub(crate) mod requests {
         pub operator_id: i32,
         pub active: bool,
         pub type_id: i32,
+        pub badge_text_color: Option<String>,
+        pub badge_bg_color: Option<String>,
         // FIXME this default is temporary while we have change logs without it
         #[serde(default)]
         pub circular: bool,
@@ -44,6 +46,8 @@ pub(crate) mod requests {
                 operator_id: route.operator_id,
                 active: route.active,
                 type_id: route.type_id,
+                badge_text_color: route.badge_text_color,
+                badge_bg_color: route.badge_bg_color,
                 circular: route.circular,
             }
         }

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT routes.id as id,\n    routes.type as type_id,\n    routes.operator as operator_id,\n    routes.code as code,\n    routes.name as name,\n    routes.main_subroute as main_subroute,\n    routes.circular as circular,\n    routes.active as active\nFROM routes\nWHERE routes.id = $1\n",
+  "query": "\nSELECT routes.id as id,\n    routes.type as type_id,\n    routes.operator as operator_id,\n    routes.code as code,\n    routes.name as name,\n    routes.main_subroute as main_subroute,\n    routes.circular as circular,\n    routes.active as active,\n    routes.badge_text_color,\n    routes.badge_bg_color\nFROM routes\nWHERE routes.id = $1\n",
   "describe": {
     "columns": [
       {
@@ -42,6 +42,16 @@
         "ordinal": 7,
         "name": "active",
         "type_info": "Bool"
+      },
+      {
+        "ordinal": 8,
+        "name": "badge_text_color",
+        "type_info": "Bpchar"
+      },
+      {
+        "ordinal": 9,
+        "name": "badge_bg_color",
+        "type_info": "Bpchar"
       }
     ],
     "parameters": {
@@ -57,8 +67,10 @@
       false,
       true,
       false,
-      false
+      false,
+      true,
+      true
     ]
   },
-  "hash": "43049cc31fbb09e8bbd6776e98482a13557f3a0d39feed06625be456d8c597a7"
+  "hash": "f86f54ac52d22162d9c34e1777ea3956d6777f3ecccfc5c8d9ef826b5b0c60e5"
 }

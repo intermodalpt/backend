@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE Routes\nSET code=$1, name=$2, main_subroute=$3, operator=$4, circular=$5, active=$6,\n    type=$7, badge_text_color=$8, badge_bg_color=$9\nWHERE id=$10\n    ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Int4",
+        "Int4",
+        "Bool",
+        "Bool",
+        "Int4",
+        "Bpchar",
+        "Bpchar",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a81c611cf3431696df4a5cc27ae1febecf287896be10d154f3795e280352a5b5"
+}
