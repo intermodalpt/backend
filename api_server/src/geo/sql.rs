@@ -29,7 +29,7 @@ pub(crate) async fn fetch_regions(pool: &PgPool) -> Result<Vec<geo::Region>> {
     sqlx::query_as!(
         geo::Region,
         r#"
-SELECT id, name, geometry
+SELECT id, name, geometry, center_lat, center_lon, zoom
 FROM regions
     "#
     )

@@ -42,9 +42,12 @@ CREATE TABLE audit_log
 
 CREATE TABLE regions
 (
-    id       serial PRIMARY KEY,
-    name     text NOT NULL,
-    geometry jsonb
+    id         serial PRIMARY KEY,
+    name       text    NOT NULL,
+    geometry   jsonb,
+    center_lat float,
+    center_lon float,
+    zoom       float
 );
 
 CREATE TABLE municipalities
