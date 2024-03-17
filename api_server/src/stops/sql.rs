@@ -240,6 +240,46 @@ WHERE lon >= $1 AND lon <= $2 AND lat <= $3 AND lat >= $4
         .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
+pub(crate) async fn fetch_route_stops(
+    pool: &PgPool,
+    route_id: i32,
+) -> Result<Vec<responses::Stop>> {
+    sqlx::query_as!(
+        responses::Stop,
+r#"SELECT stops.id, name, short_name, locality, street, door, lat, lon, notes,
+    parish, tags, verification_level, osm_id,
+    service_check_date, infrastructure_check_date,
+    accessibility_meta as "a11y!: sqlx::types::Json<stops::A11yMeta>"
+FROM stops
+JOIN subroute_stops ON stops.id = subroute_stops.stop
+JOIN subroutes ON subroute_stops.subroute = subroutes.id
+WHERE subroutes.route = $1"#,
+        route_id
+    )
+        .fetch_all(pool)
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+}
+
+pub(crate) async fn fetch_operator_stops(
+    pool: &PgPool,
+    operator_id: i32,
+) -> Result<Vec<responses::Stop>> {
+    sqlx::query_as!(
+        responses::Stop,
+r#"SELECT id, name, short_name, locality, street, door, lat, lon, notes, parish,
+    tags, verification_level, service_check_date, infrastructure_check_date,
+    accessibility_meta as "a11y!: sqlx::types::Json<stops::A11yMeta>", osm_id
+FROM stops
+JOIN stop_operators ON stops.id = stop_operators.stop_id
+WHERE stop_operators.operator_id = $1"#,
+        operator_id
+    )
+        .fetch_all(pool)
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+}
+
 pub(crate) async fn insert_stop(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     stop: requests::NewStop,

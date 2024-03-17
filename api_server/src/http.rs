@@ -148,7 +148,6 @@ pub fn build_paths(state: AppState) -> Router {
             "/v1/pictures/rels",
             get(pics::handlers::get_picture_stop_rels),
         )
-        .route("/v1/stops/spider", post(stops::handlers::get_stops_spider))
         .route("/v1/routes", post(routes::handlers::post_route))
         .route(
             "/v1/routes/:route_id",
@@ -187,6 +186,18 @@ pub fn build_paths(state: AppState) -> Router {
             post(gtfs::handlers::post_assign_subroute_validation),
         )
         .route(
+            "/v1/routes/:route_id/stops", // <- TODO change URL
+            get(routes::handlers::get_subroute_stops),
+        )
+        .route(
+            "/v1/routes/:route_id/stops/full", // <- TODO simplify url
+            get(stops::handlers::get_route_stops),
+        )
+        .route(
+            "/v1/routes/:route_id/stops/subroutes/:subroute_id",
+            patch(routes::handlers::patch_subroute_stops),
+        )
+        .route(
             "/v1/subroutes/:subroute_id/paired_stops",
             post(gtfs::handlers::patch_subroute_validation_stops),
         )
@@ -198,14 +209,6 @@ pub fn build_paths(state: AppState) -> Router {
             "/v1/schedules/:subroute_id/:departure_id",
             patch(routes::handlers::patch_subroute_departure)
                 .delete(routes::handlers::delete_subroute_departure),
-        )
-        .route(
-            "/v1/routes/:route_id/stops",
-            get(routes::handlers::get_route_stops),
-        )
-        .route(
-            "/v1/routes/:route_id/stops/subroutes/:subroute_id",
-            patch(routes::handlers::patch_subroute_stops),
         )
         .route("/v1/stop_pics/map", get(pics::handlers::get_pictures_map))
         .route(
@@ -339,6 +342,10 @@ pub fn build_paths(state: AppState) -> Router {
         .route(
             "/v1/operators/:operator_id/calendars/:calendar_id",
             delete(operators::handlers::delete_operator_calendar),
+        )
+        .route(
+            "/v1/operators/:operator_id/stops",
+            get(stops::handlers::get_operator_stops),
         )
         .route(
             "/v1/operators/:operator_id/routes",

@@ -239,6 +239,23 @@ pub(crate) async fn get_bounded_stops(
     Ok(Json(sql::fetch_bounded_stops(&state.pool, boundary).await?))
 }
 
+pub(crate) async fn get_operator_stops(
+    State(state): State<AppState>,
+    Path(operator_id): Path<i32>,
+) -> Result<Json<Vec<responses::Stop>>, Error> {
+    Ok(Json(
+        sql::fetch_operator_stops(&state.pool, operator_id).await?,
+    ))
+}
+
+pub(crate) async fn get_route_stops(
+    State(state): State<AppState>,
+    Path(route_id): Path<i32>,
+) -> Result<Json<Vec<responses::Stop>>, Error> {
+    Ok(Json(sql::fetch_route_stops(&state.pool, route_id).await?))
+}
+
+// TODO move this to the routes module
 pub(crate) async fn get_stop_routes(
     State(state): State<AppState>,
     Path(stop_id): Path<i32>,
