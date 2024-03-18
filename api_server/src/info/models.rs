@@ -79,6 +79,8 @@ pub(crate) mod responses {
         pub is_validated: bool,
         pub is_relevant: bool,
         pub is_sensible: bool,
+
+        pub screenshot_url: Option<String>,
     }
 
     #[derive(Serialize, Debug)]

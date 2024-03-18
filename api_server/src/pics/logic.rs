@@ -530,3 +530,333 @@ async fn delete_operator_pic_from_storage(
 
     Ok(())
 }
+
+pub(crate) async fn upload_news_item_img(
+    item_id: i32,
+    bucket: &s3::Bucket,
+    db_pool: &PgPool,
+    filename: &str,
+    content: &Bytes,
+) -> Result<String, Error> {
+    let mut hasher = Sha1::new();
+    hasher.update(content);
+    let hash = hasher.finalize();
+    let hex_hash = base16ct::lower::encode_string(&hash);
+
+    let mut transaction = db_pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    let existing_hashes =
+        sql::fetch_news_img_hashes(&mut transaction, item_id).await?;
+    let existing_hashes = existing_hashes.ok_or(Error::NotFoundUpstream)?;
+
+    if existing_hashes.contains(&hex_hash) {
+        return Ok(hex_hash);
+    }
+
+    let path = std::path::Path::new(&filename);
+    let ext = path.extension();
+    if ext.is_none() {
+        return Err(Error::DependenciesNotMet);
+    }
+    let ext = ext.unwrap();
+    // Ensure valid
+    if ext.eq_ignore_ascii_case("png")
+        || ext.eq_ignore_ascii_case("jpg")
+        || ext.eq_ignore_ascii_case("webp")
+    {
+        // Ensure it is valid
+        let _ = image::load_from_memory(content.as_ref())
+            .map_err(|err| Error::ValidationFailure(err.to_string()))?;
+    } else {
+        return Err(Error::DependenciesNotMet);
+    }
+
+    let mime = mime_guess::from_path(path)
+        .first()
+        .expect("Unable to deduce MIME despite whitelist");
+
+    upload_news_img_to_storage(bucket, content, &hex_hash, mime.as_ref())
+        .await?;
+
+    let db_res =
+        sql::insert_news_img(&mut transaction, item_id, &hex_hash).await;
+
+    if let Err(db_err) = db_res {
+        let storage_res =
+            delete_news_img_from_storage(&bucket, &hex_hash).await;
+        if let Err(storage_err) = storage_res {
+            eprintln!(
+                "Reversion failure.\
+                {hex_hash} was stored into news_item. {item_id}.\
+                Database threw: {db_err}. Storage threw: {storage_err}"
+            )
+        }
+        return Err(db_err);
+    }
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    Ok(hex_hash)
+}
+
+async fn upload_news_img_to_storage(
+    bucket: &s3::Bucket,
+    content: &Bytes,
+    hex_hash: &str,
+    mime: &str,
+) -> Result<(), Error> {
+    bucket
+        .put_object_with_content_type(
+            format!("/news/{hex_hash}"),
+            content.as_ref(),
+            mime,
+        )
+        .await
+        .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?;
+
+    Ok(())
+}
+
+async fn delete_news_img_from_storage(
+    bucket: &s3::Bucket,
+    hex_hash: &str,
+) -> Result<(), Error> {
+    bucket
+        .delete_object(format!("/news/{hex_hash}"))
+        .await
+        .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?;
+
+    Ok(())
+}
+
+pub(crate) async fn upload_external_news_item_img(
+    item_id: i32,
+    bucket: &s3::Bucket,
+    db_pool: &PgPool,
+    filename: &str,
+    content: &Bytes,
+) -> Result<String, Error> {
+    let mut hasher = Sha1::new();
+    hasher.update(content);
+    let hash = hasher.finalize();
+    let hex_hash = base16ct::lower::encode_string(&hash);
+
+    let mut transaction = db_pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    let existing_hashes =
+        sql::fetch_external_news_img_hashes(&mut transaction, item_id).await?;
+    let existing_hashes = existing_hashes.ok_or(Error::NotFoundUpstream)?;
+
+    if existing_hashes.contains(&hex_hash) {
+        return Ok(hex_hash);
+    }
+
+    let path = std::path::Path::new(&filename);
+    let ext = path.extension();
+    if ext.is_none() {
+        return Err(Error::DependenciesNotMet);
+    }
+    let ext = ext.unwrap();
+    // Ensure valid
+    if ext.eq_ignore_ascii_case("png")
+        || ext.eq_ignore_ascii_case("jpg")
+        || ext.eq_ignore_ascii_case("webp")
+    {
+        // Ensure it is valid
+        let _ = image::load_from_memory(content.as_ref())
+            .map_err(|err| Error::ValidationFailure(err.to_string()))?;
+    } else {
+        return Err(Error::DependenciesNotMet);
+    }
+
+    let mime = mime_guess::from_path(path)
+        .first()
+        .expect("Unable to deduce MIME despite whitelist");
+
+    upload_external_news_img_to_storage(
+        bucket,
+        content,
+        &hex_hash,
+        mime.as_ref(),
+    )
+    .await?;
+
+    let db_res =
+        sql::insert_external_news_img(&mut transaction, item_id, &hex_hash)
+            .await;
+
+    if let Err(db_err) = db_res {
+        let storage_res =
+            delete_external_news_img_from_storage(&bucket, &hex_hash).await;
+        if let Err(storage_err) = storage_res {
+            eprintln!(
+                "Reversion failure.\
+                {hex_hash} was stored into news_item. {item_id}.\
+                Database threw: {db_err}. Storage threw: {storage_err}"
+            )
+        }
+        return Err(db_err);
+    }
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    Ok(hex_hash)
+}
+
+async fn upload_external_news_img_to_storage(
+    bucket: &s3::Bucket,
+    content: &Bytes,
+    hex_hash: &str,
+    mime: &str,
+) -> Result<(), Error> {
+    bucket
+        .put_object_with_content_type(
+            format!("/enews/{hex_hash}"),
+            content.as_ref(),
+            mime,
+        )
+        .await
+        .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?;
+
+    Ok(())
+}
+
+async fn delete_external_news_img_from_storage(
+    bucket: &s3::Bucket,
+    hex_hash: &str,
+) -> Result<(), Error> {
+    bucket
+        .delete_object(format!("/enews/{hex_hash}"))
+        .await
+        .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?;
+
+    Ok(())
+}
+
+pub(crate) async fn upload_news_item_screenshot(
+    item_id: i32,
+    bucket: &s3::Bucket,
+    db_pool: &PgPool,
+    filename: &str,
+    content: &Bytes,
+) -> Result<(), Error> {
+    let mut hasher = Sha1::new();
+    hasher.update(content);
+    let hash = hasher.finalize();
+    let hex_hash = base16ct::lower::encode_string(&hash);
+
+    let mut transaction = db_pool
+        .begin()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    let existing_hashes =
+        sql::fetch_external_news_screenshot_hashes(&mut transaction, item_id)
+            .await?;
+    let existing_hashes = existing_hashes.ok_or(Error::NotFoundUpstream)?;
+
+    if existing_hashes.contains(&hex_hash) {
+        return Ok(());
+    }
+
+    let path = std::path::Path::new(&filename);
+    let ext = path.extension();
+    if ext.is_none() {
+        return Err(Error::DependenciesNotMet);
+    }
+    let ext = ext.unwrap();
+    // Ensure valid
+    if ext.eq_ignore_ascii_case("png")
+        || ext.eq_ignore_ascii_case("jpg")
+        || ext.eq_ignore_ascii_case("webp")
+    {
+        // Ensure it is valid
+        let _ = image::load_from_memory(content.as_ref())
+            .map_err(|err| Error::ValidationFailure(err.to_string()))?;
+    } else {
+        return Err(Error::DependenciesNotMet);
+    }
+
+    let mime = mime_guess::from_path(path)
+        .first()
+        .expect("Unable to deduce MIME despite whitelist");
+
+    upload_external_news_item_screenshot_to_storage(
+        bucket,
+        content,
+        &hex_hash,
+        mime.as_ref(),
+    )
+    .await?;
+
+    let db_res = sql::update_external_news_screenshot(
+        &mut transaction,
+        item_id,
+        &hex_hash,
+    )
+    .await;
+
+    if let Err(db_err) = db_res {
+        let storage_res = delete_external_news_item_screenshot_from_storage(
+            &bucket, &hex_hash,
+        )
+        .await;
+        if let Err(storage_err) = storage_res {
+            eprintln!(
+                "Reversion failure.\
+                {hex_hash} was stored into news_item_ss. {item_id}.\
+                Database threw: {db_err}. Storage threw: {storage_err}"
+            )
+        }
+        return Err(db_err);
+    }
+
+    transaction
+        .commit()
+        .await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    Ok(())
+}
+
+async fn upload_external_news_item_screenshot_to_storage(
+    bucket: &s3::Bucket,
+    content: &Bytes,
+    hex_hash: &str,
+    mime: &str,
+) -> Result<(), Error> {
+    bucket
+        .put_object_with_content_type(
+            format!("/enews_ss/{hex_hash}"),
+            content.as_ref(),
+            mime,
+        )
+        .await
+        .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?;
+
+    Ok(())
+}
+
+async fn delete_external_news_item_screenshot_from_storage(
+    bucket: &s3::Bucket,
+    hex_hash: &str,
+) -> Result<(), Error> {
+    bucket
+        .delete_object(format!("/enews_ss/{hex_hash}"))
+        .await
+        .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?;
+
+    Ok(())
+}

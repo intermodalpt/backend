@@ -1140,3 +1140,144 @@ WHERE operators.id=$2
 
     Ok(())
 }
+
+pub(crate) async fn fetch_news_img_hashes(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    item_id: i32,
+) -> Result<Option<Vec<String>>> {
+    Ok(sqlx::query!(
+        r#"
+SELECT external_news_imgs.id, array_remove(array_agg(sha1), NULL) as "hashes!: Vec<String>"
+FROM external_news_imgs
+JOIN external_news_items_imgs ON external_news_items_imgs.img_id = external_news_imgs.id
+WHERE item_id=$1
+GROUP BY external_news_imgs.id"#,
+        item_id
+    )
+        .fetch_optional(&mut **transaction).await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+        .map(|row| row.hashes))
+}
+
+pub(crate) async fn insert_news_img(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    item_id: i32,
+    sha1: &str,
+) -> Result<i32> {
+    let res = sqlx::query!(
+        r#"
+INSERT INTO news_imgs(sha1)
+VALUES ($1)
+RETURNING id
+        "#,
+        sha1,
+    )
+    .fetch_one(&mut **transaction)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    let pic_id = res.id;
+
+    let _res = sqlx::query!(
+        r#"
+INSERT INTO news_items_imgs(item_id, img_id)
+VALUES ($1, $2)
+        "#,
+        item_id,
+        pic_id,
+    )
+    .fetch_one(&mut **transaction)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    Ok(pic_id)
+}
+
+pub(crate) async fn fetch_external_news_img_hashes(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    item_id: i32,
+) -> Result<Option<Vec<String>>> {
+    Ok(sqlx::query!(
+        r#"
+SELECT external_news_imgs.id, array_remove(array_agg(sha1), NULL) as "hashes!: Vec<String>"
+FROM external_news_imgs
+JOIN external_news_items_imgs ON external_news_items_imgs.img_id = external_news_imgs.id
+WHERE item_id=$1
+GROUP BY external_news_imgs.id"#,
+        item_id
+    )
+        .fetch_optional(&mut **transaction).await
+        .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+        .map(|row| row.hashes))
+}
+
+pub(crate) async fn insert_external_news_img(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    item_id: i32,
+    sha1: &str,
+) -> Result<i32> {
+    let res = sqlx::query!(
+        r#"
+INSERT INTO external_news_imgs(sha1)
+VALUES ($1)
+RETURNING id"#,
+        sha1,
+    )
+    .fetch_one(&mut **transaction)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    let pic_id = res.id;
+
+    let _res = sqlx::query!(
+        r#"
+INSERT INTO external_news_items_imgs(item_id, img_id)
+VALUES ($1, $2)
+        "#,
+        item_id,
+        pic_id,
+    )
+    .fetch_one(&mut **transaction)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    Ok(pic_id)
+}
+
+pub(crate) async fn fetch_external_news_screenshot_hashes(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    item_id: i32,
+) -> Result<Option<Vec<String>>> {
+    Ok(sqlx::query!(
+        r#"
+SELECT external_news_imgs.id, array_remove(array_agg(sha1), NULL) as "hashes!: Vec<String>"
+FROM external_news_imgs
+JOIN external_news_items_imgs ON external_news_items_imgs.img_id = external_news_imgs.id
+WHERE item_id=$1
+GROUP BY external_news_imgs.id"#,
+        item_id
+    )
+    .fetch_optional(&mut **transaction).await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map(|row| row.hashes))
+}
+
+pub(crate) async fn update_external_news_screenshot(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    item_id: i32,
+    sha1: &str,
+) -> Result<()> {
+    let _res = sqlx::query!(
+        r#"
+UPDATE external_news_items
+SET ss_sha1 = $1
+WHERE id=$2"#,
+        sha1,
+        item_id
+    )
+    .fetch_one(&mut **transaction)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    Ok(())
+}

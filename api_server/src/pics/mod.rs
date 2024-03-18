@@ -49,9 +49,9 @@ pub(crate) fn get_logo_path(operator_id: i32, sha: &str) -> String {
 }
 
 pub(crate) fn get_external_news_img_path(sha: &str) -> String {
-    format!("{}/enews/{sha}/min", IMG_ROOT.get().unwrap())
+    format!("{}/enews/{sha}/img", IMG_ROOT.get().unwrap())
 }
 
 pub(crate) fn get_external_news_ss_path(sha: &str) -> String {
-    format!("{}/enews_ss/{sha}/logo", IMG_ROOT.get().unwrap())
+    format!("{}/enews_ss/{sha}/img", IMG_ROOT.get().unwrap())
 }

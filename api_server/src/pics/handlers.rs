@@ -639,3 +639,128 @@ pub(crate) async fn post_upload_operator_logo(
 
     Ok(())
 }
+
+pub(crate) async fn post_news_image(
+    State(state): State<AppState>,
+    claims: Option<auth::Claims>,
+    Path(item_id): Path<i32>,
+    mut multipart: Multipart,
+) -> Result<Json<HashMap<String, String>>, Error> {
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
+    let field = get_exactly_one_field(&mut multipart).await?;
+
+    let filename = field
+        .file_name()
+        .ok_or_else(|| {
+            Error::ValidationFailure("File without a filename".to_string())
+        })?
+        .to_string();
+    let content = field
+        .bytes()
+        .await
+        .map_err(|err| Error::ValidationFailure(err.to_string()))?;
+
+    let sha1 = logic::upload_news_item_img(
+        item_id,
+        &state.bucket,
+        &state.pool,
+        &filename,
+        &content,
+    )
+    .await?;
+
+    Ok({
+        let mut map = HashMap::new();
+        map.insert("url".to_string(), super::get_external_news_img_path(&sha1));
+        Json(map)
+    })
+}
+
+pub(crate) async fn post_external_news_image(
+    State(state): State<AppState>,
+    claims: Option<auth::Claims>,
+    Path(item_id): Path<i32>,
+    mut multipart: Multipart,
+) -> Result<Json<HashMap<String, String>>, Error> {
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
+    let field = get_exactly_one_field(&mut multipart).await?;
+
+    let filename = field
+        .file_name()
+        .ok_or_else(|| {
+            Error::ValidationFailure("File without a filename".to_string())
+        })?
+        .to_string();
+    let content = field
+        .bytes()
+        .await
+        .map_err(|err| Error::ValidationFailure(err.to_string()))?;
+
+    let sha1 = logic::upload_external_news_item_img(
+        item_id,
+        &state.bucket,
+        &state.pool,
+        &filename,
+        &content,
+    )
+    .await?;
+
+    Ok({
+        let mut map = HashMap::new();
+        map.insert("url".to_string(), super::get_external_news_img_path(&sha1));
+        Json(map)
+    })
+}
+
+pub(crate) async fn put_external_news_screenshot(
+    State(state): State<AppState>,
+    claims: Option<auth::Claims>,
+    Path(item_id): Path<i32>,
+    mut multipart: Multipart,
+) -> Result<(), Error> {
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
+    let field = get_exactly_one_field(&mut multipart).await?;
+
+    let filename = field
+        .file_name()
+        .ok_or_else(|| {
+            Error::ValidationFailure("File without a filename".to_string())
+        })?
+        .to_string();
+    let content = field
+        .bytes()
+        .await
+        .map_err(|err| Error::ValidationFailure(err.to_string()))?;
+
+    logic::upload_news_item_screenshot(
+        item_id,
+        &state.bucket,
+        &state.pool,
+        &filename,
+        &content,
+    )
+    .await?;
+
+    Ok(())
+}

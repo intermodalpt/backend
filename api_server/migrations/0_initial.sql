@@ -441,7 +441,7 @@ CREATE TABLE external_news_items
     is_sensible         boolean                  NOT NULL default FALSE,
     duplicate_of        integer REFERENCES external_news_items (id),
 
-    ss_sha1             character(40)            NOT NULL
+    ss_sha1             character(40)
 );
 
 CREATE TABLE external_news_imgs

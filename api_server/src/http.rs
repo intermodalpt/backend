@@ -435,6 +435,18 @@ pub fn build_paths(state: AppState) -> Router {
                 .delete(info::handlers::delete_external_news),
         )
         .route(
+            "/v1/news/:item_id/images",
+            post(pics::handlers::post_news_image),
+        )
+        .route(
+            "/v1/news/external/:item_id/images",
+            post(pics::handlers::post_external_news_image),
+        )
+        .route(
+            "/v1/news/external/:item_id/screenshot",
+            put(pics::handlers::put_external_news_screenshot),
+        )
+        .route(
             "/v1/news/external/:item_id/full",
             get(info::handlers::get_full_external_news_item),
         )

@@ -169,7 +169,7 @@ pub(crate) async fn fetch_full_external_news_item(
         r#"
 SELECT external_news_items.id, operator_id,
     content_md, prepro_content_md, content_text, prepro_content_text,
-    datetime, source, url, is_validated, is_relevant, is_sensible, raw,
+    datetime, source, url, is_validated, is_relevant, is_sensible, raw, ss_sha1,
     CASE
         WHEN count(external_news_imgs.id) > 0
         THEN array_agg(
@@ -202,6 +202,7 @@ GROUP BY external_news_items.id
         is_relevant: row.is_relevant,
         is_sensible: row.is_sensible,
         imgs: row.imgs.into_iter().map(Into::into).collect(),
+        screenshot_url: row.ss_sha1.as_ref().map(|sha1| get_external_news_ss_path(sha1))
     }))
 }
 
@@ -340,7 +341,7 @@ pub(crate) async fn fetch_pending_external_news(
         r#"
 SELECT external_news_items.id, operator_id,
     content_md, prepro_content_md, content_text, prepro_content_text,
-    datetime, source, url, is_validated, is_relevant, is_sensible, raw,
+    datetime, source, url, is_validated, is_relevant, is_sensible, raw, ss_sha1,
     CASE
         WHEN count(external_news_imgs.id) > 0
         THEN array_agg(
@@ -377,6 +378,7 @@ LIMIT $1 OFFSET $2
             is_relevant: row.is_relevant,
             is_sensible: row.is_sensible,
             imgs: row.imgs.into_iter().map(Into::into).collect(),
+            screenshot_url: row.ss_sha1.as_ref().map(|sha1| get_external_news_ss_path(sha1))
         })
     })
     .collect()
