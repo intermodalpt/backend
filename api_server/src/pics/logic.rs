@@ -422,15 +422,14 @@ pub(crate) async fn upload_operator_logo(
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
-    let res =
-        sql::fetch_operator_logo_hash(&mut transaction, operator_id).await?;
+    let curr_hash = sql::fetch_operator_logo_hash(&mut transaction, operator_id)
+        .await?
+        .ok_or(Error::NotFoundUpstream)?;
 
-    if let Some(Some(existing_hash)) = res {
-        if existing_hash == hex_hash {
-            return Ok(());
+    if let Some(curr_hash) = &curr_hash {
+        if &hex_hash == curr_hash {
+            return Ok(())
         }
-        delete_operator_pic_from_storage(&bucket, &existing_hash, operator_id)
-            .await?;
     }
 
     let path = std::path::Path::new(&filename);
@@ -469,6 +468,10 @@ pub(crate) async fn upload_operator_logo(
         mime.as_ref(),
     )
     .await?;
+    if let Some(existing_hash) = curr_hash {
+        delete_operator_pic_from_storage(&bucket, &existing_hash, operator_id)
+            .await?;
+    }
 
     let db_res = sql::update_operator_logo_hash(
         &mut transaction,
