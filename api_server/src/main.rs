@@ -31,6 +31,7 @@ mod errors;
 mod geo;
 pub(crate) mod gtfs;
 mod http;
+pub mod info;
 pub(crate) mod misc;
 mod operators;
 mod osm;

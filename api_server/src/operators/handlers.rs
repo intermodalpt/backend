@@ -18,10 +18,9 @@
 
 use std::collections::HashMap;
 
-use axum::extract::{Path, Query, State};
+use axum::extract::{Path, State};
 use axum::Json;
 use chrono::NaiveDate;
-use serde::Deserialize;
 
 use commons::models::{history, operators};
 
@@ -483,37 +482,5 @@ pub(crate) async fn get_operator_calendars_for_date(
 
     Ok(Json(
         sql::fetch_calendars_for_date(&state.pool, operator_id, date).await?,
-    ))
-}
-
-#[derive(Deserialize, Default)]
-pub(crate) struct Page {
-    #[serde(default)]
-    p: u32,
-}
-
-const PAGE_SIZE: u32 = 20;
-
-pub(crate) async fn get_news(
-    State(state): State<AppState>,
-    paginator: Query<Page>,
-) -> Result<Json<Vec<operators::NewsItem>>, Error> {
-    let offset = i64::from(paginator.p * PAGE_SIZE);
-    let take = i64::from(PAGE_SIZE);
-
-    Ok(Json(sql::fetch_news(&state.pool, take, offset).await?))
-}
-
-pub(crate) async fn get_operator_news(
-    State(state): State<AppState>,
-    Path(operator_id): Path<i32>,
-    paginator: Query<Page>,
-) -> Result<Json<Vec<responses::OperatorNewsItem>>, Error> {
-    let offset = i64::from(paginator.p * PAGE_SIZE);
-    let take = i64::from(PAGE_SIZE);
-
-    Ok(Json(
-        sql::fetch_operator_news(&state.pool, operator_id, take, offset)
-            .await?,
     ))
 }

@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nDELETE FROM external_news_items\nWHERE id=$1\n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a8d722f22f2c9fbd5584027cc0a0535a4996ffea1a53acc874b23559b0d36561"
+}

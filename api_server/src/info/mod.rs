@@ -1,6 +1,6 @@
 /*
     Intermodal, transportation information aggregator
-    Copyright (C) 2023  Cláudio Pereira
+    Copyright (C) 2024  Cláudio Pereira
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -16,23 +16,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#![allow(unused)]
-pub mod auth;
-pub mod contrib;
-pub mod errors;
-pub mod geo;
-pub mod gtfs;
-pub mod http;
-pub mod info;
-pub mod misc;
-pub mod operators;
-pub mod osm;
-pub mod pics;
-mod responses;
-pub mod routes;
-pub mod state;
-pub mod stops;
-pub mod utils;
-
-pub use errors::Error;
-pub use state::{AppState, Cached, State};
+pub(crate) mod handlers;
+pub(crate) mod models;
+pub(crate) mod sql;

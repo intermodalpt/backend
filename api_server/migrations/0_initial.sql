@@ -405,3 +405,63 @@ CREATE TABLE news_items
     geojson     jsonb,
     visible     boolean                  NOT NULL
 );
+
+CREATE TABLE news_imgs
+(
+    id         integer PRIMARY KEY,
+    sha1       character(40) NOT NULL,
+    transcript text
+);
+
+CREATE TABLE news_items_imgs
+(
+    item_id integer NOT NULL REFERENCES news_items (id),
+    img_id  integer NOT NULL REFERENCES news_imgs (id),
+    PRIMARY KEY (item_id, img_id)
+);
+
+CREATE TABLE external_news_items
+(
+    id                  serial PRIMARY KEY,
+    operator_id         integer REFERENCES operators (id),
+
+    prepro_content_md   text,
+    prepro_content_text text,
+
+    content_md          text,
+    content_text        text,
+
+    datetime            timestamp with time zone NOT NULL,
+    raw                 jsonb                    NOT NULL,
+    source              text                     NOT NULL,
+    url                 text,
+    is_validated        boolean                  NOT NULL,
+
+    is_relevant         boolean                  NOT NULL default FALSE,
+    is_sensible         boolean                  NOT NULL default FALSE,
+    duplicate_of        integer REFERENCES external_news_items (id),
+
+    ss_sha1             character(40)            NOT NULL
+);
+
+CREATE TABLE external_news_imgs
+(
+    id                   serial PRIMARY KEY,
+    sha1                 character(40) NOT NULL,
+    has_copyright_issues boolean,
+    transcript           text
+);
+
+CREATE TABLE external_news_items_imgs
+(
+    item_id integer NOT NULL REFERENCES external_news_items (id),
+    img_id  integer NOT NULL REFERENCES external_news_imgs (id),
+    PRIMARY KEY (item_id, img_id)
+);
+
+CREATE TABLE news_items_external_news_items
+(
+    news_item_id          integer NOT NULL REFERENCES news_items (id),
+    external_news_item_id integer NOT NULL REFERENCES external_news_items (id),
+    PRIMARY KEY (news_item_id, external_news_item_id)
+);

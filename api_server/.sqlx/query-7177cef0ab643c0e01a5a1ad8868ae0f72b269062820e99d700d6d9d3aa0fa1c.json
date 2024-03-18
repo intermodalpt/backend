@@ -1,0 +1,82 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT external_news_items.id, operator_id,\n    COALESCE(content_md, prepro_content_md) as content_md,\n    COALESCE(content_text, prepro_content_text) as content_text,\n    datetime, source, url, is_validated, is_relevant, is_sensible,\n    CASE\n        WHEN count(external_news_imgs.id) > 0\n        THEN array_agg(\n            ROW(sha1, transcript, has_copyright_issues))\n        ELSE array[]::record[]\n    END as \"imgs!: Vec<(String, Option<String>, Option<bool>)>\"\nFROM external_news_items\nJOIN external_news_items_imgs ON external_news_items.id=external_news_items_imgs.item_id\nJOIN external_news_imgs ON external_news_items_imgs.img_id=external_news_imgs.id\nWHERE external_news_items.id=$1 AND has_copyright_issues=false\nGROUP BY external_news_items.id\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "operator_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "content_md",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "content_text",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "datetime",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
+        "name": "source",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "url",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "is_validated",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 8,
+        "name": "is_relevant",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 9,
+        "name": "is_sensible",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 10,
+        "name": "imgs!: Vec<(String, Option<String>, Option<bool>)>",
+        "type_info": "RecordArray"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      null,
+      null,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "7177cef0ab643c0e01a5a1ad8868ae0f72b269062820e99d700d6d9d3aa0fa1c"
+}

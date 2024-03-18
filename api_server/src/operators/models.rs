@@ -300,4 +300,15 @@ pub(crate) mod requests {
         pub route_ids: Vec<i32>,
         pub stop_ids: Vec<i32>,
     }
+
+    #[derive(Debug, Deserialize)]
+    pub struct NewExternalNewsItem {
+        pub operator_id: Option<i32>,
+        pub prepro_content_md: String,
+        pub prepro_content_text: String,
+        pub datetime: Option<DateTime<Local>>,
+        pub source: String,
+        pub url: Option<String>,
+        pub raw: JsonValue,
+    }
 }

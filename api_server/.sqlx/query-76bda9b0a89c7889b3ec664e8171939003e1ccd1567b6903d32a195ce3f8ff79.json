@@ -1,0 +1,100 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT external_news_items.id, operator_id,\n    content_md, prepro_content_md, content_text, prepro_content_text,\n    datetime, source, url, is_validated, is_relevant, is_sensible, raw,\n    CASE\n        WHEN count(external_news_imgs.id) > 0\n        THEN array_agg(\n            ROW(external_news_imgs.id, sha1, has_copyright_issues, transcript))\n        ELSE array[]::record[]\n    END as \"imgs!: Vec<models::ExternalNewsImage>\"\nFROM external_news_items\nJOIN external_news_items_imgs ON external_news_items.id=external_news_items_imgs.item_id\nJOIN external_news_imgs ON external_news_items_imgs.img_id=external_news_imgs.id\nWHERE external_news_items.id=$1\nGROUP BY external_news_items.id\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "operator_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "content_md",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "prepro_content_md",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "content_text",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "prepro_content_text",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "datetime",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 7,
+        "name": "source",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "url",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "is_validated",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 10,
+        "name": "is_relevant",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 11,
+        "name": "is_sensible",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 12,
+        "name": "raw",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 13,
+        "name": "imgs!: Vec<models::ExternalNewsImage>",
+        "type_info": "RecordArray"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "76bda9b0a89c7889b3ec664e8171939003e1ccd1567b6903d32a195ce3f8ff79"
+}

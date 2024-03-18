@@ -26,7 +26,7 @@ use tower_http::limit::RequestBodyLimitLayer;
 
 use crate::state::AppState;
 use crate::{
-    auth, contrib, geo, gtfs, misc, operators, osm, pics, routes, stops,
+    auth, contrib, geo, gtfs, info, misc, operators, osm, pics, routes, stops,
 };
 
 #[allow(clippy::too_many_lines)]
@@ -320,7 +320,6 @@ pub fn build_paths(state: AppState) -> Router {
             "/v1/contrib/:contribution_id/decline",
             post(contrib::handlers::post_decline_contrib_data),
         )
-        .route("/v1/news", get(operators::handlers::get_news))
         .route(
             "/v1/operators",
             get(operators::handlers::get_operators)
@@ -404,7 +403,15 @@ pub fn build_paths(state: AppState) -> Router {
         )
         .route(
             "/v1/operators/:operator_id/news",
-            get(operators::handlers::get_operator_news),
+            get(info::handlers::get_operator_news),
+        )
+        .route(
+            "/v1/operators/:operator_id/external_news",
+            get(info::handlers::get_operator_external_news),
+        )
+        .route(
+            "/v1/operators/:operator_id/external_news",
+            get(info::handlers::get_operator_pending_external_news),
         )
         .route(
             "/v1/operators/:operator_id/validation",
@@ -416,6 +423,25 @@ pub fn build_paths(state: AppState) -> Router {
             post(pics::handlers::post_upload_operator_logo),
         )
         .route("/v1/calendars", get(operators::handlers::get_calendars))
+        .route("/v1/news", get(info::handlers::get_news))
+        .route(
+            "/v1/news/external",
+            get(info::handlers::get_external_news)
+                .post(info::handlers::post_external_news),
+        )
+        .route(
+            "/v1/news/external/:item_id",
+            get(info::handlers::get_external_news_item)
+                .delete(info::handlers::delete_external_news),
+        )
+        .route(
+            "/v1/news/external/:item_id/full",
+            get(info::handlers::get_full_external_news_item),
+        )
+        .route(
+            "/v1/news/external/pending",
+            get(info::handlers::get_pending_external_news),
+        )
         .route(
             "/v1/osm/stops",
             get(osm::handlers::get_osm_stops)
