@@ -18,7 +18,6 @@
 
 use sqlx::types::Json;
 use sqlx::{PgPool, QueryBuilder};
-use std::borrow::Cow;
 use std::collections::HashMap;
 
 use commons::models::osm;
@@ -88,7 +87,18 @@ pub(crate) async fn upsert_osm_stops(
             "History cannot be empty".to_string(),
         ));
     }
+    // Upsert in chunks to avoid exceeding the query param limit
+    for chunk in osm_stops.chunks(5000) {
+        upsert_osm_stops_chunk(pool, chunk).await?;
+    }
 
+    Ok(())
+}
+
+pub(crate) async fn upsert_osm_stops_chunk(
+    pool: &PgPool,
+    osm_stops: &[requests::OsmStop],
+) -> Result<()> {
     let mut qb = QueryBuilder::new(
         "INSERT INTO osm_stops (id, history, name, lat, lon, pos_author, last_author, creation, modification, version, deleted)",
     );
@@ -99,8 +109,7 @@ pub(crate) async fn upsert_osm_stops(
         let history = &osm_stop.history;
 
         let mut coord_author = "";
-        let mut lat = 0.0;
-        let mut lon = 0.0;
+        let (mut lat, mut lon) = (0.0, 0.0);
         for version in history.iter() {
             if (version.lat - lat).abs() > FLOAT_TOLERANCE
                 || (version.lon - lon).abs() > FLOAT_TOLERANCE
@@ -164,12 +173,11 @@ pub(crate) async fn upsert_osm_stops(
             deleted = EXCLUDED.deleted",
     );
 
-    let query = qb.build();
-
-    query
+    qb.build()
         .execute(pool)
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
     Ok(())
 }
 

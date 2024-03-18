@@ -19,7 +19,7 @@
 use axum::extract::{Path, State};
 use axum::Json;
 use itertools::Itertools;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use commons::models::osm;
 
@@ -44,7 +44,7 @@ pub(crate) async fn get_osm_stop_history(
 pub(crate) async fn patch_osm_stops(
     State(state): State<AppState>,
     claims: Option<auth::Claims>,
-    Json(mut osm_stops): Json<Vec<requests::OsmStop>>,
+    Json(mut newer_stops): Json<Vec<requests::OsmStop>>,
 ) -> Result<(), Error> {
     if claims.is_none() {
         return Err(Error::Forbidden);
@@ -56,16 +56,16 @@ pub(crate) async fn patch_osm_stops(
 
     let mut partial_updates = 0;
 
-    for osm_stop in osm_stops.iter_mut() {
-        if osm_stop.history.is_empty() {
+    for newer_stop in newer_stops.iter_mut() {
+        if newer_stop.history.is_empty() {
             return Err(Error::ValidationFailure(
                 "Received node with an empty history".to_string(),
             ));
         }
-        osm_stop.history.sort_by_key(|h| h.version);
+        newer_stop.history.sort_by_key(|h| h.version);
 
-        let version_count = osm_stop.history.len();
-        let last_version = osm_stop.history.last().unwrap();
+        let version_count = newer_stop.history.len();
+        let last_version = newer_stop.history.last().unwrap();
         if version_count != last_version.version as usize {
             partial_updates += 1;
         }
@@ -73,31 +73,33 @@ pub(crate) async fn patch_osm_stops(
 
     if partial_updates > 0 {
         let histories = sql::fetch_osm_stop_histories(&state.pool).await?;
-        for osm_stop in osm_stops.iter_mut() {
-            osm_stop.history.sort_by_key(|h| h.version);
-            let version_count = osm_stop.history.len();
-            let last_version = osm_stop.history.last().unwrap();
+        for newer_stop in newer_stops.iter_mut() {
+            let version_count = newer_stop.history.len();
+            let last_version = newer_stop.history.last().unwrap();
             let is_partial = version_count != last_version.version as usize;
 
             if is_partial {
-                if let Some(history) = histories.get(&osm_stop.id) {
-                    let merged_history = history
+                let newer_versions = newer_stop
+                    .history
+                    .iter()
+                    .map(|node| node.version)
+                    .collect::<HashSet<i32>>();
+                if let Some(old_history) = histories.get(&newer_stop.id) {
+                    let merged_history = old_history
                         .iter()
-                        .chain(osm_stop.history.iter())
+                        // Ensure that the newer versions prevail over the older
+                        .filter(|h| !newer_versions.contains(&h.version))
+                        .chain(newer_stop.history.iter())
                         .sorted_by_key(|h| h.version)
-                        .dedup_by(|a, b| a.version == b.version)
                         .cloned()
                         .collect();
-                    osm_stop.history = merged_history;
+                    newer_stop.history = merged_history;
                 }
             }
         }
     }
 
-    // Upsert in chunks to avoid exceeding the query param limit
-    for chunk in osm_stops.chunks(5000) {
-        sql::upsert_osm_stops(&state.pool, chunk).await?
-    }
+    sql::upsert_osm_stops(&state.pool, &newer_stops).await?;
 
     Ok(())
 }
