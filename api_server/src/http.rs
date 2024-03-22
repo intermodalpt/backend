@@ -344,7 +344,20 @@ pub fn build_paths(state: AppState) -> Router {
         )
         .route(
             "/v1/operators/:operator_id/stops",
+            get(operators::handlers::get_operator_stops),
+        )
+        .route(
+            "/v1/operators/:operator_id/stops/full",
             get(stops::handlers::get_operator_stops),
+        )
+        .route(
+            "/v1/operators/:operator_id/stop_by_ref/:stop_ref",
+            get(stops::handlers::get_stop_by_operator_ref),
+        )
+        .route(
+            "/v1/operators/:operator_id/stops/:stop_id",
+            put(operators::handlers::put_operator_stop)
+                .delete(operators::handlers::delete_operator_stop),
         )
         .route(
             "/v1/operators/:operator_id/routes",
@@ -367,19 +380,6 @@ pub fn build_paths(state: AppState) -> Router {
         .route(
             "/v1/operators/:operator_id/issues",
             get(operators::handlers::get_operator_issues),
-        )
-        .route(
-            "/v1/operators/:operator_id/stops",
-            get(operators::handlers::get_operator_stops),
-        )
-        .route(
-            "/v1/operators/:operator_id/stop_by_ref/:stop_ref",
-            get(stops::handlers::get_stop_by_operator_ref),
-        )
-        .route(
-            "/v1/operators/:operator_id/stops/:stop_id",
-            put(operators::handlers::put_operator_stop)
-                .delete(operators::handlers::delete_operator_stop),
         )
         .route(
             "/v1/operators/:operator_id/gtfs/stops",
@@ -410,7 +410,7 @@ pub fn build_paths(state: AppState) -> Router {
             get(info::handlers::get_operator_external_news),
         )
         .route(
-            "/v1/operators/:operator_id/external_news",
+            "/v1/operators/:operator_id/external_news/pending",
             get(info::handlers::get_operator_pending_external_news),
         )
         .route(
@@ -425,6 +425,10 @@ pub fn build_paths(state: AppState) -> Router {
         .route("/v1/calendars", get(operators::handlers::get_calendars))
         .route("/v1/news", get(info::handlers::get_news))
         .route(
+            "/v1/news/:item_id/images",
+            post(pics::handlers::post_news_image),
+        )
+        .route(
             "/v1/news/external",
             get(info::handlers::get_external_news)
                 .post(info::handlers::post_external_news),
@@ -433,10 +437,6 @@ pub fn build_paths(state: AppState) -> Router {
             "/v1/news/external/:item_id",
             get(info::handlers::get_external_news_item)
                 .delete(info::handlers::delete_external_news),
-        )
-        .route(
-            "/v1/news/:item_id/images",
-            post(pics::handlers::post_news_image),
         )
         .route(
             "/v1/news/external/:item_id/images",
