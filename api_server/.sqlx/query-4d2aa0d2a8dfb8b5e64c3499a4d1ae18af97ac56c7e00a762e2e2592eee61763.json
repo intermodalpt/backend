@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nINSERT INTO external_news_imgs(sha1)\nVALUES ($1)\nRETURNING id",
+  "query": "\nINSERT INTO external_news_imgs(sha1, filename)\nVALUES ($1, $2)\nRETURNING id",
   "describe": {
     "columns": [
       {
@@ -11,12 +11,13 @@
     ],
     "parameters": {
       "Left": [
-        "Bpchar"
+        "Bpchar",
+        "Text"
       ]
     },
     "nullable": [
       false
     ]
   },
-  "hash": "f6f3a77237289518ed14d59edbbee0ca72d1961b8c81d88ad891a29a57adff97"
+  "hash": "4d2aa0d2a8dfb8b5e64c3499a4d1ae18af97ac56c7e00a762e2e2592eee61763"
 }

@@ -1164,14 +1164,16 @@ pub(crate) async fn insert_news_img(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     item_id: i32,
     sha1: &str,
+    filename: &str,
 ) -> Result<i32> {
     let res = sqlx::query!(
         r#"
-INSERT INTO news_imgs(sha1)
-VALUES ($1)
+INSERT INTO news_imgs(sha1, filename)
+VALUES ($1, $2)
 RETURNING id
         "#,
         sha1,
+        filename,
     )
     .fetch_one(&mut **transaction)
     .await
@@ -1217,13 +1219,15 @@ pub(crate) async fn insert_external_news_img(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     item_id: i32,
     sha1: &str,
+    filename: &str,
 ) -> Result<i32> {
     let res = sqlx::query!(
         r#"
-INSERT INTO external_news_imgs(sha1)
-VALUES ($1)
+INSERT INTO external_news_imgs(sha1, filename)
+VALUES ($1, $2)
 RETURNING id"#,
         sha1,
+        filename,
     )
     .fetch_one(&mut **transaction)
     .await

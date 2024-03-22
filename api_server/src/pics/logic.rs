@@ -586,7 +586,8 @@ pub(crate) async fn upload_news_item_img(
         .await?;
 
     let db_res =
-        sql::insert_news_img(&mut transaction, item_id, &hex_hash).await;
+        sql::insert_news_img(&mut transaction, item_id, &hex_hash, &filename)
+            .await;
 
     if let Err(db_err) = db_res {
         let storage_res =
@@ -694,9 +695,13 @@ pub(crate) async fn upload_external_news_item_img(
     )
     .await?;
 
-    let db_res =
-        sql::insert_external_news_img(&mut transaction, item_id, &hex_hash)
-            .await;
+    let db_res = sql::insert_external_news_img(
+        &mut transaction,
+        item_id,
+        &hex_hash,
+        &filename,
+    )
+    .await;
 
     if let Err(db_err) = db_res {
         let storage_res =

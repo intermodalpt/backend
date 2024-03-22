@@ -416,6 +416,7 @@ CREATE TABLE news_imgs
 (
     id         integer PRIMARY KEY,
     sha1       character(40) NOT NULL,
+    filename   text,
     transcript text
 );
 
@@ -482,6 +483,7 @@ CREATE TABLE external_news_imgs
 (
     id                   serial PRIMARY KEY,
     sha1                 character(40) NOT NULL,
+    filename             text,
     has_copyright_issues boolean,
     transcript           text
 );
