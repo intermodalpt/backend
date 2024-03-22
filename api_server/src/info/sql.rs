@@ -521,3 +521,23 @@ WHERE id=$1
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
     Ok(())
 }
+
+pub(crate) async fn fetch_external_news_source_urls(
+    pool: &PgPool,
+    source: &str,
+) -> Result<Vec<String>> {
+    Ok(sqlx::query!(
+        r#"
+SELECT url
+FROM external_news_items
+WHERE source=$1
+"#,
+        source,
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .into_iter()
+    .filter_map(|row| row.url)
+    .collect())
+}

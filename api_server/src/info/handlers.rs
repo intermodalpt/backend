@@ -235,3 +235,21 @@ pub(crate) async fn delete_external_news(
     sql::delete_external_news_item(&state.pool, item_id).await?;
     Ok(())
 }
+
+pub(crate) async fn get_external_news_source_known_urls(
+    State(state): State<AppState>,
+    claims: Option<auth::Claims>,
+    Path(source): Path<String>,
+) -> Result<Json<Vec<String>>, Error> {
+    if claims.is_none() {
+        return Err(Error::Forbidden);
+    }
+    let claims = claims.unwrap();
+    if !claims.permissions.is_admin {
+        return Err(Error::Forbidden);
+    }
+
+    Ok(Json(
+        sql::fetch_external_news_source_urls(&state.pool, &source).await?,
+    ))
+}
