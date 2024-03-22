@@ -31,15 +31,18 @@ pub(crate) mod responses {
     use serde::Serialize;
     use sqlx::types::JsonValue;
 
+    use commons::models::info;
+
     use crate::pics::get_external_news_img_path;
 
     #[derive(Debug, Serialize)]
     pub struct OperatorNewsItem {
         pub id: i32,
+        pub title: String,
         pub summary: String,
-        pub content: String,
-        pub datetime: DateTime<Local>,
-        pub geojson: Option<JsonValue>,
+        pub content: Vec<info::ContentBlock>,
+        pub publish_datetime: DateTime<Local>,
+        pub edit_datetime: Option<DateTime<Local>>,
         pub visible: bool,
     }
 
@@ -47,21 +50,36 @@ pub(crate) mod responses {
     pub struct ExternalNewsItem {
         pub id: i32,
 
+        pub title: Option<String>,
+        pub summary: Option<String>,
+        pub author: Option<String>,
+
         pub content_md: Option<String>,
         pub content_text: Option<String>,
 
         pub operator_id: Option<i32>,
-        pub images: Vec<ExternalNewsImage>,
 
-        pub datetime: DateTime<Local>,
+        pub publish_datetime: DateTime<Local>,
+        pub edit_datetime: Option<DateTime<Local>>,
 
         pub source: String,
         pub url: Option<String>,
+
+        pub is_partial: bool,
+        pub is_validated: bool,
+        pub is_relevant: Option<bool>,
+        pub is_sensitive: bool,
+
+        pub images: Vec<ExternalNewsImage>,
     }
 
     #[derive(Debug, Serialize)]
     pub struct FullExternalNewsItem {
         pub id: i32,
+
+        pub title: Option<String>,
+        pub summary: Option<String>,
+        pub author: Option<String>,
 
         pub prepro_content_md: Option<String>,
         pub prepro_content_text: Option<String>,
@@ -70,16 +88,19 @@ pub(crate) mod responses {
 
         pub operator_id: Option<i32>,
 
-        pub datetime: DateTime<Local>,
-        pub imgs: Vec<FullExternalNewsImage>,
+        pub publish_datetime: DateTime<Local>,
+        pub edit_datetime: Option<DateTime<Local>>,
 
         pub source: String,
         pub url: Option<String>,
         pub raw: JsonValue,
-        pub is_validated: bool,
-        pub is_relevant: bool,
-        pub is_sensible: bool,
 
+        pub is_partial: bool,
+        pub is_validated: bool,
+        pub is_relevant: Option<bool>,
+        pub is_sensitive: bool,
+
+        pub images: Vec<FullExternalNewsImage>,
         pub screenshot_url: Option<String>,
     }
 
@@ -117,11 +138,20 @@ pub(crate) mod requests {
     #[derive(Debug, Deserialize)]
     pub struct NewExternalNewsItem {
         pub operator_id: Option<i32>,
-        pub prepro_content_md: String,
-        pub prepro_content_text: String,
-        pub datetime: Option<DateTime<Local>>,
+
+        pub title: Option<String>,
+        pub summary: Option<String>,
+        pub author: Option<String>,
+
+        pub prepro_content_md: Option<String>,
+        pub prepro_content_text: Option<String>,
+
+        pub publish_datetime: DateTime<Local>,
+        pub edit_datetime: Option<DateTime<Local>>,
+
         pub source: String,
         pub url: Option<String>,
+        pub is_partial: bool,
         pub raw: JsonValue,
     }
 }

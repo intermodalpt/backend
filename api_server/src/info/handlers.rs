@@ -19,12 +19,23 @@
 use axum::extract::{Path, Query, State};
 use axum::Json;
 use serde::Deserialize;
+use serde_with::serde_derive::Serialize;
 
-use commons::models::operators;
+use commons::models::info;
 
 use super::models::{requests, responses};
 use super::sql;
 use crate::{auth, AppState, Error};
+
+#[derive(Serialize)]
+pub struct IdReturn {
+    pub id: i32,
+}
+
+#[derive(Serialize)]
+pub struct UrlReturn {
+    pub url: String,
+}
 
 #[derive(Deserialize, Default)]
 pub(crate) struct Page {
@@ -37,7 +48,7 @@ const PAGE_SIZE: u32 = 20;
 pub(crate) async fn get_news(
     State(state): State<AppState>,
     paginator: Query<Page>,
-) -> Result<Json<Vec<operators::NewsItem>>, Error> {
+) -> Result<Json<Vec<info::NewsItem>>, Error> {
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
@@ -169,7 +180,7 @@ pub(crate) async fn get_operator_pending_external_news(
     claims: Option<auth::Claims>,
     paginator: Query<Page>,
     Path(operator_id): Path<i32>,
-) -> Result<Json<Vec<responses::ExternalNewsItem>>, Error> {
+) -> Result<Json<Vec<responses::FullExternalNewsItem>>, Error> {
     if claims.is_none() {
         return Err(Error::Forbidden);
     }
@@ -196,7 +207,7 @@ pub(crate) async fn post_external_news(
     State(state): State<AppState>,
     claims: Option<auth::Claims>,
     Json(news_item): Json<requests::NewExternalNewsItem>,
-) -> Result<Json<i32>, Error> {
+) -> Result<Json<IdReturn>, Error> {
     if claims.is_none() {
         return Err(Error::Forbidden);
     }
@@ -205,9 +216,8 @@ pub(crate) async fn post_external_news(
         return Err(Error::Forbidden);
     }
 
-    Ok(Json(
-        sql::insert_external_news(&state.pool, news_item).await?,
-    ))
+    let id = sql::insert_external_news(&state.pool, news_item).await?;
+    Ok(Json(IdReturn { id }))
 }
 
 pub(crate) async fn delete_external_news(

@@ -200,17 +200,6 @@ pub struct TicketComment {
     pub user_id: i32,
 }
 
-#[derive(Debug, Serialize)]
-pub struct NewsItem {
-    pub id: i32,
-    pub operator_id: Option<i32>,
-    pub summary: String,
-    pub content: String,
-    pub datetime: DateTime<Local>,
-    pub geojson: Option<serde_json::Value>,
-    pub visible: bool,
-}
-
 // TODO use this again in the operator-stop links
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "lowercase")]

@@ -25,7 +25,7 @@ pub struct Region {
     pub geometry: serde_json::Value,
     pub center_lat: Option<f64>,
     pub center_lon: Option<f64>,
-    pub zoom: Option<f64>
+    pub zoom: Option<f64>,
 }
 
 #[derive(Serialize, Deserialize)]

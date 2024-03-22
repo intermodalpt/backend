@@ -397,13 +397,19 @@ CREATE TABLE ticket_comments
 
 CREATE TABLE news_items
 (
-    id          serial PRIMARY KEY,
-    operator_id integer REFERENCES operators (id),
-    summary     text                     NOT NULL,
-    content     text                     NOT NULL,
-    datetime    timestamp with time zone NOT NULL,
-    geojson     jsonb,
-    visible     boolean                  NOT NULL
+    id               serial PRIMARY KEY,
+    operator_id      integer REFERENCES operators (id),
+
+    title            text                     NOT NULL,
+    summary          text                     NOT NULL,
+    author           text,
+    author_id        integer REFERENCES users (ID),
+    content          jsonb                    NOT NULL,
+
+    publish_datetime timestamp with time zone NOT NULL,
+    edit_datetime    timestamp with time zone,
+
+    visible          boolean                  NOT NULL
 );
 
 CREATE TABLE news_imgs
@@ -420,28 +426,56 @@ CREATE TABLE news_items_imgs
     PRIMARY KEY (item_id, img_id)
 );
 
+CREATE TABLE news_items_regions
+(
+    news_item_id integer NOT NULL REFERENCES news_items (id),
+    region_id    integer NOT NULL REFERENCES regions (id),
+    PRIMARY KEY (news_item_id, region_id)
+);
+
 CREATE TABLE external_news_items
 (
     id                  serial PRIMARY KEY,
     operator_id         integer REFERENCES operators (id),
 
+    title               text,
+    summary             text,
+    author              text,
+
+    -- Algorithmically determined markdown content
     prepro_content_md   text,
+    -- Algorithmically determined text content
     prepro_content_text text,
 
+    -- Manually inserted markdown content
     content_md          text,
+    -- Manually inserted text content
     content_text        text,
 
-    datetime            timestamp with time zone NOT NULL,
-    raw                 jsonb                    NOT NULL,
+    publish_datetime    timestamp with time zone NOT NULL,
+    edit_datetime       timestamp with time zone,
+    -- The place this was scraped from (eg. 'facebook;foobar')
     source              text                     NOT NULL,
+    -- The source URL when there's one that's 1) public and not 2) linked to an account
     url                 text,
-    is_validated        boolean                  NOT NULL,
+    -- Is a snapshot of the actual news item
+    -- (because eg. wants to point people at the item source)
+    is_partial          boolean                  NOT NULL,
 
-    is_relevant         boolean                  NOT NULL default FALSE,
-    is_sensible         boolean                  NOT NULL default FALSE,
+    -- Has been manually checked and the fields have been completed where needed
+    is_validated        boolean                  NOT NULL,
+    -- If is an actual news piece and not just... social media people doing social media things
+    is_relevant         boolean,
+    -- If shows things a bit too personally (eg. faces of random people)
+    is_sensitive        boolean                  NOT NULL default FALSE,
+
     duplicate_of        integer REFERENCES external_news_items (id),
 
-    ss_sha1             character(40)
+    -- Screenshot of the news piece
+    ss_sha1             character(40),
+
+    -- Random data that the scraper wants to attach to this content
+    raw                 jsonb                    NOT NULL
 );
 
 CREATE TABLE external_news_imgs

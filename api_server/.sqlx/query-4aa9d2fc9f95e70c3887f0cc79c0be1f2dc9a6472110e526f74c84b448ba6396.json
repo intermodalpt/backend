@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT id, operator_id, summary, content, datetime, geojson, visible\nFROM news_items\nLIMIT $1 OFFSET $2\n",
+  "query": "\nSELECT id, operator_id, title, summary,\n    content as \"content!: sqlx::types::Json<Vec<info::ContentBlock>>\",\n    publish_datetime, edit_datetime, visible\nFROM news_items\nLIMIT $1 OFFSET $2\n",
   "describe": {
     "columns": [
       {
@@ -15,26 +15,31 @@
       },
       {
         "ordinal": 2,
-        "name": "summary",
+        "name": "title",
         "type_info": "Text"
       },
       {
         "ordinal": 3,
-        "name": "content",
+        "name": "summary",
         "type_info": "Text"
       },
       {
         "ordinal": 4,
-        "name": "datetime",
-        "type_info": "Timestamptz"
-      },
-      {
-        "ordinal": 5,
-        "name": "geojson",
+        "name": "content!: sqlx::types::Json<Vec<info::ContentBlock>>",
         "type_info": "Jsonb"
       },
       {
+        "ordinal": 5,
+        "name": "publish_datetime",
+        "type_info": "Timestamptz"
+      },
+      {
         "ordinal": 6,
+        "name": "edit_datetime",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 7,
         "name": "visible",
         "type_info": "Bool"
       }
@@ -51,9 +56,10 @@
       false,
       false,
       false,
+      false,
       true,
       false
     ]
   },
-  "hash": "c406e267894dc2e434297255ef976f0e428c9612d5fd607b183100ee66764c02"
+  "hash": "4aa9d2fc9f95e70c3887f0cc79c0be1f2dc9a6472110e526f74c84b448ba6396"
 }
