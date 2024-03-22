@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT ss_sha1\nFROM external_news_items\nWHERE external_news_items.id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "ss_sha1",
+        "type_info": "Bpchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "6ec91d7421161a9c5a79d14a56a6ff3b73808d03e922eba8a00a22be3663d642"
+}

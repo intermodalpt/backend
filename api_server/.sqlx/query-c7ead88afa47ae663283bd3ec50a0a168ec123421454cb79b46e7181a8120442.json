@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT external_news_imgs.id, array_remove(array_agg(sha1), NULL) as \"hashes!: Vec<String>\"\nFROM external_news_imgs\nJOIN external_news_items_imgs ON external_news_items_imgs.img_id = external_news_imgs.id\nWHERE item_id=$1\nGROUP BY external_news_imgs.id",
+  "query": "\nSELECT news_items.id, array_remove(array_agg(sha1), NULL) as \"hashes!: Vec<String>\"\nFROM news_items\nLEFT JOIN news_items_imgs ON news_items_imgs.item_id = news_items.id\nLEFT JOIN news_imgs ON news_items_imgs.img_id = news_imgs.id\nWHERE news_items.id=$1\nGROUP BY news_items.id",
   "describe": {
     "columns": [
       {
@@ -24,5 +24,5 @@
       null
     ]
   },
-  "hash": "9af652427041ffa945dde2ea7cb1baa9cba902da38033c44aa9be08efb82e1b2"
+  "hash": "c7ead88afa47ae663283bd3ec50a0a168ec123421454cb79b46e7181a8120442"
 }

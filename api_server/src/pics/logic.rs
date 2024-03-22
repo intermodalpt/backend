@@ -422,13 +422,14 @@ pub(crate) async fn upload_operator_logo(
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
-    let curr_hash = sql::fetch_operator_logo_hash(&mut transaction, operator_id)
-        .await?
-        .ok_or(Error::NotFoundUpstream)?;
+    let curr_hash =
+        sql::fetch_operator_logo_hash(&mut transaction, operator_id)
+            .await?
+            .ok_or(Error::NotFoundUpstream)?;
 
     if let Some(curr_hash) = &curr_hash {
         if &hex_hash == curr_hash {
-            return Ok(())
+            return Ok(());
         }
     }
 
@@ -765,13 +766,15 @@ pub(crate) async fn upload_news_item_screenshot(
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
-    let existing_hashes =
-        sql::fetch_external_news_screenshot_hashes(&mut transaction, item_id)
-            .await?;
-    let existing_hashes = existing_hashes.ok_or(Error::NotFoundUpstream)?;
+    let current_hash =
+        sql::fetch_external_news_screenshot_hash(&mut transaction, item_id)
+            .await?
+            .ok_or(Error::NotFoundUpstream)?;
 
-    if existing_hashes.contains(&hex_hash) {
-        return Ok(());
+    if let Some(sha1) = &current_hash {
+        if sha1 == &hex_hash {
+            return Ok(());
+        }
     }
 
     let path = std::path::Path::new(&filename);
@@ -830,6 +833,12 @@ pub(crate) async fn upload_news_item_screenshot(
         .commit()
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+
+    // Delete the old one
+    if let Some(old_sha1) = current_hash {
+        delete_external_news_item_screenshot_from_storage(&bucket, &old_sha1)
+            .await?;
+    }
 
     Ok(())
 }

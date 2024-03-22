@@ -1147,11 +1147,12 @@ pub(crate) async fn fetch_news_img_hashes(
 ) -> Result<Option<Vec<String>>> {
     Ok(sqlx::query!(
         r#"
-SELECT external_news_imgs.id, array_remove(array_agg(sha1), NULL) as "hashes!: Vec<String>"
-FROM external_news_imgs
-JOIN external_news_items_imgs ON external_news_items_imgs.img_id = external_news_imgs.id
-WHERE item_id=$1
-GROUP BY external_news_imgs.id"#,
+SELECT news_items.id, array_remove(array_agg(sha1), NULL) as "hashes!: Vec<String>"
+FROM news_items
+LEFT JOIN news_items_imgs ON news_items_imgs.item_id = news_items.id
+LEFT JOIN news_imgs ON news_items_imgs.img_id = news_imgs.id
+WHERE news_items.id=$1
+GROUP BY news_items.id"#,
         item_id
     )
         .fetch_optional(&mut **transaction).await
@@ -1199,11 +1200,12 @@ pub(crate) async fn fetch_external_news_img_hashes(
 ) -> Result<Option<Vec<String>>> {
     Ok(sqlx::query!(
         r#"
-SELECT external_news_imgs.id, array_remove(array_agg(sha1), NULL) as "hashes!: Vec<String>"
-FROM external_news_imgs
-JOIN external_news_items_imgs ON external_news_items_imgs.img_id = external_news_imgs.id
-WHERE item_id=$1
-GROUP BY external_news_imgs.id"#,
+SELECT external_news_items.id, array_remove(array_agg(sha1), NULL) as "hashes!: Vec<String>"
+FROM external_news_items
+LEFT JOIN external_news_items_imgs ON external_news_items_imgs.item_id = external_news_items.id
+LEFT JOIN external_news_imgs ON external_news_items_imgs.img_id = external_news_imgs.id
+WHERE external_news_items.id=$1
+GROUP BY external_news_items.id"#,
         item_id
     )
         .fetch_optional(&mut **transaction).await
@@ -1237,29 +1239,28 @@ VALUES ($1, $2)
         item_id,
         pic_id,
     )
-    .fetch_one(&mut **transaction)
+    .execute(&mut **transaction)
     .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     Ok(pic_id)
 }
 
-pub(crate) async fn fetch_external_news_screenshot_hashes(
+pub(crate) async fn fetch_external_news_screenshot_hash(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     item_id: i32,
-) -> Result<Option<Vec<String>>> {
+) -> Result<Option<Option<String>>> {
     Ok(sqlx::query!(
         r#"
-SELECT external_news_imgs.id, array_remove(array_agg(sha1), NULL) as "hashes!: Vec<String>"
-FROM external_news_imgs
-JOIN external_news_items_imgs ON external_news_items_imgs.img_id = external_news_imgs.id
-WHERE item_id=$1
-GROUP BY external_news_imgs.id"#,
+SELECT ss_sha1
+FROM external_news_items
+WHERE external_news_items.id=$1"#,
         item_id
     )
-    .fetch_optional(&mut **transaction).await
+    .fetch_optional(&mut **transaction)
+    .await
     .map_err(|err| Error::DatabaseExecution(err.to_string()))?
-    .map(|row| row.hashes))
+    .map(|row| row.ss_sha1))
 }
 
 pub(crate) async fn update_external_news_screenshot(
