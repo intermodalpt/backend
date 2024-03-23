@@ -31,6 +31,8 @@ pub struct Route {
     #[serde(default)]
     pub circular: bool,
     pub active: bool,
+    pub badge_text_color: Option<String>,
+    pub badge_bg_color: Option<String>,
 
     // --- TODO Maybe deprecate. Keep for historical data
     pub main_subroute: Option<i32>,
