@@ -48,6 +48,7 @@ use std::sync::{Arc, RwLock};
 
 use config::Config;
 use sqlx::postgres::PgPool;
+use tokio::net::TcpListener;
 
 use errors::Error;
 use state::{AppState, Cached, State};
@@ -121,12 +122,15 @@ async fn main() {
         [0, 0, 0, 0],
         settings.get_int("port").expect("port not set") as u16,
     ));
-
-    axum::Server::bind(&addr)
-        .serve(
-            http::build_paths(state)
-                .into_make_service_with_connect_info::<SocketAddr>(),
-        )
+    let listener = TcpListener::bind(addr)
         .await
-        .expect("Unable to start service");
+        .expect("Unable to bind to socket");
+
+    axum::serve(
+        listener,
+        http::build_paths(state)
+            .into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await
+    .expect("Unable to start service");
 }

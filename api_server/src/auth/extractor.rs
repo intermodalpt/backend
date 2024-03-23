@@ -1,10 +1,9 @@
 use axum::{
-    async_trait,
-    extract::{FromRequestParts, TypedHeader},
-    headers::{authorization::Bearer, Authorization},
-    http::request::Parts,
+    async_trait, extract::FromRequestParts, http::request::Parts,
     RequestPartsExt,
 };
+use axum_extra::headers::{authorization::Bearer, Authorization};
+use axum_extra::TypedHeader;
 
 use super::{logic, models};
 use crate::errors::Error;
