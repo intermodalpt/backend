@@ -16,7 +16,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use chrono::{DateTime, Utc};
 use itertools::Itertools;
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
@@ -27,8 +26,7 @@ use commons::models::osm;
 
 use crate::models;
 
-// const API_URL: &str = "https://api.intermodal.pt";
-const API_URL: &str = "http://localhost:1893";
+const API_URL: &str = "https://api.intermodal.pt";
 
 pub(crate) static TOKEN: OnceCell<&'static str> = OnceCell::new();
 
@@ -38,7 +36,7 @@ pub struct OsmStop {
     pub version: i32,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct OsmHistoryPatch {
     pub id: i64,
     pub history: osm::NodeHistory,
@@ -88,24 +86,23 @@ pub(crate) async fn fetch_cached_osm_stop_history(
     }
 }
 
-pub(crate) async fn patch_iml_stop(
-    stop_id: i32,
-    meta: &StopOsmMeta,
+pub(crate) async fn patch_osm_stops_history(
+    osm_histories: &[OsmHistoryPatch],
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let url = format!("{}/v1/stops/{}/osm_meta", API_URL, stop_id);
+    let url = format!("{}/v1/osm/stops", API_URL);
     println!("Patching {}", url);
     let res = reqwest::Client::new()
         .patch(&url)
+        .json(osm_histories)
         .bearer_auth(TOKEN.get().unwrap())
-        .json(meta)
         .send()
         .await?;
+
     if res.status().is_success() {
         Ok(())
     } else {
         eprintln!("API error");
         eprintln!("Status: {}", res.status());
-        eprintln!("Error: {}", res.text().await.unwrap());
         std::process::exit(1);
     }
 }
@@ -132,7 +129,7 @@ pub(crate) async fn fetch_osm_stops(
 }
 
 pub(crate) async fn fetch_osm_node_versions(
-    osm_node_id: &str,
+    osm_node_id: i64,
 ) -> Result<Vec<osm::NodeVersion>, Box<dyn std::error::Error>> {
     let osm_query_url = format!(
         "https://www.openstreetmap.org/api/0.6/node/{}/history",

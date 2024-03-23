@@ -35,7 +35,7 @@ pub struct OsmHistoryPatch {
 pub(crate) async fn fetch_cached_osm_stop_versions(
 ) -> Result<HashMap<i64, Vec<i32>>, Box<dyn std::error::Error>> {
     let url = format!("{}/v1/osm/stops/versions", API_URL);
-    println!("Fetching {}", url);
+    println!("Getting {}", url);
     let res = reqwest::Client::new()
         .get(&url)
         .bearer_auth(TOKEN.get().unwrap())
@@ -56,7 +56,7 @@ pub(crate) async fn patch_osm_stops_history(
     osm_histories: &[OsmHistoryPatch],
 ) -> Result<(), Box<dyn std::error::Error>> {
     let url = format!("{}/v1/osm/stops", API_URL);
-    println!("Fetching {}", url);
+    println!("Patching {}", url);
     let res = reqwest::Client::new()
         .patch(&url)
         .json(osm_histories)
