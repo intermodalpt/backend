@@ -514,7 +514,7 @@ pub(crate) async fn delete_subroute_departure(
     Ok(())
 }
 
-pub(crate) async fn get_route_stops(
+pub(crate) async fn get_subroute_stops(
     State(state): State<AppState>,
     Path(route_id): Path<i32>,
 ) -> Result<Json<Vec<responses::SubrouteStops>>, Error> {
