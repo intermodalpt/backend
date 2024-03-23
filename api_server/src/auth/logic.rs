@@ -73,7 +73,8 @@ pub(crate) async fn login(
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
     let issue_time = Utc::now();
-    let expiration_time = issue_time.add(chrono::Duration::days(90));
+    let expiration_time =
+        issue_time.add(chrono::Duration::try_days(90).unwrap());
     let claims = models::Claims {
         iat: issue_time.timestamp(),
         exp: expiration_time.timestamp(),

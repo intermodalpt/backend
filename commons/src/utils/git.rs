@@ -203,9 +203,8 @@ pub fn head_date(repo: &Repository) -> Result<DateTime<Utc>, git2::Error> {
     let head_commit = head.peel_to_commit()?;
     // Get the commit time (as a UNIX timestamp) and convert it to a DateTime
     let commit_time = head_commit.time().seconds();
-    let commit_date = chrono::NaiveDateTime::from_timestamp_opt(commit_time, 0)
-        .unwrap()
-        .and_utc();
+    let commit_date = chrono::DateTime::from_timestamp(commit_time, 0)
+        .expect("Commit with invalid date");
 
     Ok(commit_date)
 }
