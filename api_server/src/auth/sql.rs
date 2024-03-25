@@ -130,7 +130,7 @@ LIMIT $1 OFFSET $2
                 id: r.id,
                 user_id: r.user_id,
                 action: serde_json::from_value(r.action).map_err(|e| {
-                    log::error!("Error deserializing: {}", e);
+                    tracing::error!("Error deserializing {e}");
                     Error::DatabaseDeserialization
                 })?,
                 datetime: r.datetime.with_timezone(&Utc),
@@ -192,7 +192,7 @@ LIMIT $2 OFFSET $3
             id: r.id,
             user_id,
             action: serde_json::from_value(r.action).map_err(|e| {
-                log::error!("Error deserializing: {}", e);
+                tracing::error!("Error deserializing {e}");
                 Error::DatabaseDeserialization
             })?,
             datetime: r.datetime.with_timezone(&Utc),

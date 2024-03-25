@@ -50,7 +50,7 @@ WHERE id=$1
             author_id: contribution.author_id,
             change: serde_json::from_value(contribution.change).map_err(
                 |e| {
-                    log::error!("Error deserializing: {}", e);
+                    tracing::error!("Error deserializing {e}");
                     Error::DatabaseDeserialization
                 },
             )?,
@@ -95,7 +95,7 @@ LIMIT $2 OFFSET $3
             id: r.id,
             author_id: r.author_id,
             change: serde_json::from_value(r.change).map_err(|e| {
-                log::error!("Error deserializing: {}", e);
+                tracing::error!("Error deserializing {e}");
                 Error::DatabaseDeserialization
             })?,
             submission_date: r.submission_date.with_timezone(&Local),
@@ -136,7 +136,7 @@ LIMIT $2 OFFSET $3
             id: r.id,
             author_id: r.author_id,
             change: serde_json::from_value(r.change).map_err(|e| {
-                log::error!("Error deserializing: {}", e);
+                tracing::error!("Error deserializing {e}");
                 Error::DatabaseDeserialization
             })?,
             submission_date: r.submission_date.with_timezone(&Local),
@@ -186,7 +186,7 @@ LIMIT $2 OFFSET $3
                 id: r.id,
                 author_id: r.author_id,
                 change: serde_json::from_value(r.change).map_err(|e| {
-                    log::error!("Error deserializing: {}", e);
+                    tracing::error!("Error deserializing {e}");
                     Error::DatabaseDeserialization
                 })?,
                 submission_date: r.submission_date.with_timezone(&Local),
@@ -280,7 +280,7 @@ LIMIT $1 OFFSET $2
                 id: r.id,
                 author_id: r.author_id,
                 change: serde_json::from_value(r.change).map_err(|e| {
-                    log::error!("Error deserializing: {}", e);
+                    tracing::error!("Error deserializing {e}");
                     Error::DatabaseDeserialization
                 })?,
                 submission_date: r.submission_date.with_timezone(&Local),
@@ -325,7 +325,7 @@ RETURNING id
     "#,
         contribution.author_id,
         serde_json::to_value(&contribution.change).map_err(|e| {
-            log::error!("Error deserializing: {}", e);
+            tracing::error!("Error deserializing {e}");
             Error::DatabaseDeserialization
         })?,
         contribution.submission_date,
@@ -444,7 +444,7 @@ LIMIT $1 OFFSET $2
             author_id: r.author_id,
             author_username: r.author_username,
             changes: serde_json::from_value(r.changes).map_err(|e| {
-                log::error!("Error deserializing: {}", e);
+                tracing::error!("Error deserializing {e}");
                 Error::DatabaseDeserialization
             })?,
             datetime: r.datetime.with_timezone(&Local),

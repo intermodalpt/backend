@@ -89,7 +89,7 @@ WHERE subroutes.id = $1
             destination: row.destination,
             headsign: row.headsign,
             via: serde_json::from_value(row.via).map_err(|e| {
-                log::error!("Error deserializing: {}", e);
+                tracing::error!("Error deserializing {e}");
                 Error::DatabaseDeserialization
             })?,
             circular: row.circular,

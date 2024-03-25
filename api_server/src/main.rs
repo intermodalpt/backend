@@ -55,7 +55,10 @@ use state::{AppState, Cached, State};
 
 #[tokio::main]
 async fn main() {
-    env_logger::init();
+    tracing_subscriber::fmt()
+        .with_target(true)
+        .with_line_number(true)
+        .init();
 
     let settings = Config::builder()
         .add_source(config::File::with_name("./settings.toml"))
@@ -122,9 +125,17 @@ async fn main() {
         [0, 0, 0, 0],
         settings.get_int("port").expect("port not set") as u16,
     ));
-    let listener = TcpListener::bind(addr)
-        .await
-        .expect("Unable to bind to socket");
+
+    let listener = match TcpListener::bind(&addr).await {
+        Ok(listener) => {
+            tracing::info!("Listening on {}", addr);
+            listener
+        }
+        Err(err) => {
+            tracing::error!("Unable to bind to socket: {}", err);
+            return;
+        }
+    };
 
     axum::serve(
         listener,

@@ -42,7 +42,6 @@ const PAGE_SIZE: u32 = 100;
 pub(crate) async fn check_auth(
     claims: Option<models::Claims>,
 ) -> Result<impl IntoResponse, Error> {
-    println!("{claims:?}");
     if claims.is_some() {
         Ok(StatusCode::OK)
     } else {

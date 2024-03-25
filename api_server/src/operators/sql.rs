@@ -437,13 +437,13 @@ GROUP BY issues.id
             geojson: row.geojson,
             category: serde_json::from_str(&row.category)
                 .map_err(|e| {
-                    log::error!("Error deserializing: {}", e);
+                    tracing::error!("Error deserializing {e}");
                     Error::DatabaseDeserialization
                 })?,
             creation: row.creation.into(),
             state: serde_json::from_str(&row.state)
                 .map_err(|e| {
-                    log::error!("Error deserializing: {}", e);
+                    tracing::error!("Error deserializing {e}");
                     Error::DatabaseDeserialization
                 })?,
             state_justification: row.state_justification,
@@ -497,7 +497,7 @@ GROUP BY issues.id
             geojson: row.geojson,
             category: serde_json::from_str(&row.category)
                 .map_err(|e| {
-                    log::error!("Error deserializing: {}", e);
+                    tracing::error!("Error deserializing {e}");
                     Error::DatabaseDeserialization
                 })?,
             creation: row.creation.into(),
@@ -506,7 +506,7 @@ GROUP BY issues.id
             impact: row.impact,
             state: serde_json::from_str(&row.state)
                 .map_err(|e| {
-                    log::error!("Error deserializing: {}", e);
+                    tracing::error!("Error deserializing {e}");
                     Error::DatabaseDeserialization
                 })?,
             state_justification: row.state_justification,
@@ -550,13 +550,13 @@ GROUP BY issues.id"#,
             creation: row.creation.into(),
             category: serde_json::from_str(&row.category)
                 .map_err(|e| {
-                    log::error!("Error deserializing: {}", e);
+                    tracing::error!("Error deserializing {e}");
                     Error::DatabaseDeserialization
                 })?,
             impact: row.impact,
             state: serde_json::from_str(&row.state)
                 .map_err(|e| {
-                    log::error!("Error deserializing: {}", e);
+                    tracing::error!("Error deserializing {e}");
                     Error::DatabaseDeserialization
                 })?,
             state_justification: row.state_justification,
@@ -811,7 +811,7 @@ FROM operator_calendars
             id: row.id,
             name: row.name,
             calendar: serde_json::from_value(row.calendar).map_err(|e| {
-                log::error!("Error deserializing: {}", e);
+                tracing::error!("Error deserializing {e}");
                 Error::DatabaseDeserialization
             })?,
             operator_id: row.operator_id,
@@ -841,7 +841,7 @@ WHERE operator_id=$1
             id: row.id,
             name: row.name,
             calendar: serde_json::from_value(row.calendar).map_err(|e| {
-                log::error!("Error deserializing: {}", e);
+                tracing::error!("Error deserializing {e}");
                 Error::DatabaseDeserialization
             })?,
             operator_id,

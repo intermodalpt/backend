@@ -16,13 +16,17 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use axum::extract::DefaultBodyLimit;
+use axum::body::Body;
+use axum::extract::{DefaultBodyLimit, Request};
 use axum::http::Method;
 use axum::routing::{delete, get, patch, post, put};
 use axum::Router;
 use axum_client_ip::SecureClientIpSource;
+use axum_extra::headers::{authorization::Bearer, Authorization};
+use headers::Header;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::limit::RequestBodyLimitLayer;
+use tower_http::trace::{self, TraceLayer};
 
 use crate::state::AppState;
 use crate::{
@@ -502,4 +506,38 @@ pub fn build_paths(state: AppState) -> Router {
         .layer(RequestBodyLimitLayer::new(30 * 1024 * 1024 /* 30mb */))
         .layer(SecureClientIpSource::ConnectInfo.into_extension())
         .layer(cors)
+        .layer(
+            TraceLayer::new_for_http()
+                .make_span_with(|request: &Request<Body>| {
+                    let request_id = uuid::Uuid::new_v4();
+
+                    type JwtH = Authorization<Bearer>;
+                    let mut jwt_headers =
+                        request.headers().get_all(JwtH::name()).iter();
+                    // We're possibly decoding claims twice (here and in the handlers).
+                    // I don't know if this has any measurable performance impact
+                    // Maybe we could somehow have a layer to make it available here
+                    // and for the handlers
+                    let uid = JwtH::decode(&mut jwt_headers)
+                        .ok()
+                        .map(|Authorization(bearer)| {
+                            auth::decode_claims(bearer.token()).ok()
+                        })
+                        .unwrap_or(None)
+                        .map(|claims| claims.uid);
+
+                    tracing::span!(
+                        tracing::Level::INFO,
+                        "req",
+                        method = display(request.method()),
+                        uri = display(request.uri()),
+                        version = debug(request.version()),
+                        uid = debug(uid),
+                        request_id = display(request_id)
+                    )
+                })
+                .on_response(
+                    trace::DefaultOnResponse::new().level(tracing::Level::INFO),
+                ),
+        )
 }
