@@ -36,13 +36,9 @@ pub(crate) async fn get_operators(
 
 pub(crate) async fn post_operator(
     State(state): State<AppState>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
     Json(change): Json<requests::ChangeOperator>,
 ) -> Result<Json<responses::Operator>, Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
     if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }
@@ -65,14 +61,10 @@ pub(crate) async fn post_operator(
 
 pub(crate) async fn patch_operator(
     State(state): State<AppState>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
     Path(operator_id): Path<i32>,
     Json(change): Json<requests::ChangeOperator>,
 ) -> Result<(), Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
     if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }
@@ -105,13 +97,9 @@ pub(crate) async fn get_operator_stops(
 pub(crate) async fn put_operator_stop(
     State(state): State<AppState>,
     Path((operator_id, stop_id)): Path<(i32, i32)>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
     Json(change): Json<requests::ChangeOperatorStop>,
 ) -> Result<(), Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
     if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }
@@ -136,12 +124,8 @@ pub(crate) async fn put_operator_stop(
 pub(crate) async fn delete_operator_stop(
     State(state): State<AppState>,
     Path((operator_id, stop_id)): Path<(i32, i32)>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
 ) -> Result<(), Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
     if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }
@@ -188,13 +172,9 @@ pub(crate) async fn get_operator_route_types(
 pub(crate) async fn post_operator_route_type(
     State(state): State<AppState>,
     Path(operator_id): Path<i32>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
     Json(type_id): Json<requests::ChangeOperatorRouteType>,
 ) -> Result<Json<i32>, Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
     if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }
@@ -222,13 +202,9 @@ pub(crate) async fn post_operator_route_type(
 pub(crate) async fn patch_operator_route_type(
     State(state): State<AppState>,
     Path((operator_id, type_id)): Path<(i32, i32)>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
     Json(route_type): Json<requests::ChangeOperatorRouteType>,
 ) -> Result<(), Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
     if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }
@@ -260,12 +236,8 @@ pub(crate) async fn patch_operator_route_type(
 pub(crate) async fn delete_operator_route_type(
     State(state): State<AppState>,
     Path((operator_id, type_id)): Path<(i32, i32)>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
 ) -> Result<(), Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
     if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }
@@ -300,13 +272,9 @@ pub(crate) async fn get_operator_issues(
 
 pub(crate) async fn post_issue(
     State(state): State<AppState>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
     Json(issue): Json<requests::NewIssue>,
 ) -> Result<Json<HashMap<String, i32>>, Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
     if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }
@@ -346,14 +314,10 @@ pub(crate) async fn post_issue(
 
 pub(crate) async fn patch_issue(
     State(state): State<AppState>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
     Path(issue_id): Path<i32>,
     Json(change): Json<requests::ChangeIssue>,
 ) -> Result<(), Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
     if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }
@@ -410,13 +374,9 @@ pub(crate) async fn get_operator_calendars(
 pub(crate) async fn post_operator_calendar(
     State(state): State<AppState>,
     Path(operator_id): Path<i32>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
     Json(calendar): Json<requests::NewOperatorCalendar>,
 ) -> Result<Json<HashMap<String, i32>>, Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
     if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }
@@ -446,12 +406,8 @@ pub(crate) async fn post_operator_calendar(
 pub(crate) async fn delete_operator_calendar(
     State(state): State<AppState>,
     Path((operator_id, calendar_id)): Path<(i32, i32)>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
 ) -> Result<(), Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
     if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }

@@ -37,13 +37,8 @@ use crate::{auth, AppState, Error};
 pub(crate) async fn post_update_operator_gtfs(
     State(state): State<AppState>,
     Path(operator_id): Path<i32>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
 ) -> Result<(), Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-
-    let claims = claims.unwrap();
     if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }
@@ -179,14 +174,10 @@ pub(crate) async fn get_operator_validation_data(
 }
 pub(crate) async fn put_operator_validation_data(
     State(state): State<AppState>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
     Path(operator_id): Path<i32>,
     Json(validation): Json<gtfs::OperatorValidation>,
 ) -> Result<(), Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
     if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }
@@ -225,14 +216,10 @@ pub(crate) async fn get_route_validation_data(
 
 pub(crate) async fn put_route_validation_data(
     State(state): State<AppState>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
     Path(route): Path<i32>,
     Json(request): Json<requests::RouteSubroutesValidation>,
 ) -> Result<(), Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
     if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }
@@ -267,16 +254,12 @@ pub(crate) async fn put_route_validation_data(
 
 pub(crate) async fn post_assign_subroute_validation(
     State(state): State<AppState>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
     Path(route): Path<i32>,
     Json(request): Json<requests::ValidateSubroute>,
 ) -> Result<(), Error> {
     use crate::routes::sql as routes_sql;
 
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
     if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }
@@ -362,16 +345,12 @@ pub(crate) async fn post_assign_subroute_validation(
 
 pub(crate) async fn patch_subroute_validation_stops(
     State(state): State<AppState>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
     Path(subroute_id): Path<i32>,
     Json(request): Json<requests::UpdateSubrouteValidationStops>,
 ) -> Result<(), Error> {
     use crate::routes::sql as routes_sql;
 
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
     if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }

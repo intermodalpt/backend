@@ -43,13 +43,9 @@ pub(crate) async fn get_osm_stop_history(
 
 pub(crate) async fn patch_osm_stops(
     State(state): State<AppState>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
     Json(mut newer_stops): Json<Vec<requests::OsmStop>>,
 ) -> Result<(), Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
     if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }
@@ -107,12 +103,8 @@ pub(crate) async fn patch_osm_stops(
 pub(crate) async fn delete_osm_stop(
     State(state): State<AppState>,
     Path(id): Path<i64>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
 ) -> Result<(), Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
     if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }

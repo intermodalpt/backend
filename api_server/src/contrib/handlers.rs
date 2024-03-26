@@ -48,22 +48,16 @@ const PAGE_SIZE: u32 = 20;
 
 pub(crate) async fn get_decided_own_contributions(
     State(state): State<AppState>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
     paginator: Query<Page>,
 ) -> Result<Json<Vec<history::Contribution>>, Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-
-    let user_id = claims.unwrap().uid;
-
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
     Ok(Json(
         sql::fetch_decided_user_contributions(
             &state.pool,
-            user_id,
+            claims.uid,
             offset,
             take,
         )
@@ -73,22 +67,16 @@ pub(crate) async fn get_decided_own_contributions(
 
 pub(crate) async fn get_undecided_own_contributions(
     State(state): State<AppState>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
     paginator: Query<Page>,
 ) -> Result<Json<Vec<history::Contribution>>, Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-
-    let user_id = claims.unwrap().uid;
-
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
     Ok(Json(
         sql::fetch_undecided_user_contributions(
             &state.pool,
-            user_id,
+            claims.uid,
             offset,
             take,
         )
@@ -98,15 +86,10 @@ pub(crate) async fn get_undecided_own_contributions(
 
 pub(crate) async fn get_decided_user_contributions(
     State(state): State<AppState>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
     Path(user_id): Path<i32>,
     paginator: Query<Page>,
 ) -> Result<Json<Vec<history::Contribution>>, Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
-
     if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }
@@ -127,15 +110,10 @@ pub(crate) async fn get_decided_user_contributions(
 
 pub(crate) async fn get_undecided_user_contributions(
     State(state): State<AppState>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
     Path(user_id): Path<i32>,
     paginator: Query<Page>,
 ) -> Result<Json<Vec<history::Contribution>>, Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
-
     if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }
@@ -156,17 +134,11 @@ pub(crate) async fn get_undecided_user_contributions(
 
 pub(crate) async fn get_pending_stop_patch(
     State(state): State<AppState>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
 ) -> Result<Json<Vec<stops::Stop>>, Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
-
-    let user_id = claims.uid;
-
     let contributions =
-        sql::fetch_user_stop_meta_contributions(&state.pool, user_id).await?;
+        sql::fetch_user_stop_meta_contributions(&state.pool, claims.uid)
+            .await?;
     let modified_stops =
         logic::summarize_stop_meta_contributions(contributions);
 
@@ -245,15 +217,10 @@ pub(crate) async fn get_changelog(
 
 pub(crate) async fn post_contrib_stop_data(
     State(state): State<AppState>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
     Path(stop_id): Path<i32>,
     Json(contribution): Json<requests::NewStopMetaContribution>,
 ) -> Result<Json<HashMap<String, i64>>, Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let user_id = claims.unwrap().uid;
-
     let stop = crate::stops::sql::fetch_stop(&state.pool, stop_id).await?;
 
     if stop.is_none() {
@@ -272,7 +239,7 @@ pub(crate) async fn post_contrib_stop_data(
 
     let contribution = history::Contribution {
         id: 0,
-        author_id: user_id,
+        author_id: claims.uid,
         change: history::Change::StopUpdate {
             original: stop.into(),
             patch,
@@ -295,14 +262,9 @@ pub(crate) async fn post_contrib_stop_data(
 
 pub(crate) async fn post_contrib_stop_picture(
     State(state): State<AppState>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
     mut multipart: Multipart,
 ) -> Result<Json<HashMap<String, i64>>, Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let user_id = claims.unwrap().uid;
-
     let field = get_exactly_one_field(&mut multipart).await?;
 
     let filename = field
@@ -318,7 +280,7 @@ pub(crate) async fn post_contrib_stop_picture(
 
     // TODO limit maximum number of unverified pictures per user
     let pic = pics::logic::upload_stop_picture(
-        user_id,
+        claims.uid,
         filename.clone(),
         &state.bucket,
         &state.pool,
@@ -329,7 +291,7 @@ pub(crate) async fn post_contrib_stop_picture(
 
     let contribution = history::Contribution {
         id: 0,
-        author_id: user_id,
+        author_id: claims.uid,
         change: history::Change::StopPicUpload {
             pic: pic.into(),
             stops: vec![],
@@ -352,15 +314,10 @@ pub(crate) async fn post_contrib_stop_picture(
 
 pub(crate) async fn patch_contrib_stop_picture_meta(
     State(state): State<AppState>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
     Path(contribution_id): Path<i64>,
     Json(contribution_meta): Json<requests::NewPictureContribution>,
 ) -> Result<(), Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
-
     let contribution =
         sql::fetch_contribution(&state.pool, contribution_id).await?;
     if contribution.is_none() {
@@ -424,27 +381,20 @@ pub(crate) struct ContribAcceptanceParam {
 
 pub(crate) async fn post_accept_contrib_data(
     State(state): State<AppState>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
     params: Query<ContribAcceptanceParam>,
     Path(contribution_id): Path<i64>,
 ) -> Result<(), Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
-
     if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }
-
-    let user_id = claims.uid;
 
     let verify = params.verify.unwrap_or(false);
 
     logic::accept_contribution(
         &state.pool,
         contribution_id,
-        user_id,
+        claims.uid,
         verify,
         &params.ignored,
     )
@@ -453,13 +403,12 @@ pub(crate) async fn post_accept_contrib_data(
 
 pub(crate) async fn post_decline_contrib_data(
     State(state): State<AppState>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
     Path(contribution_id): Path<i64>,
 ) -> Result<(), Error> {
-    if claims.is_none() {
+    if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }
-    let user_id = claims.unwrap().uid;
 
     let contribution =
         sql::fetch_contribution(&state.pool, contribution_id).await?;
@@ -482,7 +431,7 @@ pub(crate) async fn post_decline_contrib_data(
     sql::update_guest_contribution_to_decline(
         &mut transaction,
         contribution_id,
-        user_id,
+        claims.uid,
     )
     .await?;
 

@@ -22,7 +22,7 @@ where
         let TypedHeader(Authorization(bearer)) = parts
             .extract::<TypedHeader<Authorization<Bearer>>>()
             .await
-            .map_err(|_| Error::DependenciesNotMet)?;
+            .map_err(|_| Error::Forbidden)?;
 
         logic::decode_claims(bearer.token())
     }

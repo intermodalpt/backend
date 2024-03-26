@@ -56,12 +56,8 @@ pub(crate) async fn get_region_full_stops(
 
 pub(crate) async fn get_all_detailed_stops(
     State(state): State<AppState>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
 ) -> Result<Json<Vec<responses::Stop>>, Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
     if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }
@@ -89,13 +85,9 @@ pub(crate) async fn get_stop(
 
 pub(crate) async fn post_stop(
     State(state): State<AppState>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
     Json(stop): Json<requests::NewStop>,
 ) -> Result<Json<HashMap<String, i32>>, Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
     if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }
@@ -133,14 +125,10 @@ pub(crate) async fn post_stop(
 
 pub(crate) async fn patch_stop(
     State(state): State<AppState>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
     Path(stop_id): Path<i32>,
     Json(changes): Json<requests::ChangeStop>,
 ) -> Result<Json<stops::Stop>, Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
     if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }
@@ -193,13 +181,9 @@ pub(crate) async fn patch_stop(
 pub(crate) async fn post_update_stop_position(
     State(state): State<AppState>,
     Path(stop_id): Path<i32>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
     Json(location): Json<requests::Position>,
 ) -> Result<(), Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
     if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }

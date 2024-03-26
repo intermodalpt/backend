@@ -72,9 +72,9 @@ pub(crate) async fn get_picture_stop_rels(
 
 pub(crate) async fn get_pictures(
     State(state): State<AppState>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
 ) -> Result<Json<Vec<responses::PicWithStops>>, Error> {
-    if claims.is_none() {
+    if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }
     Ok(Json(sql::fetch_pictures_with_stops(&state.pool).await?))
@@ -249,18 +249,10 @@ pub(crate) async fn get_unpositioned_stop_pictures(
 
 pub(crate) async fn upload_dangling_stop_picture(
     State(state): State<AppState>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
     mut multipart: Multipart,
 ) -> Result<Json<pics::StopPic>, Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
-
-    // TODO replace this with some rate limited for untrusted users
-    // if !(claims.permissions.is_admin) {
-    //     return Err(Error::Forbidden);
-    // }
+    // TODO have some sort of rate limiting for untrusted users
 
     let field = get_exactly_one_field(&mut multipart).await?;
 
@@ -290,15 +282,10 @@ pub(crate) async fn upload_dangling_stop_picture(
 
 pub(crate) async fn upload_stop_picture(
     State(state): State<AppState>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
     Path(stop_id): Path<i32>,
     mut multipart: Multipart,
 ) -> Result<Json<responses::PicWithStops>, Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
-
     // TODO replace this with some rate limited for untrusted users
     // if !(claims.permissions.is_admin) {
     //     return Err(Error::Forbidden);
@@ -394,15 +381,10 @@ pub(crate) async fn get_stop_picture_meta(
 
 pub(crate) async fn patch_stop_picture_meta(
     State(state): State<AppState>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
     Path(stop_picture_id): Path<i32>,
     Json(stop_pic_meta): Json<requests::ChangeStopPic>,
 ) -> Result<(), Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
-
     let mut transaction = state
         .pool
         .begin()
@@ -481,14 +463,9 @@ pub(crate) async fn patch_stop_picture_meta(
 
 pub(crate) async fn delete_picture(
     State(state): State<AppState>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
     Path(picture_id): Path<i32>,
 ) -> Result<(), Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
-
     let pic = sql::fetch_picture(&state.pool, picture_id).await?;
     if pic.is_none() {
         return Err(Error::NotFoundUpstream);
@@ -510,14 +487,9 @@ pub(crate) async fn get_picture_count_by_stop(
 
 pub(crate) async fn get_panos(
     State(state): State<AppState>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
 ) -> Result<Json<Vec<responses::FullPanoPic>>, Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
-
-    if !(claims.permissions.is_admin) {
+    if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }
 
@@ -525,14 +497,9 @@ pub(crate) async fn get_panos(
 }
 pub(crate) async fn upload_pano_picture(
     State(state): State<AppState>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
     mut multipart: Multipart,
 ) -> Result<Json<pics::PanoPic>, Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
-
     if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }
@@ -602,15 +569,10 @@ pub(crate) async fn get_onion_skin(
 
 pub(crate) async fn post_upload_operator_logo(
     State(state): State<AppState>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
     Path(operator_id): Path<i32>,
     mut multipart: Multipart,
 ) -> Result<(), Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
-
     if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }
@@ -642,14 +604,10 @@ pub(crate) async fn post_upload_operator_logo(
 
 pub(crate) async fn post_news_image(
     State(state): State<AppState>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
     Path(item_id): Path<i32>,
     mut multipart: Multipart,
 ) -> Result<Json<HashMap<String, String>>, Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
     if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }
@@ -685,14 +643,10 @@ pub(crate) async fn post_news_image(
 
 pub(crate) async fn post_external_news_image(
     State(state): State<AppState>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
     Path(item_id): Path<i32>,
     mut multipart: Multipart,
 ) -> Result<Json<HashMap<String, String>>, Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
     if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }
@@ -728,14 +682,10 @@ pub(crate) async fn post_external_news_image(
 
 pub(crate) async fn put_external_news_screenshot(
     State(state): State<AppState>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
     Path(item_id): Path<i32>,
     mut multipart: Multipart,
 ) -> Result<(), Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
     if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }

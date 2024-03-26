@@ -84,13 +84,9 @@ pub(crate) async fn get_external_news_item(
 
 pub(crate) async fn get_full_external_news_item(
     State(state): State<AppState>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
     Path(item_id): Path<i32>,
 ) -> Result<Json<responses::FullExternalNewsItem>, Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
     if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }
@@ -106,13 +102,9 @@ pub(crate) async fn get_full_external_news_item(
 
 pub(crate) async fn get_external_news(
     State(state): State<AppState>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
     paginator: Query<Page>,
 ) -> Result<Json<Vec<responses::ExternalNewsItem>>, Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
     if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }
@@ -127,14 +119,10 @@ pub(crate) async fn get_external_news(
 
 pub(crate) async fn get_operator_external_news(
     State(state): State<AppState>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
     paginator: Query<Page>,
     Path(operator_id): Path<i32>,
 ) -> Result<Json<Vec<responses::ExternalNewsItem>>, Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
     if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }
@@ -156,13 +144,9 @@ pub(crate) async fn get_operator_external_news(
 
 pub(crate) async fn get_pending_external_news(
     State(state): State<AppState>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
     paginator: Query<Page>,
 ) -> Result<Json<Vec<responses::FullExternalNewsItem>>, Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
     if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }
@@ -177,14 +161,10 @@ pub(crate) async fn get_pending_external_news(
 
 pub(crate) async fn get_operator_pending_external_news(
     State(state): State<AppState>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
     paginator: Query<Page>,
     Path(operator_id): Path<i32>,
 ) -> Result<Json<Vec<responses::FullExternalNewsItem>>, Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
     if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }
@@ -205,13 +185,9 @@ pub(crate) async fn get_operator_pending_external_news(
 
 pub(crate) async fn post_external_news(
     State(state): State<AppState>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
     Json(news_item): Json<requests::NewExternalNewsItem>,
 ) -> Result<Json<IdReturn>, Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
     if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }
@@ -222,13 +198,9 @@ pub(crate) async fn post_external_news(
 
 pub(crate) async fn delete_external_news(
     State(state): State<AppState>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
     Path(item_id): Path<i32>,
 ) -> Result<(), Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
     if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }
@@ -238,13 +210,9 @@ pub(crate) async fn delete_external_news(
 
 pub(crate) async fn get_external_news_source_known_urls(
     State(state): State<AppState>,
-    claims: Option<auth::Claims>,
+    claims: auth::Claims,
     Path(source): Path<String>,
 ) -> Result<Json<Vec<String>>, Error> {
-    if claims.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let claims = claims.unwrap();
     if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }

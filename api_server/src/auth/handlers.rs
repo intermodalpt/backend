@@ -17,8 +17,6 @@
 */
 
 use axum::extract::{Path, Query, State};
-use axum::http::StatusCode;
-use axum::response::IntoResponse;
 use axum::Json;
 use axum_client_ip::SecureClientIp;
 use serde::Deserialize;
@@ -39,15 +37,7 @@ pub(crate) struct Page {
 
 const PAGE_SIZE: u32 = 100;
 
-pub(crate) async fn check_auth(
-    claims: Option<models::Claims>,
-) -> Result<impl IntoResponse, Error> {
-    if claims.is_some() {
-        Ok(StatusCode::OK)
-    } else {
-        Err(Error::Forbidden)
-    }
-}
+pub(crate) async fn check_auth(_: Option<models::Claims>) {}
 
 pub(crate) async fn post_register(
     State(state): State<AppState>,
@@ -68,29 +58,15 @@ pub(crate) async fn post_login(
 
 pub(crate) async fn post_admin_change_password(
     State(state): State<AppState>,
-    claims: Option<models::Claims>,
+    claims: models::Claims,
     client_ip: SecureClientIp,
     Json(request): Json<models::requests::ChangeUnknownPassword>,
 ) -> Result<(), Error> {
-    let is_admin = matches!(
-        claims,
-        Some(models::Claims {
-            permissions: models::Permissions { is_admin: true, .. },
-            ..
-        })
-    );
-
-    if !is_admin {
+    if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }
 
-    let Some(models::Claims {
-        uid: requester_id, ..
-    }) = claims
-    else {
-        return Err(Error::Forbidden);
-    };
-
+    let requester_id = claims.uid;
     logic::admin_change_password(
         request,
         requester_id,
@@ -101,18 +77,15 @@ pub(crate) async fn post_admin_change_password(
 }
 pub(crate) async fn post_user_change_password(
     State(state): State<AppState>,
-    claims: Option<models::Claims>,
+    claims: models::Claims,
     client_ip: SecureClientIp,
     Json(request): Json<models::requests::ChangeKnownPassword>,
 ) -> Result<(), Error> {
-    let Some(models::Claims {
+    let models::Claims {
         uid: requester_id,
         uname: requester_username,
         ..
-    }) = claims
-    else {
-        return Err(Error::Forbidden);
-    };
+    } = claims;
 
     if requester_username != request.username {
         return Err(Error::Forbidden);
@@ -124,20 +97,12 @@ pub(crate) async fn post_user_change_password(
 
 pub(crate) async fn get_user_audit_log(
     State(state): State<AppState>,
-    claims: Option<models::Claims>,
+    claims: models::Claims,
     _client_ip: SecureClientIp,
     paginator: Query<Page>,
     Path(user_id): Path<i32>,
 ) -> Result<Json<Pagination<auth::AuditLogEntry>>, Error> {
-    let is_admin = matches!(
-        claims,
-        Some(models::Claims {
-            permissions: models::Permissions { is_admin: true, .. },
-            ..
-        })
-    );
-
-    if !is_admin {
+    if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }
 
@@ -155,19 +120,11 @@ pub(crate) async fn get_user_audit_log(
 
 pub(crate) async fn get_audit_log(
     State(state): State<AppState>,
-    claims: Option<models::Claims>,
+    claims: models::Claims,
     _client_ip: SecureClientIp,
     paginator: Query<Page>,
 ) -> Result<Json<Pagination<responses::AuditLogEntry>>, Error> {
-    let is_admin = matches!(
-        claims,
-        Some(models::Claims {
-            permissions: models::Permissions { is_admin: true, .. },
-            ..
-        })
-    );
-
-    if !is_admin {
+    if !claims.permissions.is_admin {
         return Err(Error::Forbidden);
     }
 
