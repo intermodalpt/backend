@@ -22,14 +22,12 @@ use std::sync::{Arc, RwLock};
 use sqlx::PgPool;
 
 use crate::gtfs;
-use crate::misc::models::responses::Stats;
 
 pub type AppState = Arc<State>;
 
 pub struct State {
     pub bucket: s3::Bucket,
     pub pool: PgPool,
-    pub stats: Stats,
     pub cached: Cached,
 }
 
@@ -53,13 +51,6 @@ impl State {
         State {
             bucket,
             pool,
-            stats: Stats {
-                stop_count: 0,
-                route_count: 0,
-                subroute_count: 0,
-                departure_count: 0,
-                picture_count: 0,
-            },
             cached: Cached {
                 gtfs_stops: RwLock::new(HashMap::new()),
                 tml_routes: RwLock::new(HashMap::new()),

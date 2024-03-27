@@ -30,7 +30,7 @@ use tower_http::trace::{self, TraceLayer};
 
 use crate::state::AppState;
 use crate::{
-    auth, contrib, geo, gtfs, info, misc, operators, osm, pics, routes, stops,
+    auth, contrib, geo, gtfs, info, operators, osm, pics, routes, stops,
 };
 
 #[allow(clippy::too_many_lines)]
@@ -487,7 +487,6 @@ pub fn build_paths(state: AppState) -> Router {
         .route("/v1/auth/login", post(auth::handlers::post_login))
         .route("/v1/auth/register", post(auth::handlers::post_register))
         .route("/v1/auth/check", get(auth::handlers::check_auth))
-        .route("/v1/stats", get(misc::handlers::get_stats))
         .route(
             "/v1/user/change_password",
             post(auth::handlers::post_user_change_password),

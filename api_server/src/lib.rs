@@ -24,7 +24,6 @@ pub mod geo;
 pub mod gtfs;
 pub mod http;
 pub mod info;
-pub mod misc;
 pub mod operators;
 pub mod osm;
 pub mod pics;

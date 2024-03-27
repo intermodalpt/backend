@@ -32,7 +32,6 @@ mod geo;
 pub(crate) mod gtfs;
 mod http;
 pub mod info;
-pub(crate) mod misc;
 mod operators;
 mod osm;
 mod pics;
@@ -110,11 +109,9 @@ async fn main() {
     let pool = PgPool::connect(&settings.get_string("db").expect("db not set"))
         .await
         .expect("Unable to connect to the database");
-    let stats = misc::sql::get_stats(&pool).await.unwrap();
     let state = Arc::new(State {
         bucket,
         pool,
-        stats,
         cached: Cached {
             gtfs_stops: RwLock::new(HashMap::new()),
             tml_routes: RwLock::new(HashMap::new()),
