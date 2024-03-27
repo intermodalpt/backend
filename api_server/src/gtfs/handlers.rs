@@ -37,12 +37,8 @@ use crate::{auth, AppState, Error};
 pub(crate) async fn post_update_operator_gtfs(
     State(state): State<AppState>,
     Path(operator_id): Path<i32>,
-    claims: auth::Claims,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
 ) -> Result<(), Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     let operator =
         operators_sql::fetch_operator(&state.pool, operator_id).await?;
     if operator.is_none() {
@@ -174,14 +170,10 @@ pub(crate) async fn get_operator_validation_data(
 }
 pub(crate) async fn put_operator_validation_data(
     State(state): State<AppState>,
-    claims: auth::Claims,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     Path(operator_id): Path<i32>,
     Json(validation): Json<gtfs::OperatorValidation>,
 ) -> Result<(), Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     let mut transaction = state
         .pool
         .begin()
@@ -216,14 +208,10 @@ pub(crate) async fn get_route_validation_data(
 
 pub(crate) async fn put_route_validation_data(
     State(state): State<AppState>,
-    claims: auth::Claims,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     Path(route): Path<i32>,
     Json(request): Json<requests::RouteSubroutesValidation>,
 ) -> Result<(), Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     let mut transaction = state
         .pool
         .begin()
@@ -254,15 +242,11 @@ pub(crate) async fn put_route_validation_data(
 
 pub(crate) async fn post_assign_subroute_validation(
     State(state): State<AppState>,
-    claims: auth::Claims,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     Path(route): Path<i32>,
     Json(request): Json<requests::ValidateSubroute>,
 ) -> Result<(), Error> {
     use crate::routes::sql as routes_sql;
-
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
 
     let mut transaction = state
         .pool
@@ -345,15 +329,11 @@ pub(crate) async fn post_assign_subroute_validation(
 
 pub(crate) async fn patch_subroute_validation_stops(
     State(state): State<AppState>,
-    claims: auth::Claims,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     Path(subroute_id): Path<i32>,
     Json(request): Json<requests::UpdateSubrouteValidationStops>,
 ) -> Result<(), Error> {
     use crate::routes::sql as routes_sql;
-
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
 
     let mut transaction = state
         .pool

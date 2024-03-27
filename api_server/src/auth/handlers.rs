@@ -58,22 +58,12 @@ pub(crate) async fn post_login(
 
 pub(crate) async fn post_admin_change_password(
     State(state): State<AppState>,
-    claims: models::Claims,
+    super::ScopedClaim(claims, _): super::ScopedClaim<super::perms::Admin>,
     client_ip: SecureClientIp,
     Json(request): Json<models::requests::ChangeUnknownPassword>,
 ) -> Result<(), Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
-    let requester_id = claims.uid;
-    logic::admin_change_password(
-        request,
-        requester_id,
-        client_ip.0,
-        &state.pool,
-    )
-    .await
+    logic::admin_change_password(request, claims.uid, client_ip.0, &state.pool)
+        .await
 }
 pub(crate) async fn post_user_change_password(
     State(state): State<AppState>,
@@ -97,15 +87,11 @@ pub(crate) async fn post_user_change_password(
 
 pub(crate) async fn get_user_audit_log(
     State(state): State<AppState>,
-    claims: models::Claims,
+    super::ScopedClaim(_, _): super::ScopedClaim<super::perms::Admin>,
     _client_ip: SecureClientIp,
     paginator: Query<Page>,
     Path(user_id): Path<i32>,
 ) -> Result<Json<Pagination<auth::AuditLogEntry>>, Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     // TODO log this access
 
     let offset = i64::from(paginator.p * PAGE_SIZE);
@@ -120,14 +106,10 @@ pub(crate) async fn get_user_audit_log(
 
 pub(crate) async fn get_audit_log(
     State(state): State<AppState>,
-    claims: models::Claims,
+    super::ScopedClaim(_, _): super::ScopedClaim<super::perms::Admin>,
     _client_ip: SecureClientIp,
     paginator: Query<Page>,
 ) -> Result<Json<Pagination<responses::AuditLogEntry>>, Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     // TODO log this access
 
     let offset = i64::from(paginator.p * PAGE_SIZE);

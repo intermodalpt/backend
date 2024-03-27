@@ -36,13 +36,9 @@ pub(crate) async fn get_operators(
 
 pub(crate) async fn post_operator(
     State(state): State<AppState>,
-    claims: auth::Claims,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     Json(change): Json<requests::ChangeOperator>,
 ) -> Result<Json<responses::Operator>, Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     let mut transaction = state
         .pool
         .begin()
@@ -61,14 +57,10 @@ pub(crate) async fn post_operator(
 
 pub(crate) async fn patch_operator(
     State(state): State<AppState>,
-    claims: auth::Claims,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     Path(operator_id): Path<i32>,
     Json(change): Json<requests::ChangeOperator>,
 ) -> Result<(), Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     let mut transaction = state
         .pool
         .begin()
@@ -97,13 +89,9 @@ pub(crate) async fn get_operator_stops(
 pub(crate) async fn put_operator_stop(
     State(state): State<AppState>,
     Path((operator_id, stop_id)): Path<(i32, i32)>,
-    claims: auth::Claims,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     Json(change): Json<requests::ChangeOperatorStop>,
 ) -> Result<(), Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     let mut transaction = state
         .pool
         .begin()
@@ -124,12 +112,8 @@ pub(crate) async fn put_operator_stop(
 pub(crate) async fn delete_operator_stop(
     State(state): State<AppState>,
     Path((operator_id, stop_id)): Path<(i32, i32)>,
-    claims: auth::Claims,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
 ) -> Result<(), Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     let mut transaction = state
         .pool
         .begin()
@@ -172,13 +156,9 @@ pub(crate) async fn get_operator_route_types(
 pub(crate) async fn post_operator_route_type(
     State(state): State<AppState>,
     Path(operator_id): Path<i32>,
-    claims: auth::Claims,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     Json(type_id): Json<requests::ChangeOperatorRouteType>,
 ) -> Result<Json<i32>, Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     let mut transaction = state
         .pool
         .begin()
@@ -202,13 +182,9 @@ pub(crate) async fn post_operator_route_type(
 pub(crate) async fn patch_operator_route_type(
     State(state): State<AppState>,
     Path((operator_id, type_id)): Path<(i32, i32)>,
-    claims: auth::Claims,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     Json(route_type): Json<requests::ChangeOperatorRouteType>,
 ) -> Result<(), Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     let mut transaction = state
         .pool
         .begin()
@@ -236,12 +212,8 @@ pub(crate) async fn patch_operator_route_type(
 pub(crate) async fn delete_operator_route_type(
     State(state): State<AppState>,
     Path((operator_id, type_id)): Path<(i32, i32)>,
-    claims: auth::Claims,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
 ) -> Result<(), Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     let mut transaction = state
         .pool
         .begin()
@@ -272,13 +244,9 @@ pub(crate) async fn get_operator_issues(
 
 pub(crate) async fn post_issue(
     State(state): State<AppState>,
-    claims: auth::Claims,
+    auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::Admin>,
     Json(issue): Json<requests::NewIssue>,
 ) -> Result<Json<HashMap<String, i32>>, Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     let mut transaction = state
         .pool
         .begin()
@@ -314,14 +282,10 @@ pub(crate) async fn post_issue(
 
 pub(crate) async fn patch_issue(
     State(state): State<AppState>,
-    claims: auth::Claims,
+    auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::Admin>,
     Path(issue_id): Path<i32>,
     Json(change): Json<requests::ChangeIssue>,
 ) -> Result<(), Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     let issue = sql::fetch_issue(&state.pool, issue_id).await?;
 
     let patch = change.derive_patch(&issue);
@@ -374,13 +338,9 @@ pub(crate) async fn get_operator_calendars(
 pub(crate) async fn post_operator_calendar(
     State(state): State<AppState>,
     Path(operator_id): Path<i32>,
-    claims: auth::Claims,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     Json(calendar): Json<requests::NewOperatorCalendar>,
 ) -> Result<Json<HashMap<String, i32>>, Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     let mut transaction = state
         .pool
         .begin()
@@ -406,12 +366,9 @@ pub(crate) async fn post_operator_calendar(
 pub(crate) async fn delete_operator_calendar(
     State(state): State<AppState>,
     Path((operator_id, calendar_id)): Path<(i32, i32)>,
-    claims: auth::Claims,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
 ) -> Result<(), Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-    // TODO do not allow deletion of calendars that are in use
+    // TODO forbid the deletion of calendars that are in use
 
     let mut transaction = state
         .pool

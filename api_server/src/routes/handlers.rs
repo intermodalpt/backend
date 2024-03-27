@@ -59,14 +59,9 @@ pub(crate) async fn get_operator_full_routes(
 
 pub(crate) async fn post_route(
     State(state): State<AppState>,
-    claims: auth::Claims,
+    auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::Admin>,
     Json(route): Json<requests::ChangeRoute>,
 ) -> Result<Json<routes::Route>, Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-    let user_id = claims.uid;
-
     let mut transaction = state
         .pool
         .begin()
@@ -77,7 +72,7 @@ pub(crate) async fn post_route(
 
     contrib::sql::insert_changeset_log(
         &mut transaction,
-        user_id,
+        claims.uid,
         &[history::Change::RouteCreation {
             data: route.clone().into(),
         }],
@@ -121,16 +116,10 @@ pub(crate) async fn get_route_full(
 
 pub(crate) async fn patch_route(
     State(state): State<AppState>,
-    claims: auth::Claims,
+    auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::Admin>,
     Path(route_id): Path<i32>,
     Json(changes): Json<requests::ChangeRoute>,
 ) -> Result<Json<routes::Route>, Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
-    let user_id = claims.uid;
-
     let route = sql::fetch_commons_route(&state.pool, route_id).await?;
     if route.is_none() {
         return Err(Error::NotFoundUpstream);
@@ -152,7 +141,7 @@ pub(crate) async fn patch_route(
     sql::update_route(&mut transaction, route_id, changes).await?;
     contrib::sql::insert_changeset_log(
         &mut transaction,
-        user_id,
+        claims.uid,
         &[history::Change::RouteUpdate {
             original: route.clone().into(),
             patch,
@@ -171,13 +160,9 @@ pub(crate) async fn patch_route(
 
 pub(crate) async fn delete_route(
     State(state): State<AppState>,
-    claims: auth::Claims,
+    auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::Admin>,
     Path(route_id): Path<i32>,
 ) -> Result<(), Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     let route = sql::fetch_commons_route(&state.pool, route_id).await?;
     if route.is_none() {
         return Err(Error::NotFoundUpstream);
@@ -208,16 +193,10 @@ pub(crate) async fn delete_route(
 
 pub(crate) async fn create_subroute(
     State(state): State<AppState>,
-    claims: auth::Claims,
+    auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::Admin>,
     Path(route_id): Path<i32>,
     Json(subroute): Json<requests::ChangeSubroute>,
 ) -> Result<Json<routes::Subroute>, Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
-    let user_id = claims.uid;
-
     let mut transaction = state
         .pool
         .begin()
@@ -229,7 +208,7 @@ pub(crate) async fn create_subroute(
 
     contrib::sql::insert_changeset_log(
         &mut transaction,
-        user_id,
+        claims.uid,
         &[history::Change::SubrouteCreation {
             data: subroute.clone().into(),
         }],
@@ -246,14 +225,10 @@ pub(crate) async fn create_subroute(
 
 pub(crate) async fn patch_subroute(
     State(state): State<AppState>,
-    claims: auth::Claims,
+    auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::Admin>,
     Path((route_id, subroute_id)): Path<(i32, i32)>,
     Json(changes): Json<requests::ChangeSubroute>,
 ) -> Result<Json<routes::Subroute>, Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     let subroute = sql::fetch_simple_subroute(&state.pool, subroute_id).await?;
     if subroute.is_none() {
         return Err(Error::NotFoundUpstream);
@@ -296,15 +271,9 @@ pub(crate) async fn patch_subroute(
 
 pub(crate) async fn delete_subroute(
     State(state): State<AppState>,
-    claims: auth::Claims,
+    auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::Admin>,
     Path((route_id, subroute_id)): Path<(i32, i32)>,
 ) -> Result<(), Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
-    let user_id = claims.uid;
-
     let mut transaction = state
         .pool
         .begin()
@@ -324,7 +293,7 @@ pub(crate) async fn delete_subroute(
 
     contrib::sql::insert_changeset_log(
         &mut transaction,
-        user_id,
+        claims.uid,
         &[history::Change::SubrouteDeletion {
             subroute: subroute.into(),
             stops: Some(stops),
@@ -346,14 +315,10 @@ pub(crate) async fn delete_subroute(
 
 pub(crate) async fn create_subroute_departure(
     State(state): State<AppState>,
-    claims: auth::Claims,
+    auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::Trusted>,
     Path(subroute_id): Path<i32>,
     Json(departure): Json<requests::ChangeDeparture>,
 ) -> Result<Json<routes::Departure>, Error> {
-    if !(claims.permissions.is_admin || claims.permissions.is_trusted) {
-        return Err(Error::Forbidden);
-    }
-
     let mut transaction = state
         .pool
         .begin()
@@ -383,14 +348,10 @@ pub(crate) async fn create_subroute_departure(
 
 pub(crate) async fn patch_subroute_departure(
     State(state): State<AppState>,
-    claims: auth::Claims,
+    auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::Trusted>,
     Path((subroute_id, departure_id)): Path<(i32, i32)>,
     Json(change): Json<requests::ChangeDeparture>,
 ) -> Result<Json<routes::Departure>, Error> {
-    if !(claims.permissions.is_admin || claims.permissions.is_trusted) {
-        return Err(Error::Forbidden);
-    }
-
     let departure = sql::fetch_departure(&state.pool, departure_id).await?;
 
     if departure.is_none() {
@@ -434,13 +395,9 @@ pub(crate) async fn patch_subroute_departure(
 
 pub(crate) async fn delete_subroute_departure(
     State(state): State<AppState>,
-    claims: auth::Claims,
+    auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::Trusted>,
     Path((subroute_id, departure_id)): Path<(i32, i32)>,
 ) -> Result<(), Error> {
-    if !(claims.permissions.is_admin || claims.permissions.is_trusted) {
-        return Err(Error::Forbidden);
-    }
-
     let departure = sql::fetch_departure(&state.pool, departure_id).await?;
 
     if departure.is_none() {
@@ -484,14 +441,10 @@ pub(crate) async fn get_subroute_stops(
 #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
 pub(crate) async fn patch_subroute_stops(
     State(state): State<AppState>,
-    claims: auth::Claims,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     Path((route_id, subroute_id)): Path<(i32, i32)>,
     Json(request): Json<requests::ChangeSubrouteStops>,
 ) -> Result<(), Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     let mut transaction = state
         .pool
         .begin()
@@ -524,13 +477,9 @@ pub(crate) async fn get_schedule(
 
 pub(crate) async fn post_replace_stop_across_routes(
     State(state): State<AppState>,
-    claims: auth::Claims,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     Path((original_id, replacement_id)): Path<(i32, i32)>,
 ) -> Result<(), Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     sql::migrate_stop(&state.pool, original_id, replacement_id).await?;
     Ok(())
 }

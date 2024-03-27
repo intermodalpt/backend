@@ -27,3 +27,24 @@ where
         logic::decode_claims(bearer.token())
     }
 }
+
+#[async_trait]
+impl<S, P: models::ClaimPermission> FromRequestParts<S>
+    for models::ScopedClaim<P>
+where
+    S: Send + Sync,
+{
+    type Rejection = Error;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &S,
+    ) -> Result<Self, Self::Rejection> {
+        let claims = models::Claims::from_request_parts(parts, state).await?;
+        if P::is_valid(&claims) {
+            Ok(Self(claims, std::marker::PhantomData::default()))
+        } else {
+            Err(Error::Forbidden)
+        }
+    }
+}

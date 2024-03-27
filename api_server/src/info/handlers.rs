@@ -84,13 +84,9 @@ pub(crate) async fn get_external_news_item(
 
 pub(crate) async fn get_full_external_news_item(
     State(state): State<AppState>,
-    claims: auth::Claims,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     Path(item_id): Path<i32>,
 ) -> Result<Json<responses::FullExternalNewsItem>, Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     let item = sql::fetch_full_external_news_item(&state.pool, item_id).await?;
 
     if let Some(item) = item {
@@ -102,13 +98,9 @@ pub(crate) async fn get_full_external_news_item(
 
 pub(crate) async fn get_external_news(
     State(state): State<AppState>,
-    claims: auth::Claims,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     paginator: Query<Page>,
 ) -> Result<Json<Vec<responses::ExternalNewsItem>>, Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
@@ -119,14 +111,10 @@ pub(crate) async fn get_external_news(
 
 pub(crate) async fn get_operator_external_news(
     State(state): State<AppState>,
-    claims: auth::Claims,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     paginator: Query<Page>,
     Path(operator_id): Path<i32>,
 ) -> Result<Json<Vec<responses::ExternalNewsItem>>, Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
@@ -144,13 +132,9 @@ pub(crate) async fn get_operator_external_news(
 
 pub(crate) async fn get_pending_external_news(
     State(state): State<AppState>,
-    claims: auth::Claims,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     paginator: Query<Page>,
 ) -> Result<Json<Vec<responses::FullExternalNewsItem>>, Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
@@ -161,14 +145,10 @@ pub(crate) async fn get_pending_external_news(
 
 pub(crate) async fn get_operator_pending_external_news(
     State(state): State<AppState>,
-    claims: auth::Claims,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     paginator: Query<Page>,
     Path(operator_id): Path<i32>,
 ) -> Result<Json<Vec<responses::FullExternalNewsItem>>, Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
@@ -185,38 +165,27 @@ pub(crate) async fn get_operator_pending_external_news(
 
 pub(crate) async fn post_external_news(
     State(state): State<AppState>,
-    claims: auth::Claims,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     Json(news_item): Json<requests::NewExternalNewsItem>,
 ) -> Result<Json<IdReturn>, Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     let id = sql::insert_external_news(&state.pool, news_item).await?;
     Ok(Json(IdReturn { id }))
 }
 
 pub(crate) async fn delete_external_news(
     State(state): State<AppState>,
-    claims: auth::Claims,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     Path(item_id): Path<i32>,
 ) -> Result<(), Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
     sql::delete_external_news_item(&state.pool, item_id).await?;
     Ok(())
 }
 
 pub(crate) async fn get_external_news_source_known_urls(
     State(state): State<AppState>,
-    claims: auth::Claims,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     Path(source): Path<String>,
 ) -> Result<Json<Vec<String>>, Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     Ok(Json(
         sql::fetch_external_news_source_urls(&state.pool, &source).await?,
     ))

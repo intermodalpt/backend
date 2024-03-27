@@ -36,14 +36,43 @@ pub struct Claims {
     // Username
     pub uname: String,
     // Perms
-    pub permissions: Permissions,
+    pub permissions: perms::Permissions,
+}
+pub(crate) trait ClaimPermission {
+    fn is_valid(claims: &Claims) -> bool;
 }
 
-// TODO complete this later
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
-pub struct Permissions {
-    pub is_admin: bool,
-    pub is_trusted: bool,
+pub(crate) struct ScopedClaim<P: ClaimPermission>(
+    pub(crate) Claims,
+    pub(crate) std::marker::PhantomData<P>,
+);
+
+pub(crate) mod perms {
+    use super::{ClaimPermission, Claims};
+    use serde::{Deserialize, Serialize};
+
+    // TODO complete this later
+    #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+    pub struct Permissions {
+        pub is_admin: bool,
+        pub is_trusted: bool,
+    }
+
+    pub struct Admin;
+
+    impl ClaimPermission for Admin {
+        fn is_valid(claims: &Claims) -> bool {
+            claims.permissions.is_admin
+        }
+    }
+
+    pub struct Trusted;
+
+    impl ClaimPermission for Trusted {
+        fn is_valid(claims: &Claims) -> bool {
+            claims.permissions.is_admin || claims.permissions.is_trusted
+        }
+    }
 }
 
 pub(crate) mod requests {

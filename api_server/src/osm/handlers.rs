@@ -43,13 +43,9 @@ pub(crate) async fn get_osm_stop_history(
 
 pub(crate) async fn patch_osm_stops(
     State(state): State<AppState>,
-    claims: auth::Claims,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     Json(mut newer_stops): Json<Vec<requests::OsmStop>>,
 ) -> Result<(), Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     let mut partial_updates = 0;
 
     for newer_stop in newer_stops.iter_mut() {
@@ -103,12 +99,8 @@ pub(crate) async fn patch_osm_stops(
 pub(crate) async fn delete_osm_stop(
     State(state): State<AppState>,
     Path(id): Path<i64>,
-    claims: auth::Claims,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
 ) -> Result<(), Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     sql::delete_osm_stop(&state.pool, id).await
 }
 

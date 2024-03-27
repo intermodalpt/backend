@@ -86,14 +86,10 @@ pub(crate) async fn get_undecided_own_contributions(
 
 pub(crate) async fn get_decided_user_contributions(
     State(state): State<AppState>,
-    claims: auth::Claims,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     Path(user_id): Path<i32>,
     paginator: Query<Page>,
 ) -> Result<Json<Vec<history::Contribution>>, Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
@@ -110,14 +106,10 @@ pub(crate) async fn get_decided_user_contributions(
 
 pub(crate) async fn get_undecided_user_contributions(
     State(state): State<AppState>,
-    claims: auth::Claims,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     Path(user_id): Path<i32>,
     paginator: Query<Page>,
 ) -> Result<Json<Vec<history::Contribution>>, Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
@@ -318,12 +310,10 @@ pub(crate) async fn patch_contrib_stop_picture_meta(
     Path(contribution_id): Path<i64>,
     Json(contribution_meta): Json<requests::NewPictureContribution>,
 ) -> Result<(), Error> {
-    let contribution =
-        sql::fetch_contribution(&state.pool, contribution_id).await?;
-    if contribution.is_none() {
-        return Err(Error::NotFoundUpstream);
-    }
-    let mut contribution: history::Contribution = contribution.unwrap();
+    let mut contribution =
+        sql::fetch_contribution(&state.pool, contribution_id)
+            .await?
+            .ok_or(Error::NotFoundUpstream)?;
 
     if contribution.author_id != claims.uid {
         return Err(Error::Forbidden);
@@ -381,14 +371,10 @@ pub(crate) struct ContribAcceptanceParam {
 
 pub(crate) async fn post_accept_contrib_data(
     State(state): State<AppState>,
-    claims: auth::Claims,
+    auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::Admin>,
     params: Query<ContribAcceptanceParam>,
     Path(contribution_id): Path<i64>,
 ) -> Result<(), Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     let verify = params.verify.unwrap_or(false);
 
     logic::accept_contribution(
@@ -403,20 +389,12 @@ pub(crate) async fn post_accept_contrib_data(
 
 pub(crate) async fn post_decline_contrib_data(
     State(state): State<AppState>,
-    claims: auth::Claims,
+    auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::Admin>,
     Path(contribution_id): Path<i64>,
 ) -> Result<(), Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
-    let contribution =
-        sql::fetch_contribution(&state.pool, contribution_id).await?;
-
-    if contribution.is_none() {
-        return Err(Error::NotFoundUpstream);
-    }
-    let contribution = contribution.unwrap();
+    let contribution = sql::fetch_contribution(&state.pool, contribution_id)
+        .await?
+        .ok_or(Error::NotFoundUpstream)?;
 
     if contribution.accepted.is_some() {
         return Err(Error::DependenciesNotMet);

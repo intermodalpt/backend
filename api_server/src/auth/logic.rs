@@ -80,7 +80,7 @@ pub(crate) async fn login(
         exp: expiration_time.timestamp(),
         uid: user.id,
         uname: user.username,
-        permissions: models::Permissions {
+        permissions: models::perms::Permissions {
             is_admin: user.is_admin,
             is_trusted: user.is_trusted,
         },

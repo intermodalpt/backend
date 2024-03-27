@@ -44,12 +44,8 @@ pub(crate) async fn get_operator_regions(
 pub(crate) async fn put_operator_into_region(
     State(state): State<AppState>,
     Path((region_id, operator_id)): Path<(i32, i32)>,
-    claims: auth::Claims,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
 ) -> Result<(), Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     let mut transaction = state
         .pool
         .begin()
@@ -68,12 +64,8 @@ pub(crate) async fn put_operator_into_region(
 pub(crate) async fn delete_operator_from_region(
     State(state): State<AppState>,
     Path((region_id, operator_id)): Path<(i32, i32)>,
-    claims: auth::Claims,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
 ) -> Result<(), Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     let mut transaction = state
         .pool
         .begin()
@@ -92,24 +84,16 @@ pub(crate) async fn delete_operator_from_region(
 pub(crate) async fn get_route_regions(
     State(state): State<AppState>,
     Path(route_id): Path<i32>,
-    claims: auth::Claims,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
 ) -> Result<Json<Vec<i32>>, Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     Ok(Json(sql::fetch_route_regions(&state.pool, route_id).await?))
 }
 
 pub(crate) async fn put_route_into_region(
     State(state): State<AppState>,
     Path((region_id, route_id)): Path<(i32, i32)>,
-    claims: auth::Claims,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
 ) -> Result<(), Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     let mut transaction = state
         .pool
         .begin()
@@ -128,12 +112,8 @@ pub(crate) async fn put_route_into_region(
 pub(crate) async fn delete_route_from_region(
     State(state): State<AppState>,
     Path((region_id, route_id)): Path<(i32, i32)>,
-    claims: auth::Claims,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
 ) -> Result<(), Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     let mut transaction = state
         .pool
         .begin()
@@ -159,12 +139,8 @@ pub(crate) async fn get_stop_regions(
 pub(crate) async fn put_stop_into_region(
     State(state): State<AppState>,
     Path((region_id, stop_id)): Path<(i32, i32)>,
-    claims: auth::Claims,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
 ) -> Result<(), Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     let mut transaction = state
         .pool
         .begin()
@@ -182,12 +158,8 @@ pub(crate) async fn put_stop_into_region(
 pub(crate) async fn delete_stop_from_region(
     State(state): State<AppState>,
     Path((region_id, stop_id)): Path<(i32, i32)>,
-    claims: auth::Claims,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
 ) -> Result<(), Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     let mut transaction = state
         .pool
         .begin()
@@ -224,12 +196,8 @@ pub(crate) async fn get_parishes(
 pub(crate) async fn put_stop_parish(
     State(state): State<AppState>,
     Path((stop_id, parish_id)): Path<(i32, i32)>,
-    claims: auth::Claims,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
 ) -> Result<(), Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     sql::update_stop_parish(&state.pool, stop_id, parish_id).await?;
     Ok(())
 }

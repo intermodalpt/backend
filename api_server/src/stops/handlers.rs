@@ -56,12 +56,8 @@ pub(crate) async fn get_region_full_stops(
 
 pub(crate) async fn get_all_detailed_stops(
     State(state): State<AppState>,
-    claims: auth::Claims,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
 ) -> Result<Json<Vec<responses::Stop>>, Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     Ok(Json(sql::fetch_all_detailed_stops(&state.pool).await?))
 }
 
@@ -74,38 +70,30 @@ pub(crate) async fn get_stop(
     State(state): State<AppState>,
     Path(stop_id): Path<i32>,
 ) -> Result<Json<responses::Stop>, Error> {
-    let stop = sql::fetch_stop(&state.pool, stop_id).await?;
-
-    if let Some(stop) = stop {
-        Ok(Json(stop))
-    } else {
-        Err(Error::NotFoundUpstream)
-    }
+    Ok(Json(
+        sql::fetch_stop(&state.pool, stop_id)
+            .await?
+            .ok_or(Error::NotFoundUpstream)?,
+    ))
 }
 
 pub(crate) async fn post_stop(
     State(state): State<AppState>,
-    claims: auth::Claims,
+    auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::Admin>,
     Json(stop): Json<requests::NewStop>,
 ) -> Result<Json<HashMap<String, i32>>, Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
-    let user_id = claims.uid;
-
     let mut transaction = state
         .pool
         .begin()
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
-    let stop = sql::insert_stop(&mut transaction, stop, user_id).await?;
+    let stop = sql::insert_stop(&mut transaction, stop, claims.uid).await?;
     let id = stop.id;
 
     contrib::sql::insert_changeset_log(
         &mut transaction,
-        user_id,
+        claims.uid,
         &[history::Change::StopCreation { data: stop.into() }],
         None,
     )
@@ -125,16 +113,10 @@ pub(crate) async fn post_stop(
 
 pub(crate) async fn patch_stop(
     State(state): State<AppState>,
-    claims: auth::Claims,
+    auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::Admin>,
     Path(stop_id): Path<i32>,
     Json(changes): Json<requests::ChangeStop>,
 ) -> Result<Json<stops::Stop>, Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
-    let user_id = claims.uid;
-
     let stop = sql::fetch_stop(&state.pool, stop_id).await?;
     if stop.is_none() {
         return Err(Error::NotFoundUpstream);
@@ -155,7 +137,7 @@ pub(crate) async fn patch_stop(
 
     contrib::sql::insert_changeset_log(
         &mut transaction,
-        user_id,
+        claims.uid,
         &[history::Change::StopUpdate {
             original: stop.clone().into(),
             patch: patch.clone(),
@@ -164,7 +146,7 @@ pub(crate) async fn patch_stop(
     )
     .await?;
 
-    sql::update_stop(&mut transaction, stop_id, changes, user_id).await?;
+    sql::update_stop(&mut transaction, stop_id, changes, claims.uid).await?;
 
     // If this fails then proceed find a better suited job in a fast food chain.
     // The patch was just made, must be valid.
@@ -181,13 +163,9 @@ pub(crate) async fn patch_stop(
 pub(crate) async fn post_update_stop_position(
     State(state): State<AppState>,
     Path(stop_id): Path<i32>,
-    claims: auth::Claims,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     Json(location): Json<requests::Position>,
 ) -> Result<(), Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     let mut transaction = state
         .pool
         .begin()

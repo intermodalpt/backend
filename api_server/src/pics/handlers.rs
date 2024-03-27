@@ -37,7 +37,7 @@ pub(crate) async fn get_stop_pictures(
     let is_trusted = matches!(
         claims,
         Some(auth::Claims {
-            permissions: auth::Permissions { is_admin: true, .. },
+            permissions: auth::perms::Permissions { is_admin: true, .. },
             ..
         })
     );
@@ -72,11 +72,8 @@ pub(crate) async fn get_picture_stop_rels(
 
 pub(crate) async fn get_pictures(
     State(state): State<AppState>,
-    claims: auth::Claims,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
 ) -> Result<Json<Vec<responses::PicWithStops>>, Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
     Ok(Json(sql::fetch_pictures_with_stops(&state.pool).await?))
 }
 
@@ -87,7 +84,7 @@ pub(crate) async fn get_pictures_map(
     let is_trusted = matches!(
         claims,
         Some(auth::Claims {
-            permissions: auth::Permissions { is_admin: true, .. },
+            permissions: auth::perms::Permissions { is_admin: true, .. },
             ..
         })
     );
@@ -127,7 +124,7 @@ pub(crate) async fn get_latest_stop_pictures(
     let is_trusted = matches!(
         claims,
         Some(auth::Claims {
-            permissions: auth::Permissions { is_admin: true, .. },
+            permissions: auth::perms::Permissions { is_admin: true, .. },
             ..
         })
     );
@@ -194,7 +191,7 @@ pub(crate) async fn get_user_stop_pictures(
     let is_trusted = matches!(
         claims,
         Some(auth::Claims {
-            permissions: auth::Permissions { is_admin: true, .. },
+            permissions: auth::perms::Permissions { is_admin: true, .. },
             ..
         })
     );
@@ -229,7 +226,7 @@ pub(crate) async fn get_unpositioned_stop_pictures(
     let is_trusted = matches!(
         claims,
         Some(auth::Claims {
-            permissions: auth::Permissions { is_admin: true, .. },
+            permissions: auth::perms::Permissions { is_admin: true, .. },
             ..
         })
     );
@@ -359,7 +356,7 @@ pub(crate) async fn get_stop_picture_meta(
     let is_trusted = matches!(
         claims,
         Some(auth::Claims {
-            permissions: auth::Permissions { is_admin: true, .. },
+            permissions: auth::perms::Permissions { is_admin: true, .. },
             ..
         })
     );
@@ -487,23 +484,15 @@ pub(crate) async fn get_picture_count_by_stop(
 
 pub(crate) async fn get_panos(
     State(state): State<AppState>,
-    claims: auth::Claims,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
 ) -> Result<Json<Vec<responses::FullPanoPic>>, Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     Ok(Json(sql::fetch_panos(&state.pool, true).await?))
 }
 pub(crate) async fn upload_pano_picture(
     State(state): State<AppState>,
-    claims: auth::Claims,
+    auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::Admin>,
     mut multipart: Multipart,
 ) -> Result<Json<pics::PanoPic>, Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     let field = get_exactly_one_field(&mut multipart).await?;
 
     let filename = field
@@ -537,7 +526,7 @@ pub(crate) async fn get_stop_pano(
     let is_trusted = matches!(
         claims,
         Some(auth::Claims {
-            permissions: auth::Permissions { is_admin: true, .. },
+            permissions: auth::perms::Permissions { is_admin: true, .. },
             ..
         })
     );
@@ -550,33 +539,17 @@ pub(crate) async fn get_stop_pano(
 pub(crate) async fn get_onion_skin(
     State(state): State<AppState>,
     Path(pano_id): Path<i32>,
-    claims: Option<auth::Claims>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Trusted>,
 ) -> Result<Json<responses::PanoOnion>, Error> {
-    let is_trusted = matches!(
-        claims,
-        Some(auth::Claims {
-            permissions: auth::Permissions { is_admin: true, .. },
-            ..
-        })
-    );
-
-    if !is_trusted {
-        return Err(Error::Forbidden);
-    }
-
     Ok(Json(sql::fetch_pano_onion(&state.pool, pano_id).await?))
 }
 
 pub(crate) async fn post_upload_operator_logo(
     State(state): State<AppState>,
-    claims: auth::Claims,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     Path(operator_id): Path<i32>,
     mut multipart: Multipart,
 ) -> Result<(), Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     let field = get_exactly_one_field(&mut multipart).await?;
     let filename = field
         .file_name()
@@ -604,14 +577,10 @@ pub(crate) async fn post_upload_operator_logo(
 
 pub(crate) async fn post_news_image(
     State(state): State<AppState>,
-    claims: auth::Claims,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     Path(item_id): Path<i32>,
     mut multipart: Multipart,
 ) -> Result<Json<HashMap<String, String>>, Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     let field = get_exactly_one_field(&mut multipart).await?;
 
     let filename = field
@@ -643,14 +612,10 @@ pub(crate) async fn post_news_image(
 
 pub(crate) async fn post_external_news_image(
     State(state): State<AppState>,
-    claims: auth::Claims,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     Path(item_id): Path<i32>,
     mut multipart: Multipart,
 ) -> Result<Json<HashMap<String, String>>, Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     let field = get_exactly_one_field(&mut multipart).await?;
 
     let filename = field
@@ -682,14 +647,10 @@ pub(crate) async fn post_external_news_image(
 
 pub(crate) async fn put_external_news_screenshot(
     State(state): State<AppState>,
-    claims: auth::Claims,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     Path(item_id): Path<i32>,
     mut multipart: Multipart,
 ) -> Result<(), Error> {
-    if !claims.permissions.is_admin {
-        return Err(Error::Forbidden);
-    }
-
     let field = get_exactly_one_field(&mut multipart).await?;
 
     let filename = field
