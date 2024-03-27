@@ -120,11 +120,9 @@ pub(crate) async fn patch_route(
     Path(route_id): Path<i32>,
     Json(changes): Json<requests::ChangeRoute>,
 ) -> Result<Json<routes::Route>, Error> {
-    let route = sql::fetch_commons_route(&state.pool, route_id).await?;
-    if route.is_none() {
-        return Err(Error::NotFoundUpstream);
-    }
-    let route = route.unwrap();
+    let route = sql::fetch_commons_route(&state.pool, route_id)
+        .await?
+        .ok_or(Error::NotFoundUpstream)?;
 
     let patch = changes.derive_patch(&route);
 
@@ -163,11 +161,9 @@ pub(crate) async fn delete_route(
     auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::Admin>,
     Path(route_id): Path<i32>,
 ) -> Result<(), Error> {
-    let route = sql::fetch_commons_route(&state.pool, route_id).await?;
-    if route.is_none() {
-        return Err(Error::NotFoundUpstream);
-    }
-    let route = route.unwrap();
+    let route = sql::fetch_commons_route(&state.pool, route_id)
+        .await?
+        .ok_or(Error::NotFoundUpstream)?;
 
     let mut transaction = state
         .pool
@@ -229,11 +225,9 @@ pub(crate) async fn patch_subroute(
     Path((route_id, subroute_id)): Path<(i32, i32)>,
     Json(changes): Json<requests::ChangeSubroute>,
 ) -> Result<Json<routes::Subroute>, Error> {
-    let subroute = sql::fetch_simple_subroute(&state.pool, subroute_id).await?;
-    if subroute.is_none() {
-        return Err(Error::NotFoundUpstream);
-    }
-    let subroute = subroute.unwrap();
+    let subroute = sql::fetch_simple_subroute(&state.pool, subroute_id)
+        .await?
+        .ok_or(Error::NotFoundUpstream)?;
 
     let patch = changes.derive_patch(&subroute);
 
@@ -280,11 +274,9 @@ pub(crate) async fn delete_subroute(
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
-    let subroute = sql::fetch_simple_subroute(&state.pool, subroute_id).await?;
-    if subroute.is_none() {
-        return Err(Error::NotFoundUpstream);
-    }
-    let subroute = subroute.unwrap();
+    let subroute = sql::fetch_simple_subroute(&state.pool, subroute_id)
+        .await?
+        .ok_or(Error::NotFoundUpstream)?;
 
     let stops =
         sql::fetch_subroute_stops(&mut transaction, subroute_id).await?;
@@ -352,13 +344,9 @@ pub(crate) async fn patch_subroute_departure(
     Path((subroute_id, departure_id)): Path<(i32, i32)>,
     Json(change): Json<requests::ChangeDeparture>,
 ) -> Result<Json<routes::Departure>, Error> {
-    let departure = sql::fetch_departure(&state.pool, departure_id).await?;
-
-    if departure.is_none() {
-        return Err(Error::NotFoundUpstream);
-    }
-    let departure = departure.unwrap();
-
+    let departure = sql::fetch_departure(&state.pool, departure_id)
+        .await?
+        .ok_or(Error::NotFoundUpstream)?;
     let patch = change.derive_patch(&departure);
 
     if patch.is_empty() {
@@ -398,12 +386,9 @@ pub(crate) async fn delete_subroute_departure(
     auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::Trusted>,
     Path((subroute_id, departure_id)): Path<(i32, i32)>,
 ) -> Result<(), Error> {
-    let departure = sql::fetch_departure(&state.pool, departure_id).await?;
-
-    if departure.is_none() {
-        return Err(Error::NotFoundUpstream);
-    }
-    let departure = departure.unwrap();
+    let departure = sql::fetch_departure(&state.pool, departure_id)
+        .await?
+        .ok_or(Error::NotFoundUpstream)?;
 
     let mut transaction = state
         .pool

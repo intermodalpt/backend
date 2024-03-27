@@ -159,12 +159,8 @@ fn zip_datetime_to_chrono(
         u32::from(datetime.second()),
     );
 
-    if date.is_none() || time.is_none() {
-        return Err(Error::ExtractionFailure("Bad date".to_string()));
-    }
-
-    let date = date.unwrap();
-    let time = time.unwrap();
+    let date = date.ok_or(Error::ExtractionFailure("Bad date".to_string()))?;
+    let time = time.ok_or(Error::ExtractionFailure("Bad time".to_string()))?;
 
     Ok(chrono::NaiveDateTime::new(date, time).and_utc())
 }

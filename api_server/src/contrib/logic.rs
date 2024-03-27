@@ -62,12 +62,9 @@ pub(crate) async fn accept_contribution(
     verify: bool,
     ignored: &Option<String>,
 ) -> Result<(), Error> {
-    let contribution = sql::fetch_contribution(pool, contribution_id).await?;
-
-    if contribution.is_none() {
-        return Err(Error::NotFoundUpstream);
-    }
-    let mut contribution = contribution.unwrap();
+    let mut contribution = sql::fetch_contribution(pool, contribution_id)
+        .await?
+        .ok_or(Error::NotFoundUpstream)?;
 
     if contribution.accepted.is_some() {
         return Err(Error::DependenciesNotMet);
@@ -80,15 +77,15 @@ pub(crate) async fn accept_contribution(
 
     match &mut contribution.change {
         history::Change::StopUpdate { original, patch } => {
-            let stop = crate::stops::sql::fetch_stop(pool, original.id).await?;
-            if stop.is_none() {
-                // TODO Do something about this
-                // TODO Prevent patches from reaching this state
-                return Err(Error::ValidationFailure(
-                    "Stop no longer exists".to_string(),
-                ));
-            }
-            let stop = stops::Stop::from(stop.unwrap());
+            // TODO Do something about these
+            // TODO Prevent patches from getting dangling references
+            let stop: stops::Stop =
+                crate::stops::sql::fetch_stop(pool, original.id)
+                    .await?
+                    .ok_or(Error::ValidationFailure(
+                        "Stop no longer exists".to_string(),
+                    ))?
+                    .into();
 
             *original = stop.clone().into();
             // FIXME This we might want to check if the original has been patched

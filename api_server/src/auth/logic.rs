@@ -40,11 +40,9 @@ pub(crate) async fn login(
     requester_ip: IpAddr,
     db_pool: &PgPool,
 ) -> Result<String, Error> {
-    let user = sql::fetch_user(db_pool, &request.username).await?;
-    if user.is_none() {
-        return Err(Error::Forbidden);
-    }
-    let user = user.unwrap();
+    let user = sql::fetch_user(db_pool, &request.username)
+        .await?
+        .ok_or(Error::Forbidden)?;
 
     let parsed_hash = PasswordHash::new(&user.password).map_err(|_err| {
         Error::Processing("Unable to parse existing hash".to_string())
@@ -93,11 +91,9 @@ pub(crate) async fn is_user_password(
     password: &str,
     db_pool: &PgPool,
 ) -> Result<bool, Error> {
-    let user = sql::fetch_user(db_pool, username).await?;
-    if user.is_none() {
-        return Err(Error::NotFoundUpstream);
-    }
-    let user = user.unwrap();
+    let user = sql::fetch_user(db_pool, username)
+        .await?
+        .ok_or(Error::NotFoundUpstream)?;
 
     let parsed_hash = PasswordHash::new(&user.password).map_err(|_err| {
         Error::Processing("Unable to parse existing hash".to_string())

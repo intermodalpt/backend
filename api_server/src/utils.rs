@@ -25,24 +25,8 @@ pub(crate) async fn get_exactly_one_field(
     let field = multipart
         .next_field()
         .await
-        .map_err(|err| Error::ValidationFailure(err.to_string()))?;
-    if field.is_none() {
-        return Err(Error::ValidationFailure(
-            "No file was provided".to_string(),
-        ));
-    }
-    // The compiler cries if one does this
-    // if multipart
-    //     .next_field()
-    //     .await
-    //     .map_err(|err| Error::ValidationFailure(err.to_string()))?
-    //     .is_some()
-    // {
-    //     return Err(Error::ValidationFailure(
-    //         "Too many files were provided".to_string(),
-    //     ));
-    // }
-    let field = field.unwrap();
+        .map_err(|err| Error::ValidationFailure(err.to_string()))?
+        .ok_or(Error::ValidationFailure("No file was provided".to_string()))?;
 
     Ok(field)
 }

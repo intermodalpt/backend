@@ -362,11 +362,9 @@ pub(crate) async fn get_stop_picture_meta(
     );
     let uid = claims.map(|c| c.uid);
 
-    let pic = sql::fetch_picture_with_stops(&state.pool, picture_id).await?;
-    if pic.is_none() {
-        return Err(Error::NotFoundUpstream);
-    }
-    let pic = pic.unwrap();
+    let pic = sql::fetch_picture_with_stops(&state.pool, picture_id)
+        .await?
+        .ok_or(Error::NotFoundUpstream)?;
 
     if (pic.tagged && !pic.sensitive) || Some(pic.uploader) == uid || is_trusted
     {
@@ -388,11 +386,9 @@ pub(crate) async fn patch_stop_picture_meta(
         .await
         .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
 
-    let pic = sql::fetch_picture(&mut *transaction, stop_picture_id).await?;
-    if pic.is_none() {
-        return Err(Error::NotFoundUpstream);
-    }
-    let pic = pic.unwrap();
+    let pic = sql::fetch_picture(&mut *transaction, stop_picture_id)
+        .await?
+        .ok_or(Error::NotFoundUpstream)?;
 
     if !(claims.permissions.is_admin
         || !pic.tagged && pic.uploader == claims.uid)
@@ -463,11 +459,9 @@ pub(crate) async fn delete_picture(
     claims: auth::Claims,
     Path(picture_id): Path<i32>,
 ) -> Result<(), Error> {
-    let pic = sql::fetch_picture(&state.pool, picture_id).await?;
-    if pic.is_none() {
-        return Err(Error::NotFoundUpstream);
-    }
-    let pic = pic.unwrap();
+    let pic = sql::fetch_picture(&state.pool, picture_id)
+        .await?
+        .ok_or(Error::NotFoundUpstream)?;
 
     if !(claims.permissions.is_admin || pic.uploader == claims.uid) {
         return Err(Error::Forbidden);

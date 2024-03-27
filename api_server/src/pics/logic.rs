@@ -434,11 +434,8 @@ pub(crate) async fn upload_operator_logo(
     }
 
     let path = std::path::Path::new(&filename);
-    let ext = path.extension();
-    if ext.is_none() {
-        return Err(Error::DependenciesNotMet);
-    }
-    let ext = ext.unwrap();
+    let ext = path.extension().ok_or(Error::DependenciesNotMet)?;
+
     // Ensure valid
     if ext.eq_ignore_ascii_case("svg") {
         let svg_data = String::from_utf8(content.to_vec()).map_err(|_e| {
@@ -561,11 +558,8 @@ pub(crate) async fn upload_news_item_img(
     }
 
     let path = std::path::Path::new(&filename);
-    let ext = path.extension();
-    if ext.is_none() {
-        return Err(Error::DependenciesNotMet);
-    }
-    let ext = ext.unwrap();
+    let ext = path.extension().ok_or(Error::DependenciesNotMet)?;
+
     // Ensure valid
     if ext.eq_ignore_ascii_case("png")
         || ext.eq_ignore_ascii_case("jpg")
@@ -666,11 +660,8 @@ pub(crate) async fn upload_external_news_item_img(
     }
 
     let path = std::path::Path::new(&filename);
-    let ext = path.extension();
-    if ext.is_none() {
-        return Err(Error::DependenciesNotMet);
-    }
-    let ext = ext.unwrap();
+    let ext = path.extension().ok_or(Error::DependenciesNotMet)?;
+
     // Ensure valid
     if ext.eq_ignore_ascii_case("png")
         || ext.eq_ignore_ascii_case("jpg")
@@ -783,11 +774,8 @@ pub(crate) async fn upload_news_item_screenshot(
     }
 
     let path = std::path::Path::new(&filename);
-    let ext = path.extension();
-    if ext.is_none() {
-        return Err(Error::DependenciesNotMet);
-    }
-    let ext = ext.unwrap();
+    let ext = path.extension().ok_or(Error::DependenciesNotMet)?;
+
     // Ensure valid
     if ext.eq_ignore_ascii_case("png")
         || ext.eq_ignore_ascii_case("jpg")

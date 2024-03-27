@@ -39,12 +39,9 @@ pub(crate) async fn post_update_operator_gtfs(
     Path(operator_id): Path<i32>,
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
 ) -> Result<(), Error> {
-    let operator =
-        operators_sql::fetch_operator(&state.pool, operator_id).await?;
-    if operator.is_none() {
-        return Err(Error::NotFoundUpstream);
-    }
-    let operator = operator.unwrap();
+    let operator = operators_sql::fetch_operator(&state.pool, operator_id)
+        .await?
+        .ok_or(Error::NotFoundUpstream)?;
 
     update_operator_gtfs(operator.id, &operator.tag).await
 }
@@ -53,12 +50,9 @@ pub(crate) async fn get_gtfs_stops(
     State(state): State<AppState>,
     Path(operator_id): Path<i32>,
 ) -> Result<Json<Arc<Vec<gtfs::Stop>>>, Error> {
-    let operator =
-        operators_sql::fetch_operator(&state.pool, operator_id).await?;
-    if operator.is_none() {
-        return Err(Error::NotFoundUpstream);
-    }
-    let operator = operator.unwrap();
+    let operator = operators_sql::fetch_operator(&state.pool, operator_id)
+        .await?
+        .ok_or(Error::NotFoundUpstream)?;
 
     let meta = operator.get_storage_meta()?;
 
@@ -87,12 +81,9 @@ pub(crate) async fn get_gtfs_route_trips(
     State(state): State<AppState>,
     Path(operator_id): Path<i32>,
 ) -> Result<Json<Arc<Vec<models::TMLRoute>>>, Error> {
-    let operator =
-        operators_sql::fetch_operator(&state.pool, operator_id).await?;
-    if operator.is_none() {
-        return Err(Error::NotFoundUpstream);
-    }
-    let operator = operator.unwrap();
+    let operator = operators_sql::fetch_operator(&state.pool, operator_id)
+        .await?
+        .ok_or(Error::NotFoundUpstream)?;
 
     let meta = operator.get_storage_meta()?;
 
@@ -121,12 +112,9 @@ pub(crate) async fn get_gtfs_stop_sliding_windows(
     State(state): State<AppState>,
     Path(operator_id): Path<i32>,
 ) -> Result<Json<Vec<Vec<String>>>, Error> {
-    let operator =
-        operators_sql::fetch_operator(&state.pool, operator_id).await?;
-    if operator.is_none() {
-        return Err(Error::NotFoundUpstream);
-    }
-    let operator = operator.unwrap();
+    let operator = operators_sql::fetch_operator(&state.pool, operator_id)
+        .await?
+        .ok_or(Error::NotFoundUpstream)?;
 
     let meta = operator.get_storage_meta()?;
 

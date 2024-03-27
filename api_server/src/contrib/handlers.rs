@@ -213,12 +213,11 @@ pub(crate) async fn post_contrib_stop_data(
     Path(stop_id): Path<i32>,
     Json(contribution): Json<requests::NewStopMetaContribution>,
 ) -> Result<Json<HashMap<String, i64>>, Error> {
-    let stop = crate::stops::sql::fetch_stop(&state.pool, stop_id).await?;
+    let stop: stops::Stop = crate::stops::sql::fetch_stop(&state.pool, stop_id)
+        .await?
+        .ok_or(Error::NotFoundUpstream)?
+        .into();
 
-    if stop.is_none() {
-        return Err(Error::NotFoundUpstream);
-    }
-    let stop: stops::Stop = stop.unwrap().into();
     let patch = contribution.contribution.derive_patch(&stop);
 
     if patch.is_empty() {
@@ -338,11 +337,9 @@ pub(crate) async fn patch_contrib_stop_picture_meta(
 
     pic.dyn_meta = contribution_meta.contribution;
 
-    let db_pic = pics::sql::fetch_picture(&state.pool, pic.id).await?;
-    if db_pic.is_none() {
-        return Err(Error::NotFoundUpstream);
-    }
-    let db_pic = db_pic.unwrap();
+    let db_pic = pics::sql::fetch_picture(&state.pool, pic.id)
+        .await?
+        .ok_or(Error::NotFoundUpstream)?;
 
     if db_pic.tagged {
         return Err(Error::DependenciesNotMet);

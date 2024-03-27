@@ -18,6 +18,7 @@
 
 use chrono::Utc;
 use sqlx::types::ipnetwork::IpNetwork;
+use sqlx::types::Json;
 use sqlx::PgPool;
 
 use commons::models::auth;
@@ -155,7 +156,7 @@ VALUES ($1, $2, $3)
 RETURNING id
     "#,
         user_id,
-        serde_json::to_value(action).unwrap(),
+        Json(action) as _,
         addr
     )
     .fetch_one(&mut **transaction)

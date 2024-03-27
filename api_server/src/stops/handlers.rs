@@ -117,11 +117,10 @@ pub(crate) async fn patch_stop(
     Path(stop_id): Path<i32>,
     Json(changes): Json<requests::ChangeStop>,
 ) -> Result<Json<stops::Stop>, Error> {
-    let stop = sql::fetch_stop(&state.pool, stop_id).await?;
-    if stop.is_none() {
-        return Err(Error::NotFoundUpstream);
-    }
-    let mut stop = stops::Stop::from(stop.unwrap());
+    let mut stop: stops::Stop = sql::fetch_stop(&state.pool, stop_id)
+        .await?
+        .ok_or(Error::NotFoundUpstream)?
+        .into();
 
     let patch = changes.derive_patch(&stop);
 
