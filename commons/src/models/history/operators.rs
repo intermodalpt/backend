@@ -40,6 +40,7 @@ pub struct OperatorCalendar {
 }
 
 #[derive(Debug, Serialize)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct OperatorVehicle {
     pub id: i32,
     pub name: String,
@@ -419,7 +420,7 @@ pub(crate) enum MatchSource {
     Unknown,
     Tml,
     Manual,
-    OSM,
+    Osm,
     Flags,
     H1,
 }
@@ -430,7 +431,7 @@ impl From<MatchSource> for current::MatchSource {
             MatchSource::Unknown => current::MatchSource::Unknown,
             MatchSource::Tml => current::MatchSource::Tml,
             MatchSource::Manual => current::MatchSource::Manual,
-            MatchSource::OSM => current::MatchSource::OSM,
+            MatchSource::Osm => current::MatchSource::Osm,
             MatchSource::Flags => current::MatchSource::Flags,
             MatchSource::H1 => current::MatchSource::H1,
         }

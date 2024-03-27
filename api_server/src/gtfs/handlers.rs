@@ -337,7 +337,7 @@ pub(crate) async fn patch_subroute_validation_stops(
     sr_validation_data
         .gtfs_pattern_ids
         .contains(&request.pattern_id)
-        .then(|| ())
+        .then_some(())
         .ok_or(Error::ValidationFailure(format!(
             "Unrecognized pattern '{}' for subroute {}",
             request.pattern_id, subroute_id

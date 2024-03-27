@@ -43,7 +43,7 @@ impl State {
         let bucket = s3::Bucket::new(
             "",
             s3::Region::R2 {
-                account_id: "".to_string(),
+                account_id: String::new(),
             },
             credentials,
         )

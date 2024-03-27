@@ -509,9 +509,8 @@ pub fn build_paths(state: AppState) -> Router {
         .layer(
             TraceLayer::new_for_http()
                 .make_span_with(|request: &Request<Body>| {
-                    let request_id = uuid::Uuid::new_v4();
-
                     type JwtH = Authorization<Bearer>;
+
                     let mut jwt_headers =
                         request.headers().get_all(JwtH::name()).iter();
                     // We're possibly decoding claims twice (here and in the handlers).
@@ -520,11 +519,12 @@ pub fn build_paths(state: AppState) -> Router {
                     // and for the handlers
                     let uid = JwtH::decode(&mut jwt_headers)
                         .ok()
-                        .map(|Authorization(bearer)| {
+                        .and_then(|Authorization(bearer)| {
                             auth::decode_claims(bearer.token()).ok()
                         })
-                        .unwrap_or(None)
                         .map(|claims| claims.uid);
+
+                    let request_id = uuid::Uuid::new_v4();
 
                     tracing::span!(
                         tracing::Level::INFO,

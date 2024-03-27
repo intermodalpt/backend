@@ -63,7 +63,7 @@ impl Eq for NodeVersion {}
 
 impl PartialOrd for NodeVersion {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.version.partial_cmp(&other.version)
+        Some(self.cmp(other))
     }
 }
 

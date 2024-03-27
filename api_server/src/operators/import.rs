@@ -129,7 +129,7 @@ pub(crate) async fn update_operator_gtfs(
 
             if meta.last_gtfs != Some(version_date) {
                 meta.last_gtfs = Some(version_date);
-                let _ = gtfs_utils::extract_gtfs(
+                let _ = gtfs_utils::extract(
                     &format!(
                         "./data/operators/{operator_id}/gtfsrepo/CarrisMetropolitana.zip"
                     ),
@@ -143,7 +143,7 @@ pub(crate) async fn update_operator_gtfs(
 
             http::download_file(url, &path, None).await?;
 
-            let newest_file = gtfs_utils::extract_gtfs(
+            let newest_file = gtfs_utils::extract(
                 &format!("./data/operators/{operator_id}/gtfs.zip"),
                 &format!("./data/operators/{operator_id}/gtfs"),
             )?;
@@ -186,7 +186,7 @@ async fn fetch_transporlis_feed(
 
     http::download_file(&url, &path, None).await?;
 
-    let newest_file = gtfs_utils::extract_gtfs(
+    let newest_file = gtfs_utils::extract(
         &format!("./data/operators/{operator_id}/gtfs.zip"),
         &format!("./data/operators/{operator_id}/gtfs"),
     )?;

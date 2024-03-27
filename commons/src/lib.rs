@@ -24,6 +24,7 @@
     clippy::all,
     clippy::pedantic
 )]
+#![allow(clippy::missing_errors_doc, clippy::option_option)]
 
 pub mod errors;
 pub mod models;

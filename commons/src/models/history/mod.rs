@@ -27,10 +27,12 @@ pub mod stops;
 pub use changes::{Change, Changeset, Contribution};
 
 // Rust... cmon. Let's pretend I'm not going to use these a million times because they're not part of the stdlib
+#[must_use]
 pub fn vec_into_vec<T, R: From<T>>(vec: Vec<T>) -> Vec<R> {
     vec.into_iter().map(Into::into).collect()
 }
 
+#[must_use]
 pub fn opt_vec_into_opt_vec<T, R: From<T>>(
     opt_vec: Option<Vec<T>>,
 ) -> Option<Vec<R>> {

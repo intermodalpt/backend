@@ -83,7 +83,7 @@ pub(crate) async fn login(
             is_trusted: user.is_trusted,
         },
     };
-    encode_claims(claims)
+    encode_claims(&claims)
 }
 
 pub(crate) async fn is_user_password(
@@ -127,7 +127,7 @@ pub(crate) async fn register(
     .await?;
 
     // TODO something more robust than this
-    if request.username.contains(" ") {
+    if request.username.contains(' ') {
         return Err(Error::ValidationFailure(
             "Username cannot contain spaces".to_string(),
         ));
@@ -184,6 +184,7 @@ pub(crate) async fn register(
         .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
+#[allow(clippy::similar_names)]
 pub(crate) async fn change_password(
     request: requests::ChangeKnownPassword,
     requester_id: i32,
@@ -222,6 +223,7 @@ pub(crate) async fn change_password(
         .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
+#[allow(clippy::similar_names)]
 pub(crate) async fn admin_change_password(
     request: requests::ChangeUnknownPassword,
     requester_id: i32,
@@ -261,10 +263,10 @@ pub(crate) async fn admin_change_password(
         .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
-pub(crate) fn encode_claims(claims: models::Claims) -> Result<String, Error> {
+pub(crate) fn encode_claims(claims: &models::Claims) -> Result<String, Error> {
     jsonwebtoken::encode(
         &jsonwebtoken::Header::default(),
-        &claims,
+        claims,
         &jsonwebtoken::EncodingKey::from_secret(
             SECRET_KEY.get().unwrap().as_ref(),
         ),
@@ -305,12 +307,12 @@ mod tests {
             exp: 2000000000,
             uid: 0,
             uname: "test".to_string(),
-            permissions: models::Permissions {
+            permissions: models::perms::Permissions {
                 is_admin: false,
                 is_trusted: false,
             },
         };
-        let encoded = encode_claims(claims.clone()).unwrap();
+        let encoded = encode_claims(&claims).unwrap();
         let decoded = decode_claims(&encoded).unwrap();
         assert_eq!(claims, decoded);
     }

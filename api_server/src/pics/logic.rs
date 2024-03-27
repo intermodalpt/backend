@@ -39,6 +39,7 @@ const MEDIUM_IMG_MAX_WIDTH: u32 = 1200;
 const MEDIUM_IMG_MAX_HEIGHT: u32 = 800;
 const MEDIUM_IMG_MAX_QUALITY: f32 = 85.0;
 
+#[allow(clippy::cast_possible_wrap)]
 pub(crate) async fn upload_stop_picture(
     user_id: i32,
     name: String,
@@ -55,7 +56,9 @@ pub(crate) async fn upload_stop_picture(
     let res = sql::fetch_picture_by_hash(db_pool, &hex_hash).await?;
 
     if let Some(pic) = res {
-        return Err(Error::DuplicatedResource(pics::Resource::StopPic(pic)));
+        return Err(Error::DuplicatedResource(Box::new(
+            pics::Resource::StopPic(pic),
+        )));
     }
 
     let mut original_img = image::load_from_memory(content.as_ref())
@@ -156,7 +159,7 @@ pub(crate) async fn upload_stop_picture(
         &[history::Change::StopPicUpload {
             pic: pic.clone().into(),
             stops: stops
-                .into_iter()
+                .iter()
                 .map(|stop_id| {
                     pics::StopAttrs {
                         id: *stop_id,
@@ -328,7 +331,9 @@ pub(crate) async fn upload_pano_picture(
     let res = sql::fetch_pano_by_hash(db_pool, &hex_hash).await?;
 
     if let Some(pic) = res {
-        return Err(Error::DuplicatedResource(pics::Resource::PanoPic(pic)));
+        return Err(Error::DuplicatedResource(Box::new(
+            pics::Resource::PanoPic(pic),
+        )));
     }
 
     let _ = image::load_from_memory(content.as_ref())
@@ -467,7 +472,7 @@ pub(crate) async fn upload_operator_logo(
     )
     .await?;
     if let Some(existing_hash) = curr_hash {
-        delete_operator_pic_from_storage(&bucket, &existing_hash, operator_id)
+        delete_operator_pic_from_storage(bucket, &existing_hash, operator_id)
             .await?;
     }
 
@@ -480,14 +485,14 @@ pub(crate) async fn upload_operator_logo(
 
     if let Err(db_err) = db_res {
         let storage_res =
-            delete_operator_pic_from_storage(&bucket, &hex_hash, operator_id)
+            delete_operator_pic_from_storage(bucket, &hex_hash, operator_id)
                 .await;
         if let Err(storage_err) = storage_res {
             eprintln!(
                 "Reversion failure.\
                 {hex_hash} was stored into opr. {operator_id}.\
                 Database threw: {db_err}. Storage threw: {storage_err}"
-            )
+            );
         }
         return Err(db_err);
     }
@@ -580,18 +585,17 @@ pub(crate) async fn upload_news_item_img(
         .await?;
 
     let db_res =
-        sql::insert_news_img(&mut transaction, item_id, &hex_hash, &filename)
+        sql::insert_news_img(&mut transaction, item_id, &hex_hash, filename)
             .await;
 
     if let Err(db_err) = db_res {
-        let storage_res =
-            delete_news_img_from_storage(&bucket, &hex_hash).await;
+        let storage_res = delete_news_img_from_storage(bucket, &hex_hash).await;
         if let Err(storage_err) = storage_res {
             eprintln!(
                 "Reversion failure.\
                 {hex_hash} was stored into news_item. {item_id}.\
                 Database threw: {db_err}. Storage threw: {storage_err}"
-            )
+            );
         }
         return Err(db_err);
     }
@@ -690,19 +694,19 @@ pub(crate) async fn upload_external_news_item_img(
         &mut transaction,
         item_id,
         &hex_hash,
-        &filename,
+        filename,
     )
     .await;
 
     if let Err(db_err) = db_res {
         let storage_res =
-            delete_external_news_img_from_storage(&bucket, &hex_hash).await;
+            delete_external_news_img_from_storage(bucket, &hex_hash).await;
         if let Err(storage_err) = storage_res {
             eprintln!(
                 "Reversion failure.\
                 {hex_hash} was stored into news_item. {item_id}.\
                 Database threw: {db_err}. Storage threw: {storage_err}"
-            )
+            );
         }
         return Err(db_err);
     }
@@ -809,7 +813,7 @@ pub(crate) async fn upload_news_item_screenshot(
 
     if let Err(db_err) = db_res {
         let storage_res = delete_external_news_item_screenshot_from_storage(
-            &bucket, &hex_hash,
+            bucket, &hex_hash,
         )
         .await;
         if let Err(storage_err) = storage_res {
@@ -817,7 +821,7 @@ pub(crate) async fn upload_news_item_screenshot(
                 "Reversion failure.\
                 {hex_hash} was stored into news_item_ss. {item_id}.\
                 Database threw: {db_err}. Storage threw: {storage_err}"
-            )
+            );
         }
         return Err(db_err);
     }
@@ -829,7 +833,7 @@ pub(crate) async fn upload_news_item_screenshot(
 
     // Delete the old one
     if let Some(old_sha1) = current_hash {
-        delete_external_news_item_screenshot_from_storage(&bucket, &old_sha1)
+        delete_external_news_item_screenshot_from_storage(bucket, &old_sha1)
             .await?;
     }
 

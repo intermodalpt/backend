@@ -45,6 +45,7 @@ pub(crate) mod requests {
     }
 
     impl StopMetaContribution {
+        #[allow(clippy::too_many_lines)]
         pub(crate) fn derive_patch(
             self,
             stop: &stops::Stop,

@@ -88,7 +88,7 @@ pub(crate) async fn post_user_change_password(
 pub(crate) async fn get_user_audit_log(
     State(state): State<AppState>,
     super::ScopedClaim(_, _): super::ScopedClaim<super::perms::Admin>,
-    _client_ip: SecureClientIp,
+    _: SecureClientIp,
     paginator: Query<Page>,
     Path(user_id): Path<i32>,
 ) -> Result<Json<Pagination<auth::AuditLogEntry>>, Error> {
@@ -100,14 +100,14 @@ pub(crate) async fn get_user_audit_log(
     Ok(Json(Pagination {
         items: sql::fetch_user_audit_log(&state.pool, user_id, offset, take)
             .await?,
-        total: sql::count_user_audit_logs(&state.pool, user_id).await? as usize,
+        total: sql::count_user_audit_logs(&state.pool, user_id).await?,
     }))
 }
 
 pub(crate) async fn get_audit_log(
     State(state): State<AppState>,
     super::ScopedClaim(_, _): super::ScopedClaim<super::perms::Admin>,
-    _client_ip: SecureClientIp,
+    _: SecureClientIp,
     paginator: Query<Page>,
 ) -> Result<Json<Pagination<responses::AuditLogEntry>>, Error> {
     // TODO log this access
@@ -117,6 +117,6 @@ pub(crate) async fn get_audit_log(
 
     Ok(Json(Pagination {
         items: sql::fetch_audit_log_entries(&state.pool, offset, take).await?,
-        total: sql::count_audit_logs(&state.pool).await? as usize,
+        total: sql::count_audit_logs(&state.pool).await?,
     }))
 }

@@ -46,7 +46,7 @@ pub enum Error {
     #[error("Unable to download file: `{0}`")]
     DownloadFailure(String),
     #[error("Attempted to duplicate resource`")]
-    DuplicatedResource(Resource),
+    DuplicatedResource(Box<Resource>),
 }
 
 impl IntoResponse for Error {
@@ -71,7 +71,7 @@ impl IntoResponse for Error {
                 StatusCode::BAD_REQUEST,
                 message,
             ),
-            Error::DuplicatedResource(resource) => match resource {
+            Error::DuplicatedResource(resource) => match *resource {
                 Resource::StopPic(pic) => {
                     let detail = DuplicatedPicDetail { existing: pic };
                     DetailedJsonErrorResponse::new_response(
@@ -121,8 +121,7 @@ impl From<commons::errors::Error> for Error {
             ),
             commons::errors::Error::PatchingFailure { field, value } => {
                 Error::Processing(format!(
-                    "Patching failure: field `{}` does not accept value `{}`",
-                    field, value
+                    "Patching failure: field `{field}` does not accept value `{value}`"
                 ))
             }
         }

@@ -147,7 +147,7 @@ pub(crate) async fn get_undecided_contribution_contributors(
 
 pub(crate) async fn get_latest_undecided_contributions(
     State(state): State<AppState>,
-    _claims: Option<auth::Claims>,
+    _: Option<auth::Claims>,
     paginator: Query<PageForUser>,
 ) -> Result<Json<Pagination<responses::Contribution>>, Error> {
     // FIXME use the claims to censor pictures and other possibly-sensitive data
@@ -166,13 +166,13 @@ pub(crate) async fn get_latest_undecided_contributions(
         )
         .await?,
         total: sql::count_undecided_contributions(&state.pool, paginator.uid)
-            .await? as usize,
+            .await?,
     }))
 }
 
 pub(crate) async fn get_latest_decided_contributions(
     State(state): State<AppState>,
-    _claims: Option<auth::Claims>,
+    _: Option<auth::Claims>,
     paginator: Query<Page>,
 ) -> Result<Json<Pagination<responses::Contribution>>, Error> {
     // FIXME use the claims to censor pictures and other possibly-sensitive data
@@ -185,13 +185,13 @@ pub(crate) async fn get_latest_decided_contributions(
     Ok(Json(Pagination {
         items: sql::fetch_decided_contributions(&state.pool, offset, take)
             .await?,
-        total: sql::count_decided_contributions(&state.pool).await? as usize,
+        total: sql::count_decided_contributions(&state.pool).await?,
     }))
 }
 
 pub(crate) async fn get_changelog(
     State(state): State<AppState>,
-    _claims: Option<auth::Claims>,
+    _: Option<auth::Claims>,
     paginator: Query<Page>,
 ) -> Result<Json<Pagination<responses::Changeset>>, Error> {
     // FIXME use the claims to censor pictures and other possibly-sensitive data
@@ -203,7 +203,7 @@ pub(crate) async fn get_changelog(
 
     Ok(Json(Pagination {
         items: sql::fetch_changeset_logs(&state.pool, offset, take).await?,
-        total: sql::count_changeset_logs(&state.pool).await? as usize,
+        total: sql::count_changeset_logs(&state.pool).await?,
     }))
 }
 
@@ -326,13 +326,11 @@ pub(crate) async fn patch_contrib_stop_picture_meta(
 
     contribution.comment = contribution_meta.comment;
 
-    let mut pic = match contribution.change {
-        history::Change::StopPicUpload { pic, .. } => pic,
-        _ => {
-            return Err(Error::ValidationFailure(
-                "Contribution is not a picture".to_string(),
-            ))
-        }
+    let history::Change::StopPicUpload { mut pic, .. } = contribution.change
+    else {
+        return Err(Error::ValidationFailure(
+            "Contribution is not a picture".to_string(),
+        ));
     };
 
     pic.dyn_meta = contribution_meta.contribution;

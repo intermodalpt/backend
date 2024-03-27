@@ -304,13 +304,13 @@ pub(crate) mod responses {
             Ok(Subroute {
                 id,
                 group,
-                flag,
                 headsign,
                 origin,
                 destination,
                 via,
                 circular,
                 polyline,
+                flag,
             })
         }
     }

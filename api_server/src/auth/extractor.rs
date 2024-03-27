@@ -42,7 +42,7 @@ where
     ) -> Result<Self, Self::Rejection> {
         let claims = models::Claims::from_request_parts(parts, state).await?;
         if P::is_valid(&claims) {
-            Ok(Self(claims, std::marker::PhantomData::default()))
+            Ok(Self(claims, std::marker::PhantomData))
         } else {
             Err(Error::Forbidden)
         }

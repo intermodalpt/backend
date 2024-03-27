@@ -153,7 +153,7 @@ fn do_merge<'a>(
         // do a fast forward
         let refname = format!("refs/heads/{remote_branch}");
         if let Ok(mut r) = repo.find_reference(&refname) {
-            fast_forward(repo, &mut r, &fetch_commit)?;
+            fast_forward(repo, &mut r, fetch_commit)?;
         } else {
             // The branch doesn't exist so just set the reference to the
             // commit directly. Usually this is because you are pulling
@@ -175,7 +175,7 @@ fn do_merge<'a>(
     } else if analysis.0.is_normal() {
         // do a normal merge
         let head_commit = repo.reference_to_annotated_commit(&repo.head()?)?;
-        normal_merge(repo, &head_commit, &fetch_commit)?;
+        normal_merge(repo, &head_commit, fetch_commit)?;
     } else {
         println!("Nothing to do...");
     }
@@ -196,6 +196,9 @@ pub fn pull(
         .map_err(|e| format!("Failed to merge: {e:?}"))
 }
 
+/// # Panics
+///
+/// Will panic on invalid commit timestamps
 pub fn head_date(repo: &Repository) -> Result<DateTime<Utc>, git2::Error> {
     // Get the HEAD reference
     let head = repo.head()?;
@@ -224,22 +227,21 @@ pub fn update_repo(
             println!("Last commit date: {commit_date}");
             Ok(commit_date)
         }
-        Err(e) => match e.class() {
-            git2::ErrorClass::Os => {
+        Err(e) => {
+            if e.class() == git2::ErrorClass::Os {
                 println!("Cloning {url} into {path}...");
                 let repo = match Repository::clone(url, path) {
-                    Ok(repo) => repo,
-                    Err(e) => panic!("failed to clone: {e}"),
-                };
+                    Ok(repo) => Ok(repo),
+                    Err(e) => Err(format!("failed to clone: {e}")),
+                }?;
 
                 let commit_date =
                     head_date(&repo).map_err(|e| e.to_string())?;
                 Ok(commit_date)
-            }
-            _ => {
+            } else {
                 println!("failed to open: {e}");
                 Err(e.to_string())
             }
-        },
+        }
     }
 }

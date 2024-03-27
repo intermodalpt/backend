@@ -126,6 +126,7 @@ WHERE id IN (
     .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 pub(crate) async fn fetch_region_full_stops(
     pool: &PgPool,
     region_id: i32,

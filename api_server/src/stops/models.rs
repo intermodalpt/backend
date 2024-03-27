@@ -98,6 +98,7 @@ pub(crate) mod requests {
     }
 
     impl ChangeStop {
+        #[allow(clippy::too_many_lines)]
         pub fn derive_patch(
             &self,
             stop: &stops::Stop,
@@ -330,6 +331,7 @@ pub(crate) mod responses {
     }
 
     impl From<Stop> for stops::Stop {
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         fn from(stop: Stop) -> Self {
             let sqlx::types::Json(ally) = stop.a11y;
             stops::Stop {
@@ -460,8 +462,8 @@ pub(crate) mod responses {
             let source = decoder.try_decode::<String>()?;
             Ok(OperatorStop {
                 operator_id,
-                name,
                 stop_ref,
+                name,
                 source,
             })
         }

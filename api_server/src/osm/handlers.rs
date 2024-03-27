@@ -41,6 +41,7 @@ pub(crate) async fn get_osm_stop_history(
     Ok(Json(sql::fetch_osm_stop_history(&state.pool, id).await?))
 }
 
+#[allow(clippy::cast_sign_loss)]
 pub(crate) async fn patch_osm_stops(
     State(state): State<AppState>,
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
@@ -48,7 +49,7 @@ pub(crate) async fn patch_osm_stops(
 ) -> Result<(), Error> {
     let mut partial_updates = 0;
 
-    for newer_stop in newer_stops.iter_mut() {
+    for newer_stop in &mut newer_stops {
         if newer_stop.history.is_empty() {
             return Err(Error::ValidationFailure(
                 "Received node with an empty history".to_string(),
@@ -65,7 +66,7 @@ pub(crate) async fn patch_osm_stops(
 
     if partial_updates > 0 {
         let histories = sql::fetch_osm_stop_histories(&state.pool).await?;
-        for newer_stop in newer_stops.iter_mut() {
+        for newer_stop in &mut newer_stops {
             let version_count = newer_stop.history.len();
             let last_version = newer_stop.history.last().unwrap();
             let is_partial = version_count != last_version.version as usize;

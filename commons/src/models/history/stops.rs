@@ -426,26 +426,26 @@ impl From<current::A11yMeta> for A11yMeta {
             has_waiting_times: a11y.has_waiting_times,
             has_ticket_seller: a11y.has_ticket_seller,
             has_costumer_support: a11y.has_costumer_support,
-            advertisement_qty: a11y.advertisement_qty.map(|qty| qty.into()),
+            advertisement_qty: a11y.advertisement_qty.map(Into::into),
             has_crossing: a11y.has_crossing,
             has_wide_access: a11y.has_wide_access,
             has_flat_access: a11y.has_flat_access,
             has_tactile_access: a11y.has_tactile_access,
-            illumination_strength: a11y.illumination_strength.map(|s| s.into()),
-            illumination_position: a11y.illumination_position.map(|p| p.into()),
+            illumination_strength: a11y.illumination_strength.map(Into::into),
+            illumination_position: a11y.illumination_position.map(Into::into),
             has_illuminated_path: a11y.has_illuminated_path,
             has_visibility_from_within: a11y.has_visibility_from_within,
             has_visibility_from_area: a11y.has_visibility_from_area,
             is_visible_from_outside: a11y.is_visible_from_outside,
             parking_visibility_impairment: a11y
                 .parking_visibility_impairment
-                .map(|v| v.into()),
+                .map(Into::into),
             parking_local_access_impairment: a11y
                 .parking_local_access_impairment
-                .map(|v| v.into()),
+                .map(Into::into),
             parking_area_access_impairment: a11y
                 .parking_area_access_impairment
-                .map(|v| v.into()),
+                .map(Into::into),
             tmp_issues: a11y.tmp_issues,
         }
     }
@@ -469,7 +469,7 @@ impl TryFrom<A11yMeta> for current::A11yMeta {
             has_costumer_support: a11y.has_costumer_support,
             advertisement_qty: a11y
                 .advertisement_qty
-                .map(|qty| qty.try_into())
+                .map(TryInto::try_into)
                 .transpose()?,
             has_crossing: a11y.has_crossing,
             has_wide_access: a11y.has_wide_access,
@@ -477,11 +477,11 @@ impl TryFrom<A11yMeta> for current::A11yMeta {
             has_tactile_access: a11y.has_tactile_access,
             illumination_strength: a11y
                 .illumination_strength
-                .map(|s| s.try_into())
+                .map(TryInto::try_into)
                 .transpose()?,
             illumination_position: a11y
                 .illumination_position
-                .map(|p| p.try_into())
+                .map(TryInto::try_into)
                 .transpose()?,
             has_illuminated_path: a11y.has_illuminated_path,
             has_visibility_from_within: a11y.has_visibility_from_within,
@@ -489,15 +489,15 @@ impl TryFrom<A11yMeta> for current::A11yMeta {
             is_visible_from_outside: a11y.is_visible_from_outside,
             parking_visibility_impairment: a11y
                 .parking_visibility_impairment
-                .map(|v| v.try_into())
+                .map(TryInto::try_into)
                 .transpose()?,
             parking_local_access_impairment: a11y
                 .parking_local_access_impairment
-                .map(|v| v.try_into())
+                .map(TryInto::try_into)
                 .transpose()?,
             parking_area_access_impairment: a11y
                 .parking_area_access_impairment
-                .map(|v| v.try_into())
+                .map(TryInto::try_into)
                 .transpose()?,
             tmp_issues: a11y.tmp_issues,
         })
@@ -881,6 +881,7 @@ impl StopPatch {
             && self.verification_level.is_none()
     }
 
+    #[allow(clippy::too_many_lines)]
     pub fn apply(&self, stop: &mut current::Stop) -> Result<(), Error> {
         if let Some(name) = self.name.clone() {
             stop.name = name;
@@ -1017,11 +1018,11 @@ impl StopPatch {
         }
         if let Some(infrastructure_check_date) = self.infrastructure_check_date
         {
-            stop.infrastructure_check_date = infrastructure_check_date.into();
+            stop.infrastructure_check_date = infrastructure_check_date;
         }
         Ok(())
     }
-
+    #[allow(clippy::too_many_lines)]
     pub fn drop_noops(&mut self, stop: &current::Stop) -> Result<(), Error> {
         if let Some(name) = &self.name {
             if name == &stop.name {
@@ -1242,7 +1243,7 @@ impl StopPatch {
         }
         Ok(())
     }
-
+    #[allow(clippy::too_many_lines)]
     pub fn drop_fields(&mut self, fields: &HashSet<&str>) {
         if fields.contains(&"name") {
             self.name = None;

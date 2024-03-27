@@ -145,27 +145,15 @@ impl Calendar {
             Condition::Range { start, end } => within_dates(date, *start, *end),
         };
 
-        if !self
-            .only_if
-            .iter()
-            .all(|condition| condition_matches(condition))
-        {
+        if !self.only_if.iter().all(condition_matches) {
             return false;
         }
 
-        if self
-            .except_if
-            .iter()
-            .any(|condition| condition_matches(condition))
-        {
+        if self.except_if.iter().any(condition_matches) {
             return false;
         }
 
-        if self
-            .also_if
-            .iter()
-            .any(|condition| condition_matches(condition))
-        {
+        if self.also_if.iter().any(condition_matches) {
             return true;
         }
 

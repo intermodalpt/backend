@@ -30,7 +30,7 @@ type Result<T> = std::result::Result<T, Error>;
 pub(crate) async fn fetch_osm_stops(
     pool: &PgPool,
 ) -> Result<Vec<responses::OsmStop>> {
-    Ok(sqlx::query_as!(
+    sqlx::query_as!(
         responses::OsmStop,
         r#"
 SELECT id, lat, lon, name, pos_author, last_author, creation, modification,
@@ -40,7 +40,7 @@ FROM osm_stops
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?)
+    .map_err(|err| Error::DatabaseExecution(err.to_string()))
 }
 
 pub(crate) async fn fetch_osm_stop_history(
@@ -110,7 +110,7 @@ pub(crate) async fn upsert_osm_stops_chunk(
 
         let mut coord_author = "";
         let (mut lat, mut lon) = (0.0, 0.0);
-        for version in history.iter() {
+        for version in history {
             if (version.lat - lat).abs() > FLOAT_TOLERANCE
                 || (version.lon - lon).abs() > FLOAT_TOLERANCE
             {
@@ -120,15 +120,9 @@ pub(crate) async fn upsert_osm_stops_chunk(
             }
         }
 
-        let name;
-        let version;
-        let last_author;
-        let modification;
-        let deleted;
-
         let last_version: &osm::NodeVersion = history.last().unwrap();
 
-        name = last_version.attributes.iter().find_map(|(k, v)| {
+        let name = last_version.attributes.iter().find_map(|(k, v)| {
             if k == "name" {
                 Some(v.to_string())
             } else {
@@ -136,17 +130,17 @@ pub(crate) async fn upsert_osm_stops_chunk(
             }
         });
 
-        version = last_version.version;
-        last_author = &last_version.author_uname;
-        modification = last_version.timestamp;
-        deleted = last_version.deleted;
+        let version = last_version.version;
+        let last_author = &last_version.author_uname;
+        let modification = last_version.timestamp;
+        let deleted = last_version.deleted;
 
         let creation = {
             let first_version = history.first().unwrap();
             first_version.timestamp
         };
 
-        b.push_bind(&osm_stop.id)
+        b.push_bind(osm_stop.id)
             .push_bind(Json(history))
             .push_bind(name)
             .push_bind(lat)

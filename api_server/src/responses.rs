@@ -3,5 +3,5 @@ use serde::Serialize;
 #[derive(Serialize)]
 pub struct Pagination<T> {
     pub items: Vec<T>,
-    pub total: usize,
+    pub total: i64,
 }

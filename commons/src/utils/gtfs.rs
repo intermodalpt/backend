@@ -65,6 +65,7 @@ pub fn calculate_gtfs_stop_sequence(
 }
 
 #[must_use]
+#[allow(clippy::implicit_hasher)]
 pub fn calculate_stop_sliding_windows(
     gtfs_stop_sequence: &HashMap<String, Vec<String>>,
 ) -> Vec<Vec<String>> {
@@ -82,7 +83,7 @@ pub fn calculate_stop_sliding_windows(
         .collect::<Vec<_>>()
 }
 
-pub fn extract_gtfs(
+pub fn extract(
     zip_file: &str,
     output_dir: &str,
 ) -> Result<chrono::DateTime<chrono::Utc>, Error> {
