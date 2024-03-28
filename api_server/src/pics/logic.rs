@@ -867,3 +867,24 @@ async fn delete_external_news_item_screenshot_from_storage(
 
     Ok(())
 }
+
+fn is_supported_raster(ext: &OsStr, content: &Bytes) -> bool {
+    if is_supported_raster_ext(ext) {
+        match image::load_from_memory(content.as_ref()) {
+            Ok(_) => true,
+            Err(err) => {
+                tracing::warn!("Failed to decode image: {}", err.to_string());
+                false
+            }
+        }
+    } else {
+        false
+    }
+}
+
+#[inline]
+fn is_supported_raster_ext(ext: &OsStr) -> bool {
+    ext.eq_ignore_ascii_case("png")
+        || ext.eq_ignore_ascii_case("jpg")
+        || ext.eq_ignore_ascii_case("webp")
+}
