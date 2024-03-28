@@ -22,7 +22,7 @@ pub(crate) mod requests {
 
     use commons::models::{history, stops};
 
-    #[derive(Deserialize)]
+    #[derive(Debug, Deserialize)]
     pub struct NewStop {
         pub lon: f64,
         pub lat: f64,

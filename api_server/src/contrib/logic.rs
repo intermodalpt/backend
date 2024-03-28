@@ -70,10 +70,10 @@ pub(crate) async fn accept_contribution(
         return Err(Error::DependenciesNotMet);
     }
 
-    let mut transaction = pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     match &mut contribution.change {
         history::Change::StopUpdate { original, patch } => {
@@ -123,10 +123,10 @@ pub(crate) async fn accept_contribution(
     )
     .await?;
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })
 }
 
 pub(crate) fn accept_stop_contribution(

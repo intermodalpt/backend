@@ -35,7 +35,10 @@ FROM regions
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    .map_err(|err| {
+        tracing::error!(error = err.to_string());
+        Error::DatabaseExecution
+    })
 }
 
 pub(crate) async fn fetch_operator_regions(
@@ -52,7 +55,10 @@ WHERE operator_id = $1
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), operator_id);
+        Error::DatabaseExecution
+    })?
     .into_iter()
     .map(|row| row.region_id)
     .collect())
@@ -74,7 +80,10 @@ ON CONFLICT DO NOTHING;
     )
     .execute(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), region_id, operator_id);
+        Error::DatabaseExecution
+    })?;
 
     Ok(())
 }
@@ -94,7 +103,10 @@ WHERE region_id=$1 AND operator_id=$2;
     )
     .execute(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), region_id, operator_id);
+        Error::DatabaseExecution
+    })?;
 
     Ok(())
 }
@@ -113,7 +125,10 @@ WHERE route_id = $1
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), route_id);
+        Error::DatabaseExecution
+    })?
     .into_iter()
     .map(|row| row.region_id)
     .collect())
@@ -135,7 +150,10 @@ ON CONFLICT DO NOTHING;
     )
     .execute(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), region_id, route_id);
+        Error::DatabaseExecution
+    })?;
 
     Ok(())
 }
@@ -155,7 +173,10 @@ WHERE region_id=$1 AND route_id=$2;
     )
     .execute(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), region_id, route_id);
+        Error::DatabaseExecution
+    })?;
 
     Ok(())
 }
@@ -174,7 +195,10 @@ WHERE stop_id = $1
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), stop_id);
+        Error::DatabaseExecution
+    })?
     .into_iter()
     .map(|row| row.region_id)
     .collect())
@@ -196,7 +220,10 @@ ON CONFLICT DO NOTHING;
     )
     .execute(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), stop_id, region_id);
+        Error::DatabaseExecution
+    })?;
 
     Ok(())
 }
@@ -216,7 +243,10 @@ WHERE region_id=$1 AND stop_id=$2;
     )
     .execute(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), stop_id, region_id);
+        Error::DatabaseExecution
+    })?;
 
     Ok(())
 }
@@ -233,7 +263,10 @@ JOIN municipalities ON parishes.municipality = municipalities.id
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    .map_err(|err| {
+        tracing::error!(error=err.to_string());
+        Error::DatabaseExecution
+    })
 }
 
 pub(crate) async fn update_stop_parish(
@@ -248,7 +281,10 @@ pub(crate) async fn update_stop_parish(
     )
     .execute(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), parish, stop_id);
+        Error::DatabaseExecution
+    })?;
 
     Ok(())
 }
@@ -268,7 +304,10 @@ WHERE region_stops.region_id = $1
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), region_id);
+        Error::DatabaseExecution
+    })?
     .into_iter()
     .map(|row| (row.stop_id, row.osm_map_quality))
     .collect())

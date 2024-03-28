@@ -39,18 +39,17 @@ pub(crate) async fn post_operator(
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     Json(change): Json<requests::ChangeOperator>,
 ) -> Result<Json<responses::Operator>, Error> {
-    let mut transaction = state
-        .pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     let operator = sql::insert_operator(&mut transaction, change).await?;
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
 
     Ok(Json(operator))
 }
@@ -61,18 +60,17 @@ pub(crate) async fn patch_operator(
     Path(operator_id): Path<i32>,
     Json(change): Json<requests::ChangeOperator>,
 ) -> Result<(), Error> {
-    let mut transaction = state
-        .pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     sql::update_operator(&mut transaction, operator_id, change).await?;
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
 
     Ok(())
 }
@@ -92,20 +90,19 @@ pub(crate) async fn put_operator_stop(
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     Json(change): Json<requests::ChangeOperatorStop>,
 ) -> Result<(), Error> {
-    let mut transaction = state
-        .pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     // TODO log
     sql::upsert_operator_stop(&mut transaction, operator_id, stop_id, change)
         .await?;
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
     Ok(())
 }
 
@@ -114,19 +111,18 @@ pub(crate) async fn delete_operator_stop(
     Path((operator_id, stop_id)): Path<(i32, i32)>,
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
 ) -> Result<(), Error> {
-    let mut transaction = state
-        .pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     // TODO log
     sql::delete_operator_stop(&mut transaction, operator_id, stop_id).await?;
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
 
     Ok(())
 }
@@ -159,11 +155,10 @@ pub(crate) async fn post_operator_route_type(
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     Json(type_id): Json<requests::ChangeOperatorRouteType>,
 ) -> Result<Json<i32>, Error> {
-    let mut transaction = state
-        .pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     let id =
         sql::insert_operator_route_type(&mut transaction, operator_id, type_id)
@@ -171,10 +166,10 @@ pub(crate) async fn post_operator_route_type(
 
     // TODO log
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
 
     Ok(Json(id))
 }
@@ -185,11 +180,10 @@ pub(crate) async fn patch_operator_route_type(
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     Json(route_type): Json<requests::ChangeOperatorRouteType>,
 ) -> Result<(), Error> {
-    let mut transaction = state
-        .pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     sql::update_operator_route_type(
         &mut transaction,
@@ -201,10 +195,10 @@ pub(crate) async fn patch_operator_route_type(
 
     // TODO log
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
 
     Ok(())
 }
@@ -214,21 +208,20 @@ pub(crate) async fn delete_operator_route_type(
     Path((operator_id, type_id)): Path<(i32, i32)>,
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
 ) -> Result<(), Error> {
-    let mut transaction = state
-        .pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     sql::delete_operator_route_type(&mut transaction, operator_id, type_id)
         .await?;
 
     // TODO log
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
 
     Ok(())
 }
@@ -247,11 +240,10 @@ pub(crate) async fn post_issue(
     auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::Admin>,
     Json(issue): Json<requests::NewIssue>,
 ) -> Result<Json<HashMap<String, i32>>, Error> {
-    let mut transaction = state
-        .pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     let id = sql::insert_issue(&mut transaction, &issue).await?;
 
@@ -268,10 +260,10 @@ pub(crate) async fn post_issue(
     )
     .await?;
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
 
     Ok(Json({
         let mut map = HashMap::new();
@@ -293,11 +285,10 @@ pub(crate) async fn patch_issue(
         return Ok(());
     }
 
-    let mut transaction = state
-        .pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     sql::update_issue(&mut transaction, issue_id, change).await?;
 
@@ -312,10 +303,10 @@ pub(crate) async fn patch_issue(
     )
     .await?;
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
 
     Ok(())
 }
@@ -341,20 +332,19 @@ pub(crate) async fn post_operator_calendar(
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     Json(calendar): Json<requests::NewOperatorCalendar>,
 ) -> Result<Json<HashMap<String, i32>>, Error> {
-    let mut transaction = state
-        .pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     // TODO log
     let id =
         sql::insert_calendar(&mut transaction, operator_id, calendar).await?;
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
 
     Ok(Json({
         let mut map = HashMap::new();
@@ -370,18 +360,17 @@ pub(crate) async fn delete_operator_calendar(
 ) -> Result<(), Error> {
     // TODO forbid the deletion of calendars that are in use
 
-    let mut transaction = state
-        .pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     sql::delete_calendar(&mut transaction, operator_id, calendar_id).await?;
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
 
     Ok(())
 }

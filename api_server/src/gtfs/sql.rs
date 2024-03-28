@@ -40,7 +40,10 @@ WHERE operators.id=$1
     )
         .fetch_optional(pool)
         .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+        .map_err(|err| {
+            tracing::error!(error=err.to_string(), operator_id);
+            Error::DatabaseExecution
+        })?
         .map(|r| r.validation.map(|data| data.0)))
 }
 
@@ -55,12 +58,15 @@ UPDATE Operators
 SET validation=$1
 WHERE id=$2
     "#,
-        Json(data) as _,
+        Json(&data) as _,
         route_id
     )
     .execute(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), route_id, data = ?data);
+        Error::DatabaseExecution
+    })?;
 
     Ok(())
 }
@@ -90,7 +96,10 @@ GROUP BY routes.id
     )
     .fetch_optional(executor)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error=err.to_string(), route_id);
+        Error::DatabaseExecution
+    })?
     .map(|row| responses::RouteValidation {
         validation: row.validation,
         subroutes: row
@@ -112,12 +121,15 @@ UPDATE Routes
 SET validation=$1
 WHERE id=$2
     "#,
-        Json(data) as _,
+        Json(&data) as _,
         route_id
     )
     .execute(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), route_id, data = ?data);
+        Error::DatabaseExecution
+    })?;
 
     Ok(())
 }
@@ -139,7 +151,10 @@ WHERE subroutes.id=$1
     )
     .fetch_optional(executor)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), subroute_id);
+        Error::DatabaseExecution
+    })?;
 
     Ok(res.map(|row| row.validation.0))
 }
@@ -155,12 +170,15 @@ UPDATE Subroutes
 SET validation=$1
 WHERE id=$2
     "#,
-        Json(data) as _,
+        Json(&data) as _,
         subroute_id
     )
     .execute(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), subroute_id, data = ?data);
+        Error::DatabaseExecution
+    })?;
 
     Ok(())
 }

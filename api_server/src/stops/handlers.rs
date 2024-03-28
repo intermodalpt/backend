@@ -82,11 +82,10 @@ pub(crate) async fn post_stop(
     auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::Admin>,
     Json(stop): Json<requests::NewStop>,
 ) -> Result<Json<HashMap<String, i32>>, Error> {
-    let mut transaction = state
-        .pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     let stop = sql::insert_stop(&mut transaction, stop, claims.uid).await?;
     let id = stop.id;
@@ -99,10 +98,10 @@ pub(crate) async fn post_stop(
     )
     .await?;
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
 
     Ok(Json({
         let mut map = HashMap::new();
@@ -128,11 +127,10 @@ pub(crate) async fn patch_stop(
         return Ok(Json(stop));
     }
 
-    let mut transaction = state
-        .pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     contrib::sql::insert_changeset_log(
         &mut transaction,
@@ -151,10 +149,10 @@ pub(crate) async fn patch_stop(
     // The patch was just made, must be valid.
     assert!(patch.apply(&mut stop).is_ok());
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
 
     Ok(Json(stop))
 }
@@ -165,11 +163,10 @@ pub(crate) async fn post_update_stop_position(
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     Json(location): Json<requests::Position>,
 ) -> Result<(), Error> {
-    let mut transaction = state
-        .pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     // TODO log
 
@@ -185,10 +182,10 @@ pub(crate) async fn post_update_stop_position(
         return Err(Error::NotFoundUpstream);
     }
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
 
     Ok(())
 }

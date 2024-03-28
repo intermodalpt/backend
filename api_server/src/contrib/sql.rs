@@ -18,6 +18,7 @@
 
 use chrono::Local;
 use serde_json::json;
+use sqlx::types::Json;
 use sqlx::PgPool;
 
 use commons::models::history;
@@ -42,7 +43,10 @@ WHERE id=$1
     )
     .fetch_optional(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), contribution_id);
+        Error::DatabaseExecution
+    })?;
 
     if let Some(contribution) = res {
         Ok(Some(history::Contribution {
@@ -88,7 +92,10 @@ LIMIT $2 OFFSET $3
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), user_id, take, skip);
+        Error::DatabaseExecution
+    })?
     .into_iter()
     .map(|r| {
         Ok(history::Contribution {
@@ -129,7 +136,10 @@ LIMIT $2 OFFSET $3
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), user_id, take, skip);
+        Error::DatabaseExecution
+    })?
     .into_iter()
     .map(|r| {
         Ok(history::Contribution {
@@ -178,7 +188,10 @@ LIMIT $2 OFFSET $3
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), filter_uid, take, skip);
+        Error::DatabaseExecution
+    })?
     .into_iter()
     .map(|r| {
         Ok(responses::Contribution {
@@ -222,7 +235,10 @@ WHERE Contributions.accepted IS NULL
     )
     .fetch_one(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), filter_uid);
+        Error::DatabaseExecution
+    })?
     .cnt
     .unwrap_or(0))
 }
@@ -244,7 +260,10 @@ WHERE Users.id IN (
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    .map_err(|err| {
+        tracing::error!(error = err.to_string());
+        Error::DatabaseExecution
+    })
 }
 
 pub(crate) async fn fetch_decided_contributions(
@@ -272,7 +291,10 @@ LIMIT $1 OFFSET $2
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), take, skip);
+        Error::DatabaseExecution
+    })?
     .into_iter()
     .map(|r| {
         Ok(responses::Contribution {
@@ -308,7 +330,10 @@ WHERE accepted IS NOT NULL
     )
     .fetch_one(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error = err.to_string());
+        Error::DatabaseExecution
+    })?
     .cnt
     .unwrap_or(0))
 }
@@ -324,16 +349,16 @@ VALUES ($1, $2, $3, $4)
 RETURNING id
     "#,
         contribution.author_id,
-        serde_json::to_value(&contribution.change).map_err(|e| {
-            tracing::error!("Error deserializing {e}");
-            Error::DatabaseDeserialization
-        })?,
+        Json(&contribution.change) as _,
         contribution.submission_date,
         contribution.comment
     )
     .fetch_one(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), contribution = ?contribution);
+        Error::DatabaseExecution
+    })?;
 
     Ok(res.id)
 }
@@ -362,7 +387,15 @@ WHERE id=$3
     )
     .execute(executor)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(
+            error = err.to_string(),
+            change = ?change,
+            comment,
+            id
+        );
+        Error::DatabaseExecution
+    })?;
     Ok(())
 }
 
@@ -385,7 +418,15 @@ WHERE id=$3
     )
     .execute(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(
+            error = err.to_string(),
+            evaluator_id,
+            date = ?date,
+            contribution_id
+        );
+        Error::DatabaseExecution
+    })?;
 
     Ok(())
 }
@@ -409,7 +450,15 @@ WHERE id=$3
     )
     .execute(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(
+            error = err.to_string(),
+            evaluator_id,
+            contribution_id,
+            date = ?date
+        );
+        Error::DatabaseExecution
+    })?;
 
     Ok(())
 }
@@ -436,7 +485,10 @@ LIMIT $1 OFFSET $2
     )
     .fetch_all(executor)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), take, skip);
+        Error::DatabaseExecution
+    })?
     .into_iter()
     .map(|r| {
         Ok(responses::Changeset {
@@ -464,7 +516,10 @@ INNER JOIN Users ON author_id = Users.id
     )
     .fetch_one(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error = err.to_string());
+        Error::DatabaseExecution
+    })?
     .cnt
     .unwrap_or(0))
 }
@@ -482,12 +537,20 @@ VALUES ($1, $2, $3)
 RETURNING id
     "#,
         author_id,
-        serde_json::to_value(changes).unwrap(),
+        json!(changes),
         contribution_id
     )
     .fetch_one(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(
+            error = err.to_string(),
+            author_id,
+            changes = ?changes,
+            contribution_id
+        );
+        Error::DatabaseExecution
+    })?;
 
     Ok(res.id)
 }
@@ -508,7 +571,10 @@ ORDER BY submission_date ASC
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), user_id);
+        Error::DatabaseExecution
+    })?
     .into_iter()
     .filter_map(|r| {
         let change = match serde_json::from_value(r.change) {

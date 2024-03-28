@@ -162,11 +162,10 @@ pub(crate) async fn put_operator_validation_data(
     Path(operator_id): Path<i32>,
     Json(validation): Json<gtfs::OperatorValidation>,
 ) -> Result<(), Error> {
-    let mut transaction = state
-        .pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     sql::update_operator_validation_data(
         &mut transaction,
@@ -175,10 +174,10 @@ pub(crate) async fn put_operator_validation_data(
     )
     .await?;
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })
 }
 
 pub(crate) async fn get_route_validation_data(
@@ -200,11 +199,10 @@ pub(crate) async fn put_route_validation_data(
     Path(route): Path<i32>,
     Json(request): Json<requests::RouteSubroutesValidation>,
 ) -> Result<(), Error> {
-    let mut transaction = state
-        .pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     sql::update_route_validation_data(
         &mut transaction,
@@ -222,10 +220,10 @@ pub(crate) async fn put_route_validation_data(
         .await?;
     }
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })
 }
 
 pub(crate) async fn post_assign_subroute_validation(
@@ -236,11 +234,10 @@ pub(crate) async fn post_assign_subroute_validation(
 ) -> Result<(), Error> {
     use crate::routes::sql as routes_sql;
 
-    let mut transaction = state
-        .pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     let validation_data =
         sql::fetch_route_validation_data(&mut *transaction, route)
@@ -307,10 +304,10 @@ pub(crate) async fn post_assign_subroute_validation(
     )
     .await?;
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
 
     Ok(())
 }
@@ -323,11 +320,10 @@ pub(crate) async fn patch_subroute_validation_stops(
 ) -> Result<(), Error> {
     use crate::routes::sql as routes_sql;
 
-    let mut transaction = state
-        .pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     let sr_validation_data =
         sql::fetch_subroute_validation_data(&mut *transaction, subroute_id)
@@ -370,10 +366,10 @@ pub(crate) async fn patch_subroute_validation_stops(
     )
     .await?;
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
 
     Ok(())
 }

@@ -45,7 +45,10 @@ LIMIT $1 OFFSET $2
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), take, skip);
+        Error::DatabaseExecution
+    })?
     .into_iter()
     .map(|row| {
         Ok(info::NewsItem {
@@ -85,7 +88,10 @@ LIMIT $2 OFFSET $3
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), operator_id, take, skip);
+        Error::DatabaseExecution
+    })?
     .into_iter()
     .map(|row| {
         Ok(responses::OperatorNewsItem {
@@ -130,7 +136,10 @@ GROUP BY external_news_items.id
     )
     .fetch_optional(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error=err.to_string(), item_id);
+        Error::DatabaseExecution
+    })?
     .map(|row| {
 
         responses::ExternalNewsItem {
@@ -191,7 +200,10 @@ GROUP BY external_news_items.id
     )
     .fetch_optional(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error=err.to_string(), item_id);
+        Error::DatabaseExecution
+    })?
     .map(|row| responses::FullExternalNewsItem {
         id: row.id,
         title: row.title,
@@ -247,7 +259,10 @@ LIMIT $2 OFFSET $3
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error=err.to_string(), public_only, take, skip);
+        Error::DatabaseExecution
+    })?
     .into_iter()
     .map(|row| {
         Ok(responses::ExternalNewsItem {
@@ -322,7 +337,16 @@ LIMIT $3 OFFSET $4
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(
+            error=err.to_string(),
+            operator_id,
+            public_only,
+            take,
+            skip
+        );
+        Error::DatabaseExecution
+    })?
     .into_iter()
     .map(|row| {
         Ok(responses::ExternalNewsItem {
@@ -387,7 +411,10 @@ LIMIT $1 OFFSET $2
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error=err.to_string(), take, skip);
+        Error::DatabaseExecution
+    })?
     .into_iter()
     .map(|row| {
         Ok(responses::FullExternalNewsItem {
@@ -446,7 +473,10 @@ LIMIT $2 OFFSET $3
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error=err.to_string(), operator_id, take, skip);
+        Error::DatabaseExecution
+    })?
     .into_iter()
     .map(|row| {
         Ok(responses::FullExternalNewsItem {
@@ -501,7 +531,10 @@ RETURNING id"#,
     )
     .fetch_one(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), change = ?change);
+        Error::DatabaseExecution
+    })?;
     Ok(row.id)
 }
 
@@ -518,7 +551,10 @@ WHERE id=$1
     )
     .execute(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), id);
+        Error::DatabaseExecution
+    })?;
     Ok(())
 }
 
@@ -536,7 +572,10 @@ WHERE source=$1
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), source);
+        Error::DatabaseExecution
+    })?
     .into_iter()
     .filter_map(|row| row.url)
     .collect())

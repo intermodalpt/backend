@@ -46,19 +46,18 @@ pub(crate) async fn put_operator_into_region(
     Path((region_id, operator_id)): Path<(i32, i32)>,
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
 ) -> Result<(), Error> {
-    let mut transaction = state
-        .pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     sql::upsert_operator_into_region(&mut transaction, region_id, operator_id)
         .await?;
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })
 }
 
 pub(crate) async fn delete_operator_from_region(
@@ -66,19 +65,18 @@ pub(crate) async fn delete_operator_from_region(
     Path((region_id, operator_id)): Path<(i32, i32)>,
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
 ) -> Result<(), Error> {
-    let mut transaction = state
-        .pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     sql::delete_operator_from_region(&mut transaction, region_id, operator_id)
         .await?;
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })
 }
 
 pub(crate) async fn get_route_regions(
@@ -94,19 +92,18 @@ pub(crate) async fn put_route_into_region(
     Path((region_id, route_id)): Path<(i32, i32)>,
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
 ) -> Result<(), Error> {
-    let mut transaction = state
-        .pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     sql::upsert_route_into_region(&mut transaction, region_id, route_id)
         .await?;
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })
 }
 
 pub(crate) async fn delete_route_from_region(
@@ -114,19 +111,18 @@ pub(crate) async fn delete_route_from_region(
     Path((region_id, route_id)): Path<(i32, i32)>,
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
 ) -> Result<(), Error> {
-    let mut transaction = state
-        .pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     sql::delete_route_from_region(&mut transaction, region_id, route_id)
         .await?;
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })
 }
 
 pub(crate) async fn get_stop_regions(
@@ -141,18 +137,17 @@ pub(crate) async fn put_stop_into_region(
     Path((region_id, stop_id)): Path<(i32, i32)>,
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
 ) -> Result<(), Error> {
-    let mut transaction = state
-        .pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     sql::upsert_stop_into_region(&mut transaction, region_id, stop_id).await?;
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })
 }
 
 pub(crate) async fn delete_stop_from_region(
@@ -160,18 +155,17 @@ pub(crate) async fn delete_stop_from_region(
     Path((region_id, stop_id)): Path<(i32, i32)>,
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
 ) -> Result<(), Error> {
-    let mut transaction = state
-        .pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     sql::delete_stop_from_region(&mut transaction, region_id, stop_id).await?;
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
 
     Ok(())
 }

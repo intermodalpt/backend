@@ -41,8 +41,8 @@ pub enum Error {
     Processing(String),
     #[error("Unable to communicate with the storage: `{0}`")]
     ObjectStorageFailure(String),
-    #[error("Unable to execute database transaction: `{0}`")]
-    DatabaseExecution(String),
+    #[error("Unable to execute database transaction")]
+    DatabaseExecution,
     #[error("Unable to download file: `{0}`")]
     DownloadFailure(String),
     #[error("Attempted to duplicate resource`")]
@@ -91,7 +91,7 @@ impl IntoResponse for Error {
             },
             Error::Processing(_)
             | Error::ObjectStorageFailure(_)
-            | Error::DatabaseExecution(_)
+            | Error::DatabaseExecution
             | Error::DownloadFailure(_) => {
                 eprintln!("{:?}", &self);
                 JsonErrorResponse::new_response(

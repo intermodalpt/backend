@@ -33,7 +33,7 @@ type Result<T> = std::result::Result<T, Error>;
 /// Fetches a picture by its id.
 pub(crate) async fn fetch_picture<'c, E>(
     executor: E,
-    picture_id: i32,
+    pic_id: i32,
 ) -> Result<Option<pics::StopPic>>
 where
     E: sqlx::Executor<'c, Database = sqlx::Postgres>,
@@ -46,11 +46,14 @@ SELECT id, original_filename, sha1, tagged, public, sensitive, uploader,
 FROM stop_pics
 WHERE id = $1
 "#,
-        picture_id
+        pic_id
     )
     .fetch_optional(executor)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), pic_id);
+        Error::DatabaseExecution
+    })
     .map(|row| {
         row.map(|row| pics::StopPic {
             id: row.id,
@@ -96,7 +99,10 @@ WHERE sha1 = $1
     )
     .fetch_optional(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), pic_hash);
+        Error::DatabaseExecution
+    })
     .map(|row| {
         row.map(|row| pics::StopPic {
             id: row.id,
@@ -128,7 +134,7 @@ WHERE sha1 = $1
 /// A specific picture and its stops
 pub(crate) async fn fetch_picture_with_stops(
     pool: &PgPool,
-    picture_id: i32,
+    pic_id: i32,
 ) -> Result<Option<responses::PicWithStops>> {
     Ok(sqlx::query!(
         r#"
@@ -147,11 +153,14 @@ LEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id
 WHERE stop_pics.id = $1
 GROUP BY stop_pics.id
 "#,
-        picture_id
+        pic_id
     )
     .fetch_optional(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), pic_id);
+        Error::DatabaseExecution
+    })?
     .map(|r| responses::PicWithStops {
         id: r.id,
         url_full: get_full_path(&r.sha1),
@@ -201,7 +210,10 @@ GROUP BY stop_pics.id
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error = err.to_string());
+        Error::DatabaseExecution
+    })?
     .into_iter()
     .map(|r| responses::PicWithStops {
         id: r.id,
@@ -253,7 +265,10 @@ GROUP BY stop_pics.id
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), uid, trusted);
+        Error::DatabaseExecution
+    })?
     .into_iter()
     .map(|r| responses::MinimalPicWithStops {
         id: r.id,
@@ -267,10 +282,10 @@ GROUP BY stop_pics.id
     .collect())
 }
 
-/// All of the stops that are linked to a picture
+/// All the stops that are linked to a picture
 pub(crate) async fn fetch_picture_stops_rel_attrs(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-    picture_id: i32,
+    pic_id: i32,
 ) -> Result<Vec<pics::StopAttrs>> {
     Ok(sqlx::query!(
         r#"
@@ -279,11 +294,14 @@ FROM stop_pic_stops
 WHERE pic = $1
 ORDER BY stop ASC
 "#,
-        picture_id
+        pic_id
     )
     .fetch_all(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), pic_id);
+        Error::DatabaseExecution
+    })?
     .into_iter()
     .map(|r| pics::StopAttrs {
         id: r.stop,
@@ -292,7 +310,7 @@ ORDER BY stop ASC
     .collect())
 }
 
-/// All of the pictures that are attached to a stop and meant to be public
+/// All the pictures that are attached to a stop and meant to be public
 pub(crate) async fn fetch_public_stop_pictures(
     pool: &PgPool,
     stop_id: i32,
@@ -311,7 +329,9 @@ ORDER BY stop_pics.capture_date DESC
     )
         .fetch_all(pool)
         .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+        .map_err(|err| {
+        tracing::error!(error=err.to_string(), stop_id);
+        Error::DatabaseExecution})?
         .into_iter()
         .map(|r| responses::PublicStopPic {
             id: r.id,
@@ -329,7 +349,7 @@ ORDER BY stop_pics.capture_date DESC
     )
 }
 
-/// All of the pictures that are attached to a stop and visible to the user
+/// All the pictures that are attached to a stop and visible to the user
 pub(crate) async fn fetch_stop_pictures(
     pool: &PgPool,
     stop_id: i32,
@@ -363,7 +383,9 @@ ORDER BY quality DESC
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error=err.to_string(), stop_id, uid, trusted);
+        Error::DatabaseExecution})?
     .into_iter()
     .map(|r| responses::PicWithStops {
         id: r.id,
@@ -427,7 +449,15 @@ LIMIT $2 OFFSET $3
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(
+            error=err.to_string(),
+            user_id,
+            take,
+            skip,
+            include_private
+        );
+        Error::DatabaseExecution})?
     .into_iter()
     .map(|r| responses::PicWithStops {
         id: r.id,
@@ -492,7 +522,9 @@ LIMIT $3 OFFSET $4
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error=err.to_string(), uid, trusted, take, skip);
+        Error::DatabaseExecution})?
     .into_iter()
     .map(|r| responses::PicWithStops {
         id: r.id,
@@ -558,7 +590,9 @@ LIMIT $3 OFFSET $4
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error=err.to_string(), uid, trusted, take, skip);
+        Error::DatabaseExecution})?
     .into_iter()
     .map(|r| responses::PicWithStops {
         id: r.id,
@@ -624,7 +658,9 @@ LIMIT $3 OFFSET $4
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error=err.to_string(), uid, trusted, take, skip);
+        Error::DatabaseExecution})?
     .into_iter()
     .map(|r| responses::PicWithStops {
         id: r.id,
@@ -665,7 +701,10 @@ ORDER BY stop ASC
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string());
+        Error::DatabaseExecution
+    })?;
 
     let mut stops = HashMap::<i32, Vec<i32>>::new();
 
@@ -705,7 +744,10 @@ LIMIT $3 OFFSET $4
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), uid, trusted, take, skip);
+        Error::DatabaseExecution
+    })?
     .into_iter()
     .map(|r| responses::MinimalPic {
         id: r.id,
@@ -730,7 +772,10 @@ ORDER BY stop ASC
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string());
+        Error::DatabaseExecution
+    })?;
 
     let mut stops = HashMap::<i32, Vec<i32>>::new();
 
@@ -774,7 +819,13 @@ RETURNING id
     )
     .fetch_one(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(
+            error = err.to_string(),
+            pic = ?pic
+        );
+        Error::DatabaseExecution
+    })?;
 
     pic.id = res.id;
 
@@ -790,7 +841,10 @@ ON CONFLICT DO NOTHING
         )
         .execute(&mut **transaction)
         .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+        .map_err(|err| {
+            tracing::error!(error = err.to_string(), pic_id = pic.id, stop_id);
+            Error::DatabaseExecution
+        })?;
     }
 
     Ok(pic)
@@ -798,7 +852,7 @@ ON CONFLICT DO NOTHING
 
 pub(crate) async fn update_picture_meta(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-    stop_picture_id: i32,
+    stop_pic_id: i32,
     stop_pic_meta: requests::ChangeStopPic,
     user_id: i32,
 ) -> Result<()> {
@@ -808,8 +862,8 @@ pub(crate) async fn update_picture_meta(
     let _res = sqlx::query!(
         r#"
 UPDATE stop_pics
-SET public=$1, sensitive=$2, lon=$3, lat=$4, tags=$5, attrs=$6, quality=$7, updater=$8,
-    update_date=$9, tagged=true
+SET public=$1, sensitive=$2, lon=$3, lat=$4, tags=$5, attrs=$6, quality=$7,
+    updater=$8, update_date=$9, tagged=true
 WHERE id=$10
     "#,
         stop_pic_meta.public,
@@ -821,11 +875,20 @@ WHERE id=$10
         stop_pic_meta.quality,
         user_id,
         update_date,
-        stop_picture_id
+        stop_pic_id
     )
     .execute(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(
+            error=err.to_string(),
+            stop_pic_id,
+            stop_pic_meta=?stop_pic_meta,
+            user_id,
+            update_date
+        );
+        Error::DatabaseExecution
+    })?;
 
     if !stop_pic_meta.stops.is_empty() {
         // TODO add updater and update date
@@ -837,10 +900,13 @@ WHERE id=$10
     WHERE pic=$1 AND stop NOT IN ({stop_ids})
         "#
         ))
-        .bind(stop_picture_id)
+        .bind(stop_pic_id)
         .execute(&mut **transaction)
         .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+        .map_err(|err| {
+            tracing::error!(error = err.to_string(), stop_ids, stop_pic_id);
+            Error::DatabaseExecution
+        })?;
 
         for stop_rel in stop_pic_meta.stops {
             let _res = sqlx::query!(
@@ -850,13 +916,20 @@ VALUES ($1, $2, $3)
 ON CONFLICT (pic, stop)
 DO UPDATE SET attrs = EXCLUDED.attrs
     "#,
-                stop_picture_id,
+                stop_pic_id,
                 stop_rel.id,
                 &stop_rel.attrs
             )
             .execute(&mut **transaction)
             .await
-            .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+            .map_err(|err| {
+                tracing::error!(
+                    error = err.to_string(),
+                    stop_id = stop_rel.id,
+                    attrs = stop_rel.attrs.join(",")
+                );
+                Error::DatabaseExecution
+            })?;
         }
     }
 
@@ -875,7 +948,10 @@ WHERE pic=$1"#,
     )
     .execute(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), pic_id);
+        Error::DatabaseExecution
+    })?;
 
     sqlx::query!(
         r#"
@@ -886,7 +962,10 @@ WHERE id=$1
     )
     .execute(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), pic_id);
+        Error::DatabaseExecution
+    })?;
 
     Ok(())
 }
@@ -903,7 +982,10 @@ GROUP BY stop_pic_stops.stop
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error = err.to_string());
+        Error::DatabaseExecution
+    })?
     .into_iter()
     .map(|row| (row.stop, row.pic_count))
     .collect();
@@ -928,7 +1010,10 @@ WHERE sensitive = false OR $1 = true
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), allow_sensitive);
+        Error::DatabaseExecution
+    })
 }
 
 /// Fetches a pano picture by its hash.
@@ -946,7 +1031,10 @@ WHERE sha1 = $1
     )
         .fetch_optional(pool)
         .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+        .map_err(|err| {
+            tracing::error!(error=err.to_string(), pic_hash);
+            Error::DatabaseExecution
+        })
         .map(|row| {
             row.map(|row| pics::PanoPic {
                 id: row.id,
@@ -980,7 +1068,10 @@ WHERE stop_id = $1 AND (sensitive = false OR $2 = true)
     )
     .fetch_optional(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), stop_id, allow_sensitive);
+        Error::DatabaseExecution
+    })
     .map(|row| {
         row.map(|row| responses::PanoPic {
             id: row.id,
@@ -1017,7 +1108,9 @@ RETURNING id
     )
     .fetch_one(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error=err.to_string(), pic=?pic);
+        Error::DatabaseExecution})?;
 
     pic.id = res.id;
 
@@ -1051,7 +1144,10 @@ LIMIT 10
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), pano_id);
+        Error::DatabaseExecution
+    })?
     .into_iter()
     .map(|r| responses::MinimalPicWithStops {
         id: r.id,
@@ -1084,7 +1180,10 @@ LIMIT 10
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), pano_id);
+        Error::DatabaseExecution
+    })?
     .into_iter()
     .map(|r| responses::MinimalPicWithStops {
         id: r.id,
@@ -1117,7 +1216,10 @@ WHERE operators.id=$1
     )
     .fetch_optional(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), operator_id);
+        Error::DatabaseExecution
+    })
     .map(|res| res.map(|row| row.logo_sha1))
 }
 pub(crate) async fn update_operator_logo_hash(
@@ -1136,7 +1238,10 @@ WHERE operators.id=$2
     )
     .execute(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), hash, operator_id);
+        Error::DatabaseExecution
+    })?;
 
     Ok(())
 }
@@ -1156,7 +1261,10 @@ GROUP BY news_items.id"#,
         item_id
     )
         .fetch_optional(&mut **transaction).await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+        .map_err(|err| {
+            tracing::error!(error=err.to_string(), item_id);
+            Error::DatabaseExecution
+        })?
         .map(|row| row.hashes))
 }
 
@@ -1177,7 +1285,10 @@ RETURNING id
     )
     .fetch_one(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), item_id, sha1, filename);
+        Error::DatabaseExecution
+    })?;
 
     let pic_id = res.id;
 
@@ -1191,7 +1302,10 @@ VALUES ($1, $2)
     )
     .fetch_one(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), item_id, pic_id);
+        Error::DatabaseExecution
+    })?;
 
     Ok(pic_id)
 }
@@ -1211,7 +1325,10 @@ GROUP BY external_news_items.id"#,
         item_id
     )
         .fetch_optional(&mut **transaction).await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+        .map_err(|err| {
+            tracing::error!(error=err.to_string(), item_id);
+            Error::DatabaseExecution
+        })?
         .map(|row| row.hashes))
 }
 
@@ -1231,7 +1348,10 @@ RETURNING id"#,
     )
     .fetch_one(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), item_id, sha1, filename);
+        Error::DatabaseExecution
+    })?;
 
     let pic_id = res.id;
 
@@ -1245,7 +1365,10 @@ VALUES ($1, $2)
     )
     .execute(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), item_id, pic_id);
+        Error::DatabaseExecution
+    })?;
 
     Ok(pic_id)
 }
@@ -1263,7 +1386,10 @@ WHERE external_news_items.id=$1"#,
     )
     .fetch_optional(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), item_id);
+        Error::DatabaseExecution
+    })?
     .map(|row| row.ss_sha1))
 }
 
@@ -1282,7 +1408,10 @@ WHERE id=$2"#,
     )
     .fetch_one(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), item_id, sha1);
+        Error::DatabaseExecution
+    })?;
 
     Ok(())
 }

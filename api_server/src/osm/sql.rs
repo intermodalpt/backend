@@ -40,7 +40,10 @@ FROM osm_stops
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    .map_err(|err| {
+        tracing::error!(error = err.to_string());
+        Error::DatabaseExecution
+    })
 }
 
 pub(crate) async fn fetch_osm_stop_history(
@@ -58,7 +61,10 @@ WHERE id=$1
     .fetch_one(pool)
     .await
     .map(|r| r.history.0)
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), id);
+        Error::DatabaseExecution
+    })
 }
 
 pub(crate) async fn fetch_osm_stop_histories(
@@ -72,7 +78,10 @@ FROM osm_stops
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error = err.to_string());
+        Error::DatabaseExecution
+    })?
     .into_iter()
     .map(|r| (r.id, r.history.0))
     .collect())
@@ -167,10 +176,10 @@ pub(crate) async fn upsert_osm_stops_chunk(
             deleted = EXCLUDED.deleted",
     );
 
-    qb.build()
-        .execute(pool)
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    qb.build().execute(pool).await.map_err(|err| {
+        tracing::error!(error = err.to_string());
+        Error::DatabaseExecution
+    })?;
 
     Ok(())
 }
@@ -185,7 +194,10 @@ WHERE id=$1
     )
     .execute(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), id);
+        Error::DatabaseExecution
+    })?;
 
     Ok(())
 }
@@ -202,7 +214,10 @@ GROUP BY id
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error = err.to_string());
+        Error::DatabaseExecution
+    })?
     .into_iter()
     .map(|r| (r.id, r.versions))
     .collect())
@@ -227,5 +242,8 @@ WHERE stops.id = $1
     )
     .fetch_optional(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), iml_stop_id);
+        Error::DatabaseExecution
+    })
 }

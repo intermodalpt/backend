@@ -19,6 +19,7 @@
 use std::collections::{hash_map, HashMap};
 
 use chrono::Utc;
+use sqlx::types::Json;
 use sqlx::PgPool;
 
 use commons::models::{routes, stops};
@@ -44,7 +45,10 @@ WHERE id = $1"#,
     )
     .fetch_optional(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    .map_err(|err| {
+        tracing::error!(error=err.to_string(), stop_id);
+        Error::DatabaseExecution
+    })
 }
 
 pub(crate) async fn fetch_paired_stop(
@@ -60,7 +64,10 @@ WHERE osm_id = $1"#,
     )
     .fetch_optional(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), osm_id);
+        Error::DatabaseExecution
+    })
 }
 
 pub(crate) async fn fetch_stops_by_operator_ref(
@@ -79,7 +86,10 @@ WHERE stop_operators.operator_id= $1 AND stop_operators.stop_ref = $2"#,
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), operator_id, stop_ref);
+        Error::DatabaseExecution
+    })
 }
 
 pub(crate) async fn fetch_region_simple_stops(
@@ -101,7 +111,10 @@ WHERE id IN (
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), region_id);
+        Error::DatabaseExecution
+    })
 }
 
 pub(crate) async fn fetch_region_detailed_stops(
@@ -123,7 +136,10 @@ WHERE id IN (
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    .map_err(|err| {
+        tracing::error!(error=err.to_string(), region_id);
+        Error::DatabaseExecution
+    })
 }
 
 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
@@ -139,8 +155,9 @@ r#"SELECT id, name, short_name, locality, street, door, lat, lon, notes, parish,
     CASE
         WHEN count(stop_operators.stop_id) > 0
         THEN array_agg(
-            ROW(stop_operators.operator_id, stop_operators.stop_ref, stop_operators.official_name,
-                stop_operators.source))
+            ROW(
+                stop_operators.operator_id, stop_operators.stop_ref,
+                stop_operators.official_name, stop_operators.source))
         ELSE array[]::record[]
     END as "operators!: Vec<responses::OperatorStop>"
 FROM Stops
@@ -156,7 +173,10 @@ GROUP BY stops.id
     )
         .fetch_all(pool)
         .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+        .map_err(|err| {
+            tracing::error!(error=err.to_string(), region_id);
+            Error::DatabaseExecution
+        })?
         .into_iter()
         .map(|r| {
             let sqlx::types::Json(a11y) = r.a11y;
@@ -201,7 +221,10 @@ pub(crate) async fn fetch_all_stops(
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    .map_err(|err| {
+        tracing::error!(error = err.to_string());
+        Error::DatabaseExecution
+    })
 }
 
 pub(crate) async fn fetch_all_detailed_stops(
@@ -216,7 +239,10 @@ FROM stops"#
     )
         .fetch_all(pool)
         .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+        .map_err(|err| {
+            tracing::error!(error=err.to_string());
+            Error::DatabaseExecution
+        })
 }
 
 pub(crate) async fn fetch_bounded_stops(
@@ -238,7 +264,10 @@ WHERE lon >= $1 AND lon <= $2 AND lat <= $3 AND lat >= $4
     )
         .fetch_all(pool)
         .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+        .map_err(|err| {
+            tracing::error!(error=err.to_string(), x0, x1, y0, y1);
+            Error::DatabaseExecution
+        })
 }
 
 pub(crate) async fn fetch_route_stops(
@@ -259,7 +288,10 @@ WHERE subroutes.route = $1"#,
     )
         .fetch_all(pool)
         .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+        .map_err(|err| {
+            tracing::error!(error=err.to_string(), route_id);
+            Error::DatabaseExecution
+        })
 }
 
 pub(crate) async fn fetch_operator_stops(
@@ -278,7 +310,10 @@ WHERE stop_operators.operator_id = $1"#,
     )
         .fetch_all(pool)
         .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+        .map_err(|err| {
+            tracing::error!(error=err.to_string(), operator_id);
+            Error::DatabaseExecution
+        })
 }
 
 pub(crate) async fn insert_stop(
@@ -305,7 +340,7 @@ RETURNING id
         stop.lat,
         stop.notes,
         &stop.tags,
-        &serde_json::to_value(&stop.a11y).unwrap(),
+        Json(&stop.a11y) as _,
         user_id,
         update_date,
         i16::from(stop.verification_level),
@@ -315,7 +350,14 @@ RETURNING id
     )
     .fetch_one(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(
+            error = err.to_string(),
+            stop = ?stop,
+            user_id,
+            update_date=?update_date);
+        Error::DatabaseExecution
+    })?;
 
     Ok(stops::Stop {
         id: res.id,
@@ -371,7 +413,10 @@ WHERE id=$16
     )
         .execute(&mut **transaction)
         .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+        .map_err(|err| {
+            tracing::error!(error=err.to_string(), stop_id);
+            Error::DatabaseExecution
+        })?;
 
     Ok(())
 }
@@ -390,7 +435,10 @@ pub(crate) async fn update_stop_position(
     )
     .execute(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), stop_id);
+        Error::DatabaseExecution
+    })?;
 
     Ok(res.rows_affected() != 0)
 }
@@ -420,7 +468,10 @@ WHERE subroute_stops.stop = $1"#,
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    .map_err(|err| {
+        tracing::error!(error=err.to_string(), stop_id);
+        Error::DatabaseExecution
+    })
 }
 
 pub(crate) async fn fetch_stop_spider(
@@ -454,7 +505,10 @@ ORDER BY subroute_stops.idx"#,
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), stops = ?stops);
+        Error::DatabaseExecution
+    })?;
 
     let mut routes: HashMap<i32, responses::SpiderRoute> = HashMap::new();
     let mut subroutes: HashMap<i32, responses::SpiderSubroute> = HashMap::new();

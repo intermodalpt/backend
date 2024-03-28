@@ -301,11 +301,10 @@ pub(crate) async fn upload_stop_picture(
         .await
         .map_err(|err| Error::ValidationFailure(err.to_string()))?;
 
-    let mut transaction = state
-        .pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     let pic = logic::upload_stop_picture(
         claims.uid,
@@ -332,10 +331,10 @@ pub(crate) async fn upload_stop_picture(
     )
     .await?;
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
 
     let pic = responses::PicWithStops::from((
         pic,
@@ -380,11 +379,10 @@ pub(crate) async fn patch_stop_picture_meta(
     Path(stop_picture_id): Path<i32>,
     Json(stop_pic_meta): Json<requests::ChangeStopPic>,
 ) -> Result<(), Error> {
-    let mut transaction = state
-        .pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     let pic = sql::fetch_picture(&mut *transaction, stop_picture_id)
         .await?
@@ -445,10 +443,10 @@ pub(crate) async fn patch_stop_picture_meta(
         )
         .await?;
 
-        transaction
-            .commit()
-            .await
-            .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+        transaction.commit().await.map_err(|err| {
+            tracing::error!("Transaction failed to commit: {err}");
+            Error::DatabaseExecution
+        })?;
     }
 
     Ok(())

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nUPDATE stop_pics\nSET public=$1, sensitive=$2, lon=$3, lat=$4, tags=$5, attrs=$6, quality=$7, updater=$8,\n    update_date=$9, tagged=true\nWHERE id=$10\n    ",
+  "query": "\nUPDATE stop_pics\nSET public=$1, sensitive=$2, lon=$3, lat=$4, tags=$5, attrs=$6, quality=$7,\n    updater=$8, update_date=$9, tagged=true\nWHERE id=$10\n    ",
   "describe": {
     "columns": [],
     "parameters": {
@@ -19,5 +19,5 @@
     },
     "nullable": []
   },
-  "hash": "e3e943da3b587788154c7e989974fa743d7d9e27109dbe9a99af13156a30dbfe"
+  "hash": "074c67eb21bc32ff8b2bb1c95982e2ce165bf9cc2de623a5cbee7b06f6b6aa72"
 }

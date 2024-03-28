@@ -144,10 +144,10 @@ pub(crate) async fn upload_stop_picture(
     )
     .await?;
 
-    let mut transaction = db_pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = db_pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     // TODO Delete if insertion fails
     let pic =
@@ -173,10 +173,10 @@ pub(crate) async fn upload_stop_picture(
     )
     .await?;
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
 
     Ok(pic)
 }
@@ -187,17 +187,15 @@ pub(crate) async fn delete_picture(
     bucket: &s3::Bucket,
     db_pool: &PgPool,
 ) -> Result<(), Error> {
-    let mut transaction = db_pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = db_pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     let stop_rels =
         sql::fetch_picture_stops_rel_attrs(&mut transaction, pic.id).await?;
 
-    let stop_pic = sql::fetch_picture(db_pool, pic.id)
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let stop_pic = sql::fetch_picture(db_pool, pic.id).await?;
 
     if let Some(stop_pic) = stop_pic {
         let hex_hash = stop_pic.sha1;
@@ -219,10 +217,10 @@ pub(crate) async fn delete_picture(
     )
     .await?;
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })
 }
 
 async fn upload_picture_to_storage(
@@ -364,10 +362,10 @@ pub(crate) async fn upload_pano_picture(
 
     upload_pano_to_storage(bucket, content, &hex_hash).await?;
 
-    let mut transaction = db_pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = db_pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     // TODO Delete if insertion fails
     let inserted_pic =
@@ -385,10 +383,10 @@ pub(crate) async fn upload_pano_picture(
     )
     .await?;*/
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
 
     Ok(inserted_pic)
 }
@@ -422,10 +420,10 @@ pub(crate) async fn upload_operator_logo(
     let hash = hasher.finalize();
     let hex_hash = base16ct::lower::encode_string(&hash);
 
-    let mut transaction = db_pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = db_pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     let curr_hash =
         sql::fetch_operator_logo_hash(&mut transaction, operator_id)
@@ -497,10 +495,10 @@ pub(crate) async fn upload_operator_logo(
         return Err(db_err);
     }
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
 
     Ok(())
 }
@@ -549,10 +547,10 @@ pub(crate) async fn upload_news_item_img(
     let hash = hasher.finalize();
     let hex_hash = base16ct::lower::encode_string(&hash);
 
-    let mut transaction = db_pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = db_pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     let existing_hashes =
         sql::fetch_news_img_hashes(&mut transaction, item_id).await?;
@@ -600,10 +598,10 @@ pub(crate) async fn upload_news_item_img(
         return Err(db_err);
     }
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
 
     Ok(hex_hash)
 }
@@ -650,10 +648,10 @@ pub(crate) async fn upload_external_news_item_img(
     let hash = hasher.finalize();
     let hex_hash = base16ct::lower::encode_string(&hash);
 
-    let mut transaction = db_pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = db_pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     let existing_hashes =
         sql::fetch_external_news_img_hashes(&mut transaction, item_id).await?;
@@ -711,10 +709,10 @@ pub(crate) async fn upload_external_news_item_img(
         return Err(db_err);
     }
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
 
     Ok(hex_hash)
 }
@@ -761,10 +759,10 @@ pub(crate) async fn upload_news_item_screenshot(
     let hash = hasher.finalize();
     let hex_hash = base16ct::lower::encode_string(&hash);
 
-    let mut transaction = db_pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = db_pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     let current_hash =
         sql::fetch_external_news_screenshot_hash(&mut transaction, item_id)
@@ -826,10 +824,10 @@ pub(crate) async fn upload_news_item_screenshot(
         return Err(db_err);
     }
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
 
     // Delete the old one
     if let Some(old_sha1) = current_hash {

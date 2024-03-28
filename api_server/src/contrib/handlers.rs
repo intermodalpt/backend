@@ -395,11 +395,10 @@ pub(crate) async fn post_decline_contrib_data(
         return Err(Error::DependenciesNotMet);
     }
 
-    let mut transaction = state
-        .pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     sql::update_guest_contribution_to_decline(
         &mut transaction,
@@ -410,8 +409,8 @@ pub(crate) async fn post_decline_contrib_data(
 
     // TODO, file deletions
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })
 }

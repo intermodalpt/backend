@@ -62,11 +62,10 @@ pub(crate) async fn post_route(
     auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::Admin>,
     Json(route): Json<requests::ChangeRoute>,
 ) -> Result<Json<routes::Route>, Error> {
-    let mut transaction = state
-        .pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     let route = sql::insert_route(&mut transaction, route).await?;
 
@@ -80,10 +79,10 @@ pub(crate) async fn post_route(
     )
     .await?;
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
 
     Ok(Json(route))
 }
@@ -130,11 +129,10 @@ pub(crate) async fn patch_route(
         return Ok(Json(route));
     }
 
-    let mut transaction = state
-        .pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     sql::update_route(&mut transaction, route_id, changes).await?;
     contrib::sql::insert_changeset_log(
@@ -148,10 +146,10 @@ pub(crate) async fn patch_route(
     )
     .await?;
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
 
     Ok(Json(route))
 }
@@ -165,11 +163,10 @@ pub(crate) async fn delete_route(
         .await?
         .ok_or(Error::NotFoundUpstream)?;
 
-    let mut transaction = state
-        .pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     sql::delete_route(&mut transaction, route_id).await?;
 
@@ -181,10 +178,10 @@ pub(crate) async fn delete_route(
     )
     .await?;
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })
 }
 
 pub(crate) async fn create_subroute(
@@ -193,11 +190,10 @@ pub(crate) async fn create_subroute(
     Path(route_id): Path<i32>,
     Json(subroute): Json<requests::ChangeSubroute>,
 ) -> Result<Json<routes::Subroute>, Error> {
-    let mut transaction = state
-        .pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     let subroute =
         sql::insert_subroute(&mut transaction, route_id, subroute).await?;
@@ -212,10 +208,10 @@ pub(crate) async fn create_subroute(
     )
     .await?;
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
     Ok(Json(subroute))
 }
 
@@ -235,11 +231,10 @@ pub(crate) async fn patch_subroute(
         return Ok(Json(subroute));
     }
 
-    let mut transaction = state
-        .pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     contrib::sql::insert_changeset_log(
         &mut transaction,
@@ -255,10 +250,10 @@ pub(crate) async fn patch_subroute(
     sql::update_subroute(&mut transaction, route_id, subroute_id, changes)
         .await?;
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
 
     Ok(Json(subroute))
 }
@@ -268,11 +263,10 @@ pub(crate) async fn delete_subroute(
     auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::Admin>,
     Path((route_id, subroute_id)): Path<(i32, i32)>,
 ) -> Result<(), Error> {
-    let mut transaction = state
-        .pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     let subroute = sql::fetch_simple_subroute(&state.pool, subroute_id)
         .await?
@@ -299,10 +293,10 @@ pub(crate) async fn delete_subroute(
     sql::delete_subroute_departures(&mut transaction, subroute_id).await?;
     sql::delete_subroute(&mut transaction, route_id, subroute_id).await?;
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })
 }
 
 pub(crate) async fn create_subroute_departure(
@@ -311,11 +305,10 @@ pub(crate) async fn create_subroute_departure(
     Path(subroute_id): Path<i32>,
     Json(departure): Json<requests::ChangeDeparture>,
 ) -> Result<Json<routes::Departure>, Error> {
-    let mut transaction = state
-        .pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     let departure =
         sql::insert_departure(&mut transaction, subroute_id, departure).await?;
@@ -330,10 +323,10 @@ pub(crate) async fn create_subroute_departure(
     )
     .await?;
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
 
     Ok(Json(departure))
 }
@@ -353,11 +346,10 @@ pub(crate) async fn patch_subroute_departure(
         return Ok(Json(departure));
     }
 
-    let mut transaction = state
-        .pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     sql::update_departure(&mut transaction, subroute_id, departure_id, change)
         .await?;
@@ -373,10 +365,10 @@ pub(crate) async fn patch_subroute_departure(
     )
     .await?;
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
 
     Ok(Json(departure))
 }
@@ -390,11 +382,10 @@ pub(crate) async fn delete_subroute_departure(
         .await?
         .ok_or(Error::NotFoundUpstream)?;
 
-    let mut transaction = state
-        .pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     sql::delete_departure(&mut transaction, subroute_id, departure_id).await?;
 
@@ -408,10 +399,10 @@ pub(crate) async fn delete_subroute_departure(
     )
     .await?;
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
 
     Ok(())
 }
@@ -430,11 +421,10 @@ pub(crate) async fn patch_subroute_stops(
     Path((route_id, subroute_id)): Path<(i32, i32)>,
     Json(request): Json<requests::ChangeSubrouteStops>,
 ) -> Result<(), Error> {
-    let mut transaction = state
-        .pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     sql::update_subroute_stops(
         &mut transaction,
@@ -445,10 +435,10 @@ pub(crate) async fn patch_subroute_stops(
     .await?;
 
     // TODO log
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
 
     Ok(())
 }

@@ -44,7 +44,10 @@ WHERE username=$1
     )
     .fetch_optional(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), username);
+        Error::DatabaseExecution
+    })
 }
 
 pub(crate) async fn fetch_user_by_username_or_email(
@@ -64,7 +67,10 @@ WHERE username=$1 or email = $2
     )
     .fetch_optional(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), username, email);
+        Error::DatabaseExecution
+    })
 }
 
 pub(crate) async fn register_user(
@@ -81,7 +87,14 @@ RETURNING id"#,
     )
     .fetch_one(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(
+            error = err.to_string(),
+            username = request.username,
+            email = request.email
+        );
+        Error::DatabaseExecution
+    })?;
     Ok(res.id)
 }
 
@@ -97,7 +110,10 @@ pub(crate) async fn change_user_password(
     )
     .execute(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), username);
+        Error::DatabaseExecution
+    })?;
     Ok(())
 }
 
@@ -123,7 +139,10 @@ LIMIT $1 OFFSET $2
     )
     .fetch_all(executor)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error=err.to_string(), take, skip);
+        Error::DatabaseExecution
+    })?
     .into_iter()
     .map(|r| {
         Ok(responses::AuditLogEntry {
@@ -156,12 +175,20 @@ VALUES ($1, $2, $3)
 RETURNING id
     "#,
         user_id,
-        Json(action) as _,
+        Json(&action) as _,
         addr
     )
     .fetch_one(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(
+            error = err.to_string(),
+            user_id,
+            action = ?action,
+            addr = ?addr
+        );
+        Error::DatabaseExecution
+    })?;
 
     Ok(res.id)
 }
@@ -186,7 +213,10 @@ LIMIT $2 OFFSET $3
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), user_id, take, skip);
+        Error::DatabaseExecution
+    })?
     .into_iter()
     .map(|r| {
         Ok(auth::AuditLogEntry {
@@ -212,7 +242,10 @@ FROM audit_log
     )
     .fetch_one(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error = err.to_string());
+        Error::DatabaseExecution
+    })?
     .cnt
     .unwrap_or(0))
 }
@@ -231,7 +264,10 @@ WHERE user_id=$1
     )
     .fetch_one(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), user_id);
+        Error::DatabaseExecution
+    })?
     .cnt
     .unwrap_or(0))
 }

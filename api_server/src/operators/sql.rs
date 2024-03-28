@@ -17,6 +17,7 @@
 */
 
 use chrono::{Local, NaiveDate};
+use sqlx::types::Json;
 use sqlx::PgPool;
 
 use commons::models::calendar::Calendar;
@@ -43,7 +44,10 @@ WHERE id = $1
     )
     .fetch_optional(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), operator_id = operator_id);
+        Error::DatabaseExecution
+    })
 }
 
 pub(crate) async fn fetch_operators(
@@ -59,7 +63,10 @@ GROUP BY operators.id
     )
         .fetch_all(pool)
         .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+        .map_err(|err| {
+            tracing::error!(error=err.to_string());
+            Error::DatabaseExecution
+        })?
         .into_iter()
         .map(|row| responses::OperatorWithRegions {
             id: row.id,
@@ -90,7 +97,10 @@ RETURNING id
         )
         .fetch_one(&mut **transaction)
         .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+        .map_err(|err| {
+            tracing::error!(error = err.to_string(), change = ?change, description);
+            Error::DatabaseExecution
+        })?
         .id
     } else {
         sqlx::query!(
@@ -104,7 +114,14 @@ RETURNING id
         )
         .fetch_one(&mut **transaction)
         .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+        .map_err(|err| {
+            tracing::error!(
+                error = err.to_string(),
+                name = change.name,
+                tag = change.tag
+            );
+            Error::DatabaseExecution
+        })?
         .id
     };
 
@@ -139,7 +156,16 @@ WHERE id = $4
         )
         .fetch_one(&mut **transaction)
         .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+        .map_err(|err| {
+            tracing::error!(
+                error = err.to_string(),
+                name = &change.name,
+                tag = &change.tag,
+                description = description,
+                operator_id = operator_id
+            );
+            Error::DatabaseExecution
+        })?;
     } else {
         sqlx::query!(
             r#"
@@ -154,7 +180,15 @@ WHERE id = $3
         )
         .fetch_one(&mut **transaction)
         .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+        .map_err(|err| {
+            tracing::error!(
+                error = err.to_string(),
+                name = &change.name,
+                tag = &change.tag,
+                operator_id = operator_id
+            );
+            Error::DatabaseExecution
+        })?;
     };
 
     Ok(())
@@ -176,7 +210,10 @@ WHERE stop_operators.operator_id = $1
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    .map_err(|err| {
+        tracing::error!(error=err.to_string(), operator_id=operator_id);
+        Error::DatabaseExecution
+    })
 }
 
 pub(crate) async fn upsert_operator_stop(
@@ -196,7 +233,14 @@ pub(crate) async fn upsert_operator_stop(
     )
     .fetch_all(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(
+            error = err.to_string(),
+            stop_id = stop_id,
+            operator_id = operator_id
+        );
+        Error::DatabaseExecution
+    })?;
 
     match existing.len() {
         0 => {
@@ -213,7 +257,15 @@ pub(crate) async fn upsert_operator_stop(
             )
             .execute(&mut **transaction)
             .await
-            .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+            .map_err(|err| {
+                tracing::error!(
+                    error=err.to_string(),
+                    stop_id=stop_id,
+                    operator_id=operator_id,
+                    change=?change
+                );
+                Error::DatabaseExecution
+            })?;
         }
         1 => {
             sqlx::query!(
@@ -232,15 +284,18 @@ pub(crate) async fn upsert_operator_stop(
             )
             .execute(&mut **transaction)
             .await
-            .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+            .map_err(|err| {
+                tracing::error!(error = err.to_string(), stop_id = stop_id);
+                Error::DatabaseExecution
+            })?;
         }
         _ => {
             // TODO This should never happen. Ensure that the constraints are
             // properly set up.
-            return Err(Error::DatabaseExecution(
+            tracing::error!(
                 "Multiple stop_operators for the same operator_id and stop_id"
-                    .to_string(),
-            ));
+            );
+            return Err(Error::DatabaseExecution);
         }
     }
     Ok(())
@@ -262,7 +317,10 @@ pub(crate) async fn delete_operator_stop(
     )
     .fetch_all(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), stop_id = stop_id);
+        Error::DatabaseExecution
+    })?;
 
     match existing.len() {
         0 => {
@@ -279,15 +337,18 @@ pub(crate) async fn delete_operator_stop(
             )
             .execute(&mut **transaction)
             .await
-            .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+            .map_err(|err| {
+                tracing::error!(error = err.to_string(), stop_id = stop_id);
+                Error::DatabaseExecution
+            })?;
         }
         _ => {
             // TODO This should never happen. Ensure that the constraints are
             // properly set up.
-            return Err(Error::DatabaseExecution(
+            tracing::error!(
                 "Multiple stop_operators for the same operator_id and stop_id"
-                    .to_string(),
-            ));
+            );
+            return Err(Error::DatabaseExecution);
         }
     }
     Ok(())
@@ -308,7 +369,10 @@ WHERE operator = $1
     )
         .fetch_all(pool)
         .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+        .map_err(|err| {
+            tracing::error!(error=err.to_string(), operator_id=operator_id);
+            Error::DatabaseExecution
+        })
 }
 
 pub(crate) async fn insert_operator_route_type(
@@ -332,7 +396,14 @@ RETURNING id
     )
         .fetch_one(&mut **transaction)
         .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+        .map_err(|err| {
+            tracing::error!(
+                error=err.to_string(),
+                operator_id=operator_id,
+                change=?change
+            );
+            Error::DatabaseExecution
+        })?;
 
     Ok(res.id)
 }
@@ -364,7 +435,15 @@ WHERE operator = $7 AND id = $8
     )
     .execute(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(
+            error = err.to_string(),
+            change = ?change,
+            operator_id=operator_id,
+            type_id=type_id
+        );
+        Error::DatabaseExecution
+    })?;
 
     Ok(())
 }
@@ -383,7 +462,10 @@ WHERE type = $1
     )
     .fetch_one(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), type_id = type_id);
+        Error::DatabaseExecution
+    })?
     .cnt
     .unwrap_or(0);
 
@@ -401,7 +483,14 @@ WHERE operator = $1 AND id = $2
     )
     .execute(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(
+            error = err.to_string(),
+            operator_id = operator_id,
+            type_id = type_id
+        );
+        Error::DatabaseExecution
+    })?;
 
     Ok(())
 }
@@ -427,7 +516,10 @@ GROUP BY issues.id
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error=err.to_string());
+        Error::DatabaseExecution
+    })?
     .into_iter()
     .map(|row| {
         Ok(operators::Issue {
@@ -487,7 +579,13 @@ GROUP BY issues.id
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(
+            error=err.to_string(),
+            operator_id=operator_id
+        );
+        Error::DatabaseExecution
+    })?
     .into_iter()
     .map(|row| {
         Ok(responses::Issue {
@@ -541,7 +639,10 @@ GROUP BY issues.id"#,
     )
     .fetch_one(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    .map_err(|err| {
+        tracing::error!(error=err.to_string(), issue_id=issue_id);
+        Error::DatabaseExecution
+    })
     .and_then(|row| {
         Ok(operators::Issue {
             id: row.id,
@@ -585,17 +686,24 @@ RETURNING id
 "#,
         issue.title,
         issue.message,
-        &serde_json::to_string(&issue.category).unwrap(),
+        Json(&issue.category) as _,
         issue.impact,
         creation,
         issue.lat,
         issue.lon,
         issue.geojson,
-        &serde_json::to_string(&operators::IssueState::Unanswered).unwrap()
+        Json(&operators::IssueState::Unanswered) as _
     )
         .fetch_one(&mut **transaction)
         .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+        .map_err(|err| {
+            tracing::error!(
+                error=err.to_string(),
+                issue=?issue,
+                creation=?creation
+            );
+            Error::DatabaseExecution
+        })?;
 
     let id = row.id;
 
@@ -610,7 +718,14 @@ RETURNING id
         )
         .execute(&mut **transaction)
         .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+        .map_err(|err| {
+            tracing::error!(
+                error = err.to_string(),
+                operator_id = operator_id,
+                id = id
+            );
+            Error::DatabaseExecution
+        })?;
     }
 
     for route_id in &issue.route_ids {
@@ -624,7 +739,14 @@ RETURNING id
         )
         .execute(&mut **transaction)
         .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+        .map_err(|err| {
+            tracing::error!(
+                error = err.to_string(),
+                route_id = route_id,
+                id = id
+            );
+            Error::DatabaseExecution
+        })?;
     }
 
     for stop_id in &issue.stop_ids {
@@ -638,7 +760,10 @@ RETURNING id
         )
         .execute(&mut **transaction)
         .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+        .map_err(|err| {
+            tracing::error!(error = err.to_string(), stop_id = stop_id);
+            Error::DatabaseExecution
+        })?;
     }
 
     for pic_id in &issue.pic_ids {
@@ -652,7 +777,10 @@ RETURNING id
         )
         .execute(&mut **transaction)
         .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+        .map_err(|err| {
+            tracing::error!(error = err.to_string(), pic_id = pic_id, id = id);
+            Error::DatabaseExecution
+        })?;
     }
 
     Ok(id)
@@ -679,16 +807,19 @@ pub(crate) async fn update_issue(
         issue.title,
         issue.message,
         issue.geojson,
-        &serde_json::to_string(&issue.category).unwrap(),
+        Json(&issue.category) as _,
         issue.lat,
         issue.lon,
-        &serde_json::to_string(&issue.state).unwrap(),
+        Json(&issue.state) as _,
         issue.state_justification,
         issue_id
     )
     .execute(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), issue_id=issue_id, issue = ?issue);
+        Error::DatabaseExecution
+    })?;
 
     sqlx::query!(
         r#"
@@ -699,7 +830,10 @@ pub(crate) async fn update_issue(
     )
     .execute(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), issue_id = issue_id);
+        Error::DatabaseExecution
+    })?;
 
     sqlx::query!(
         r#"
@@ -710,7 +844,10 @@ pub(crate) async fn update_issue(
     )
     .execute(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), issue_id = issue_id);
+        Error::DatabaseExecution
+    })?;
 
     sqlx::query!(
         r#"
@@ -721,7 +858,10 @@ pub(crate) async fn update_issue(
     )
     .execute(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), issue_id = issue_id);
+        Error::DatabaseExecution
+    })?;
 
     sqlx::query!(
         r#"
@@ -732,7 +872,10 @@ pub(crate) async fn update_issue(
     )
     .execute(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), issue_id = issue_id);
+        Error::DatabaseExecution
+    })?;
 
     for operator_id in &issue.operator_ids {
         sqlx::query!(
@@ -745,7 +888,14 @@ pub(crate) async fn update_issue(
         )
         .execute(&mut **transaction)
         .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+        .map_err(|err| {
+            tracing::error!(
+                error = err.to_string(),
+                operator_id = operator_id,
+                issue_id = issue_id
+            );
+            Error::DatabaseExecution
+        })?;
     }
 
     for route_id in &issue.route_ids {
@@ -759,7 +909,14 @@ pub(crate) async fn update_issue(
         )
         .execute(&mut **transaction)
         .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+        .map_err(|err| {
+            tracing::error!(
+                error = err.to_string(),
+                route_id = route_id,
+                issue_id = issue_id
+            );
+            Error::DatabaseExecution
+        })?;
     }
 
     for stop_id in &issue.stop_ids {
@@ -773,7 +930,14 @@ pub(crate) async fn update_issue(
         )
         .execute(&mut **transaction)
         .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+        .map_err(|err| {
+            tracing::error!(
+                error = err.to_string(),
+                stop_id = stop_id,
+                issue_id = issue_id
+            );
+            Error::DatabaseExecution
+        })?;
     }
 
     for pic_id in &issue.pic_ids {
@@ -787,7 +951,14 @@ pub(crate) async fn update_issue(
         )
         .execute(&mut **transaction)
         .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+        .map_err(|err| {
+            tracing::error!(
+                error = err.to_string(),
+                pic_id = pic_id,
+                issue_id = issue_id
+            );
+            Error::DatabaseExecution
+        })?;
     }
 
     Ok(())
@@ -804,7 +975,10 @@ FROM operator_calendars
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error = err.to_string());
+        Error::DatabaseExecution
+    })?
     .into_iter()
     .map(|row| {
         Ok(responses::OperatorCalendar {
@@ -834,7 +1008,10 @@ WHERE operator_id=$1
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), operator_id = operator_id);
+        Error::DatabaseExecution
+    })?
     .into_iter()
     .map(|row| {
         Ok(responses::OperatorCalendar {
@@ -863,11 +1040,14 @@ RETURNING id
 "#,
         operator_id,
         calendar.name,
-        serde_json::to_value(calendar.calendar).unwrap()
+        Json(calendar.calendar) as _
     )
     .fetch_one(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), operator_id = operator_id);
+        Error::DatabaseExecution
+    })?;
     Ok(row.id)
 }
 
@@ -886,7 +1066,14 @@ WHERE operator_id=$1 AND id=$2
     )
     .execute(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(
+            error = err.to_string(),
+            operator_id = operator_id,
+            calendar_id = calendar_id
+        );
+        Error::DatabaseExecution
+    })?;
     Ok(())
 }
 
@@ -905,7 +1092,10 @@ WHERE operator_id=$1
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), operator_id = operator_id);
+        Error::DatabaseExecution
+    })?
     .into_iter()
     .filter_map(
         |row| match serde_json::from_value::<Calendar>(row.calendar) {

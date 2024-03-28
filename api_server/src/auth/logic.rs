@@ -52,10 +52,10 @@ pub(crate) async fn login(
         .verify_password(request.password.as_bytes(), &parsed_hash)
         .map_err(|_| Error::Forbidden)?;
 
-    let mut transaction = db_pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = db_pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     sql::insert_audit_log_entry(
         &mut transaction,
@@ -65,10 +65,10 @@ pub(crate) async fn login(
     )
     .await?;
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
 
     let issue_time = Utc::now();
     let expiration_time =
@@ -161,10 +161,10 @@ pub(crate) async fn register(
         email: request.email,
     };
 
-    let mut transaction = db_pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = db_pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     let user_id = sql::register_user(db_pool, &registration).await?;
     sql::insert_audit_log_entry(
@@ -178,10 +178,10 @@ pub(crate) async fn register(
     )
     .await?;
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })
 }
 
 #[allow(clippy::similar_names)]
@@ -198,10 +198,10 @@ pub(crate) async fn change_password(
     }
     let password_kdf = gen_kdf_password_string(&request.new_password)?;
 
-    let mut transaction = db_pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = db_pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     sql::change_user_password(
         &mut transaction,
@@ -217,10 +217,10 @@ pub(crate) async fn change_password(
     )
     .await?;
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })
 }
 
 #[allow(clippy::similar_names)]
@@ -236,10 +236,10 @@ pub(crate) async fn admin_change_password(
         .await?
         .ok_or(Error::NotFoundUpstream)?;
 
-    let mut transaction = db_pool
-        .begin()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    let mut transaction = db_pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
 
     sql::change_user_password(
         &mut transaction,
@@ -257,10 +257,10 @@ pub(crate) async fn admin_change_password(
     )
     .await?;
 
-    transaction
-        .commit()
-        .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })
 }
 
 pub(crate) fn encode_claims(claims: &models::Claims) -> Result<String, Error> {

@@ -51,7 +51,10 @@ WHERE routes.id = $1
     )
     .fetch_optional(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), route_id);
+        Error::DatabaseExecution
+    })
 }
 
 pub(crate) async fn fetch_simple_subroute(
@@ -77,7 +80,10 @@ WHERE subroutes.id = $1
     )
     .fetch_optional(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), subroute_id);
+        Error::DatabaseExecution
+    })?;
 
     if let Some(row) = res {
         Ok(Some(routes::Subroute {
@@ -134,7 +140,10 @@ JOIN route_types on routes.type_id = route_types.id"#,
     )
         .fetch_optional(pool)
         .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+        .map_err(|err| {
+            tracing::error!(error=err.to_string(), route_id);
+            Error::DatabaseExecution
+        })
 }
 
 pub(crate) async fn fetch_full_route_with_subroutes(
@@ -174,7 +183,10 @@ JOIN route_types on routes.type_id = route_types.id"#,
     )
         .fetch_optional(pool)
         .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+        .map_err(|err| {
+            tracing::error!(error=err.to_string(), route_id);
+            Error::DatabaseExecution
+        })
 }
 
 pub(crate) async fn fetch_routes(
@@ -212,7 +224,10 @@ JOIN route_types on routes.type_id = route_types.id
     )
         .fetch_all(pool)
         .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+        .map_err(|err| {
+            tracing::error!(error=err.to_string(), region_id);
+            Error::DatabaseExecution
+        })
 }
 
 pub(crate) async fn fetch_operator_routes(
@@ -249,7 +264,10 @@ JOIN route_types on routes.type_id = route_types.id
     )
         .fetch_all(pool)
         .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+        .map_err(|err| {
+            tracing::error!(error=err.to_string(), operator_id);
+            Error::DatabaseExecution
+        })
 }
 
 pub(crate) async fn fetch_full_routes(
@@ -290,7 +308,10 @@ JOIN route_types on routes.type_id = route_types.id
     )
         .fetch_all(pool)
         .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+        .map_err(|err| {
+            tracing::error!(error=err.to_string(), region_id);
+            Error::DatabaseExecution
+        })
 }
 
 pub(crate) async fn fetch_operator_full_routes(
@@ -331,7 +352,10 @@ JOIN route_types on routes.type_id = route_types.id
     )
         .fetch_all(pool)
         .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))
+        .map_err(|err| {
+            tracing::error!(error=err.to_string(), operator_id);
+            Error::DatabaseExecution
+        })
 }
 
 pub(crate) async fn insert_route(
@@ -358,7 +382,10 @@ RETURNING id
     )
     .fetch_one(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), route=?route);
+        Error::DatabaseExecution
+    })?;
 
     Ok(routes::Route {
         id: res.id,
@@ -399,7 +426,10 @@ WHERE id=$10
     )
     .execute(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), changes = ?changes);
+        Error::DatabaseExecution
+    })?;
 
     Ok(())
 }
@@ -418,7 +448,10 @@ WHERE route=$1
     )
     .fetch_one(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), route_id);
+        Error::DatabaseExecution
+    })?
     .count
     .unwrap_or(0);
 
@@ -435,7 +468,10 @@ WHERE id=$1
     )
     .execute(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), route_id);
+        Error::DatabaseExecution
+    })?
     .rows_affected();
 
     match deleted_rows {
@@ -467,7 +503,10 @@ RETURNING id
     )
     .fetch_one(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error=err.to_string(), change=?change);
+        Error::DatabaseExecution
+    })?;
 
     Ok(routes::Subroute {
         id: res.id,
@@ -508,7 +547,15 @@ WHERE id=$8 AND route=$9
     )
     .execute(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(
+            error=err.to_string(),
+            changes=?changes,
+            subroute_id,
+            route_id
+        );
+        Error::DatabaseExecution
+    })?;
 
     Ok(())
 }
@@ -528,7 +575,10 @@ WHERE id=$1 AND route=$2
     )
     .execute(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), subroute_id, route_id);
+        Error::DatabaseExecution
+    })?
     .rows_affected();
 
     match deleted_rows {
@@ -551,7 +601,10 @@ WHERE subroute=$1
     )
     .execute(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), subroute_id);
+        Error::DatabaseExecution
+    })?;
 
     Ok(())
 }
@@ -569,7 +622,10 @@ WHERE subroute=$1
     )
     .execute(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), subroute_id);
+        Error::DatabaseExecution
+    })?;
 
     Ok(())
 }
@@ -590,7 +646,10 @@ ORDER BY subroutes.id ASC, subroute_stops.idx ASC
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), route_id);
+        Error::DatabaseExecution
+    })?;
 
     // TODO Consider moving the stop indexes to an array (in the DB)
     let subroute_stops = res
@@ -625,7 +684,10 @@ ORDER BY subroute_stops.idx ASC
     )
     .fetch_all(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), subroute_id);
+        Error::DatabaseExecution
+    })?;
 
     // Check for the difference from stored to future
     let stored_len = existing_query_res.len();
@@ -667,7 +729,10 @@ WHERE Subroute=$1 AND idx>=$2
         )
         .execute(&mut **transaction)
         .await
-        .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+        .map_err(|err| {
+            tracing::error!(error = err.to_string(), subroute_id, to_store_len);
+            Error::DatabaseExecution
+        })?
         .rows_affected();
 
         if deleted_rows != u64::from(stored_changes.unsigned_abs()) {
@@ -691,7 +756,15 @@ VALUES ($1, $2, $3)
             )
             .execute(&mut **transaction)
             .await
-            .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+            .map_err(|err| {
+                tracing::error!(
+                    error = err.to_string(),
+                    subroute_id,
+                    stop,
+                    index
+                );
+                Error::DatabaseExecution
+            })?;
         }
     };
 
@@ -713,7 +786,15 @@ WHERE  subroute=$2 AND idx=$3
             )
             .execute(&mut **transaction)
             .await
-            .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+            .map_err(|err| {
+                tracing::error!(
+                    error = err.to_string(),
+                    stop,
+                    subroute_id,
+                    index
+                );
+                Error::DatabaseExecution
+            })?;
         }
     }
     Ok(())
@@ -733,7 +814,10 @@ WHERE subroute=$1
     )
     .fetch_all(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), subroute_id);
+        Error::DatabaseExecution
+    })?
     .into_iter()
     .map(|r| r.stop)
     .collect())
@@ -757,7 +841,10 @@ WHERE departures.subroute = $1
     )
     .fetch_all(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), subroute_id);
+        Error::DatabaseExecution
+    })
 }
 
 pub(crate) async fn fetch_schedule(
@@ -779,7 +866,10 @@ ORDER BY time ASC
     )
     .fetch_all(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), route_id);
+        Error::DatabaseExecution
+    })?;
 
     let mut departures = vec![];
     for row in res {
@@ -815,7 +905,10 @@ WHERE departures.id = $1
     )
     .fetch_optional(executor)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), departure_id);
+        Error::DatabaseExecution
+    })
 }
 
 pub(crate) async fn insert_departure(
@@ -835,7 +928,15 @@ RETURNING id
     )
     .fetch_one(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(
+            error = err.to_string(),
+            subroute_id,
+            departure = departure.time,
+            calendar_id = departure.calendar_id
+        );
+        Error::DatabaseExecution
+    })?;
 
     Ok(routes::Departure {
         id: res.id,
@@ -864,7 +965,16 @@ WHERE id=$3 AND subroute=$4
     )
     .execute(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(
+            error = err.to_string(),
+            time = departure.time,
+            calendar_id = departure.calendar_id,
+            departure_id,
+            subroute_id
+        );
+        Error::DatabaseExecution
+    })?;
     Ok(())
 }
 
@@ -883,7 +993,10 @@ WHERE id=$1 AND subroute=$2
     )
     .execute(&mut **transaction)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), departure_id, subroute_id,);
+        Error::DatabaseExecution
+    })?;
     Ok(())
 }
 
@@ -903,7 +1016,10 @@ WHERE id = ($1) OR id = ($2)
     )
     .fetch_one(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), destination_id, original_id);
+        Error::DatabaseExecution
+    })?;
 
     if res.cnt != Some(2) {
         return Err(Error::ValidationFailure("Invalid stop id".to_string()));
@@ -920,6 +1036,9 @@ WHERE stop=$2
     )
     .execute(pool)
     .await
-    .map_err(|err| Error::DatabaseExecution(err.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), destination_id, original_id);
+        Error::DatabaseExecution
+    })?;
     Ok(())
 }
