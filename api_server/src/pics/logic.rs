@@ -16,6 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+use std::ffi::OsStr;
 use std::io::{BufReader, Cursor};
 
 use bytes::Bytes;
@@ -237,7 +238,10 @@ async fn upload_picture_to_storage(
     );
 
     let medium_img_webp = webp::Encoder::from_image(&medium_img)
-        .map_err(|err| Error::Processing(err.to_string()))?
+        .map_err(|err| {
+            tracing::error!(err);
+            Error::Processing
+        })?
         .encode(MEDIUM_IMG_MAX_QUALITY)
         .to_vec();
     // TODO handle status codes
@@ -248,7 +252,10 @@ async fn upload_picture_to_storage(
             "image/webp",
         )
         .await
-        .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?;
+        .map_err(|err| {
+            tracing::error!("Object storage failure: {err}");
+            Error::ObjectStorageFailure
+        })?;
 
     let thumbnail_img = original_img.resize(
         THUMBNAIL_MAX_WIDTH,
@@ -256,7 +263,10 @@ async fn upload_picture_to_storage(
         image::imageops::FilterType::CatmullRom,
     );
     let thumbnail_img_webp = webp::Encoder::from_image(&thumbnail_img)
-        .map_err(|err| Error::Processing(err.to_string()))?
+        .map_err(|err| {
+            tracing::error!(err);
+            Error::Processing
+        })?
         .encode(THUMBNAIL_MAX_QUALITY)
         .to_vec();
     let _status_code = bucket
@@ -266,7 +276,10 @@ async fn upload_picture_to_storage(
             "image/webp",
         )
         .await
-        .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?;
+        .map_err(|err| {
+            tracing::error!("Object storage failure: {err}");
+            Error::ObjectStorageFailure
+        })?;
 
     let _status_code = if let Some(mime) = original_img_mime.first() {
         bucket
@@ -276,12 +289,18 @@ async fn upload_picture_to_storage(
                 mime.as_ref(),
             )
             .await
-            .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?
+            .map_err(|err| {
+                tracing::error!("Object storage failure: {err}");
+                Error::ObjectStorageFailure
+            })?
     } else {
         bucket
             .put_object(format!("/ori/{hex_hash}"), content.as_ref())
             .await
-            .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?
+            .map_err(|err| {
+                tracing::error!("Object storage failure: {err}");
+                Error::ObjectStorageFailure
+            })?
     };
 
     Ok(())
@@ -294,15 +313,24 @@ async fn delete_picture_from_storage(
     bucket
         .delete_object(format!("/thumb/{hex_hash}"))
         .await
-        .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?;
+        .map_err(|err| {
+            tracing::error!("Object storage failure: {err}");
+            Error::ObjectStorageFailure
+        })?;
     bucket
         .delete_object(format!("/medium/{hex_hash}"))
         .await
-        .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?;
+        .map_err(|err| {
+            tracing::error!("Object storage failure: {err}");
+            Error::ObjectStorageFailure
+        })?;
     bucket
         .delete_object(format!("/ori/{hex_hash}"))
         .await
-        .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?;
+        .map_err(|err| {
+            tracing::error!("Object storage failure: {err}");
+            Error::ObjectStorageFailure
+        })?;
 
     Ok(())
 }
@@ -343,7 +371,8 @@ pub(crate) async fn upload_pano_picture(
         exif::Reader::new()
             .read_from_container(&mut source_buffer)
             .map_err(|e| {
-                Error::Processing(format!("Panorama exif error: {e}"))
+                tracing::error!("Panorama exif error: {e}");
+                Error::Processing
             })?,
     );
 
@@ -403,7 +432,10 @@ async fn upload_pano_to_storage(
             mime::IMAGE_JPEG.as_ref(),
         )
         .await
-        .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?;
+        .map_err(|err| {
+            tracing::error!("Object storage failure: {err}");
+            Error::ObjectStorageFailure
+        })?;
 
     Ok(())
 }
@@ -446,10 +478,7 @@ pub(crate) async fn upload_operator_logo(
         })?;
         let _ = svg::read(&svg_data)
             .map_err(|err| Error::ValidationFailure(err.to_string()))?;
-    } else if ext.eq_ignore_ascii_case("png")
-        || ext.eq_ignore_ascii_case("jpg")
-        || ext.eq_ignore_ascii_case("webp")
-    {
+    } else if is_supported_raster_ext(ext) {
         // Ensure it is valid
         let _ = image::load_from_memory(content.as_ref())
             .map_err(|err| Error::ValidationFailure(err.to_string()))?;
@@ -457,9 +486,10 @@ pub(crate) async fn upload_operator_logo(
         return Err(Error::DependenciesNotMet);
     }
 
-    let mime = mime_guess::from_path(path)
-        .first()
-        .expect("Unable to deduce MIME despite whitelist");
+    let mime = mime_guess::from_path(path).first().ok_or_else(|| {
+        tracing::error!("Unable to deduce MIME despite whitelist");
+        Error::Processing
+    })?;
 
     upload_operator_pic_to_storage(
         bucket,
@@ -486,7 +516,7 @@ pub(crate) async fn upload_operator_logo(
             delete_operator_pic_from_storage(bucket, &hex_hash, operator_id)
                 .await;
         if let Err(storage_err) = storage_res {
-            eprintln!(
+            tracing::error!(
                 "Reversion failure.\
                 {hex_hash} was stored into opr. {operator_id}.\
                 Database threw: {db_err}. Storage threw: {storage_err}"
@@ -517,7 +547,10 @@ async fn upload_operator_pic_to_storage(
             mime,
         )
         .await
-        .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?;
+        .map_err(|err| {
+            tracing::error!("Object storage failure: {err}");
+            Error::ObjectStorageFailure
+        })?;
 
     Ok(())
 }
@@ -530,7 +563,10 @@ async fn delete_operator_pic_from_storage(
     bucket
         .delete_object(format!("/operators/{operator_id}/{hex_hash}"))
         .await
-        .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?;
+        .map_err(|err| {
+            tracing::error!("Object storage failure: {err}");
+            Error::ObjectStorageFailure
+        })?;
 
     Ok(())
 }
@@ -563,21 +599,14 @@ pub(crate) async fn upload_news_item_img(
     let path = std::path::Path::new(&filename);
     let ext = path.extension().ok_or(Error::DependenciesNotMet)?;
 
-    // Ensure valid
-    if ext.eq_ignore_ascii_case("png")
-        || ext.eq_ignore_ascii_case("jpg")
-        || ext.eq_ignore_ascii_case("webp")
-    {
-        // Ensure it is valid
-        let _ = image::load_from_memory(content.as_ref())
-            .map_err(|err| Error::ValidationFailure(err.to_string()))?;
-    } else {
-        return Err(Error::DependenciesNotMet);
+    if !is_supported_raster(ext, content) {
+        return Err(Error::ValidationFailure("Unsupported image".to_string()));
     }
 
-    let mime = mime_guess::from_path(path)
-        .first()
-        .expect("Unable to deduce MIME despite whitelist");
+    let mime = mime_guess::from_path(path).first().ok_or_else(|| {
+        tracing::error!("Unable to deduce MIME despite whitelist");
+        Error::Processing
+    })?;
 
     upload_news_img_to_storage(bucket, content, &hex_hash, mime.as_ref())
         .await?;
@@ -589,7 +618,7 @@ pub(crate) async fn upload_news_item_img(
     if let Err(db_err) = db_res {
         let storage_res = delete_news_img_from_storage(bucket, &hex_hash).await;
         if let Err(storage_err) = storage_res {
-            eprintln!(
+            tracing::error!(
                 "Reversion failure.\
                 {hex_hash} was stored into news_item. {item_id}.\
                 Database threw: {db_err}. Storage threw: {storage_err}"
@@ -619,7 +648,10 @@ async fn upload_news_img_to_storage(
             mime,
         )
         .await
-        .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?;
+        .map_err(|err| {
+            tracing::error!("Object storage failure: {err}");
+            Error::ObjectStorageFailure
+        })?;
 
     Ok(())
 }
@@ -631,7 +663,10 @@ async fn delete_news_img_from_storage(
     bucket
         .delete_object(format!("/news/{hex_hash}"))
         .await
-        .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?;
+        .map_err(|err| {
+            tracing::error!("Object storage failure: {err}");
+            Error::ObjectStorageFailure
+        })?;
 
     Ok(())
 }
@@ -664,21 +699,14 @@ pub(crate) async fn upload_external_news_item_img(
     let path = std::path::Path::new(&filename);
     let ext = path.extension().ok_or(Error::DependenciesNotMet)?;
 
-    // Ensure valid
-    if ext.eq_ignore_ascii_case("png")
-        || ext.eq_ignore_ascii_case("jpg")
-        || ext.eq_ignore_ascii_case("webp")
-    {
-        // Ensure it is valid
-        let _ = image::load_from_memory(content.as_ref())
-            .map_err(|err| Error::ValidationFailure(err.to_string()))?;
-    } else {
-        return Err(Error::DependenciesNotMet);
+    if !is_supported_raster(ext, content) {
+        return Err(Error::ValidationFailure("Unsupported image".to_string()));
     }
 
-    let mime = mime_guess::from_path(path)
-        .first()
-        .expect("Unable to deduce MIME despite whitelist");
+    let mime = mime_guess::from_path(path).first().ok_or_else(|| {
+        tracing::error!("Unable to deduce MIME despite whitelist");
+        Error::Processing
+    })?;
 
     upload_external_news_img_to_storage(
         bucket,
@@ -700,7 +728,7 @@ pub(crate) async fn upload_external_news_item_img(
         let storage_res =
             delete_external_news_img_from_storage(bucket, &hex_hash).await;
         if let Err(storage_err) = storage_res {
-            eprintln!(
+            tracing::error!(
                 "Reversion failure.\
                 {hex_hash} was stored into news_item. {item_id}.\
                 Database threw: {db_err}. Storage threw: {storage_err}"
@@ -730,7 +758,10 @@ async fn upload_external_news_img_to_storage(
             mime,
         )
         .await
-        .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?;
+        .map_err(|err| {
+            tracing::error!("Object storage failure: {err}");
+            Error::ObjectStorageFailure
+        })?;
 
     Ok(())
 }
@@ -742,7 +773,10 @@ async fn delete_external_news_img_from_storage(
     bucket
         .delete_object(format!("/enews/{hex_hash}"))
         .await
-        .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?;
+        .map_err(|err| {
+            tracing::error!("Object storage failure: {err}");
+            Error::ObjectStorageFailure
+        })?;
 
     Ok(())
 }
@@ -778,21 +812,14 @@ pub(crate) async fn upload_news_item_screenshot(
     let path = std::path::Path::new(&filename);
     let ext = path.extension().ok_or(Error::DependenciesNotMet)?;
 
-    // Ensure valid
-    if ext.eq_ignore_ascii_case("png")
-        || ext.eq_ignore_ascii_case("jpg")
-        || ext.eq_ignore_ascii_case("webp")
-    {
-        // Ensure it is valid
-        let _ = image::load_from_memory(content.as_ref())
-            .map_err(|err| Error::ValidationFailure(err.to_string()))?;
-    } else {
-        return Err(Error::DependenciesNotMet);
+    if !is_supported_raster(ext, content) {
+        return Err(Error::ValidationFailure("Unsupported image".to_string()));
     }
 
-    let mime = mime_guess::from_path(path)
-        .first()
-        .expect("Unable to deduce MIME despite whitelist");
+    let mime = mime_guess::from_path(path).first().ok_or_else(|| {
+        tracing::error!("Unable to deduce MIME despite whitelist");
+        Error::Processing
+    })?;
 
     upload_external_news_item_screenshot_to_storage(
         bucket,
@@ -815,7 +842,7 @@ pub(crate) async fn upload_news_item_screenshot(
         )
         .await;
         if let Err(storage_err) = storage_res {
-            eprintln!(
+            tracing::error!(
                 "Reversion failure.\
                 {hex_hash} was stored into news_item_ss. {item_id}.\
                 Database threw: {db_err}. Storage threw: {storage_err}"
@@ -851,7 +878,10 @@ async fn upload_external_news_item_screenshot_to_storage(
             mime,
         )
         .await
-        .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?;
+        .map_err(|err| {
+            tracing::error!("Object storage failure: {err}");
+            Error::ObjectStorageFailure
+        })?;
 
     Ok(())
 }
@@ -863,7 +893,10 @@ async fn delete_external_news_item_screenshot_from_storage(
     bucket
         .delete_object(format!("/enews_ss/{hex_hash}"))
         .await
-        .map_err(|err| Error::ObjectStorageFailure(err.to_string()))?;
+        .map_err(|err| {
+            tracing::error!("Object storage failure: {err}");
+            Error::ObjectStorageFailure
+        })?;
 
     Ok(())
 }

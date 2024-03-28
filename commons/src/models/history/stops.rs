@@ -350,11 +350,11 @@ impl TryFrom<Stop> for current::Stop {
             street: stop.street,
             door: stop.door,
             parish: stop.parish,
-            lat: stop.lat.ok_or_else(|| Error::PatchingFailure {
+            lat: stop.lat.ok_or_else(|| Error::Patching {
                 field: "lat",
                 value: "None".to_string(),
             })?,
-            lon: stop.lon.ok_or_else(|| Error::PatchingFailure {
+            lon: stop.lon.ok_or_else(|| Error::Patching {
                 field: "lon",
                 value: "None".to_string(),
             })?,

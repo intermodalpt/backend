@@ -736,9 +736,12 @@ WHERE Subroute=$1 AND idx>=$2
         .rows_affected();
 
         if deleted_rows != u64::from(stored_changes.unsigned_abs()) {
-            return Err(Error::Processing(
-                "Detected an unexpected amount of rows".to_string(),
-            ));
+            tracing::error!(
+                msg = "Detected an unexpected amount of rows",
+                deleted_rows,
+                stored_changes
+            );
+            return Err(Error::DatabaseExecution);
         }
     } else if stored_changes > 0 {
         let additional_entries = to_stops.iter().skip(stored_len).enumerate();

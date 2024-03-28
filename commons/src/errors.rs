@@ -16,11 +16,18 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#[derive(Debug)]
+use thiserror::Error;
+
+#[derive(Debug, Error)]
 pub enum Error {
-    DownloadFailure(String),
-    FilesystemFailure(String),
-    ExtractionFailure(String),
-    PatchingFailure { field: &'static str, value: String },
+    #[error("Unable to download: `{0}`")]
+    Download(String),
+    #[error("Filesystem: `{0}`")]
+    Filesystem(String),
+    #[error("Unable to extract content: `{0}`")]
+    Extraction(String),
+    #[error("Patching failure: field `{field}` does not accept value `{value}`")]
+    Patching { field: &'static str, value: String },
+    #[error("Unable to convert from old models`")]
     Conversion,
 }

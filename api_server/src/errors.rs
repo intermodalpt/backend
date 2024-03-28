@@ -27,6 +27,7 @@ use commons::models::pics::Resource;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {
+    // TODO this error variant can be deleted with sqlx wrappers
     #[error("Failed to deserialize data from the database")]
     DatabaseDeserialization,
     #[error("Requested data not in the storage")]
@@ -37,14 +38,20 @@ pub enum Error {
     DependenciesNotMet,
     #[error("The provided information failed validation:: `{0}`")]
     ValidationFailure(String),
-    #[error("The data could not be handled: `{0}`")]
-    Processing(String),
-    #[error("Unable to communicate with the storage: `{0}`")]
-    ObjectStorageFailure(String),
+    #[error("Data could not be handled")]
+    Processing,
+    #[error("Filesystem error")]
+    Filesystem,
+    #[error("Error manipulating incompatible data models")]
+    ModelCompatibility,
+    #[error("Error serializing data")]
+    Serialization,
+    #[error("Unable to communicate with the storage")]
+    ObjectStorageFailure,
     #[error("Unable to execute database transaction")]
     DatabaseExecution,
-    #[error("Unable to download file: `{0}`")]
-    DownloadFailure(String),
+    #[error("Unable to download an external resource")]
+    UpstreamResourceDownload,
     #[error("Attempted to duplicate resource`")]
     DuplicatedResource(Box<Resource>),
 }
@@ -67,9 +74,9 @@ impl IntoResponse for Error {
                 StatusCode::FAILED_DEPENDENCY,
                 message,
             ),
-            Error::ValidationFailure(_) => JsonErrorResponse::new_response(
+            Error::ValidationFailure(msg) => JsonErrorResponse::new_response(
                 StatusCode::BAD_REQUEST,
-                message,
+                msg,
             ),
             Error::DuplicatedResource(resource) => match *resource {
                 Resource::StopPic(pic) => {
@@ -89,14 +96,18 @@ impl IntoResponse for Error {
                     )
                 }
             },
-            Error::Processing(_)
-            | Error::ObjectStorageFailure(_)
-            | Error::DatabaseExecution
-            | Error::DownloadFailure(_) => {
-                eprintln!("{:?}", &self);
+            Error::Processing | Error::UpstreamResourceDownload |
+            Error::Serialization | Error::Filesystem | Error::ModelCompatibility  => {
                 JsonErrorResponse::new_response(
                     StatusCode::INTERNAL_SERVER_ERROR,
                     "The server had an internal error".to_string(),
+                )
+            }
+            Error::ObjectStorageFailure
+            | Error::DatabaseExecution => {
+                JsonErrorResponse::new_response(
+                    StatusCode::SERVICE_UNAVAILABLE,
+                    "The server is unable to complete the request at the moment".to_string(),
                 )
             }
         }
@@ -106,23 +117,14 @@ impl IntoResponse for Error {
 impl From<commons::errors::Error> for Error {
     fn from(e: commons::errors::Error) -> Self {
         match e {
-            commons::errors::Error::DownloadFailure(msg) => {
-                Error::DownloadFailure(msg)
+            commons::errors::Error::Download(_) => {
+                Error::UpstreamResourceDownload
             }
-            commons::errors::Error::ExtractionFailure(msg) => {
-                Error::Processing(format!("Extraction failure: {msg}"))
-            }
-            commons::errors::Error::FilesystemFailure(msg) => {
-                Error::Processing(msg)
-            }
-            commons::errors::Error::Conversion => Error::Processing(
-                "Error converting now-incompatible historical object"
-                    .to_string(),
-            ),
-            commons::errors::Error::PatchingFailure { field, value } => {
-                Error::Processing(format!(
-                    "Patching failure: field `{field}` does not accept value `{value}`"
-                ))
+            commons::errors::Error::Extraction(_) => Error::Processing,
+            commons::errors::Error::Filesystem(_) => Error::Filesystem,
+            commons::errors::Error::Conversion
+            | commons::errors::Error::Patching { .. } => {
+                Error::ModelCompatibility
             }
         }
     }

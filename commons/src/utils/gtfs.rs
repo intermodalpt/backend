@@ -88,17 +88,17 @@ pub fn extract(
     output_dir: &str,
 ) -> Result<chrono::DateTime<chrono::Utc>, Error> {
     let file = fs::File::open(zip_file)
-        .map_err(|e| Error::FilesystemFailure(e.to_string()))?;
+        .map_err(|e| Error::Filesystem(e.to_string()))?;
 
     let mut archive = zip::ZipArchive::new(file)
-        .map_err(|e| Error::ExtractionFailure(e.to_string()))?;
+        .map_err(|e| Error::Extraction(e.to_string()))?;
 
     let mut last_modification_date = chrono::DateTime::default();
 
     for i in 0..archive.len() {
         let mut file = archive
             .by_index(i)
-            .map_err(|e| Error::ExtractionFailure(e.to_string()))?;
+            .map_err(|e| Error::Extraction(e.to_string()))?;
 
         let file_path = match file.enclosed_name() {
             Some(path) => path.to_owned(),
@@ -123,7 +123,7 @@ pub fn extract(
         if (*file.name()).ends_with('/') {
             println!("File {} extracted to \"{}\"", i, output_dir.display());
             fs::create_dir_all(&output_dir)
-                .map_err(|e| Error::FilesystemFailure(e.to_string()))?;
+                .map_err(|e| Error::Filesystem(e.to_string()))?;
         } else {
             println!(
                 "File {} extracted to \"{}\" ({} bytes)",
@@ -134,13 +134,13 @@ pub fn extract(
             if let Some(p) = output_dir.parent() {
                 if !p.exists() {
                     fs::create_dir_all(p)
-                        .map_err(|e| Error::FilesystemFailure(e.to_string()))?;
+                        .map_err(|e| Error::Filesystem(e.to_string()))?;
                 }
             }
             let mut outfile = fs::File::create(&output_dir)
-                .map_err(|e| Error::FilesystemFailure(e.to_string()))?;
+                .map_err(|e| Error::Filesystem(e.to_string()))?;
             io::copy(&mut file, &mut outfile)
-                .map_err(|e| Error::FilesystemFailure(e.to_string()))?;
+                .map_err(|e| Error::Filesystem(e.to_string()))?;
         }
     }
     Ok(last_modification_date)
@@ -160,8 +160,8 @@ fn zip_datetime_to_chrono(
         u32::from(datetime.second()),
     );
 
-    let date = date.ok_or(Error::ExtractionFailure("Bad date".to_string()))?;
-    let time = time.ok_or(Error::ExtractionFailure("Bad time".to_string()))?;
+    let date = date.ok_or(Error::Extraction("Bad date".to_string()))?;
+    let time = time.ok_or(Error::Extraction("Bad time".to_string()))?;
 
     Ok(chrono::NaiveDateTime::new(date, time).and_utc())
 }

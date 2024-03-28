@@ -44,8 +44,12 @@ pub(crate) async fn login(
         .await?
         .ok_or(Error::Forbidden)?;
 
-    let parsed_hash = PasswordHash::new(&user.password).map_err(|_err| {
-        Error::Processing("Unable to parse existing hash".to_string())
+    let parsed_hash = PasswordHash::new(&user.password).map_err(|err| {
+        tracing::error!(
+            msg="Unable to parse existing hash",
+            err=?err,
+            username=request.username);
+        Error::Processing
     })?;
 
     Pbkdf2
@@ -95,8 +99,9 @@ pub(crate) async fn is_user_password(
         .await?
         .ok_or(Error::NotFoundUpstream)?;
 
-    let parsed_hash = PasswordHash::new(&user.password).map_err(|_err| {
-        Error::Processing("Unable to parse existing hash".to_string())
+    let parsed_hash = PasswordHash::new(&user.password).map_err(|err| {
+        tracing::error!(msg="Unable to parse existing hash", err=?err, username);
+        Error::Processing
     })?;
 
     Ok(Pbkdf2
@@ -108,8 +113,9 @@ fn gen_kdf_password_string(password: &str) -> Result<String, Error> {
     let salt = SaltString::generate(&mut OsRng);
     Ok(Pbkdf2
         .hash_password(password.as_bytes(), &salt)
-        .map_err(|_err| {
-            Error::Processing("Unable to hash password".to_string())
+        .map_err(|err| {
+            tracing::error!(msg="Unable to hash password", err=?err);
+            Error::Processing
         })?
         .to_string())
 }
@@ -271,7 +277,10 @@ pub(crate) fn encode_claims(claims: &models::Claims) -> Result<String, Error> {
             SECRET_KEY.get().unwrap().as_ref(),
         ),
     )
-    .map_err(|_err| Error::Processing("Failed to encode JWT".to_string()))
+    .map_err(|err| {
+        tracing::error!("Failed to encode JWT: {err}");
+        Error::Processing
+    })
 }
 
 pub(crate) fn decode_claims(jwt: &str) -> Result<models::Claims, Error> {

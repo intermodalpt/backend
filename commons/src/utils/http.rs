@@ -27,7 +27,7 @@ pub async fn download_file(
 ) -> Result<(), Error> {
     let resp = reqwest::get(url)
         .await
-        .map_err(|e| Error::DownloadFailure(e.to_string()))?;
+        .map_err(|e| Error::Download(e.to_string()))?;
 
     // TODO This implementation is fragile at best. Improve it.
 
@@ -35,7 +35,7 @@ pub async fn download_file(
         if let Some(max_content_len) = max_content_len {
             if let Some(content_len) = resp.content_length() {
                 if content_len > max_content_len as u64 {
-                    return Err(Error::DownloadFailure(
+                    return Err(Error::Download(
                         "Max content len exceeded".to_string(),
                     ));
                 }
@@ -45,17 +45,17 @@ pub async fn download_file(
         let mut content = Cursor::new(
             resp.bytes()
                 .await
-                .map_err(|e| Error::DownloadFailure(e.to_string()))?,
+                .map_err(|e| Error::Download(e.to_string()))?,
         );
 
         let mut file = std::fs::File::create(output)
-            .map_err(|e| Error::FilesystemFailure(e.to_string()))?;
+            .map_err(|e| Error::Filesystem(e.to_string()))?;
         std::io::copy(&mut content, &mut file)
-            .map_err(|e| Error::FilesystemFailure(e.to_string()))?;
+            .map_err(|e| Error::Filesystem(e.to_string()))?;
 
         Ok(())
     } else {
-        Err(Error::DownloadFailure(format!(
+        Err(Error::Download(format!(
             "Unexpected return code: {}",
             resp.status()
         )))

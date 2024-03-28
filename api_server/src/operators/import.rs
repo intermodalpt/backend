@@ -66,8 +66,14 @@ pub(crate) fn get_operator_storage_meta(
 
     let meta = if meta_path.exists() {
         let meta: OperatorStorageMeta = serde_json::from_reader(
-            fs::File::open(meta_path)
-                .map_err(|e| Error::Processing(e.to_string()))?,
+            fs::File::open(&meta_path).map_err(|err| {
+                tracing::error!(
+                    msg = "Filesystem error",
+                    err=?err,
+                    meta_path=?meta_path
+                );
+                Error::Filesystem
+            })?,
         )
         .unwrap_or_default();
         meta
@@ -80,11 +86,16 @@ pub(crate) fn get_operator_storage_meta(
             }
         }
         serde_json::to_writer(
-            fs::File::create(meta_path)
-                .map_err(|e| Error::Processing(e.to_string()))?,
+            fs::File::create(&meta_path).map_err(|err| {
+                tracing::error!(msg = "Filesystem error", err=?err);
+                Error::Filesystem
+            })?,
             &meta,
         )
-        .map_err(|e| Error::Processing(e.to_string()))?;
+        .map_err(|err| {
+            tracing::error!(msg="Unable to serialize meta to file", err=?err);
+            Error::Serialization
+        })?;
         meta
     };
     Ok(meta)
@@ -103,11 +114,25 @@ pub(crate) fn set_operator_storage_meta(
         }
     }
     serde_json::to_writer(
-        fs::File::create(meta_path)
-            .map_err(|e| Error::Processing(e.to_string()))?,
+        fs::File::create(&meta_path).map_err(|err| {
+            tracing::error!(
+                msg="Unable to create file",
+                err=?err,
+                meta_path=?meta_path
+            );
+            Error::Filesystem
+        })?,
         &meta,
     )
-    .map_err(|e| Error::Processing(e.to_string()))?;
+    .map_err(|err| {
+        tracing::error!(
+            msg="Unable to serialize data to file",
+            err=?err,
+            meta=?meta,
+            meta_path=?meta_path
+        );
+        Error::Serialization
+    })?;
     Ok(())
 }
 
@@ -125,23 +150,37 @@ pub(crate) async fn update_operator_gtfs(
 
             let version_date =
                 git::update_repo(url, &path, remote_name, remote_branch)
-                    .map_err(Error::Processing)?;
+                    .map_err(|err| {
+                        tracing::error!(err=?err);
+                        Error::Processing
+                    })?;
 
             if meta.last_gtfs != Some(version_date) {
                 meta.last_gtfs = Some(version_date);
-                let _ = gtfs_utils::extract(
+                gtfs_utils::extract(
                     &format!(
                         "./data/operators/{operator_id}/gtfsrepo/CarrisMetropolitana.zip"
                     ),
                     &format!("./data/operators/{operator_id}/gtfs"),
-                );
+                ).inspect_err(|err| {
+                    tracing::error!(msg="Failure extracting GTFS", operator_id, err=?err)
+                })?;
             }
         }
         "carris" => {
             let path = format!("./data/operators/{operator_id}/gtfs.zip");
             let url = "https://gateway.carris.pt/gateway/gtfs/api/v2.11/GTFS";
 
-            http::download_file(url, &path, None).await?;
+            http::download_file(url, &path, None)
+                .await
+                .inspect_err(|err| {
+                    tracing::error!(
+                        msg="Failed to download file",
+                        err=?err,
+                        url,
+                        path
+                    );
+                })?;
 
             let newest_file = gtfs_utils::extract(
                 &format!("./data/operators/{operator_id}/gtfs.zip"),
@@ -165,7 +204,7 @@ pub(crate) async fn update_operator_gtfs(
             fetch_transporlis_feed(&mut meta, operator_id, 13).await?;
         }
         _ => {
-            eprintln!("Unknown operator tag: {}", operator.tag);
+            tracing::warn!("Unknown operator tag: '{operator_tag}'");
         }
     }
 
@@ -184,12 +223,23 @@ async fn fetch_transporlis_feed(
             trp_opendata/ajax/downloadFile.ashx?op={transporlis_id}&u=web"
     );
 
-    http::download_file(&url, &path, None).await?;
+    http::download_file(&url, &path, None)
+        .await
+        .inspect_err(|err| {
+            tracing::error!(
+                msg="Failed to download file",
+                err=?err,
+                url,
+                path
+            );
+        })?;
 
     let newest_file = gtfs_utils::extract(
         &format!("./data/operators/{operator_id}/gtfs.zip"),
         &format!("./data/operators/{operator_id}/gtfs"),
-    )?;
+    ).inspect_err(|err| {
+        tracing::error!(msg="Failure extracting GTFS", operator_id, err=?err)
+    })?;
     meta.last_gtfs = Some(newest_file);
     Ok(())
 }
