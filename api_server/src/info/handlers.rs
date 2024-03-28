@@ -190,3 +190,12 @@ pub(crate) async fn get_external_news_source_known_urls(
         sql::fetch_external_news_source_urls(&state.pool, &source).await?,
     ))
 }
+pub(crate) async fn get_external_news_source_dump(
+    State(state): State<AppState>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    Path(source): Path<String>,
+) -> Result<Json<Vec<responses::SourceExternalNewsItem>>, Error> {
+    Ok(Json(
+        sql::fetch_external_news_source_dump(&state.pool, &source).await?,
+    ))
+}

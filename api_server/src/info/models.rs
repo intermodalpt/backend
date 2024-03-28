@@ -27,7 +27,7 @@ pub struct ExternalNewsImage {
 }
 
 pub(crate) mod responses {
-    use chrono::{DateTime, Local};
+    use chrono::{DateTime, Local, Utc};
     use serde::Serialize;
     use sqlx::types::JsonValue;
 
@@ -102,6 +102,30 @@ pub(crate) mod responses {
 
         pub images: Vec<FullExternalNewsImage>,
         pub screenshot_url: Option<String>,
+    }
+
+    /// An item as sourced
+    #[derive(Debug, Serialize)]
+    pub struct SourceExternalNewsItem {
+        pub id: i32,
+
+        pub title: Option<String>,
+        pub summary: Option<String>,
+        pub author: Option<String>,
+
+        pub prepro_content_md: Option<String>,
+        pub prepro_content_text: Option<String>,
+
+        pub operator_id: Option<i32>,
+
+        pub publish_datetime: DateTime<Utc>,
+        pub edit_datetime: Option<DateTime<Utc>>,
+
+        pub source: String,
+        pub url: Option<String>,
+        pub raw: JsonValue,
+
+        pub is_partial: bool,
     }
 
     #[derive(Serialize, Debug)]

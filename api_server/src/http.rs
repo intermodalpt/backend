@@ -463,6 +463,10 @@ pub fn build_paths(state: AppState) -> Router {
             get(info::handlers::get_external_news_source_known_urls),
         )
         .route(
+            "/v1/news/external/:source/dump",
+            get(info::handlers::get_external_news_source_dump),
+        )
+        .route(
             "/v1/osm/stops",
             get(osm::handlers::get_osm_stops)
                 .patch(osm::handlers::patch_osm_stops),

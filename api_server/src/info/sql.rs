@@ -580,3 +580,26 @@ WHERE source=$1
     .filter_map(|row| row.url)
     .collect())
 }
+
+pub(crate) async fn fetch_external_news_source_dump(
+    pool: &PgPool,
+    source: &str,
+) -> Result<Vec<responses::SourceExternalNewsItem>> {
+    sqlx::query_as!(
+        responses::SourceExternalNewsItem,
+        r#"
+SELECT id, operator_id, title, summary, author,
+    prepro_content_md, prepro_content_text,
+    publish_datetime, edit_datetime, source, url, is_partial, raw
+FROM external_news_items
+WHERE source=$1
+"#,
+        source,
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), source);
+        Error::DatabaseExecution
+    })
+}

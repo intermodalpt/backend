@@ -1,0 +1,94 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT id, operator_id, title, summary, author,\n    prepro_content_md, prepro_content_text,\n    publish_datetime, edit_datetime, source, url, is_partial, raw\nFROM external_news_items\nWHERE source=$1\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "operator_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "title",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "summary",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "author",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "prepro_content_md",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "prepro_content_text",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "publish_datetime",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 8,
+        "name": "edit_datetime",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 9,
+        "name": "source",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 10,
+        "name": "url",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 11,
+        "name": "is_partial",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 12,
+        "name": "raw",
+        "type_info": "Jsonb"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      true,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "5c4b26335453a7bf612fb8c34ecc532cefd00577649ca5f807fd2f20d45b2892"
+}
