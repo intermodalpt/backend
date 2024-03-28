@@ -163,7 +163,11 @@ pub(crate) async fn update_operator_gtfs(
                     ),
                     &format!("./data/operators/{operator_id}/gtfs"),
                 ).inspect_err(|err| {
-                    tracing::error!(msg="Failure extracting GTFS", operator_id, err=?err)
+                    tracing::error!(
+                        msg="Failure extracting GTFS",
+                        operator_id,
+                        err=?err
+                    );
                 })?;
             }
         }
@@ -237,8 +241,9 @@ async fn fetch_transporlis_feed(
     let newest_file = gtfs_utils::extract(
         &format!("./data/operators/{operator_id}/gtfs.zip"),
         &format!("./data/operators/{operator_id}/gtfs"),
-    ).inspect_err(|err| {
-        tracing::error!(msg="Failure extracting GTFS", operator_id, err=?err)
+    )
+    .inspect_err(|err| {
+        tracing::error!(msg="Failure extracting GTFS", operator_id, err=?err);
     })?;
     meta.last_gtfs = Some(newest_file);
     Ok(())

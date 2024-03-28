@@ -220,6 +220,7 @@ pub(crate) mod responses {
     use commons::models::history;
 
     #[derive(Serialize)]
+    #[allow(clippy::struct_field_names)]
     pub struct Contribution {
         #[serde(flatten)]
         pub contribution: history::Contribution,

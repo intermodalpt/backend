@@ -665,7 +665,11 @@ ORDER BY subroutes.id ASC, subroute_stops.idx ASC
     Ok(subroute_stops)
 }
 
-#[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+#[allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::comparison_chain
+)]
 pub(crate) async fn update_subroute_stops(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     subroute_id: i32,

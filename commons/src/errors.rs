@@ -26,7 +26,9 @@ pub enum Error {
     Filesystem(String),
     #[error("Unable to extract content: `{0}`")]
     Extraction(String),
-    #[error("Patching failure: field `{field}` does not accept value `{value}`")]
+    #[error(
+        "Patching failure: field `{field}` does not accept value `{value}`"
+    )]
     Patching { field: &'static str, value: String },
     #[error("Unable to convert from old models`")]
     Conversion,

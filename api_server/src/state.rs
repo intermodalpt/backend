@@ -23,6 +23,7 @@ use sqlx::PgPool;
 
 use crate::gtfs;
 
+#[allow(clippy::module_name_repetitions)]
 pub type AppState = Arc<State>;
 
 pub struct State {

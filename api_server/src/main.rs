@@ -120,7 +120,8 @@ async fn main() {
 
     let addr = SocketAddr::from((
         [0, 0, 0, 0],
-        settings.get_int("port").expect("port not set") as u16,
+        u16::try_from(settings.get_int("port").expect("port not set"))
+            .expect("Illegal port"),
     ));
 
     let listener = match TcpListener::bind(&addr).await {

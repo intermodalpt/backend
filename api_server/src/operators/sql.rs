@@ -835,48 +835,17 @@ pub(crate) async fn update_issue(
         Error::DatabaseExecution
     })?;
 
-    sqlx::query!(
-        r#"
-        DELETE FROM issue_routes
-        WHERE issue_id = $1
-        "#,
-        issue_id
-    )
-    .execute(&mut **transaction)
-    .await
-    .map_err(|err| {
-        tracing::error!(error = err.to_string(), issue_id = issue_id);
-        Error::DatabaseExecution
-    })?;
+    delete_issue_related(transaction, issue_id).await?;
+    insert_issue_related(transaction, issue_id, issue).await?;
 
-    sqlx::query!(
-        r#"
-        DELETE FROM issue_stops
-        WHERE issue_id = $1
-        "#,
-        issue_id
-    )
-    .execute(&mut **transaction)
-    .await
-    .map_err(|err| {
-        tracing::error!(error = err.to_string(), issue_id = issue_id);
-        Error::DatabaseExecution
-    })?;
+    Ok(())
+}
 
-    sqlx::query!(
-        r#"
-        DELETE FROM issue_pics
-        WHERE issue_id = $1
-        "#,
-        issue_id
-    )
-    .execute(&mut **transaction)
-    .await
-    .map_err(|err| {
-        tracing::error!(error = err.to_string(), issue_id = issue_id);
-        Error::DatabaseExecution
-    })?;
-
+async fn insert_issue_related(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    issue_id: i32,
+    issue: requests::ChangeIssue,
+) -> Result<()> {
     for operator_id in &issue.operator_ids {
         sqlx::query!(
             r#"
@@ -960,6 +929,55 @@ pub(crate) async fn update_issue(
             Error::DatabaseExecution
         })?;
     }
+
+    Ok(())
+}
+
+async fn delete_issue_related(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    issue_id: i32,
+) -> Result<()> {
+    sqlx::query!(
+        r#"
+        DELETE FROM issue_routes
+        WHERE issue_id = $1
+        "#,
+        issue_id
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), issue_id = issue_id);
+        Error::DatabaseExecution
+    })?;
+
+    sqlx::query!(
+        r#"
+        DELETE FROM issue_stops
+        WHERE issue_id = $1
+        "#,
+        issue_id
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), issue_id = issue_id);
+        Error::DatabaseExecution
+    })?;
+
+    sqlx::query!(
+        r#"
+        DELETE FROM issue_pics
+        WHERE issue_id = $1
+        "#,
+        issue_id
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), issue_id = issue_id);
+        Error::DatabaseExecution
+    })?;
 
     Ok(())
 }
