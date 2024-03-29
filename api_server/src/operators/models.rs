@@ -59,9 +59,8 @@ pub(crate) mod responses {
         pub official_name: Option<String>,
         pub stop_ref: Option<String>,
         pub source: String,
-        // TODO Why the option?
-        pub lat: Option<f64>,
-        pub lon: Option<f64>,
+        pub lat: f64,
+        pub lon: f64,
     }
 
     #[derive(Debug, Serialize)]
