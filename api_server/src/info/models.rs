@@ -36,7 +36,7 @@ pub(crate) mod responses {
     use crate::pics::get_external_news_img_path;
 
     #[derive(Debug, Serialize)]
-    pub struct OperatorNewsItem {
+    pub struct NewsItem {
         pub id: i32,
         pub title: String,
         pub summary: String,
@@ -44,11 +44,15 @@ pub(crate) mod responses {
         pub publish_datetime: DateTime<Local>,
         pub edit_datetime: Option<DateTime<Local>>,
         pub visible: bool,
+
+        pub operator_ids: Vec<i32>,
+        pub regions_ids: Vec<i32>,
     }
 
     #[derive(Debug, Serialize)]
     pub struct ExternalNewsItem {
         pub id: i32,
+        pub operator_ids: Vec<i32>,
 
         pub title: Option<String>,
         pub summary: Option<String>,
@@ -56,8 +60,6 @@ pub(crate) mod responses {
 
         pub content_md: Option<String>,
         pub content_text: Option<String>,
-
-        pub operator_id: Option<i32>,
 
         pub publish_datetime: DateTime<Local>,
         pub edit_datetime: Option<DateTime<Local>>,
@@ -86,8 +88,6 @@ pub(crate) mod responses {
         pub content_md: Option<String>,
         pub content_text: Option<String>,
 
-        pub operator_id: Option<i32>,
-
         pub publish_datetime: DateTime<Local>,
         pub edit_datetime: Option<DateTime<Local>>,
 
@@ -100,6 +100,7 @@ pub(crate) mod responses {
         pub is_relevant: Option<bool>,
         pub is_sensitive: bool,
 
+        pub operator_ids: Vec<i32>,
         pub images: Vec<FullExternalNewsImage>,
         pub screenshot_url: Option<String>,
     }
@@ -108,6 +109,7 @@ pub(crate) mod responses {
     #[derive(Debug, Serialize)]
     pub struct SourceExternalNewsItem {
         pub id: i32,
+        pub operator_ids: Vec<i32>,
 
         pub title: Option<String>,
         pub summary: Option<String>,
@@ -115,8 +117,6 @@ pub(crate) mod responses {
 
         pub prepro_content_md: Option<String>,
         pub prepro_content_text: Option<String>,
-
-        pub operator_id: Option<i32>,
 
         pub publish_datetime: DateTime<Utc>,
         pub edit_datetime: Option<DateTime<Utc>>,
@@ -156,12 +156,31 @@ pub(crate) mod responses {
 
 pub(crate) mod requests {
     use chrono::{DateTime, Local};
+    use commons::models::info::ContentBlock;
     use serde::Deserialize;
     use sqlx::types::JsonValue;
 
     #[derive(Debug, Deserialize)]
+    pub struct NewNewsItem {
+        pub title: Option<String>,
+        pub summary: Option<String>,
+        pub author_id: Option<i32>,
+        pub author_override: Option<String>,
+
+        pub content: Vec<ContentBlock>,
+
+        pub publish_datetime: DateTime<Local>,
+        pub edit_datetime: Option<DateTime<Local>>,
+
+        pub visible: bool,
+
+        pub operator_ids: Vec<i32>,
+        pub region_ids: Vec<i32>,
+    }
+
+    #[derive(Debug, Deserialize)]
     pub struct NewExternalNewsItem {
-        pub operator_id: Option<i32>,
+        pub operator_ids: Vec<i32>,
 
         pub title: Option<String>,
         pub summary: Option<String>,

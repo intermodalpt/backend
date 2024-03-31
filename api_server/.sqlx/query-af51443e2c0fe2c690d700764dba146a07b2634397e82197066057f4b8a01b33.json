@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT id, title, operator_id, summary,\n    content as \"content!: sqlx::types::Json<Vec<info::ContentBlock>>\",\n    publish_datetime, edit_datetime, visible\nFROM news_items\nWHERE operator_id=$1\nLIMIT $2 OFFSET $3\n",
+  "query": "\nSELECT id, title, summary,\n    array_remove(array_agg(operator_id), NULL) as \"operator_ids!: Vec<i32>\",\n    content as \"content!: sqlx::types::Json<Vec<info::ContentBlock>>\",\n    publish_datetime, edit_datetime, visible\nFROM news_items\nJOIN news_items_operators ON news_items.id=news_items_operators.item_id\nWHERE operator_id=$1\nGROUP BY news_items.id\nLIMIT $2 OFFSET $3\n",
   "describe": {
     "columns": [
       {
@@ -15,13 +15,13 @@
       },
       {
         "ordinal": 2,
-        "name": "operator_id",
-        "type_info": "Int4"
+        "name": "summary",
+        "type_info": "Text"
       },
       {
         "ordinal": 3,
-        "name": "summary",
-        "type_info": "Text"
+        "name": "operator_ids!: Vec<i32>",
+        "type_info": "Int4Array"
       },
       {
         "ordinal": 4,
@@ -54,13 +54,13 @@
     "nullable": [
       false,
       false,
-      true,
       false,
+      null,
       false,
       false,
       true,
       false
     ]
   },
-  "hash": "d0f3c2a49de08fb0030df85e1fbdc14476a60042d8b2bfca2800d690c521aaec"
+  "hash": "af51443e2c0fe2c690d700764dba146a07b2634397e82197066057f4b8a01b33"
 }

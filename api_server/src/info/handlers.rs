@@ -59,7 +59,7 @@ pub(crate) async fn get_operator_news(
     State(state): State<AppState>,
     Path(operator_id): Path<i32>,
     paginator: Query<Page>,
-) -> Result<Json<Vec<responses::OperatorNewsItem>>, Error> {
+) -> Result<Json<Vec<info::NewsItem>>, Error> {
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
@@ -67,6 +67,26 @@ pub(crate) async fn get_operator_news(
         sql::fetch_operator_news(&state.pool, operator_id, take, offset)
             .await?,
     ))
+}
+
+pub(crate) async fn post_news(
+    State(state): State<AppState>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    Json(news_item): Json<requests::NewNewsItem>,
+) -> Result<Json<IdReturn>, Error> {
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
+
+    let id = sql::insert_news(&mut transaction, news_item).await?;
+
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
+
+    Ok(Json(IdReturn { id }))
 }
 
 pub(crate) async fn get_external_news_item(
@@ -168,7 +188,18 @@ pub(crate) async fn post_external_news(
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     Json(news_item): Json<requests::NewExternalNewsItem>,
 ) -> Result<Json<IdReturn>, Error> {
-    let id = sql::insert_external_news(&state.pool, news_item).await?;
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
+
+    let id = sql::insert_external_news(&mut transaction, news_item).await?;
+
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
+
     Ok(Json(IdReturn { id }))
 }
 

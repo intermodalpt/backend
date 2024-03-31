@@ -44,10 +44,9 @@ pub struct NewsItem {
     pub summary: String,
     pub content: Vec<ContentBlock>,
 
-    pub operator_id: Option<i32>,
-
     pub publish_datetime: DateTime<Local>,
     pub edit_datetime: Option<DateTime<Local>>,
 
     pub visible: bool,
+    pub operator_ids: Vec<i32>,
 }

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT id, operator_id, title, summary, author,\n    prepro_content_md, prepro_content_text,\n    publish_datetime, edit_datetime, source, url, is_partial, raw\nFROM external_news_items\nWHERE source=$1\n",
+  "query": "\nSELECT id, title, summary, author,\n    array_remove(array_agg(operator_id), NULL) as \"operator_ids!: Vec<i32>\",\n    prepro_content_md, prepro_content_text,\n    publish_datetime, edit_datetime, source, url, is_partial, raw\nFROM external_news_items\nJOIN news_items_operators\n    ON external_news_items.id=news_items_operators.item_id\nWHERE source=$1\nGROUP BY external_news_items.id\n",
   "describe": {
     "columns": [
       {
@@ -10,23 +10,23 @@
       },
       {
         "ordinal": 1,
-        "name": "operator_id",
-        "type_info": "Int4"
-      },
-      {
-        "ordinal": 2,
         "name": "title",
         "type_info": "Text"
       },
       {
-        "ordinal": 3,
+        "ordinal": 2,
         "name": "summary",
         "type_info": "Text"
       },
       {
-        "ordinal": 4,
+        "ordinal": 3,
         "name": "author",
         "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "operator_ids!: Vec<i32>",
+        "type_info": "Int4Array"
       },
       {
         "ordinal": 5,
@@ -79,7 +79,7 @@
       true,
       true,
       true,
-      true,
+      null,
       true,
       true,
       false,
@@ -90,5 +90,5 @@
       false
     ]
   },
-  "hash": "5c4b26335453a7bf612fb8c34ecc532cefd00577649ca5f807fd2f20d45b2892"
+  "hash": "f375a702b63de0c42e62b7c6396bf40b53de41a43b7a0953e7e2630f9ce7116b"
 }

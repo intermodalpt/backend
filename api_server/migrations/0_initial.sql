@@ -398,12 +398,10 @@ CREATE TABLE ticket_comments
 CREATE TABLE news_items
 (
     id               serial PRIMARY KEY,
-    operator_id      integer REFERENCES operators (id),
-
     title            text                     NOT NULL,
     summary          text                     NOT NULL,
-    author           text,
     author_id        integer REFERENCES users (ID),
+    author_override  text,
     content          jsonb                    NOT NULL,
 
     publish_datetime timestamp with time zone NOT NULL,
@@ -429,16 +427,21 @@ CREATE TABLE news_items_imgs
 
 CREATE TABLE news_items_regions
 (
-    news_item_id integer NOT NULL REFERENCES news_items (id),
-    region_id    integer NOT NULL REFERENCES regions (id),
-    PRIMARY KEY (news_item_id, region_id)
+    item_id   integer NOT NULL REFERENCES news_items (id),
+    region_id integer NOT NULL REFERENCES regions (id),
+    PRIMARY KEY (item_id, region_id)
+);
+
+CREATE TABLE news_items_operators
+(
+    item_id     integer NOT NULL REFERENCES news_items (id),
+    operator_id integer NOT NULL REFERENCES operators (id),
+    PRIMARY KEY (item_id, operator_id)
 );
 
 CREATE TABLE external_news_items
 (
     id                  serial PRIMARY KEY,
-    operator_id         integer REFERENCES operators (id),
-
     title               text,
     summary             text,
     author              text,
@@ -453,9 +456,10 @@ CREATE TABLE external_news_items
     -- Manually inserted text content
     content_text        text,
 
+    imported_datetime   timestamp with time zone NOT NULL DEFAULT now(),
     publish_datetime    timestamp with time zone NOT NULL,
     edit_datetime       timestamp with time zone,
-    -- The place this was scraped from (eg. 'facebook;foobar')
+    -- The place this was scraped from (eg. 'facebook;profile')
     source              text                     NOT NULL,
     -- The source URL when there's one that's 1) public and not 2) linked to an account
     url                 text,
@@ -464,7 +468,7 @@ CREATE TABLE external_news_items
     is_partial          boolean                  NOT NULL,
 
     -- Has been manually checked and the fields have been completed where needed
-    is_validated        boolean                  NOT NULL,
+    is_validated        boolean                  NOT NULL default FALSE,
     -- If is an actual news piece and not just... social media people doing social media things
     is_relevant         boolean,
     -- If shows things a bit too personally (eg. faces of random people)
@@ -493,6 +497,13 @@ CREATE TABLE external_news_items_imgs
     item_id integer NOT NULL REFERENCES external_news_items (id),
     img_id  integer NOT NULL REFERENCES external_news_imgs (id),
     PRIMARY KEY (item_id, img_id)
+);
+
+CREATE TABLE external_news_items_operators
+(
+    item_id     integer NOT NULL REFERENCES external_news_items (id),
+    operator_id integer NOT NULL REFERENCES operators (id),
+    PRIMARY KEY (item_id, operator_id)
 );
 
 CREATE TABLE news_items_external_news_items
