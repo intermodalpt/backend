@@ -225,6 +225,7 @@ VALUES ($1, $2)"#,
 pub(crate) async fn fetch_external_news_item(
     pool: &PgPool,
     item_id: i32,
+    incl_private: bool,
 ) -> Result<Option<responses::ExternalNewsItem>> {
     Ok(sqlx::query!(
         r#"
@@ -247,10 +248,12 @@ LEFT JOIN external_news_imgs
     ON external_news_items_imgs.img_id=external_news_imgs.id
 LEFT JOIN news_items_operators
     ON external_news_items.id=news_items_operators.item_id
-WHERE external_news_items.id=$1 AND has_copyright_issues=false
+WHERE external_news_items.id=$1
+    AND (NOT has_copyright_issues OR $2)
 GROUP BY external_news_items.id
 "#,
-        item_id
+        item_id,
+        incl_private,
     )
     .fetch_optional(pool)
     .await

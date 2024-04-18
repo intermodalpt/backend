@@ -25,6 +25,7 @@ use commons::models::info;
 
 use super::models::{requests, responses};
 use super::sql;
+use crate::auth::ClaimPermission;
 use crate::responses::Pagination;
 use crate::{auth, AppState, Error};
 
@@ -96,9 +97,17 @@ pub(crate) async fn post_news(
 
 pub(crate) async fn get_external_news_item(
     State(state): State<AppState>,
+    claims: Option<auth::Claims>,
     Path(item_id): Path<i32>,
 ) -> Result<Json<responses::ExternalNewsItem>, Error> {
-    let item = sql::fetch_external_news_item(&state.pool, item_id).await?;
+    let include_private = claims
+        .as_ref()
+        .map(auth::perms::Trusted::is_valid)
+        .unwrap_or(false);
+
+    let item =
+        sql::fetch_external_news_item(&state.pool, item_id, include_private)
+            .await?;
 
     if let Some(item) = item {
         Ok(Json(item))
@@ -123,27 +132,42 @@ pub(crate) async fn get_full_external_news_item(
 
 pub(crate) async fn get_external_news(
     State(state): State<AppState>,
-    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    claims: Option<auth::Claims>,
     paginator: Query<Page>,
 ) -> Result<Json<Pagination<responses::ExternalNewsItem>>, Error> {
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
+    let include_private = claims
+        .as_ref()
+        .map(auth::perms::Trusted::is_valid)
+        .unwrap_or(false);
+
     Ok(Json(Pagination {
-        items: sql::fetch_external_news(&state.pool, offset, take, true)
-            .await?,
-        total: sql::count_external_news(&state.pool, true).await?,
+        items: sql::fetch_external_news(
+            &state.pool,
+            offset,
+            take,
+            include_private,
+        )
+        .await?,
+        total: sql::count_external_news(&state.pool, include_private).await?,
     }))
 }
 
 pub(crate) async fn get_operator_external_news(
     State(state): State<AppState>,
-    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    claims: Option<auth::Claims>,
     paginator: Query<Page>,
     Path(operator_id): Path<i32>,
 ) -> Result<Json<Pagination<responses::ExternalNewsItem>>, Error> {
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
+
+    let include_private = claims
+        .as_ref()
+        .map(auth::perms::Trusted::is_valid)
+        .unwrap_or(false);
 
     Ok(Json(Pagination {
         items: sql::fetch_operator_external_news(
@@ -151,13 +175,13 @@ pub(crate) async fn get_operator_external_news(
             operator_id,
             offset,
             take,
-            true,
+            include_private,
         )
         .await?,
         total: sql::count_operator_external_news(
             &state.pool,
             operator_id,
-            true,
+            include_private,
         )
         .await?,
     }))
