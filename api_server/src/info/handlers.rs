@@ -25,6 +25,7 @@ use commons::models::info;
 
 use super::models::{requests, responses};
 use super::sql;
+use crate::responses::Pagination;
 use crate::{auth, AppState, Error};
 
 #[derive(Serialize)]
@@ -48,25 +49,29 @@ const PAGE_SIZE: u32 = 20;
 pub(crate) async fn get_news(
     State(state): State<AppState>,
     paginator: Query<Page>,
-) -> Result<Json<Vec<info::NewsItem>>, Error> {
+) -> Result<Json<Pagination<info::NewsItem>>, Error> {
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
-    Ok(Json(sql::fetch_news(&state.pool, take, offset).await?))
+    Ok(Json(Pagination {
+        items: sql::fetch_news(&state.pool, take, offset).await?,
+        total: sql::count_news(&state.pool).await?,
+    }))
 }
 
 pub(crate) async fn get_operator_news(
     State(state): State<AppState>,
     Path(operator_id): Path<i32>,
     paginator: Query<Page>,
-) -> Result<Json<Vec<info::NewsItem>>, Error> {
+) -> Result<Json<Pagination<info::NewsItem>>, Error> {
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
-    Ok(Json(
-        sql::fetch_operator_news(&state.pool, operator_id, take, offset)
+    Ok(Json(Pagination {
+        items: sql::fetch_operator_news(&state.pool, operator_id, take, offset)
             .await?,
-    ))
+        total: sql::count_operator_news(&state.pool, operator_id).await?,
+    }))
 }
 
 pub(crate) async fn post_news(
@@ -120,13 +125,15 @@ pub(crate) async fn get_external_news(
     State(state): State<AppState>,
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     paginator: Query<Page>,
-) -> Result<Json<Vec<responses::ExternalNewsItem>>, Error> {
+) -> Result<Json<Pagination<responses::ExternalNewsItem>>, Error> {
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
-    Ok(Json(
-        sql::fetch_external_news(&state.pool, offset, take, true).await?,
-    ))
+    Ok(Json(Pagination {
+        items: sql::fetch_external_news(&state.pool, offset, take, true)
+            .await?,
+        total: sql::count_external_news(&state.pool, true).await?,
+    }))
 }
 
 pub(crate) async fn get_operator_external_news(
@@ -134,12 +141,12 @@ pub(crate) async fn get_operator_external_news(
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     paginator: Query<Page>,
     Path(operator_id): Path<i32>,
-) -> Result<Json<Vec<responses::ExternalNewsItem>>, Error> {
+) -> Result<Json<Pagination<responses::ExternalNewsItem>>, Error> {
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
-    Ok(Json(
-        sql::fetch_operator_external_news(
+    Ok(Json(Pagination {
+        items: sql::fetch_operator_external_news(
             &state.pool,
             operator_id,
             offset,
@@ -147,20 +154,28 @@ pub(crate) async fn get_operator_external_news(
             true,
         )
         .await?,
-    ))
+        total: sql::count_operator_external_news(
+            &state.pool,
+            operator_id,
+            true,
+        )
+        .await?,
+    }))
 }
 
 pub(crate) async fn get_pending_external_news(
     State(state): State<AppState>,
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     paginator: Query<Page>,
-) -> Result<Json<Vec<responses::FullExternalNewsItem>>, Error> {
+) -> Result<Json<Pagination<responses::FullExternalNewsItem>>, Error> {
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
-    Ok(Json(
-        sql::fetch_pending_external_news(&state.pool, offset, take).await?,
-    ))
+    Ok(Json(Pagination {
+        items: sql::fetch_pending_external_news(&state.pool, offset, take)
+            .await?,
+        total: sql::count_pending_external_news(&state.pool).await?,
+    }))
 }
 
 pub(crate) async fn get_operator_pending_external_news(
@@ -168,19 +183,24 @@ pub(crate) async fn get_operator_pending_external_news(
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     paginator: Query<Page>,
     Path(operator_id): Path<i32>,
-) -> Result<Json<Vec<responses::FullExternalNewsItem>>, Error> {
+) -> Result<Json<Pagination<responses::FullExternalNewsItem>>, Error> {
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
-    Ok(Json(
-        sql::fetch_pending_operator_external_news(
+    Ok(Json(Pagination {
+        items: sql::fetch_pending_operator_external_news(
             &state.pool,
             operator_id,
             offset,
             take,
         )
         .await?,
-    ))
+        total: sql::count_pending_operator_external_news(
+            &state.pool,
+            operator_id,
+        )
+        .await?,
+    }))
 }
 
 pub(crate) async fn post_external_news(

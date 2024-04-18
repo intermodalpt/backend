@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT count(*) as \"cnt!: i64\"\nFROM external_news_items\nWHERE (($1 = true) OR (is_validated=true AND is_sensitive=false))\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "cnt!: i64",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bool"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "e12c9685176ac4ca0627340486592571719f3bede7e36b27e3feacc258f34c27"
+}

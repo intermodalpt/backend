@@ -40,7 +40,7 @@ SELECT id, title, summary,
     publish_datetime, edit_datetime, visible,
     array_remove(array_agg(operator_id), NULL) as "operator_ids!: Vec<i32>"
 FROM news_items
-JOIN news_items_operators ON news_items.id=news_items_operators.item_id
+LEFT JOIN news_items_operators ON news_items.id=news_items_operators.item_id
 GROUP BY news_items.id
 LIMIT $1 OFFSET $2
 "#,
@@ -71,6 +71,24 @@ LIMIT $1 OFFSET $2
     .collect()
 }
 
+pub(crate) async fn count_news(pool: &PgPool) -> Result<i64> {
+    Ok(sqlx::query!(
+        r#"
+SELECT count(*) as "cnt!: i64"
+FROM news_items
+GROUP BY news_items.id
+"#,
+    )
+    .fetch_optional(pool)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string());
+        Error::DatabaseExecution
+    })?
+    .map(|row| row.cnt)
+    .unwrap_or(0))
+}
+
 pub(crate) async fn fetch_operator_news(
     pool: &PgPool,
     operator_id: i32,
@@ -84,7 +102,7 @@ SELECT id, title, summary,
     content as "content!: sqlx::types::Json<Vec<info::ContentBlock>>",
     publish_datetime, edit_datetime, visible
 FROM news_items
-JOIN news_items_operators ON news_items.id=news_items_operators.item_id
+LEFT JOIN news_items_operators ON news_items.id=news_items_operators.item_id
 WHERE operator_id=$1
 GROUP BY news_items.id
 LIMIT $2 OFFSET $3
@@ -115,6 +133,30 @@ LIMIT $2 OFFSET $3
         })
     })
     .collect()
+}
+
+pub(crate) async fn count_operator_news(
+    pool: &PgPool,
+    operator_id: i32,
+) -> Result<i64> {
+    Ok(sqlx::query!(
+        r#"
+SELECT count(*) as "cnt!: i64"
+FROM news_items
+JOIN news_items_operators ON news_items.id=news_items_operators.item_id
+WHERE operator_id=$1
+GROUP BY news_items.id
+"#,
+        operator_id,
+    )
+    .fetch_optional(pool)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), operator_id);
+        Error::DatabaseExecution
+    })?
+    .map(|row| row.cnt)
+    .unwrap_or(0))
 }
 
 pub(crate) async fn insert_news(
@@ -199,9 +241,12 @@ SELECT external_news_items.id, title, summary, author,
         ELSE array[]::record[]
     END as "imgs!: Vec<(String, Option<String>, Option<bool>)>"
 FROM external_news_items
-JOIN external_news_items_imgs ON external_news_items.id=external_news_items_imgs.item_id
-JOIN external_news_imgs ON external_news_items_imgs.img_id=external_news_imgs.id
-JOIN news_items_operators ON external_news_items.id=news_items_operators.item_id
+LEFT JOIN external_news_items_imgs
+    ON external_news_items.id=external_news_items_imgs.item_id
+LEFT JOIN external_news_imgs
+    ON external_news_items_imgs.img_id=external_news_imgs.id
+LEFT JOIN news_items_operators
+    ON external_news_items.id=news_items_operators.item_id
 WHERE external_news_items.id=$1 AND has_copyright_issues=false
 GROUP BY external_news_items.id
 "#,
@@ -210,41 +255,41 @@ GROUP BY external_news_items.id
     .fetch_optional(pool)
     .await
     .map_err(|err| {
-        tracing::error!(error=err.to_string(), item_id);
+        tracing::error!(error = err.to_string(), item_id);
         Error::DatabaseExecution
     })?
-    .map(|row| {
-
-        responses::ExternalNewsItem {
-            id: row.id,
-            title: row.title,
-            summary: row.summary,
-            author: row.author,
-            content_md: row.content_md,
-            content_text: row.content_text,
-            publish_datetime: row.publish_datetime.with_timezone(&Local),
-            edit_datetime: row.edit_datetime.map(|datetime| datetime.with_timezone(&Local)),
-            source: row.source,
-            url: row.url,
-            is_partial: row.is_partial,
-            is_validated: row.is_validated,
-            is_relevant: row.is_relevant,
-            is_sensitive: row.is_sensitive,
-            operator_ids: row.operator_ids,
-            images: row.imgs
-                .into_iter()
-                .map(|(sha1, transcript, has_copyright_issues)| {
-                    responses::ExternalNewsImage {
-                        transcript,
-                        url: if has_copyright_issues == Some(false) {
-                            Some(get_external_news_img_path(sha1.as_ref()))
-                        } else {
-                            None
-                        },
-                    }
-                })
-                .collect::<Vec<_>>(),
-        }
+    .map(|row| responses::ExternalNewsItem {
+        id: row.id,
+        title: row.title,
+        summary: row.summary,
+        author: row.author,
+        content_md: row.content_md,
+        content_text: row.content_text,
+        publish_datetime: row.publish_datetime.with_timezone(&Local),
+        edit_datetime: row
+            .edit_datetime
+            .map(|datetime| datetime.with_timezone(&Local)),
+        source: row.source,
+        url: row.url,
+        is_partial: row.is_partial,
+        is_validated: row.is_validated,
+        is_relevant: row.is_relevant,
+        is_sensitive: row.is_sensitive,
+        operator_ids: row.operator_ids,
+        images: row
+            .imgs
+            .into_iter()
+            .map(|(sha1, transcript, has_copyright_issues)| {
+                responses::ExternalNewsImage {
+                    transcript,
+                    url: if has_copyright_issues == Some(false) {
+                        Some(get_external_news_img_path(sha1.as_ref()))
+                    } else {
+                        None
+                    },
+                }
+            })
+            .collect::<Vec<_>>(),
     }))
 }
 
@@ -266,11 +311,11 @@ SELECT external_news_items.id, title, summary, author,
         ELSE array[]::record[]
     END as "imgs!: Vec<models::ExternalNewsImage>"
 FROM external_news_items
-JOIN external_news_items_imgs
+LEFT JOIN external_news_items_imgs
     ON external_news_items.id=external_news_items_imgs.item_id
-JOIN external_news_items_operators
+LEFT JOIN external_news_items_operators
     ON external_news_items.id=external_news_items_operators.item_id
-JOIN external_news_imgs ON external_news_items_imgs.img_id=external_news_imgs.id
+LEFT JOIN external_news_imgs ON external_news_items_imgs.img_id=external_news_imgs.id
 WHERE external_news_items.id=$1
 GROUP BY external_news_items.id
 "#,
@@ -315,7 +360,7 @@ pub(crate) async fn fetch_external_news(
     pool: &PgPool,
     skip: i64,
     take: i64,
-    public_only: bool,
+    incl_private: bool,
 ) -> Result<Vec<responses::ExternalNewsItem>> {
     sqlx::query!(
         r#"
@@ -332,22 +377,22 @@ SELECT external_news_items.id, title, author, summary,
         ELSE array[]::record[]
     END as "imgs!: Vec<(String, Option<String>, Option<bool>)>"
 FROM external_news_items
-JOIN external_news_items_imgs ON external_news_items.id=external_news_items_imgs.item_id
-JOIN external_news_imgs ON external_news_items_imgs.img_id=external_news_imgs.id
-JOIN external_news_items_operators
+LEFT JOIN external_news_items_imgs ON external_news_items.id=external_news_items_imgs.item_id
+LEFT JOIN external_news_imgs ON external_news_items_imgs.img_id=external_news_imgs.id
+LEFT JOIN external_news_items_operators
     ON external_news_items.id=external_news_items_operators.item_id
 WHERE (($1 = true) OR (is_validated=true AND is_sensitive=false))
 GROUP BY external_news_items.id
 LIMIT $2 OFFSET $3
 "#,
-        public_only,
+        incl_private,
         take,
         skip,
     )
     .fetch_all(pool)
     .await
     .map_err(|err| {
-        tracing::error!(error=err.to_string(), public_only, take, skip);
+        tracing::error!(error=err.to_string(), incl_private, take, skip);
         Error::DatabaseExecution
     })?
     .into_iter()
@@ -375,7 +420,7 @@ LIMIT $2 OFFSET $3
                     responses::ExternalNewsImage {
                         transcript,
                         url: if has_copyright_issues == Some(false)
-                            || !public_only
+                            || incl_private
                         {
                             Some(get_external_news_img_path(sha1.as_ref()))
                         } else {
@@ -389,12 +434,34 @@ LIMIT $2 OFFSET $3
     .collect()
 }
 
+pub(crate) async fn count_external_news(
+    pool: &PgPool,
+    incl_private: bool,
+) -> Result<i64> {
+    Ok(sqlx::query!(
+        r#"
+SELECT count(*) as "cnt!: i64"
+FROM external_news_items
+WHERE (($1 = true) OR (is_validated=true AND is_sensitive=false))
+"#,
+        incl_private
+    )
+    .fetch_optional(pool)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), incl_private);
+        Error::DatabaseExecution
+    })?
+    .map(|row| row.cnt)
+    .unwrap_or(0))
+}
+
 pub(crate) async fn fetch_operator_external_news(
     pool: &PgPool,
     operator_id: i32,
     skip: i64,
     take: i64,
-    public_only: bool,
+    incl_private: bool,
 ) -> Result<Vec<responses::ExternalNewsItem>> {
     sqlx::query!(
         r#"
@@ -411,8 +478,10 @@ SELECT external_news_items.id, title, author, summary,
         ELSE array[]::record[]
     END as "imgs!: Vec<(String, Option<String>, Option<bool>)>"
 FROM external_news_items
-JOIN external_news_items_imgs ON external_news_items.id=external_news_items_imgs.item_id
-JOIN external_news_imgs ON external_news_items_imgs.img_id=external_news_imgs.id
+LEFT JOIN external_news_items_imgs
+    ON external_news_items.id=external_news_items_imgs.item_id
+LEFT JOIN external_news_imgs
+    ON external_news_items_imgs.img_id=external_news_imgs.id
 JOIN external_news_items_operators
     ON external_news_items.id=external_news_items_operators.item_id
 WHERE operator_id=$1 
@@ -421,7 +490,7 @@ GROUP BY external_news_items.id
 LIMIT $3 OFFSET $4
 "#,
         operator_id,
-        public_only,
+        incl_private,
         take,
         skip,
     )
@@ -429,9 +498,9 @@ LIMIT $3 OFFSET $4
     .await
     .map_err(|err| {
         tracing::error!(
-            error=err.to_string(),
+            error = err.to_string(),
             operator_id,
-            public_only,
+            incl_private,
             take,
             skip
         );
@@ -447,7 +516,9 @@ LIMIT $3 OFFSET $4
             content_md: row.content_md,
             content_text: row.content_text,
             publish_datetime: row.publish_datetime.with_timezone(&Local),
-            edit_datetime: row.edit_datetime.map(|datetime| datetime.with_timezone(&Local)),
+            edit_datetime: row
+                .edit_datetime
+                .map(|datetime| datetime.with_timezone(&Local)),
             source: row.source,
             url: row.url,
             is_partial: row.is_partial,
@@ -455,12 +526,15 @@ LIMIT $3 OFFSET $4
             is_relevant: row.is_relevant,
             is_sensitive: row.is_sensitive,
             operator_ids: row.operator_ids,
-            images: row.imgs
+            images: row
+                .imgs
                 .into_iter()
                 .map(|(sha1, transcript, has_copyright_issues)| {
                     responses::ExternalNewsImage {
                         transcript,
-                        url: if has_copyright_issues == Some(false) || !public_only {
+                        url: if has_copyright_issues == Some(false)
+                            || incl_private
+                        {
                             Some(get_external_news_img_path(sha1.as_ref()))
                         } else {
                             None
@@ -471,6 +545,34 @@ LIMIT $3 OFFSET $4
         })
     })
     .collect()
+}
+
+pub(crate) async fn count_operator_external_news(
+    pool: &PgPool,
+    operator_id: i32,
+    incl_private: bool,
+) -> Result<i64> {
+    Ok(sqlx::query!(
+        r#"
+SELECT count(*) as "cnt!: i64"
+FROM external_news_items
+JOIN external_news_items_operators
+    ON external_news_items.id=external_news_items_operators.item_id
+WHERE operator_id=$1
+    AND (($2 = true) OR (is_validated=true AND is_sensitive=false))
+GROUP BY external_news_items.id
+"#,
+        operator_id,
+        incl_private,
+    )
+    .fetch_optional(pool)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), operator_id, incl_private);
+        Error::DatabaseExecution
+    })?
+    .map(|row| row.cnt)
+    .unwrap_or(0))
 }
 
 pub(crate) async fn fetch_pending_external_news(
@@ -492,9 +594,11 @@ SELECT external_news_items.id, title, summary, author,
         ELSE array[]::record[]
     END as "imgs!: Vec<models::ExternalNewsImage>"
 FROM external_news_items
-JOIN external_news_items_imgs ON external_news_items.id=external_news_items_imgs.item_id
-JOIN external_news_imgs ON external_news_items_imgs.img_id=external_news_imgs.id
-JOIN external_news_items_operators
+LEFT JOIN external_news_items_imgs
+    ON external_news_items.id=external_news_items_imgs.item_id
+LEFT JOIN external_news_imgs
+    ON external_news_items_imgs.img_id=external_news_imgs.id
+LEFT JOIN external_news_items_operators
     ON external_news_items.id=external_news_items_operators.item_id
 WHERE is_validated=false
 GROUP BY external_news_items.id
@@ -506,7 +610,7 @@ LIMIT $1 OFFSET $2
     .fetch_all(pool)
     .await
     .map_err(|err| {
-        tracing::error!(error=err.to_string(), take, skip);
+        tracing::error!(error = err.to_string(), take, skip);
         Error::DatabaseExecution
     })?
     .into_iter()
@@ -521,7 +625,9 @@ LIMIT $1 OFFSET $2
             content_md: row.content_md,
             content_text: row.content_text,
             publish_datetime: row.publish_datetime.with_timezone(&Local),
-            edit_datetime: row.edit_datetime.map(|datetime| datetime.with_timezone(&Local)),
+            edit_datetime: row
+                .edit_datetime
+                .map(|datetime| datetime.with_timezone(&Local)),
             source: row.source,
             url: row.url,
             raw: row.raw,
@@ -531,10 +637,32 @@ LIMIT $1 OFFSET $2
             is_sensitive: row.is_sensitive,
             operator_ids: row.operator_ids,
             images: row.imgs.into_iter().map(Into::into).collect(),
-            screenshot_url: row.ss_sha1.as_ref().map(|sha1| get_external_news_ss_path(sha1))
+            screenshot_url: row
+                .ss_sha1
+                .as_ref()
+                .map(|sha1| get_external_news_ss_path(sha1)),
         })
     })
     .collect()
+}
+
+pub(crate) async fn count_pending_external_news(pool: &PgPool) -> Result<i64> {
+    Ok(sqlx::query!(
+        r#"
+SELECT count(*) as "cnt!: i64"
+FROM external_news_items
+WHERE is_validated=false
+GROUP BY external_news_items.id
+"#,
+    )
+    .fetch_optional(pool)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string());
+        Error::DatabaseExecution
+    })?
+    .map(|row| row.cnt)
+    .unwrap_or(0))
 }
 
 pub(crate) async fn fetch_pending_operator_external_news(
@@ -556,8 +684,8 @@ SELECT external_news_items.id, title, summary, author, content_md,
         ELSE array[]::record[]
     END as "imgs!: Vec<models::ExternalNewsImage>"
 FROM external_news_items
-JOIN external_news_items_imgs ON external_news_items.id=external_news_items_imgs.item_id
-JOIN external_news_imgs ON external_news_items_imgs.img_id=external_news_imgs.id
+LEFT JOIN external_news_items_imgs ON external_news_items.id=external_news_items_imgs.item_id
+LEFT JOIN external_news_imgs ON external_news_items_imgs.img_id=external_news_imgs.id
 JOIN external_news_items_operators
     ON external_news_items.id=external_news_items_operators.item_id
 WHERE operator_id=$1 AND is_validated=false
@@ -600,6 +728,31 @@ LIMIT $2 OFFSET $3
         })
     })
     .collect()
+}
+
+pub(crate) async fn count_pending_operator_external_news(
+    pool: &PgPool,
+    operator_id: i32,
+) -> Result<i64> {
+    Ok(sqlx::query!(
+        r#"
+SELECT count(*) as "cnt!: i64"
+FROM external_news_items
+JOIN external_news_items_operators
+    ON external_news_items.id=external_news_items_operators.item_id
+WHERE operator_id=$1 AND is_validated=false
+GROUP BY external_news_items.id
+"#,
+        operator_id
+    )
+    .fetch_optional(pool)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), operator_id);
+        Error::DatabaseExecution
+    })?
+    .map(|row| row.cnt)
+    .unwrap_or(0))
 }
 
 pub(crate) async fn insert_external_news(

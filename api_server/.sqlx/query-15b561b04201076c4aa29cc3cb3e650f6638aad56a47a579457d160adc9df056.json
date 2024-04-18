@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT id, title, summary,\n    array_remove(array_agg(operator_id), NULL) as \"operator_ids!: Vec<i32>\",\n    content as \"content!: sqlx::types::Json<Vec<info::ContentBlock>>\",\n    publish_datetime, edit_datetime, visible\nFROM news_items\nJOIN news_items_operators ON news_items.id=news_items_operators.item_id\nWHERE operator_id=$1\nGROUP BY news_items.id\nLIMIT $2 OFFSET $3\n",
+  "query": "\nSELECT id, title, summary,\n    content as \"content!: sqlx::types::Json<Vec<info::ContentBlock>>\",\n    publish_datetime, edit_datetime, visible,\n    array_remove(array_agg(operator_id), NULL) as \"operator_ids!: Vec<i32>\"\nFROM news_items\nLEFT JOIN news_items_operators ON news_items.id=news_items_operators.item_id\nGROUP BY news_items.id\nLIMIT $1 OFFSET $2\n",
   "describe": {
     "columns": [
       {
@@ -20,33 +20,32 @@
       },
       {
         "ordinal": 3,
-        "name": "operator_ids!: Vec<i32>",
-        "type_info": "Int4Array"
-      },
-      {
-        "ordinal": 4,
         "name": "content!: sqlx::types::Json<Vec<info::ContentBlock>>",
         "type_info": "Jsonb"
       },
       {
-        "ordinal": 5,
+        "ordinal": 4,
         "name": "publish_datetime",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 6,
+        "ordinal": 5,
         "name": "edit_datetime",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 7,
+        "ordinal": 6,
         "name": "visible",
         "type_info": "Bool"
+      },
+      {
+        "ordinal": 7,
+        "name": "operator_ids!: Vec<i32>",
+        "type_info": "Int4Array"
       }
     ],
     "parameters": {
       "Left": [
-        "Int4",
         "Int8",
         "Int8"
       ]
@@ -55,12 +54,12 @@
       false,
       false,
       false,
-      null,
       false,
       false,
       true,
-      false
+      false,
+      null
     ]
   },
-  "hash": "af51443e2c0fe2c690d700764dba146a07b2634397e82197066057f4b8a01b33"
+  "hash": "15b561b04201076c4aa29cc3cb3e650f6638aad56a47a579457d160adc9df056"
 }
