@@ -251,7 +251,31 @@ pub(crate) async fn post_external_news_item(
     Ok(Json(IdReturn { id }))
 }
 
-pub(crate) async fn delete_external_news(
+pub(crate) async fn patch_external_news_item(
+    State(state): State<AppState>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    Path(item_id): Path<i32>,
+    Json(mut news_item): Json<requests::ChangeExternalNewsItem>,
+) -> Result<(), Error> {
+    news_item.tidy();
+
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
+
+    sql::update_external_news_item(&mut transaction, item_id, news_item)
+        .await?;
+
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
+
+    Ok(())
+}
+
+pub(crate) async fn delete_external_news_item(
     State(state): State<AppState>,
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     Path(item_id): Path<i32>,

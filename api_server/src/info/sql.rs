@@ -834,6 +834,99 @@ VALUES ($1, $2)"#,
     Ok(id)
 }
 
+pub(crate) async fn update_external_news_item(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    item_id: i32,
+    change: requests::ChangeExternalNewsItem,
+) -> Result<()> {
+    sqlx::query!(
+        r#"
+UPDATE external_news_items
+SET title=$1, summary=$2, author=$3, content_md=$4,
+    publish_datetime=$5, edit_datetime=$6, url=$7,
+    is_complete=$8, is_relevant=$9, is_sensitive=$10, is_validated=$11
+WHERE id=$12"#,
+        change.title,
+        change.summary,
+        change.author,
+        change.content_md,
+        change.publish_datetime,
+        change.edit_datetime,
+        change.url,
+        change.is_complete,
+        change.is_relevant,
+        change.is_sensitive,
+        change.is_validated,
+        item_id
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), change = ?change);
+        Error::DatabaseExecution
+    })?;
+
+    sqlx::query!(
+        r#"
+DELETE FROM external_news_items_operators
+WHERE item_id=$1"#,
+        item_id
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), item_id);
+        Error::DatabaseExecution
+    })?;
+
+    for operator_id in change.operator_ids {
+        sqlx::query!(
+            r#"
+INSERT INTO external_news_items_operators (item_id, operator_id)
+VALUES ($1, $2)"#,
+            item_id,
+            operator_id
+        )
+        .execute(&mut **transaction)
+        .await
+        .map_err(|err| {
+            tracing::error!(error = err.to_string(), item_id, operator_id);
+            Error::DatabaseExecution
+        })?;
+    }
+
+    sqlx::query!(
+        r#"
+DELETE FROM external_news_items_regions
+WHERE item_id=$1"#,
+        item_id
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), item_id);
+        Error::DatabaseExecution
+    })?;
+
+    for region_id in change.region_ids {
+        sqlx::query!(
+            r#"
+INSERT INTO external_news_items_regions (item_id, region_id)
+VALUES ($1, $2)"#,
+            item_id,
+            region_id
+        )
+        .execute(&mut **transaction)
+        .await
+        .map_err(|err| {
+            tracing::error!(error = err.to_string(), item_id, region_id);
+            Error::DatabaseExecution
+        })?;
+    }
+
+    Ok(())
+}
+
 pub(crate) async fn delete_external_news_item(
     pool: &PgPool,
     id: i32,

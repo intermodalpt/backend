@@ -438,12 +438,13 @@ pub fn build_paths(state: AppState) -> Router {
         .route(
             "/v1/news/external",
             get(info::handlers::get_external_news)
-                .post(info::handlers::post_external_news),
+                .post(info::handlers::post_external_news_item),
         )
         .route(
             "/v1/news/external/:item_id",
             get(info::handlers::get_external_news_item)
-                .delete(info::handlers::delete_external_news),
+                .patch(info::handlers::patch_external_news_item)
+                .delete(info::handlers::delete_external_news_item),
         )
         .route(
             "/v1/news/external/:item_id/images",
