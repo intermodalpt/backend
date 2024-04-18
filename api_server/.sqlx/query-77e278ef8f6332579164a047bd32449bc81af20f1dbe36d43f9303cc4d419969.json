@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT count(*) as \"cnt!: i64\"\nFROM external_news_items\nWHERE (($1 = true) OR (is_validated=true AND is_sensitive=false))\n",
+  "query": "\nSELECT count(*) as \"cnt!: i64\"\nFROM external_news_items\nWHERE ($1 OR (is_validated AND NOT is_sensitive))\n",
   "describe": {
     "columns": [
       {
@@ -18,5 +18,5 @@
       null
     ]
   },
-  "hash": "e12c9685176ac4ca0627340486592571719f3bede7e36b27e3feacc258f34c27"
+  "hash": "77e278ef8f6332579164a047bd32449bc81af20f1dbe36d43f9303cc4d419969"
 }

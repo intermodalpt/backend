@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,\n    stop_pics.public, stop_pics.sensitive, stop_pics.uploader,\n    stop_pics.upload_date, stop_pics.capture_date, stop_pics.quality,\n    stop_pics.width, stop_pics.height, stop_pics.lon, stop_pics.lat,\n    stop_pics.camera_ref, stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,\n    CASE\n        WHEN count(stop_pic_stops.stop) > 0\n        THEN array_agg(ROW(stop_pic_stops.stop, stop_pic_stops.attrs))\n        ELSE array[]::record[]\n    END as \"rels!: Vec<(i32, Vec<String>)>\"\nFROM stop_pics\nLEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id\nWHERE tagged=false\n    AND (stop_pics.uploader = $1\n        OR (stop_pics.public = true AND stop_pics.sensitive = false)\n        OR $2 = true)\nGROUP BY stop_pics.id\nORDER BY capture_date ASC, upload_date ASC\nLIMIT $3 OFFSET $4\n    ",
+  "query": "\nSELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,\n    stop_pics.public, stop_pics.sensitive, stop_pics.uploader,\n    stop_pics.upload_date, stop_pics.capture_date, stop_pics.quality,\n    stop_pics.width, stop_pics.height, stop_pics.lon, stop_pics.lat,\n    stop_pics.camera_ref, stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,\n    CASE\n        WHEN count(stop_pic_stops.stop) > 0\n        THEN array_agg(ROW(stop_pic_stops.stop, stop_pic_stops.attrs))\n        ELSE array[]::record[]\n    END as \"rels!: Vec<(i32, Vec<String>)>\"\nFROM stop_pics\nLEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id\nWHERE NOT tagged\n    AND (stop_pics.uploader = $1\n        OR (stop_pics.public AND NOT stop_pics.sensitive)\n        OR $2)\nGROUP BY stop_pics.id\nORDER BY capture_date ASC, upload_date ASC\nLIMIT $3 OFFSET $4\n    ",
   "describe": {
     "columns": [
       {
@@ -129,5 +129,5 @@
       null
     ]
   },
-  "hash": "dd10204f7809e461b301538a1f89f84d2989f759ed4f11bde8f063d113e07e80"
+  "hash": "ca7471063b68c8bd8102584420fc5aaea0d333db0a3159227632b1dcc1de2421"
 }

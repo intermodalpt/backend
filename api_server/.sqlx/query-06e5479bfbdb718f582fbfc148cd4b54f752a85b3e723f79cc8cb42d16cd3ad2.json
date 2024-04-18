@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT id, sha1, lon, lat, capture_date, sensitive\nFROM panoramas\nWHERE stop_id = $1 AND (sensitive = false OR $2 = true)\n",
+  "query": "\nSELECT id, sha1, lon, lat, capture_date, sensitive\nFROM panoramas\nWHERE stop_id = $1 AND (NOT sensitive OR $2)\n",
   "describe": {
     "columns": [
       {
@@ -49,5 +49,5 @@
       false
     ]
   },
-  "hash": "358ef25265200b6473e1418f5030e78d0f3cb9449810512b129dfcd80be0395a"
+  "hash": "06e5479bfbdb718f582fbfc148cd4b54f752a85b3e723f79cc8cb42d16cd3ad2"
 }

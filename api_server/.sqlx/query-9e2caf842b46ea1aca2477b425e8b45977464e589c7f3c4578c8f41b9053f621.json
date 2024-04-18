@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,\n    stop_pics.public, stop_pics.sensitive, stop_pics.uploader,\n    stop_pics.upload_date, stop_pics.capture_date, stop_pics.quality,\n    stop_pics.width, stop_pics.height, stop_pics.lon, stop_pics.lat,\n    stop_pics.camera_ref, stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,\n    CASE\n        WHEN count(stop_pic_stops.stop) > 0\n        THEN array_agg(ROW(stop_pic_stops.stop, stop_pic_stops.attrs))\n        ELSE array[]::record[]\n    END as \"rels!: Vec<(i32, Vec<String>)>\"\nFROM stop_pics\nLEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id\nWHERE stop_pic_stops.stop=$1\n    AND (stop_pics.uploader = $2\n        OR (stop_pics.public = true AND stop_pics.sensitive = false)\n        OR $3 = true)\nGROUP BY stop_pics.id\nORDER BY quality DESC\n    ",
+  "query": "\nSELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,\n    stop_pics.public, stop_pics.sensitive, stop_pics.uploader,\n    stop_pics.upload_date, stop_pics.capture_date, stop_pics.quality,\n    stop_pics.width, stop_pics.height, stop_pics.lon, stop_pics.lat,\n    stop_pics.camera_ref, stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,\n    CASE\n        WHEN count(stop_pic_stops.stop) > 0\n        THEN array_agg(ROW(stop_pic_stops.stop, stop_pic_stops.attrs))\n        ELSE array[]::record[]\n    END as \"rels!: Vec<(i32, Vec<String>)>\"\nFROM stop_pics\nLEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id\nWHERE stop_pics.uploader = $1\n    OR (stop_pics.public AND NOT stop_pics.sensitive)\n    OR $2\nGROUP BY stop_pics.id\nORDER BY capture_date DESC, upload_date DESC\nLIMIT $3 OFFSET $4\n    ",
   "describe": {
     "columns": [
       {
@@ -102,8 +102,9 @@
     "parameters": {
       "Left": [
         "Int4",
-        "Int4",
-        "Bool"
+        "Bool",
+        "Int8",
+        "Int8"
       ]
     },
     "nullable": [
@@ -128,5 +129,5 @@
       null
     ]
   },
-  "hash": "98f66cd8857e275b04d2f8a1bbff8f69e6c4766d06e764b803d59db297c3124a"
+  "hash": "9e2caf842b46ea1aca2477b425e8b45977464e589c7f3c4578c8f41b9053f621"
 }

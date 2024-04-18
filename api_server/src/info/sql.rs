@@ -384,7 +384,7 @@ LEFT JOIN external_news_items_imgs ON external_news_items.id=external_news_items
 LEFT JOIN external_news_imgs ON external_news_items_imgs.img_id=external_news_imgs.id
 LEFT JOIN external_news_items_operators
     ON external_news_items.id=external_news_items_operators.item_id
-WHERE (($1 = true) OR (is_validated=true AND is_sensitive=false))
+WHERE ($1 OR (is_validated AND NOT is_sensitive))
 GROUP BY external_news_items.id
 LIMIT $2 OFFSET $3
 "#,
@@ -445,7 +445,7 @@ pub(crate) async fn count_external_news(
         r#"
 SELECT count(*) as "cnt!: i64"
 FROM external_news_items
-WHERE (($1 = true) OR (is_validated=true AND is_sensitive=false))
+WHERE ($1 OR (is_validated AND NOT is_sensitive))
 "#,
         incl_private
     )
@@ -488,7 +488,7 @@ LEFT JOIN external_news_imgs
 JOIN external_news_items_operators
     ON external_news_items.id=external_news_items_operators.item_id
 WHERE operator_id=$1 
-    AND (($2 = true) OR (is_validated=true AND is_sensitive=false))
+    AND ($2 OR (is_validated AND NOT is_sensitive))
 GROUP BY external_news_items.id
 LIMIT $3 OFFSET $4
 "#,
@@ -562,7 +562,7 @@ FROM external_news_items
 JOIN external_news_items_operators
     ON external_news_items.id=external_news_items_operators.item_id
 WHERE operator_id=$1
-    AND (($2 = true) OR (is_validated=true AND is_sensitive=false))
+    AND ($2 OR (is_validated AND NOT is_sensitive))
 GROUP BY external_news_items.id
 "#,
         operator_id,
@@ -603,7 +603,7 @@ LEFT JOIN external_news_imgs
     ON external_news_items_imgs.img_id=external_news_imgs.id
 LEFT JOIN external_news_items_operators
     ON external_news_items.id=external_news_items_operators.item_id
-WHERE is_validated=false
+WHERE NOT is_validated
 GROUP BY external_news_items.id
 LIMIT $1 OFFSET $2
 "#,
@@ -654,7 +654,7 @@ pub(crate) async fn count_pending_external_news(pool: &PgPool) -> Result<i64> {
         r#"
 SELECT count(*) as "cnt!: i64"
 FROM external_news_items
-WHERE is_validated=false
+WHERE NOT is_validated
 GROUP BY external_news_items.id
 "#,
     )
@@ -691,7 +691,7 @@ LEFT JOIN external_news_items_imgs ON external_news_items.id=external_news_items
 LEFT JOIN external_news_imgs ON external_news_items_imgs.img_id=external_news_imgs.id
 JOIN external_news_items_operators
     ON external_news_items.id=external_news_items_operators.item_id
-WHERE operator_id=$1 AND is_validated=false
+WHERE operator_id=$1 AND NOT is_validated
 GROUP BY external_news_items.id
 LIMIT $2 OFFSET $3
 "#,
@@ -743,7 +743,7 @@ SELECT count(*) as "cnt!: i64"
 FROM external_news_items
 JOIN external_news_items_operators
     ON external_news_items.id=external_news_items_operators.item_id
-WHERE operator_id=$1 AND is_validated=false
+WHERE operator_id=$1 AND NOT is_validated
 GROUP BY external_news_items.id
 "#,
         operator_id

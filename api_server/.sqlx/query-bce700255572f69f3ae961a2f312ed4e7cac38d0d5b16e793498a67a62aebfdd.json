@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT id, original_filename, sha1, lon, lat, stop_id,\n    uploader, upload_date, capture_date, sensitive\nFROM panoramas\nWHERE sensitive = false OR $1 = true\n",
+  "query": "\nSELECT id, original_filename, sha1, lon, lat, stop_id,\n    uploader, upload_date, capture_date, sensitive\nFROM panoramas\nWHERE NOT sensitive OR $1\n",
   "describe": {
     "columns": [
       {
@@ -72,5 +72,5 @@
       false
     ]
   },
-  "hash": "c5e9a095671a24e4259428a51407d281905903dade9f08a8e3b9b95a7c56ff25"
+  "hash": "bce700255572f69f3ae961a2f312ed4e7cac38d0d5b16e793498a67a62aebfdd"
 }

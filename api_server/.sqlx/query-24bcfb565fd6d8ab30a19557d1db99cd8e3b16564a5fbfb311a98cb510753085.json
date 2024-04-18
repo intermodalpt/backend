@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT stop_pics.id, stop_pics.sha1, stop_pics.capture_date, stop_pics.lon, stop_pics.lat,\n    stop_pics.tags, stop_pics.attrs, stop_pics.quality\nFROM stop_pics\nJOIN stop_pic_stops on stop_pic_stops.pic = stop_pics.id\nWHERE stop_pics.tagged = true AND stop_pics.sensitive = false\n    AND stop_pics.public = true AND stop_pic_stops.stop=$1\nORDER BY stop_pics.capture_date DESC\n    ",
+  "query": "\nSELECT stop_pics.id, stop_pics.sha1, stop_pics.capture_date, stop_pics.lon, stop_pics.lat,\n    stop_pics.tags, stop_pics.attrs, stop_pics.quality\nFROM stop_pics\nJOIN stop_pic_stops on stop_pic_stops.pic = stop_pics.id\nWHERE stop_pics.tagged AND NOT stop_pics.sensitive\n    AND stop_pics.public AND stop_pic_stops.stop=$1\nORDER BY stop_pics.capture_date DESC\n    ",
   "describe": {
     "columns": [
       {
@@ -60,5 +60,5 @@
       false
     ]
   },
-  "hash": "439eb48c6fc5df546236cd4be2ab9fc91736fb78d6f992304859bc7e3402187f"
+  "hash": "24bcfb565fd6d8ab30a19557d1db99cd8e3b16564a5fbfb311a98cb510753085"
 }

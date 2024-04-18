@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT stop_pics.id, stop_pics.public, stop_pics.sensitive,\n    stop_pics.lon, stop_pics.lat, stop_pics.tagged,\n    array_remove(array_agg(stop_pic_stops.stop), NULL) as \"stops!: Vec<i32>\"\nFROM stop_pics\nLEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id\nWHERE stop_pics.uploader = $1\n    OR (stop_pics.public = true and stop_pics.sensitive = false)\n    OR $2 = true\nGROUP BY stop_pics.id\n",
+  "query": "\nSELECT stop_pics.id, stop_pics.public, stop_pics.sensitive,\n    stop_pics.lon, stop_pics.lat, stop_pics.tagged,\n    array_remove(array_agg(stop_pic_stops.stop), NULL) as \"stops!: Vec<i32>\"\nFROM stop_pics\nLEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id\nWHERE stop_pics.uploader = $1\n    OR (stop_pics.public AND NOT stop_pics.sensitive)\n    OR $2\nGROUP BY stop_pics.id\n",
   "describe": {
     "columns": [
       {
@@ -55,5 +55,5 @@
       null
     ]
   },
-  "hash": "b37dc2c1de8ffa001107ccec1504a9e5f277833d9c8771d4da7ca45be42f5906"
+  "hash": "8b9411e0fb21e1f195e9c006ec5d4a3e5cac5e521f15aad5e431733a356e2060"
 }

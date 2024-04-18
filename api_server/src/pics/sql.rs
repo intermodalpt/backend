@@ -256,8 +256,8 @@ SELECT stop_pics.id, stop_pics.public, stop_pics.sensitive,
 FROM stop_pics
 LEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id
 WHERE stop_pics.uploader = $1
-    OR (stop_pics.public = true and stop_pics.sensitive = false)
-    OR $2 = true
+    OR (stop_pics.public AND NOT stop_pics.sensitive)
+    OR $2
 GROUP BY stop_pics.id
 "#,
         uid,
@@ -321,8 +321,8 @@ SELECT stop_pics.id, stop_pics.sha1, stop_pics.capture_date, stop_pics.lon, stop
     stop_pics.tags, stop_pics.attrs, stop_pics.quality
 FROM stop_pics
 JOIN stop_pic_stops on stop_pic_stops.pic = stop_pics.id
-WHERE stop_pics.tagged = true AND stop_pics.sensitive = false
-    AND stop_pics.public = true AND stop_pic_stops.stop=$1
+WHERE stop_pics.tagged AND NOT stop_pics.sensitive
+    AND stop_pics.public AND stop_pic_stops.stop=$1
 ORDER BY stop_pics.capture_date DESC
     "#,
         stop_id
@@ -372,8 +372,8 @@ FROM stop_pics
 LEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id
 WHERE stop_pic_stops.stop=$1
     AND (stop_pics.uploader = $2
-        OR (stop_pics.public = true AND stop_pics.sensitive = false)
-        OR $3 = true)
+        OR (stop_pics.public AND NOT stop_pics.sensitive)
+        OR $3)
 GROUP BY stop_pics.id
 ORDER BY quality DESC
     "#,
@@ -437,7 +437,7 @@ SELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,
 FROM stop_pics
 LEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id
 WHERE uploader=$1
-    AND ((stop_pics.public = true AND stop_pics.sensitive = false) OR $4 = true)
+    AND ((stop_pics.public AND NOT stop_pics.sensitive) OR $4)
 GROUP BY stop_pics.id
 ORDER BY capture_date DESC, upload_date DESC
 LIMIT $2 OFFSET $3
@@ -509,8 +509,8 @@ SELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,
 FROM stop_pics
 LEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id
 WHERE stop_pics.uploader = $1
-    OR (stop_pics.public = true AND stop_pics.sensitive = false)
-    OR $2 = true
+    OR (stop_pics.public AND NOT stop_pics.sensitive)
+    OR $2
 GROUP BY stop_pics.id
 ORDER BY capture_date DESC, upload_date DESC
 LIMIT $3 OFFSET $4
@@ -575,10 +575,10 @@ SELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,
     END as "rels!: Vec<(i32, Vec<String>)>"
 FROM stop_pics
 LEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id
-WHERE tagged=true
+WHERE tagged
     AND (stop_pics.uploader = $1
-        OR (stop_pics.public = true AND stop_pics.sensitive = false)
-        OR $2 = true)
+        OR (stop_pics.public AND NOT stop_pics.sensitive)
+        OR $2)
 GROUP BY stop_pics.id
 ORDER BY capture_date DESC, upload_date DESC
 LIMIT $3 OFFSET $4
@@ -643,10 +643,10 @@ SELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,
     END as "rels!: Vec<(i32, Vec<String>)>"
 FROM stop_pics
 LEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id
-WHERE tagged=false
+WHERE NOT tagged
     AND (stop_pics.uploader = $1
-        OR (stop_pics.public = true AND stop_pics.sensitive = false)
-        OR $2 = true)
+        OR (stop_pics.public AND NOT stop_pics.sensitive)
+        OR $2)
 GROUP BY stop_pics.id
 ORDER BY capture_date ASC, upload_date ASC
 LIMIT $3 OFFSET $4
@@ -732,8 +732,8 @@ SELECT stop_pics.id, stop_pics.sha1
 FROM stop_pics
 WHERE (stop_pics.lat IS NULL OR stop_pics.lon IS NULL)
     AND (stop_pics.uploader = $1
-        OR (stop_pics.public = true AND stop_pics.sensitive = false)
-        OR $2 = true)
+        OR (stop_pics.public AND NOT stop_pics.sensitive)
+        OR $2)
 ORDER BY capture_date ASC, upload_date ASC
 LIMIT $3 OFFSET $4
     "#,
@@ -766,7 +766,7 @@ pub(crate) async fn fetch_public_picture_stop_rels(
 SELECT stop_pic_stops.stop, stop_pic_stops.pic
 FROM stop_pic_stops
 JOIN stop_pics ON stop_pic_stops.pic = stop_pics.id
-WHERE stop_pics.public = true
+WHERE stop_pics.public
 ORDER BY stop ASC
     "#
     )
@@ -1004,7 +1004,7 @@ pub(crate) async fn fetch_panos(
 SELECT id, original_filename, sha1, lon, lat, stop_id,
     uploader, upload_date, capture_date, sensitive
 FROM panoramas
-WHERE sensitive = false OR $1 = true
+WHERE NOT sensitive OR $1
 "#,
         allow_sensitive
     )
@@ -1061,7 +1061,7 @@ pub(crate) async fn fetch_stop_pano(
         r#"
 SELECT id, sha1, lon, lat, capture_date, sensitive
 FROM panoramas
-WHERE stop_id = $1 AND (sensitive = false OR $2 = true)
+WHERE stop_id = $1 AND (NOT sensitive OR $2)
 "#,
         stop_id,
         allow_sensitive
