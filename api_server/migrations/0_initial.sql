@@ -499,6 +499,13 @@ CREATE TABLE external_news_items_imgs
     PRIMARY KEY (item_id, img_id)
 );
 
+CREATE TABLE external_news_items_regions
+(
+    item_id   integer NOT NULL REFERENCES external_news_items (id),
+    region_id integer NOT NULL REFERENCES regions (id),
+    PRIMARY KEY (item_id, region_id)
+);
+
 CREATE TABLE external_news_items_operators
 (
     item_id     integer NOT NULL REFERENCES external_news_items (id),

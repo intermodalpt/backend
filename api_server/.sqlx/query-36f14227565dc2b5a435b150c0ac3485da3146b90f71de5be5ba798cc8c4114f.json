@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT external_news_items.id, title, summary, author,\n    array_remove(array_agg(operator_id), NULL) as \"operator_ids!: Vec<i32>\",\n    COALESCE(content_md, prepro_content_md) as content_md,\n    COALESCE(content_text, prepro_content_text) as content_text,\n    edit_datetime, publish_datetime, source, url,\n    is_complete, is_validated, is_relevant, is_sensitive,\n    CASE\n        WHEN count(external_news_imgs.id) > 0\n        THEN array_agg(\n            ROW(sha1, transcript, has_copyright_issues))\n        ELSE array[]::record[]\n    END as \"imgs!: Vec<(String, Option<String>, Option<bool>)>\"\nFROM external_news_items\nLEFT JOIN external_news_items_imgs\n    ON external_news_items.id=external_news_items_imgs.item_id\nLEFT JOIN external_news_imgs\n    ON external_news_items_imgs.img_id=external_news_imgs.id\nLEFT JOIN news_items_operators\n    ON external_news_items.id=news_items_operators.item_id\nWHERE external_news_items.id=$1\n    AND (NOT has_copyright_issues OR $2)\nGROUP BY external_news_items.id\n",
+  "query": "\nSELECT external_news_items.id, title, summary, author,\n    array_remove(array_agg(operator_id), NULL) as \"operator_ids!: Vec<i32>\",\n    array_remove(array_agg(region_id), NULL) as \"region_ids!: Vec<i32>\",\n    COALESCE(content_md, prepro_content_md) as content_md,\n    COALESCE(content_text, prepro_content_text) as content_text,\n    edit_datetime, publish_datetime, source, url,\n    is_complete, is_validated, is_relevant, is_sensitive,\n    CASE\n        WHEN count(external_news_imgs.id) > 0\n        THEN array_agg(\n            ROW(sha1, transcript, has_copyright_issues))\n        ELSE array[]::record[]\n    END as \"imgs!: Vec<(String, Option<String>, Option<bool>)>\"\nFROM external_news_items\nLEFT JOIN external_news_items_imgs\n    ON external_news_items.id=external_news_items_imgs.item_id\nLEFT JOIN external_news_imgs\n    ON external_news_items_imgs.img_id=external_news_imgs.id\nLEFT JOIN news_items_operators\n    ON external_news_items.id=news_items_operators.item_id\nLEFT JOIN external_news_items_regions\n    ON external_news_items.id=external_news_items_regions.item_id\nWHERE external_news_items.id=$1\n    AND (NOT has_copyright_issues OR $2)\nGROUP BY external_news_items.id\n",
   "describe": {
     "columns": [
       {
@@ -30,56 +30,61 @@
       },
       {
         "ordinal": 5,
+        "name": "region_ids!: Vec<i32>",
+        "type_info": "Int4Array"
+      },
+      {
+        "ordinal": 6,
         "name": "content_md",
         "type_info": "Text"
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "content_text",
         "type_info": "Text"
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "edit_datetime",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "publish_datetime",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "source",
         "type_info": "Text"
       },
       {
-        "ordinal": 10,
+        "ordinal": 11,
         "name": "url",
         "type_info": "Text"
       },
       {
-        "ordinal": 11,
+        "ordinal": 12,
         "name": "is_complete",
         "type_info": "Bool"
       },
       {
-        "ordinal": 12,
+        "ordinal": 13,
         "name": "is_validated",
         "type_info": "Bool"
       },
       {
-        "ordinal": 13,
+        "ordinal": 14,
         "name": "is_relevant",
         "type_info": "Bool"
       },
       {
-        "ordinal": 14,
+        "ordinal": 15,
         "name": "is_sensitive",
         "type_info": "Bool"
       },
       {
-        "ordinal": 15,
+        "ordinal": 16,
         "name": "imgs!: Vec<(String, Option<String>, Option<bool>)>",
         "type_info": "RecordArray"
       }
@@ -98,6 +103,7 @@
       null,
       null,
       null,
+      null,
       true,
       false,
       false,
@@ -109,5 +115,5 @@
       null
     ]
   },
-  "hash": "e35db9d8aeefad048f6760fa1159a4175fdbc8bb87d386fe89e087fd6b5a64ad"
+  "hash": "36f14227565dc2b5a435b150c0ac3485da3146b90f71de5be5ba798cc8c4114f"
 }

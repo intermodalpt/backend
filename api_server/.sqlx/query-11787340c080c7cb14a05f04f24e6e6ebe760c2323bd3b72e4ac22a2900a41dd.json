@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT external_news_items.id, title, summary, author,\n    array_remove(array_agg(operator_id), NULL) as \"operator_ids!: Vec<i32>\",\n    content_md, prepro_content_md, content_text, prepro_content_text,\n    publish_datetime, edit_datetime, source, url,\n    is_complete, is_validated, is_relevant, is_sensitive, raw, ss_sha1,\n    CASE\n        WHEN count(external_news_imgs.id) > 0\n        THEN array_agg(\n            ROW(external_news_imgs.id, sha1, has_copyright_issues, transcript))\n        ELSE array[]::record[]\n    END as \"imgs!: Vec<models::ExternalNewsImage>\"\nFROM external_news_items\nLEFT JOIN external_news_items_imgs\n    ON external_news_items.id=external_news_items_imgs.item_id\nLEFT JOIN external_news_imgs\n    ON external_news_items_imgs.img_id=external_news_imgs.id\nLEFT JOIN external_news_items_operators\n    ON external_news_items.id=external_news_items_operators.item_id\nWHERE NOT is_validated\nGROUP BY external_news_items.id\nLIMIT $1 OFFSET $2\n",
+  "query": "\nSELECT external_news_items.id, title, summary, author,\n    array_remove(array_agg(operator_id), NULL) as \"operator_ids!: Vec<i32>\",\n    array_remove(array_agg(region_id), NULL) as \"region_ids!: Vec<i32>\",\n    content_md, prepro_content_md, content_text, prepro_content_text,\n    publish_datetime, edit_datetime, source, url,\n    is_complete, is_validated, is_relevant, is_sensitive, raw, ss_sha1,\n    CASE\n        WHEN count(external_news_imgs.id) > 0\n        THEN array_agg(\n            ROW(external_news_imgs.id, sha1, has_copyright_issues, transcript))\n        ELSE array[]::record[]\n    END as \"imgs!: Vec<models::ExternalNewsImage>\"\nFROM external_news_items\nLEFT JOIN external_news_items_imgs\n    ON external_news_items.id=external_news_items_imgs.item_id\nLEFT JOIN external_news_imgs\n    ON external_news_items_imgs.img_id=external_news_imgs.id\nLEFT JOIN external_news_items_operators\n    ON external_news_items.id=external_news_items_operators.item_id\nLEFT JOIN external_news_items_regions\n    ON external_news_items.id=external_news_items_regions.item_id\nWHERE NOT is_validated\nGROUP BY external_news_items.id\nLIMIT $1 OFFSET $2\n",
   "describe": {
     "columns": [
       {
@@ -30,76 +30,81 @@
       },
       {
         "ordinal": 5,
+        "name": "region_ids!: Vec<i32>",
+        "type_info": "Int4Array"
+      },
+      {
+        "ordinal": 6,
         "name": "content_md",
         "type_info": "Text"
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "prepro_content_md",
         "type_info": "Text"
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "content_text",
         "type_info": "Text"
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "prepro_content_text",
         "type_info": "Text"
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "publish_datetime",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 10,
+        "ordinal": 11,
         "name": "edit_datetime",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 11,
+        "ordinal": 12,
         "name": "source",
         "type_info": "Text"
       },
       {
-        "ordinal": 12,
+        "ordinal": 13,
         "name": "url",
         "type_info": "Text"
       },
       {
-        "ordinal": 13,
+        "ordinal": 14,
         "name": "is_complete",
         "type_info": "Bool"
       },
       {
-        "ordinal": 14,
+        "ordinal": 15,
         "name": "is_validated",
         "type_info": "Bool"
       },
       {
-        "ordinal": 15,
+        "ordinal": 16,
         "name": "is_relevant",
         "type_info": "Bool"
       },
       {
-        "ordinal": 16,
+        "ordinal": 17,
         "name": "is_sensitive",
         "type_info": "Bool"
       },
       {
-        "ordinal": 17,
+        "ordinal": 18,
         "name": "raw",
         "type_info": "Jsonb"
       },
       {
-        "ordinal": 18,
+        "ordinal": 19,
         "name": "ss_sha1",
         "type_info": "Bpchar"
       },
       {
-        "ordinal": 19,
+        "ordinal": 20,
         "name": "imgs!: Vec<models::ExternalNewsImage>",
         "type_info": "RecordArray"
       }
@@ -115,6 +120,7 @@
       true,
       true,
       true,
+      null,
       null,
       true,
       true,
@@ -133,5 +139,5 @@
       null
     ]
   },
-  "hash": "4685983f1565f6a687c1f8c69dcfa3fd43419efea79f82539aad036c664e5c0a"
+  "hash": "11787340c080c7cb14a05f04f24e6e6ebe760c2323bd3b72e4ac22a2900a41dd"
 }

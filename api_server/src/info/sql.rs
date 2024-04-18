@@ -231,6 +231,7 @@ pub(crate) async fn fetch_external_news_item(
         r#"
 SELECT external_news_items.id, title, summary, author,
     array_remove(array_agg(operator_id), NULL) as "operator_ids!: Vec<i32>",
+    array_remove(array_agg(region_id), NULL) as "region_ids!: Vec<i32>",
     COALESCE(content_md, prepro_content_md) as content_md,
     COALESCE(content_text, prepro_content_text) as content_text,
     edit_datetime, publish_datetime, source, url,
@@ -248,6 +249,8 @@ LEFT JOIN external_news_imgs
     ON external_news_items_imgs.img_id=external_news_imgs.id
 LEFT JOIN news_items_operators
     ON external_news_items.id=news_items_operators.item_id
+LEFT JOIN external_news_items_regions
+    ON external_news_items.id=external_news_items_regions.item_id
 WHERE external_news_items.id=$1
     AND (NOT has_copyright_issues OR $2)
 GROUP BY external_news_items.id
@@ -279,6 +282,7 @@ GROUP BY external_news_items.id
         is_relevant: row.is_relevant,
         is_sensitive: row.is_sensitive,
         operator_ids: row.operator_ids,
+        region_ids: row.region_ids,
         images: row
             .imgs
             .into_iter()
@@ -304,6 +308,7 @@ pub(crate) async fn fetch_full_external_news_item(
         r#"
 SELECT external_news_items.id, title, summary, author,
     array_remove(array_agg(operator_id), NULL) as "operator_ids!: Vec<i32>",
+    array_remove(array_agg(region_id), NULL) as "region_ids!: Vec<i32>",
     content_md, prepro_content_md, content_text, prepro_content_text,
     edit_datetime, publish_datetime, source, url, is_complete,
     is_validated, is_relevant, is_sensitive, raw, ss_sha1,
@@ -316,9 +321,12 @@ SELECT external_news_items.id, title, summary, author,
 FROM external_news_items
 LEFT JOIN external_news_items_imgs
     ON external_news_items.id=external_news_items_imgs.item_id
+LEFT JOIN external_news_imgs
+    ON external_news_items_imgs.img_id=external_news_imgs.id
 LEFT JOIN external_news_items_operators
     ON external_news_items.id=external_news_items_operators.item_id
-LEFT JOIN external_news_imgs ON external_news_items_imgs.img_id=external_news_imgs.id
+LEFT JOIN external_news_items_regions
+    ON external_news_items.id=external_news_items_regions.item_id
 WHERE external_news_items.id=$1
 GROUP BY external_news_items.id
 "#,
@@ -352,6 +360,7 @@ GROUP BY external_news_items.id
         is_sensitive: row.is_sensitive,
         images: row.imgs.into_iter().map(Into::into).collect(),
         operator_ids: row.operator_ids,
+        region_ids: row.region_ids,
         screenshot_url: row
             .ss_sha1
             .as_ref()
@@ -369,6 +378,7 @@ pub(crate) async fn fetch_external_news(
         r#"
 SELECT external_news_items.id, title, author, summary,
     array_remove(array_agg(operator_id), NULL) as "operator_ids!: Vec<i32>",
+    array_remove(array_agg(region_id), NULL) as "region_ids!: Vec<i32>",
     COALESCE(content_md, prepro_content_md) as content_md,
     COALESCE(content_text, prepro_content_text) as content_text,
     publish_datetime, edit_datetime, source, url,
@@ -384,6 +394,8 @@ LEFT JOIN external_news_items_imgs ON external_news_items.id=external_news_items
 LEFT JOIN external_news_imgs ON external_news_items_imgs.img_id=external_news_imgs.id
 LEFT JOIN external_news_items_operators
     ON external_news_items.id=external_news_items_operators.item_id
+LEFT JOIN external_news_items_regions
+    ON external_news_items.id=external_news_items_regions.item_id
 WHERE ($1 OR (is_validated AND NOT is_sensitive))
 GROUP BY external_news_items.id
 LIMIT $2 OFFSET $3
@@ -416,6 +428,7 @@ LIMIT $2 OFFSET $3
             is_relevant: row.is_relevant,
             is_sensitive: row.is_sensitive,
             operator_ids: row.operator_ids,
+            region_ids: row.region_ids,
             images: row
                 .imgs
                 .into_iter()
@@ -470,6 +483,7 @@ pub(crate) async fn fetch_operator_external_news(
         r#"
 SELECT external_news_items.id, title, author, summary,
     array_remove(array_agg(operator_id), NULL) as "operator_ids!: Vec<i32>",
+    array_remove(array_agg(region_id), NULL) as "region_ids!: Vec<i32>",
     COALESCE(content_md, prepro_content_md) as content_md,
     COALESCE(content_text, prepro_content_text) as content_text,
     publish_datetime, edit_datetime, source, url,
@@ -487,6 +501,8 @@ LEFT JOIN external_news_imgs
     ON external_news_items_imgs.img_id=external_news_imgs.id
 JOIN external_news_items_operators
     ON external_news_items.id=external_news_items_operators.item_id
+LEFT JOIN external_news_items_regions
+    ON external_news_items.id=external_news_items_regions.item_id
 WHERE operator_id=$1 
     AND ($2 OR (is_validated AND NOT is_sensitive))
 GROUP BY external_news_items.id
@@ -529,6 +545,7 @@ LIMIT $3 OFFSET $4
             is_relevant: row.is_relevant,
             is_sensitive: row.is_sensitive,
             operator_ids: row.operator_ids,
+            region_ids: row.region_ids,
             images: row
                 .imgs
                 .into_iter()
@@ -587,6 +604,7 @@ pub(crate) async fn fetch_pending_external_news(
         r#"
 SELECT external_news_items.id, title, summary, author,
     array_remove(array_agg(operator_id), NULL) as "operator_ids!: Vec<i32>",
+    array_remove(array_agg(region_id), NULL) as "region_ids!: Vec<i32>",
     content_md, prepro_content_md, content_text, prepro_content_text,
     publish_datetime, edit_datetime, source, url,
     is_complete, is_validated, is_relevant, is_sensitive, raw, ss_sha1,
@@ -603,6 +621,8 @@ LEFT JOIN external_news_imgs
     ON external_news_items_imgs.img_id=external_news_imgs.id
 LEFT JOIN external_news_items_operators
     ON external_news_items.id=external_news_items_operators.item_id
+LEFT JOIN external_news_items_regions
+    ON external_news_items.id=external_news_items_regions.item_id
 WHERE NOT is_validated
 GROUP BY external_news_items.id
 LIMIT $1 OFFSET $2
@@ -639,6 +659,7 @@ LIMIT $1 OFFSET $2
             is_relevant: row.is_relevant,
             is_sensitive: row.is_sensitive,
             operator_ids: row.operator_ids,
+            region_ids: row.region_ids,
             images: row.imgs.into_iter().map(Into::into).collect(),
             screenshot_url: row
                 .ss_sha1
@@ -678,6 +699,7 @@ pub(crate) async fn fetch_pending_operator_external_news(
         r#"
 SELECT external_news_items.id, title, summary, author, content_md,
     array_remove(array_agg(operator_id), NULL) as "operator_ids!: Vec<i32>",
+    array_remove(array_agg(region_id), NULL) as "region_ids!: Vec<i32>",
     prepro_content_md, content_text, prepro_content_text, publish_datetime, edit_datetime,
     source, url, is_complete, is_validated, is_relevant, is_sensitive, ss_sha1, raw,
     CASE
@@ -691,6 +713,8 @@ LEFT JOIN external_news_items_imgs ON external_news_items.id=external_news_items
 LEFT JOIN external_news_imgs ON external_news_items_imgs.img_id=external_news_imgs.id
 JOIN external_news_items_operators
     ON external_news_items.id=external_news_items_operators.item_id
+LEFT JOIN external_news_items_regions
+    ON external_news_items.id=external_news_items_regions.item_id
 WHERE operator_id=$1 AND NOT is_validated
 GROUP BY external_news_items.id
 LIMIT $2 OFFSET $3
@@ -726,6 +750,7 @@ LIMIT $2 OFFSET $3
             is_relevant: row.is_relevant,
             is_sensitive: row.is_sensitive,
             operator_ids: row.operator_ids,
+            region_ids: row.region_ids,
             images: row.imgs.into_iter().map(Into::into).collect(),
             screenshot_url: row.ss_sha1.as_ref().map(|sha1| get_external_news_ss_path(sha1))
         })

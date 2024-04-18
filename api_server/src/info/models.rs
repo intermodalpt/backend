@@ -53,6 +53,7 @@ pub(crate) mod responses {
     pub struct ExternalNewsItem {
         pub id: i32,
         pub operator_ids: Vec<i32>,
+        pub region_ids: Vec<i32>,
 
         pub title: Option<String>,
         pub summary: Option<String>,
@@ -101,6 +102,7 @@ pub(crate) mod responses {
         pub is_sensitive: bool,
 
         pub operator_ids: Vec<i32>,
+        pub region_ids: Vec<i32>,
         pub images: Vec<FullExternalNewsImage>,
         pub screenshot_url: Option<String>,
     }

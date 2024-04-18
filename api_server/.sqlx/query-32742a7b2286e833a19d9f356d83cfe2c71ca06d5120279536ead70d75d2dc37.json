@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO external_news_items_regions (item_id, region_id)\nVALUES ($1, $2)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "32742a7b2286e833a19d9f356d83cfe2c71ca06d5120279536ead70d75d2dc37"
+}
