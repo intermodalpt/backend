@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT external_news_items.id, title, summary, author,\n    array_remove(array_agg(operator_id), NULL) as \"operator_ids!: Vec<i32>\",\n    content_md, prepro_content_md, content_text, prepro_content_text,\n    publish_datetime, edit_datetime, source, url,\n    is_partial, is_validated, is_relevant, is_sensitive, raw, ss_sha1,\n    CASE\n        WHEN count(external_news_imgs.id) > 0\n        THEN array_agg(\n            ROW(external_news_imgs.id, sha1, has_copyright_issues, transcript))\n        ELSE array[]::record[]\n    END as \"imgs!: Vec<models::ExternalNewsImage>\"\nFROM external_news_items\nLEFT JOIN external_news_items_imgs\n    ON external_news_items.id=external_news_items_imgs.item_id\nLEFT JOIN external_news_imgs\n    ON external_news_items_imgs.img_id=external_news_imgs.id\nLEFT JOIN external_news_items_operators\n    ON external_news_items.id=external_news_items_operators.item_id\nWHERE NOT is_validated\nGROUP BY external_news_items.id\nLIMIT $1 OFFSET $2\n",
+  "query": "\nSELECT external_news_items.id, title, summary, author,\n    array_remove(array_agg(operator_id), NULL) as \"operator_ids!: Vec<i32>\",\n    content_md, prepro_content_md, content_text, prepro_content_text,\n    edit_datetime, publish_datetime, source, url, is_complete,\n    is_validated, is_relevant, is_sensitive, raw, ss_sha1,\n    CASE\n        WHEN count(external_news_imgs.id) > 0\n        THEN array_agg(\n            ROW(external_news_imgs.id, sha1, has_copyright_issues, transcript))\n        ELSE array[]::record[]\n    END as \"imgs!: Vec<models::ExternalNewsImage>\"\nFROM external_news_items\nLEFT JOIN external_news_items_imgs\n    ON external_news_items.id=external_news_items_imgs.item_id\nLEFT JOIN external_news_items_operators\n    ON external_news_items.id=external_news_items_operators.item_id\nLEFT JOIN external_news_imgs ON external_news_items_imgs.img_id=external_news_imgs.id\nWHERE external_news_items.id=$1\nGROUP BY external_news_items.id\n",
   "describe": {
     "columns": [
       {
@@ -50,12 +50,12 @@
       },
       {
         "ordinal": 9,
-        "name": "publish_datetime",
+        "name": "edit_datetime",
         "type_info": "Timestamptz"
       },
       {
         "ordinal": 10,
-        "name": "edit_datetime",
+        "name": "publish_datetime",
         "type_info": "Timestamptz"
       },
       {
@@ -70,7 +70,7 @@
       },
       {
         "ordinal": 13,
-        "name": "is_partial",
+        "name": "is_complete",
         "type_info": "Bool"
       },
       {
@@ -106,8 +106,7 @@
     ],
     "parameters": {
       "Left": [
-        "Int8",
-        "Int8"
+        "Int4"
       ]
     },
     "nullable": [
@@ -120,8 +119,8 @@
       true,
       true,
       true,
-      false,
       true,
+      false,
       false,
       true,
       false,
@@ -133,5 +132,5 @@
       null
     ]
   },
-  "hash": "d48ca5c71be57fe847530ca2534f6c7bd61ebed1149c608c8d9b03c781274a56"
+  "hash": "12607418b0b74b5b20976abf712a1b86f7566c6a387729993335daca952fd730"
 }

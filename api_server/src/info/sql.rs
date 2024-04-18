@@ -234,7 +234,7 @@ SELECT external_news_items.id, title, summary, author,
     COALESCE(content_md, prepro_content_md) as content_md,
     COALESCE(content_text, prepro_content_text) as content_text,
     edit_datetime, publish_datetime, source, url,
-    is_partial, is_validated, is_relevant, is_sensitive,
+    is_complete, is_validated, is_relevant, is_sensitive,
     CASE
         WHEN count(external_news_imgs.id) > 0
         THEN array_agg(
@@ -274,7 +274,7 @@ GROUP BY external_news_items.id
             .map(|datetime| datetime.with_timezone(&Local)),
         source: row.source,
         url: row.url,
-        is_partial: row.is_partial,
+        is_complete: row.is_complete,
         is_validated: row.is_validated,
         is_relevant: row.is_relevant,
         is_sensitive: row.is_sensitive,
@@ -305,7 +305,7 @@ pub(crate) async fn fetch_full_external_news_item(
 SELECT external_news_items.id, title, summary, author,
     array_remove(array_agg(operator_id), NULL) as "operator_ids!: Vec<i32>",
     content_md, prepro_content_md, content_text, prepro_content_text,
-    edit_datetime, publish_datetime, source, url, is_partial,
+    edit_datetime, publish_datetime, source, url, is_complete,
     is_validated, is_relevant, is_sensitive, raw, ss_sha1,
     CASE
         WHEN count(external_news_imgs.id) > 0
@@ -346,7 +346,7 @@ GROUP BY external_news_items.id
         source: row.source,
         url: row.url,
         raw: row.raw,
-        is_partial: row.is_partial,
+        is_complete: row.is_complete,
         is_validated: row.is_validated,
         is_relevant: row.is_relevant,
         is_sensitive: row.is_sensitive,
@@ -372,7 +372,7 @@ SELECT external_news_items.id, title, author, summary,
     COALESCE(content_md, prepro_content_md) as content_md,
     COALESCE(content_text, prepro_content_text) as content_text,
     publish_datetime, edit_datetime, source, url,
-    is_partial, is_validated, is_relevant, is_sensitive,
+    is_complete, is_validated, is_relevant, is_sensitive,
     CASE
         WHEN count(external_news_imgs.id) > 0
         THEN array_agg(
@@ -411,7 +411,7 @@ LIMIT $2 OFFSET $3
             edit_datetime: row.edit_datetime.map(|datetime| datetime.with_timezone(&Local)),
             source: row.source,
             url: row.url,
-            is_partial: row.is_partial,
+            is_complete: row.is_complete,
             is_validated: row.is_validated,
             is_relevant: row.is_relevant,
             is_sensitive: row.is_sensitive,
@@ -473,7 +473,7 @@ SELECT external_news_items.id, title, author, summary,
     COALESCE(content_md, prepro_content_md) as content_md,
     COALESCE(content_text, prepro_content_text) as content_text,
     publish_datetime, edit_datetime, source, url,
-    is_partial, is_validated, is_relevant, is_sensitive,
+    is_complete, is_validated, is_relevant, is_sensitive,
     CASE
         WHEN count(external_news_imgs.id) > 0
         THEN array_agg(
@@ -524,7 +524,7 @@ LIMIT $3 OFFSET $4
                 .map(|datetime| datetime.with_timezone(&Local)),
             source: row.source,
             url: row.url,
-            is_partial: row.is_partial,
+            is_complete: row.is_complete,
             is_validated: row.is_validated,
             is_relevant: row.is_relevant,
             is_sensitive: row.is_sensitive,
@@ -589,7 +589,7 @@ SELECT external_news_items.id, title, summary, author,
     array_remove(array_agg(operator_id), NULL) as "operator_ids!: Vec<i32>",
     content_md, prepro_content_md, content_text, prepro_content_text,
     publish_datetime, edit_datetime, source, url,
-    is_partial, is_validated, is_relevant, is_sensitive, raw, ss_sha1,
+    is_complete, is_validated, is_relevant, is_sensitive, raw, ss_sha1,
     CASE
         WHEN count(external_news_imgs.id) > 0
         THEN array_agg(
@@ -634,7 +634,7 @@ LIMIT $1 OFFSET $2
             source: row.source,
             url: row.url,
             raw: row.raw,
-            is_partial: row.is_partial,
+            is_complete: row.is_complete,
             is_validated: row.is_validated,
             is_relevant: row.is_relevant,
             is_sensitive: row.is_sensitive,
@@ -679,7 +679,7 @@ pub(crate) async fn fetch_pending_operator_external_news(
 SELECT external_news_items.id, title, summary, author, content_md,
     array_remove(array_agg(operator_id), NULL) as "operator_ids!: Vec<i32>",
     prepro_content_md, content_text, prepro_content_text, publish_datetime, edit_datetime,
-    source, url, is_partial, is_validated, is_relevant, is_sensitive, ss_sha1, raw,
+    source, url, is_complete, is_validated, is_relevant, is_sensitive, ss_sha1, raw,
     CASE
         WHEN count(external_news_imgs.id) > 0
         THEN array_agg(
@@ -721,7 +721,7 @@ LIMIT $2 OFFSET $3
             source: row.source,
             url: row.url,
             raw: row.raw,
-            is_partial: row.is_partial,
+            is_complete: row.is_complete,
             is_validated: row.is_validated,
             is_relevant: row.is_relevant,
             is_sensitive: row.is_sensitive,
@@ -766,7 +766,7 @@ pub(crate) async fn insert_external_news(
         r#"
 INSERT INTO external_news_items (title, summary, author,
     prepro_content_md, prepro_content_text, publish_datetime, edit_datetime,
-    source, url, is_partial, raw)
+    source, url, is_complete, raw)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 RETURNING id"#,
         change.title,
@@ -778,7 +778,7 @@ RETURNING id"#,
         change.edit_datetime,
         change.source,
         change.url,
-        change.is_partial,
+        change.is_complete,
         change.raw
     )
     .fetch_one(&mut **transaction)
@@ -862,7 +862,7 @@ pub(crate) async fn fetch_external_news_source_dump(
 SELECT id, title, summary, author,
     array_remove(array_agg(operator_id), NULL) as "operator_ids!: Vec<i32>",
     prepro_content_md, prepro_content_text,
-    publish_datetime, edit_datetime, source, url, is_partial, raw
+    publish_datetime, edit_datetime, source, url, is_complete, raw
 FROM external_news_items
 JOIN news_items_operators
     ON external_news_items.id=news_items_operators.item_id

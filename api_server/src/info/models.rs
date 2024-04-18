@@ -67,7 +67,7 @@ pub(crate) mod responses {
         pub source: String,
         pub url: Option<String>,
 
-        pub is_partial: bool,
+        pub is_complete: bool,
         pub is_validated: bool,
         pub is_relevant: Option<bool>,
         pub is_sensitive: bool,
@@ -95,7 +95,7 @@ pub(crate) mod responses {
         pub url: Option<String>,
         pub raw: JsonValue,
 
-        pub is_partial: bool,
+        pub is_complete: bool,
         pub is_validated: bool,
         pub is_relevant: Option<bool>,
         pub is_sensitive: bool,
@@ -125,7 +125,7 @@ pub(crate) mod responses {
         pub url: Option<String>,
         pub raw: JsonValue,
 
-        pub is_partial: bool,
+        pub is_complete: bool,
     }
 
     #[derive(Serialize, Debug)]
@@ -194,7 +194,7 @@ pub(crate) mod requests {
 
         pub source: String,
         pub url: Option<String>,
-        pub is_partial: bool,
+        pub is_complete: bool,
         pub raw: JsonValue,
     }
 }

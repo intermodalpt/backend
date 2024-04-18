@@ -465,7 +465,7 @@ CREATE TABLE external_news_items
     url                 text,
     -- Is a snapshot of the actual news item
     -- (because eg. wants to point people at the item source)
-    is_partial          boolean                  NOT NULL,
+    is_complete         boolean                  NOT NULL,
 
     -- Has been manually checked and the fields have been completed where needed
     is_validated        boolean                  NOT NULL default FALSE,

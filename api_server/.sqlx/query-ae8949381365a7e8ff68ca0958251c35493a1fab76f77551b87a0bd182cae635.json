@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT id, title, summary, author,\n    array_remove(array_agg(operator_id), NULL) as \"operator_ids!: Vec<i32>\",\n    prepro_content_md, prepro_content_text,\n    publish_datetime, edit_datetime, source, url, is_partial, raw\nFROM external_news_items\nJOIN news_items_operators\n    ON external_news_items.id=news_items_operators.item_id\nWHERE source=$1\nGROUP BY external_news_items.id\n",
+  "query": "\nSELECT id, title, summary, author,\n    array_remove(array_agg(operator_id), NULL) as \"operator_ids!: Vec<i32>\",\n    prepro_content_md, prepro_content_text,\n    publish_datetime, edit_datetime, source, url, is_complete, raw\nFROM external_news_items\nJOIN news_items_operators\n    ON external_news_items.id=news_items_operators.item_id\nWHERE source=$1\nGROUP BY external_news_items.id\n",
   "describe": {
     "columns": [
       {
@@ -60,7 +60,7 @@
       },
       {
         "ordinal": 11,
-        "name": "is_partial",
+        "name": "is_complete",
         "type_info": "Bool"
       },
       {
@@ -90,5 +90,5 @@
       false
     ]
   },
-  "hash": "f375a702b63de0c42e62b7c6396bf40b53de41a43b7a0953e7e2630f9ce7116b"
+  "hash": "ae8949381365a7e8ff68ca0958251c35493a1fab76f77551b87a0bd182cae635"
 }

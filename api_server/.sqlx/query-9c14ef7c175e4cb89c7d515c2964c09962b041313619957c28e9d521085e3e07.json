@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nINSERT INTO external_news_items (title, summary, author,\n    prepro_content_md, prepro_content_text, publish_datetime, edit_datetime,\n    source, url, is_partial, raw)\nVALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)\nRETURNING id",
+  "query": "\nINSERT INTO external_news_items (title, summary, author,\n    prepro_content_md, prepro_content_text, publish_datetime, edit_datetime,\n    source, url, is_complete, raw)\nVALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)\nRETURNING id",
   "describe": {
     "columns": [
       {
@@ -28,5 +28,5 @@
       false
     ]
   },
-  "hash": "2d44ab3519a259d1513bea056b04edc18e2f584e68deff5e7fd981b3ae23f4db"
+  "hash": "9c14ef7c175e4cb89c7d515c2964c09962b041313619957c28e9d521085e3e07"
 }

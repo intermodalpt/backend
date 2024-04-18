@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT external_news_items.id, title, summary, author, content_md,\n    array_remove(array_agg(operator_id), NULL) as \"operator_ids!: Vec<i32>\",\n    prepro_content_md, content_text, prepro_content_text, publish_datetime, edit_datetime,\n    source, url, is_partial, is_validated, is_relevant, is_sensitive, ss_sha1, raw,\n    CASE\n        WHEN count(external_news_imgs.id) > 0\n        THEN array_agg(\n            ROW(external_news_imgs.id, sha1, has_copyright_issues, transcript))\n        ELSE array[]::record[]\n    END as \"imgs!: Vec<models::ExternalNewsImage>\"\nFROM external_news_items\nLEFT JOIN external_news_items_imgs ON external_news_items.id=external_news_items_imgs.item_id\nLEFT JOIN external_news_imgs ON external_news_items_imgs.img_id=external_news_imgs.id\nJOIN external_news_items_operators\n    ON external_news_items.id=external_news_items_operators.item_id\nWHERE operator_id=$1 AND NOT is_validated\nGROUP BY external_news_items.id\nLIMIT $2 OFFSET $3\n",
+  "query": "\nSELECT external_news_items.id, title, summary, author, content_md,\n    array_remove(array_agg(operator_id), NULL) as \"operator_ids!: Vec<i32>\",\n    prepro_content_md, content_text, prepro_content_text, publish_datetime, edit_datetime,\n    source, url, is_complete, is_validated, is_relevant, is_sensitive, ss_sha1, raw,\n    CASE\n        WHEN count(external_news_imgs.id) > 0\n        THEN array_agg(\n            ROW(external_news_imgs.id, sha1, has_copyright_issues, transcript))\n        ELSE array[]::record[]\n    END as \"imgs!: Vec<models::ExternalNewsImage>\"\nFROM external_news_items\nLEFT JOIN external_news_items_imgs ON external_news_items.id=external_news_items_imgs.item_id\nLEFT JOIN external_news_imgs ON external_news_items_imgs.img_id=external_news_imgs.id\nJOIN external_news_items_operators\n    ON external_news_items.id=external_news_items_operators.item_id\nWHERE operator_id=$1 AND NOT is_validated\nGROUP BY external_news_items.id\nLIMIT $2 OFFSET $3\n",
   "describe": {
     "columns": [
       {
@@ -70,7 +70,7 @@
       },
       {
         "ordinal": 13,
-        "name": "is_partial",
+        "name": "is_complete",
         "type_info": "Bool"
       },
       {
@@ -134,5 +134,5 @@
       null
     ]
   },
-  "hash": "7b40c0b5ccd399d5896c5953593e9279eafc6d0960190b2bfdebbc5b5d70d724"
+  "hash": "626f89d27721b8e7a7db51203a43198f24848c03c72c2d81bef05211e9843543"
 }

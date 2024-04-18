@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT external_news_items.id, title, author, summary,\n    array_remove(array_agg(operator_id), NULL) as \"operator_ids!: Vec<i32>\",\n    COALESCE(content_md, prepro_content_md) as content_md,\n    COALESCE(content_text, prepro_content_text) as content_text,\n    publish_datetime, edit_datetime, source, url,\n    is_partial, is_validated, is_relevant, is_sensitive,\n    CASE\n        WHEN count(external_news_imgs.id) > 0\n        THEN array_agg(\n            ROW(sha1, transcript, has_copyright_issues))\n        ELSE array[]::record[]\n    END as \"imgs!: Vec<(String, Option<String>, Option<bool>)>\"\nFROM external_news_items\nLEFT JOIN external_news_items_imgs\n    ON external_news_items.id=external_news_items_imgs.item_id\nLEFT JOIN external_news_imgs\n    ON external_news_items_imgs.img_id=external_news_imgs.id\nJOIN external_news_items_operators\n    ON external_news_items.id=external_news_items_operators.item_id\nWHERE operator_id=$1 \n    AND ($2 OR (is_validated AND NOT is_sensitive))\nGROUP BY external_news_items.id\nLIMIT $3 OFFSET $4\n",
+  "query": "\nSELECT external_news_items.id, title, author, summary,\n    array_remove(array_agg(operator_id), NULL) as \"operator_ids!: Vec<i32>\",\n    COALESCE(content_md, prepro_content_md) as content_md,\n    COALESCE(content_text, prepro_content_text) as content_text,\n    publish_datetime, edit_datetime, source, url,\n    is_complete, is_validated, is_relevant, is_sensitive,\n    CASE\n        WHEN count(external_news_imgs.id) > 0\n        THEN array_agg(\n            ROW(sha1, transcript, has_copyright_issues))\n        ELSE array[]::record[]\n    END as \"imgs!: Vec<(String, Option<String>, Option<bool>)>\"\nFROM external_news_items\nLEFT JOIN external_news_items_imgs\n    ON external_news_items.id=external_news_items_imgs.item_id\nLEFT JOIN external_news_imgs\n    ON external_news_items_imgs.img_id=external_news_imgs.id\nJOIN external_news_items_operators\n    ON external_news_items.id=external_news_items_operators.item_id\nWHERE operator_id=$1 \n    AND ($2 OR (is_validated AND NOT is_sensitive))\nGROUP BY external_news_items.id\nLIMIT $3 OFFSET $4\n",
   "describe": {
     "columns": [
       {
@@ -60,7 +60,7 @@
       },
       {
         "ordinal": 11,
-        "name": "is_partial",
+        "name": "is_complete",
         "type_info": "Bool"
       },
       {
@@ -111,5 +111,5 @@
       null
     ]
   },
-  "hash": "2c0747361d5622ec0a6d6f947d641193da7410aed238782baa1a6a63651bb1f6"
+  "hash": "49094b9234f3f5c14a8c0ff0fd6fefffabd6402dcfe49ae099f3dd5b2f2fd90e"
 }
