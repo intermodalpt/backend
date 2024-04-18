@@ -180,6 +180,26 @@ pub(crate) mod requests {
         pub region_ids: Vec<i32>,
     }
 
+    impl NewNewsItem {
+        pub(crate) fn tidy(&mut self) {
+            if let Some(title) = &self.title {
+                if title.is_empty() {
+                    self.title = None;
+                }
+            }
+            if let Some(summary) = &self.summary {
+                if summary.is_empty() {
+                    self.summary = None;
+                }
+            }
+            if let Some(author_override) = &self.author_override {
+                if author_override.is_empty() {
+                    self.author_override = None;
+                }
+            }
+        }
+    }
+
     #[derive(Debug, Deserialize)]
     pub struct NewExternalNewsItem {
         pub operator_ids: Vec<i32>,
@@ -198,6 +218,93 @@ pub(crate) mod requests {
         pub url: Option<String>,
         pub is_complete: bool,
         pub raw: JsonValue,
+    }
+
+    impl NewExternalNewsItem {
+        pub(crate) fn tidy(&mut self) {
+            if let Some(title) = &self.title {
+                if title.is_empty() {
+                    self.title = None;
+                }
+            }
+            if let Some(summary) = &self.summary {
+                if summary.is_empty() {
+                    self.summary = None;
+                }
+            }
+            if let Some(author) = &self.author {
+                if author.is_empty() {
+                    self.author = None;
+                }
+            }
+            if let Some(prepro_content_md) = &self.prepro_content_md {
+                if prepro_content_md.is_empty() {
+                    self.prepro_content_md = None;
+                }
+            }
+            if let Some(prepro_content_text) = &self.prepro_content_text {
+                if prepro_content_text.is_empty() {
+                    self.prepro_content_text = None;
+                }
+            }
+            if let Some(url) = &self.url {
+                if url.is_empty() {
+                    self.url = None;
+                }
+            }
+        }
+    }
+
+    #[derive(Debug, Deserialize)]
+    pub struct ChangeExternalNewsItem {
+        pub operator_ids: Vec<i32>,
+        pub region_ids: Vec<i32>,
+
+        pub title: Option<String>,
+        pub summary: Option<String>,
+        pub author: Option<String>,
+
+        pub content_md: Option<String>,
+
+        pub publish_datetime: DateTime<Local>,
+        pub edit_datetime: Option<DateTime<Local>>,
+
+        pub url: Option<String>,
+
+        pub is_complete: bool,
+        pub is_relevant: bool,
+        pub is_sensitive: bool,
+        pub is_validated: bool,
+    }
+
+    impl ChangeExternalNewsItem {
+        pub(crate) fn tidy(&mut self) {
+            if let Some(title) = &self.title {
+                if title.is_empty() {
+                    self.title = None;
+                }
+            }
+            if let Some(summary) = &self.summary {
+                if summary.is_empty() {
+                    self.summary = None;
+                }
+            }
+            if let Some(author) = &self.author {
+                if author.is_empty() {
+                    self.author = None;
+                }
+            }
+            if let Some(content_md) = &self.content_md {
+                if content_md.is_empty() {
+                    self.content_md = None;
+                }
+            }
+            if let Some(url) = &self.url {
+                if url.is_empty() {
+                    self.url = None;
+                }
+            }
+        }
     }
 }
 

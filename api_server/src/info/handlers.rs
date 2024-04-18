@@ -78,8 +78,10 @@ pub(crate) async fn get_operator_news(
 pub(crate) async fn post_news(
     State(state): State<AppState>,
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
-    Json(news_item): Json<requests::NewNewsItem>,
+    Json(mut news_item): Json<requests::NewNewsItem>,
 ) -> Result<Json<IdReturn>, Error> {
+    news_item.tidy();
+
     let mut transaction = state.pool.begin().await.map_err(|err| {
         tracing::error!("Failed to open transaction: {err}");
         Error::DatabaseExecution
@@ -227,11 +229,13 @@ pub(crate) async fn get_operator_pending_external_news(
     }))
 }
 
-pub(crate) async fn post_external_news(
+pub(crate) async fn post_external_news_item(
     State(state): State<AppState>,
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
-    Json(news_item): Json<requests::NewExternalNewsItem>,
+    Json(mut news_item): Json<requests::NewExternalNewsItem>,
 ) -> Result<Json<IdReturn>, Error> {
+    news_item.tidy();
+
     let mut transaction = state.pool.begin().await.map_err(|err| {
         tracing::error!("Failed to open transaction: {err}");
         Error::DatabaseExecution
