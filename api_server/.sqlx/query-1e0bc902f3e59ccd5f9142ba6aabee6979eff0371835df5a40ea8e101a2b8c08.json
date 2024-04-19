@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT external_news_items.id, title, author, summary,\n    array_remove(array_agg(operator_id), NULL) as \"operator_ids!: Vec<i32>\",\n    array_remove(array_agg(region_id), NULL) as \"region_ids!: Vec<i32>\",\n    COALESCE(content_md, prepro_content_md) as content_md,\n    COALESCE(content_text, prepro_content_text) as content_text,\n    publish_datetime, edit_datetime, source, url,\n    is_complete, is_validated, is_relevant, is_sensitive,\n    CASE\n        WHEN count(external_news_imgs.id) > 0\n        THEN array_agg(\n            ROW(sha1, transcript, has_copyright_issues))\n        ELSE array[]::record[]\n    END as \"imgs!: Vec<(String, Option<String>, Option<bool>)>\"\nFROM external_news_items\nLEFT JOIN external_news_items_imgs\n    ON external_news_items.id=external_news_items_imgs.item_id\nLEFT JOIN external_news_imgs\n    ON external_news_items_imgs.img_id=external_news_imgs.id\nJOIN external_news_items_operators\n    ON external_news_items.id=external_news_items_operators.item_id\nLEFT JOIN external_news_items_regions\n    ON external_news_items.id=external_news_items_regions.item_id\nWHERE operator_id=$1 \n    AND ($2 OR (is_validated AND NOT is_sensitive))\nGROUP BY external_news_items.id\nLIMIT $3 OFFSET $4\n",
+  "query": "\nSELECT external_news_items.id, title, summary, author,\n    array_remove(array_agg(distinct operator_id), NULL) as \"operator_ids!: Vec<i32>\",\n    array_remove(array_agg(distinct region_id), NULL) as \"region_ids!: Vec<i32>\",\n    COALESCE(content_md, prepro_content_md) as content_md,\n    COALESCE(content_text, prepro_content_text) as content_text,\n    edit_datetime, publish_datetime, source, url,\n    is_complete, is_validated, is_relevant, is_sensitive,\n    CASE\n        WHEN count(external_news_imgs.id) > 0\n        THEN array_agg(\n            ROW(sha1, transcript, has_copyright_issues))\n        ELSE array[]::record[]\n    END as \"imgs!: Vec<(String, Option<String>, Option<bool>)>\"\nFROM external_news_items\nLEFT JOIN external_news_items_imgs\n    ON external_news_items.id=external_news_items_imgs.item_id\nLEFT JOIN external_news_imgs\n    ON external_news_items_imgs.img_id=external_news_imgs.id\nLEFT JOIN external_news_items_operators\n    ON external_news_items.id=external_news_items_operators.item_id\nLEFT JOIN external_news_items_regions\n    ON external_news_items.id=external_news_items_regions.item_id\nWHERE external_news_items.id=$1\n    AND (NOT has_copyright_issues OR $2)\nGROUP BY external_news_items.id\n",
   "describe": {
     "columns": [
       {
@@ -15,12 +15,12 @@
       },
       {
         "ordinal": 2,
-        "name": "author",
+        "name": "summary",
         "type_info": "Text"
       },
       {
         "ordinal": 3,
-        "name": "summary",
+        "name": "author",
         "type_info": "Text"
       },
       {
@@ -45,12 +45,12 @@
       },
       {
         "ordinal": 8,
-        "name": "publish_datetime",
+        "name": "edit_datetime",
         "type_info": "Timestamptz"
       },
       {
         "ordinal": 9,
-        "name": "edit_datetime",
+        "name": "publish_datetime",
         "type_info": "Timestamptz"
       },
       {
@@ -92,9 +92,7 @@
     "parameters": {
       "Left": [
         "Int4",
-        "Bool",
-        "Int8",
-        "Int8"
+        "Bool"
       ]
     },
     "nullable": [
@@ -106,8 +104,8 @@
       null,
       null,
       null,
-      false,
       true,
+      false,
       false,
       true,
       false,
@@ -117,5 +115,5 @@
       null
     ]
   },
-  "hash": "371df54bbdb815a3cdf8dbe87b1dcbc815f373df3ebd8053ad33ad2aafc265cd"
+  "hash": "1e0bc902f3e59ccd5f9142ba6aabee6979eff0371835df5a40ea8e101a2b8c08"
 }

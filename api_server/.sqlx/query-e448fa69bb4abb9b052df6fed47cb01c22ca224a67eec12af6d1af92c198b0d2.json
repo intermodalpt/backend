@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT id, title, summary,\n    array_remove(array_agg(operator_id), NULL) as \"operator_ids!: Vec<i32>\",\n    content as \"content!: sqlx::types::Json<Vec<info::ContentBlock>>\",\n    publish_datetime, edit_datetime, visible\nFROM news_items\nLEFT JOIN news_items_operators ON news_items.id=news_items_operators.item_id\nWHERE operator_id=$1\nGROUP BY news_items.id\nLIMIT $2 OFFSET $3\n",
+  "query": "\nSELECT id, title, summary,\n    array_remove(array_agg(distinct operator_id), NULL) as \"operator_ids!: Vec<i32>\",\n    content as \"content!: sqlx::types::Json<Vec<info::ContentBlock>>\",\n    publish_datetime, edit_datetime, visible\nFROM news_items\nLEFT JOIN news_items_operators ON news_items.id=news_items_operators.item_id\nWHERE operator_id=$1\nGROUP BY news_items.id\nLIMIT $2 OFFSET $3\n",
   "describe": {
     "columns": [
       {
@@ -62,5 +62,5 @@
       false
     ]
   },
-  "hash": "3e7bfe937599ca7cfe3eda13d6c6b1d03c38e622bac238e9e0bee81bea855488"
+  "hash": "e448fa69bb4abb9b052df6fed47cb01c22ca224a67eec12af6d1af92c198b0d2"
 }

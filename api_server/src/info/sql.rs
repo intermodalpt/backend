@@ -98,7 +98,7 @@ pub(crate) async fn fetch_operator_news(
     sqlx::query!(
         r#"
 SELECT id, title, summary,
-    array_remove(array_agg(operator_id), NULL) as "operator_ids!: Vec<i32>",
+    array_remove(array_agg(distinct operator_id), NULL) as "operator_ids!: Vec<i32>",
     content as "content!: sqlx::types::Json<Vec<info::ContentBlock>>",
     publish_datetime, edit_datetime, visible
 FROM news_items
@@ -230,8 +230,8 @@ pub(crate) async fn fetch_external_news_item(
     Ok(sqlx::query!(
         r#"
 SELECT external_news_items.id, title, summary, author,
-    array_remove(array_agg(operator_id), NULL) as "operator_ids!: Vec<i32>",
-    array_remove(array_agg(region_id), NULL) as "region_ids!: Vec<i32>",
+    array_remove(array_agg(distinct operator_id), NULL) as "operator_ids!: Vec<i32>",
+    array_remove(array_agg(distinct region_id), NULL) as "region_ids!: Vec<i32>",
     COALESCE(content_md, prepro_content_md) as content_md,
     COALESCE(content_text, prepro_content_text) as content_text,
     edit_datetime, publish_datetime, source, url,
@@ -307,8 +307,8 @@ pub(crate) async fn fetch_full_external_news_item(
     Ok(sqlx::query!(
         r#"
 SELECT external_news_items.id, title, summary, author,
-    array_remove(array_agg(operator_id), NULL) as "operator_ids!: Vec<i32>",
-    array_remove(array_agg(region_id), NULL) as "region_ids!: Vec<i32>",
+    array_remove(array_agg(distinct operator_id), NULL) as "operator_ids!: Vec<i32>",
+    array_remove(array_agg(distinct region_id), NULL) as "region_ids!: Vec<i32>",
     content_md, prepro_content_md, content_text, prepro_content_text,
     edit_datetime, publish_datetime, source, url, is_complete,
     is_validated, is_relevant, is_sensitive, raw, ss_sha1,
@@ -377,8 +377,8 @@ pub(crate) async fn fetch_external_news(
     sqlx::query!(
         r#"
 SELECT external_news_items.id, title, author, summary,
-    array_remove(array_agg(operator_id), NULL) as "operator_ids!: Vec<i32>",
-    array_remove(array_agg(region_id), NULL) as "region_ids!: Vec<i32>",
+    array_remove(array_agg(distinct operator_id), NULL) as "operator_ids!: Vec<i32>",
+    array_remove(array_agg(distinct region_id), NULL) as "region_ids!: Vec<i32>",
     COALESCE(content_md, prepro_content_md) as content_md,
     COALESCE(content_text, prepro_content_text) as content_text,
     publish_datetime, edit_datetime, source, url,
@@ -482,8 +482,8 @@ pub(crate) async fn fetch_operator_external_news(
     sqlx::query!(
         r#"
 SELECT external_news_items.id, title, author, summary,
-    array_remove(array_agg(operator_id), NULL) as "operator_ids!: Vec<i32>",
-    array_remove(array_agg(region_id), NULL) as "region_ids!: Vec<i32>",
+    array_remove(array_agg(distinct operator_id), NULL) as "operator_ids!: Vec<i32>",
+    array_remove(array_agg(distinct region_id), NULL) as "region_ids!: Vec<i32>",
     COALESCE(content_md, prepro_content_md) as content_md,
     COALESCE(content_text, prepro_content_text) as content_text,
     publish_datetime, edit_datetime, source, url,
@@ -603,8 +603,8 @@ pub(crate) async fn fetch_pending_external_news(
     sqlx::query!(
         r#"
 SELECT external_news_items.id, title, summary, author,
-    array_remove(array_agg(operator_id), NULL) as "operator_ids!: Vec<i32>",
-    array_remove(array_agg(region_id), NULL) as "region_ids!: Vec<i32>",
+    array_remove(array_agg(distinct operator_id), NULL) as "operator_ids!: Vec<i32>",
+    array_remove(array_agg(distinct region_id), NULL) as "region_ids!: Vec<i32>",
     content_md, prepro_content_md, content_text, prepro_content_text,
     publish_datetime, edit_datetime, source, url,
     is_complete, is_validated, is_relevant, is_sensitive, raw, ss_sha1,
@@ -698,8 +698,8 @@ pub(crate) async fn fetch_pending_operator_external_news(
     sqlx::query!(
         r#"
 SELECT external_news_items.id, title, summary, author, content_md,
-    array_remove(array_agg(operator_id), NULL) as "operator_ids!: Vec<i32>",
-    array_remove(array_agg(region_id), NULL) as "region_ids!: Vec<i32>",
+    array_remove(array_agg(distinct operator_id), NULL) as "operator_ids!: Vec<i32>",
+    array_remove(array_agg(distinct region_id), NULL) as "region_ids!: Vec<i32>",
     prepro_content_md, content_text, prepro_content_text, publish_datetime, edit_datetime,
     source, url, is_complete, is_validated, is_relevant, is_sensitive, ss_sha1, raw,
     CASE
@@ -996,7 +996,7 @@ pub(crate) async fn fetch_external_news_source_dump(
         responses::SourceExternalNewsItem,
         r#"
 SELECT id, title, summary, author,
-    array_remove(array_agg(operator_id), NULL) as "operator_ids!: Vec<i32>",
+    array_remove(array_agg(distinct operator_id), NULL) as "operator_ids!: Vec<i32>",
     prepro_content_md, prepro_content_text,
     publish_datetime, edit_datetime, source, url, is_complete, raw
 FROM external_news_items
