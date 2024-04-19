@@ -112,6 +112,7 @@ pub(crate) mod responses {
     pub struct SourceExternalNewsItem {
         pub id: i32,
         pub operator_ids: Vec<i32>,
+        pub region_ids: Vec<i32>,
 
         pub title: Option<String>,
         pub summary: Option<String>,

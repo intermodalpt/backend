@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT id, title, summary, author,\n    array_remove(array_agg(distinct operator_id), NULL) as \"operator_ids!: Vec<i32>\",\n    prepro_content_md, prepro_content_text,\n    publish_datetime, edit_datetime, source, url, is_complete, raw\nFROM external_news_items\nJOIN external_news_items_operators\n    ON external_news_items.id=external_news_items_operators.item_id\nWHERE source=$1\nGROUP BY external_news_items.id\n",
+  "query": "\nSELECT id, title, summary, author,\n    array_remove(array_agg(distinct operator_id), NULL) as \"operator_ids!: Vec<i32>\",\n    array_remove(array_agg(distinct region_id), NULL) as \"region_ids!: Vec<i32>\",\n    prepro_content_md, prepro_content_text,\n    publish_datetime, edit_datetime, source, url, is_complete, raw\nFROM external_news_items\nJOIN external_news_items_operators\n    ON external_news_items.id=external_news_items_operators.item_id\nJOIN external_news_items_regions\n    ON external_news_items.id=external_news_items_regions.item_id\nWHERE source=$1\nGROUP BY external_news_items.id\n",
   "describe": {
     "columns": [
       {
@@ -30,41 +30,46 @@
       },
       {
         "ordinal": 5,
+        "name": "region_ids!: Vec<i32>",
+        "type_info": "Int4Array"
+      },
+      {
+        "ordinal": 6,
         "name": "prepro_content_md",
         "type_info": "Text"
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "prepro_content_text",
         "type_info": "Text"
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "publish_datetime",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "edit_datetime",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "source",
         "type_info": "Text"
       },
       {
-        "ordinal": 10,
+        "ordinal": 11,
         "name": "url",
         "type_info": "Text"
       },
       {
-        "ordinal": 11,
+        "ordinal": 12,
         "name": "is_complete",
         "type_info": "Bool"
       },
       {
-        "ordinal": 12,
+        "ordinal": 13,
         "name": "raw",
         "type_info": "Jsonb"
       }
@@ -80,6 +85,7 @@
       true,
       true,
       null,
+      null,
       true,
       true,
       false,
@@ -90,5 +96,5 @@
       false
     ]
   },
-  "hash": "84156b74e35edf58870dba840b894b7dc7c8ac5f2dc8fb1df9aab1cc29d42ef5"
+  "hash": "7c7771e5e8f7c00d90cfc3d51003947950451793dee7516645c25e0a8fe5ea98"
 }

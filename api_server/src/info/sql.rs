@@ -38,9 +38,11 @@ pub(crate) async fn fetch_news(
 SELECT id, title, summary,
     content as "content!: sqlx::types::Json<Vec<info::ContentBlock>>",
     publish_datetime, edit_datetime, visible,
-    array_remove(array_agg(operator_id), NULL) as "operator_ids!: Vec<i32>"
+    array_remove(array_agg(operator_id), NULL) as "operator_ids!: Vec<i32>",
+    array_remove(array_agg(region_id), NULL) as "region_ids!: Vec<i32>"
 FROM news_items
 LEFT JOIN news_items_operators ON news_items.id=news_items_operators.item_id
+LEFT JOIN news_items_regions ON news_items.id=news_items_regions.item_id
 GROUP BY news_items.id
 LIMIT $1 OFFSET $2
 "#,
@@ -66,6 +68,7 @@ LIMIT $1 OFFSET $2
                 .map(|datetime| datetime.with_timezone(&Local)),
             visible: row.visible,
             operator_ids: row.operator_ids,
+            region_ids: row.region_ids,
         })
     })
     .collect()
@@ -99,10 +102,12 @@ pub(crate) async fn fetch_operator_news(
         r#"
 SELECT id, title, summary,
     array_remove(array_agg(distinct operator_id), NULL) as "operator_ids!: Vec<i32>",
+    array_remove(array_agg(distinct region_id), NULL) as "region_ids!: Vec<i32>",
     content as "content!: sqlx::types::Json<Vec<info::ContentBlock>>",
     publish_datetime, edit_datetime, visible
 FROM news_items
 LEFT JOIN news_items_operators ON news_items.id=news_items_operators.item_id
+LEFT JOIN news_items_regions ON news_items.id=news_items_regions.item_id
 WHERE operator_id=$1
 GROUP BY news_items.id
 LIMIT $2 OFFSET $3
@@ -130,6 +135,7 @@ LIMIT $2 OFFSET $3
                 .map(|datetime| datetime.with_timezone(&Local)),
             visible: row.visible,
             operator_ids: row.operator_ids,
+            region_ids: row.region_ids,
         })
     })
     .collect()
@@ -997,11 +1003,14 @@ pub(crate) async fn fetch_external_news_source_dump(
         r#"
 SELECT id, title, summary, author,
     array_remove(array_agg(distinct operator_id), NULL) as "operator_ids!: Vec<i32>",
+    array_remove(array_agg(distinct region_id), NULL) as "region_ids!: Vec<i32>",
     prepro_content_md, prepro_content_text,
     publish_datetime, edit_datetime, source, url, is_complete, raw
 FROM external_news_items
 JOIN external_news_items_operators
     ON external_news_items.id=external_news_items_operators.item_id
+JOIN external_news_items_regions
+    ON external_news_items.id=external_news_items_regions.item_id
 WHERE source=$1
 GROUP BY external_news_items.id
 "#,
