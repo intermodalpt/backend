@@ -247,8 +247,8 @@ LEFT JOIN external_news_items_imgs
     ON external_news_items.id=external_news_items_imgs.item_id
 LEFT JOIN external_news_imgs
     ON external_news_items_imgs.img_id=external_news_imgs.id
-LEFT JOIN news_items_operators
-    ON external_news_items.id=news_items_operators.item_id
+LEFT JOIN external_news_items_operators
+    ON external_news_items.id=external_news_items_operators.item_id
 LEFT JOIN external_news_items_regions
     ON external_news_items.id=external_news_items_regions.item_id
 WHERE external_news_items.id=$1
@@ -709,8 +709,10 @@ SELECT external_news_items.id, title, summary, author, content_md,
         ELSE array[]::record[]
     END as "imgs!: Vec<models::ExternalNewsImage>"
 FROM external_news_items
-LEFT JOIN external_news_items_imgs ON external_news_items.id=external_news_items_imgs.item_id
-LEFT JOIN external_news_imgs ON external_news_items_imgs.img_id=external_news_imgs.id
+LEFT JOIN external_news_items_imgs
+    ON external_news_items.id=external_news_items_imgs.item_id
+LEFT JOIN external_news_imgs
+    ON external_news_items_imgs.img_id=external_news_imgs.id
 JOIN external_news_items_operators
     ON external_news_items.id=external_news_items_operators.item_id
 LEFT JOIN external_news_items_regions
@@ -818,7 +820,7 @@ RETURNING id"#,
     for operator_id in change.operator_ids {
         sqlx::query!(
             r#"
-INSERT INTO news_items_operators (item_id, operator_id)
+INSERT INTO external_news_items_operators (item_id, operator_id)
 VALUES ($1, $2)"#,
             id,
             operator_id
@@ -827,6 +829,22 @@ VALUES ($1, $2)"#,
         .await
         .map_err(|err| {
             tracing::error!(error = err.to_string(), id, operator_id);
+            Error::DatabaseExecution
+        })?;
+    }
+
+    for region_id in change.region_ids {
+        sqlx::query!(
+            r#"
+INSERT INTO external_news_items_regions (item_id, region_id)
+VALUES ($1, $2)"#,
+            id,
+            region_id
+        )
+        .execute(&mut **transaction)
+        .await
+        .map_err(|err| {
+            tracing::error!(error = err.to_string(), id, region_id);
             Error::DatabaseExecution
         })?;
     }
@@ -982,8 +1000,8 @@ SELECT id, title, summary, author,
     prepro_content_md, prepro_content_text,
     publish_datetime, edit_datetime, source, url, is_complete, raw
 FROM external_news_items
-JOIN news_items_operators
-    ON external_news_items.id=news_items_operators.item_id
+JOIN external_news_items_operators
+    ON external_news_items.id=external_news_items_operators.item_id
 WHERE source=$1
 GROUP BY external_news_items.id
 "#,

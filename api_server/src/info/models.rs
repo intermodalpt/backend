@@ -203,6 +203,7 @@ pub(crate) mod requests {
     #[derive(Debug, Deserialize)]
     pub struct NewExternalNewsItem {
         pub operator_ids: Vec<i32>,
+        pub region_ids: Vec<i32>,
 
         pub title: Option<String>,
         pub summary: Option<String>,
