@@ -605,15 +605,14 @@ pub(crate) async fn fetch_pending_external_news(
     pool: &PgPool,
     skip: i64,
     take: i64,
-) -> Result<Vec<responses::FullExternalNewsItem>> {
+) -> Result<Vec<responses::ExternalNewsItem>> {
     sqlx::query!(
         r#"
 SELECT external_news_items.id, title, summary, author,
     array_remove(array_agg(distinct operator_id), NULL) as "operator_ids!: Vec<i32>",
     array_remove(array_agg(distinct region_id), NULL) as "region_ids!: Vec<i32>",
-    content_md, prepro_content_md, content_text, prepro_content_text,
-    publish_datetime, edit_datetime, source, url,
-    is_complete, is_validated, is_relevant, is_sensitive, raw, ss_sha1,
+    content_md, content_text, publish_datetime, edit_datetime, source, url,
+    is_complete, is_validated, is_relevant, is_sensitive,
     CASE
         WHEN count(external_news_imgs.id) > 0
         THEN array_agg(
@@ -644,13 +643,11 @@ LIMIT $1 OFFSET $2
     })?
     .into_iter()
     .map(|row| {
-        Ok(responses::FullExternalNewsItem {
+        Ok(responses::ExternalNewsItem {
             id: row.id,
             title: row.title,
             summary: row.summary,
             author: row.author,
-            prepro_content_md: row.prepro_content_md,
-            prepro_content_text: row.prepro_content_text,
             content_md: row.content_md,
             content_text: row.content_text,
             publish_datetime: row.publish_datetime.with_timezone(&Local),
@@ -659,7 +656,6 @@ LIMIT $1 OFFSET $2
                 .map(|datetime| datetime.with_timezone(&Local)),
             source: row.source,
             url: row.url,
-            raw: row.raw,
             is_complete: row.is_complete,
             is_validated: row.is_validated,
             is_relevant: row.is_relevant,
@@ -667,10 +663,6 @@ LIMIT $1 OFFSET $2
             operator_ids: row.operator_ids,
             region_ids: row.region_ids,
             images: row.imgs.into_iter().map(Into::into).collect(),
-            screenshot_url: row
-                .ss_sha1
-                .as_ref()
-                .map(|sha1| get_external_news_ss_path(sha1)),
         })
     })
     .collect()

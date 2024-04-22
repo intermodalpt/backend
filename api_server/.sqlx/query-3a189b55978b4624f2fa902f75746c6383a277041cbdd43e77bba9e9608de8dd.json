@@ -1,0 +1,119 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT external_news_items.id, title, summary, author,\n    array_remove(array_agg(distinct operator_id), NULL) as \"operator_ids!: Vec<i32>\",\n    array_remove(array_agg(distinct region_id), NULL) as \"region_ids!: Vec<i32>\",\n    content_md, content_text, publish_datetime, edit_datetime, source, url,\n    is_complete, is_validated, is_relevant, is_sensitive,\n    CASE\n        WHEN count(external_news_imgs.id) > 0\n        THEN array_agg(\n            ROW(external_news_imgs.id, sha1, has_copyright_issues, transcript))\n        ELSE array[]::record[]\n    END as \"imgs!: Vec<models::ExternalNewsImage>\"\nFROM external_news_items\nLEFT JOIN external_news_items_imgs\n    ON external_news_items.id=external_news_items_imgs.item_id\nLEFT JOIN external_news_imgs\n    ON external_news_items_imgs.img_id=external_news_imgs.id\nLEFT JOIN external_news_items_operators\n    ON external_news_items.id=external_news_items_operators.item_id\nLEFT JOIN external_news_items_regions\n    ON external_news_items.id=external_news_items_regions.item_id\nWHERE NOT is_validated\nGROUP BY external_news_items.id\nLIMIT $1 OFFSET $2\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "title",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "summary",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "author",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "operator_ids!: Vec<i32>",
+        "type_info": "Int4Array"
+      },
+      {
+        "ordinal": 5,
+        "name": "region_ids!: Vec<i32>",
+        "type_info": "Int4Array"
+      },
+      {
+        "ordinal": 6,
+        "name": "content_md",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "content_text",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "publish_datetime",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 9,
+        "name": "edit_datetime",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 10,
+        "name": "source",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 11,
+        "name": "url",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 12,
+        "name": "is_complete",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 13,
+        "name": "is_validated",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 14,
+        "name": "is_relevant",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 15,
+        "name": "is_sensitive",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 16,
+        "name": "imgs!: Vec<models::ExternalNewsImage>",
+        "type_info": "RecordArray"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      true,
+      null,
+      null,
+      true,
+      true,
+      false,
+      true,
+      false,
+      true,
+      false,
+      false,
+      true,
+      false,
+      null
+    ]
+  },
+  "hash": "3a189b55978b4624f2fa902f75746c6383a277041cbdd43e77bba9e9608de8dd"
+}

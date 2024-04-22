@@ -145,6 +145,14 @@ pub(crate) mod responses {
         pub url: String,
     }
 
+    impl From<super::ExternalNewsImage> for ExternalNewsImage {
+        fn from(image: super::ExternalNewsImage) -> Self {
+            ExternalNewsImage {
+                transcript: image.transcript,
+                url: Some(get_external_news_img_path(&image.sha1)),
+            }
+        }
+    }
     impl From<super::ExternalNewsImage> for FullExternalNewsImage {
         fn from(image: super::ExternalNewsImage) -> Self {
             FullExternalNewsImage {

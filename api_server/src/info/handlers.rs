@@ -193,7 +193,7 @@ pub(crate) async fn get_pending_external_news(
     State(state): State<AppState>,
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     paginator: Query<Page>,
-) -> Result<Json<Pagination<responses::FullExternalNewsItem>>, Error> {
+) -> Result<Json<Pagination<responses::ExternalNewsItem>>, Error> {
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
