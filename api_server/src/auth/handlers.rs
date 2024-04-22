@@ -37,7 +37,7 @@ pub(crate) struct Page {
 
 const PAGE_SIZE: u32 = 100;
 
-pub(crate) async fn check_auth(_: Option<models::Claims>) {}
+pub(crate) async fn check_auth(_: models::Claims) {}
 
 pub(crate) async fn post_register(
     State(state): State<AppState>,
