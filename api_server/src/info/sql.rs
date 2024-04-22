@@ -79,7 +79,6 @@ pub(crate) async fn count_news(pool: &PgPool) -> Result<i64> {
         r#"
 SELECT count(*) as "cnt!: i64"
 FROM news_items
-GROUP BY news_items.id
 "#,
     )
     .fetch_optional(pool)
@@ -88,8 +87,7 @@ GROUP BY news_items.id
         tracing::error!(error = err.to_string());
         Error::DatabaseExecution
     })?
-    .map(|row| row.cnt)
-    .unwrap_or(0))
+    .map_or(0, |row| row.cnt))
 }
 
 pub(crate) async fn fetch_operator_news(
@@ -149,9 +147,8 @@ pub(crate) async fn count_operator_news(
         r#"
 SELECT count(*) as "cnt!: i64"
 FROM news_items
-JOIN news_items_operators ON news_items.id=news_items_operators.item_id
+LEFT JOIN news_items_operators ON news_items.id=news_items_operators.item_id
 WHERE operator_id=$1
-GROUP BY news_items.id
 "#,
         operator_id,
     )
@@ -161,8 +158,7 @@ GROUP BY news_items.id
         tracing::error!(error = err.to_string(), operator_id);
         Error::DatabaseExecution
     })?
-    .map(|row| row.cnt)
-    .unwrap_or(0))
+    .map_or(0, |row| row.cnt))
 }
 
 pub(crate) async fn insert_news(
@@ -474,8 +470,7 @@ WHERE ($1 OR (is_validated AND NOT is_sensitive))
         tracing::error!(error = err.to_string(), incl_private);
         Error::DatabaseExecution
     })?
-    .map(|row| row.cnt)
-    .unwrap_or(0))
+    .map_or(0, |row| row.cnt))
 }
 
 pub(crate) async fn fetch_operator_external_news(
@@ -582,11 +577,10 @@ pub(crate) async fn count_operator_external_news(
         r#"
 SELECT count(*) as "cnt!: i64"
 FROM external_news_items
-JOIN external_news_items_operators
+LEFT JOIN external_news_items_operators
     ON external_news_items.id=external_news_items_operators.item_id
 WHERE operator_id=$1
     AND ($2 OR (is_validated AND NOT is_sensitive))
-GROUP BY external_news_items.id
 "#,
         operator_id,
         incl_private,
@@ -597,8 +591,7 @@ GROUP BY external_news_items.id
         tracing::error!(error = err.to_string(), operator_id, incl_private);
         Error::DatabaseExecution
     })?
-    .map(|row| row.cnt)
-    .unwrap_or(0))
+    .map_or(0, |row| row.cnt))
 }
 
 pub(crate) async fn fetch_pending_external_news(
@@ -674,7 +667,6 @@ pub(crate) async fn count_pending_external_news(pool: &PgPool) -> Result<i64> {
 SELECT count(*) as "cnt!: i64"
 FROM external_news_items
 WHERE NOT is_validated
-GROUP BY external_news_items.id
 "#,
     )
     .fetch_optional(pool)
@@ -683,8 +675,7 @@ GROUP BY external_news_items.id
         tracing::error!(error = err.to_string());
         Error::DatabaseExecution
     })?
-    .map(|row| row.cnt)
-    .unwrap_or(0))
+    .map_or(0, |row| row.cnt))
 }
 
 pub(crate) async fn fetch_pending_operator_external_news(
@@ -766,10 +757,9 @@ pub(crate) async fn count_pending_operator_external_news(
         r#"
 SELECT count(*) as "cnt!: i64"
 FROM external_news_items
-JOIN external_news_items_operators
+LEFT JOIN external_news_items_operators
     ON external_news_items.id=external_news_items_operators.item_id
 WHERE operator_id=$1 AND NOT is_validated
-GROUP BY external_news_items.id
 "#,
         operator_id
     )
@@ -779,8 +769,7 @@ GROUP BY external_news_items.id
         tracing::error!(error = err.to_string(), operator_id);
         Error::DatabaseExecution
     })?
-    .map(|row| row.cnt)
-    .unwrap_or(0))
+    .map_or(0, |row| row.cnt))
 }
 
 pub(crate) async fn insert_external_news(

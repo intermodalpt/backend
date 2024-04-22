@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT count(*) as \"cnt!: i64\"\nFROM external_news_items\nWHERE NOT is_validated\nGROUP BY external_news_items.id\n",
+  "query": "\nSELECT count(*) as \"cnt!: i64\"\nFROM news_items\n",
   "describe": {
     "columns": [
       {
@@ -16,5 +16,5 @@
       null
     ]
   },
-  "hash": "8b503f48c420ad6bbfd6d65f25bb33c69b71b93bb587c29b26500148d19fbf92"
+  "hash": "b223476e53a5fadffabe4aa8fe657e8761e2e553b789fd288cc2cde723adbab3"
 }

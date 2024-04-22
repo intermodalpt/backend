@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT count(*) as \"cnt!: i64\"\nFROM external_news_items\nLEFT JOIN external_news_items_operators\n    ON external_news_items.id=external_news_items_operators.item_id\nWHERE operator_id=$1 AND NOT is_validated\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "cnt!: i64",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "580843fa232122542a559a6cf392224673cdc6a6898e6f8ae9cf2bf078078155"
+}
