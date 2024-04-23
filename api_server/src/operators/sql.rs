@@ -154,7 +154,7 @@ WHERE id = $4
             &description,
             operator_id
         )
-        .fetch_one(&mut **transaction)
+        .execute(&mut **transaction)
         .await
         .map_err(|err| {
             tracing::error!(
@@ -178,7 +178,7 @@ WHERE id = $3
             &change.tag,
             operator_id
         )
-        .fetch_one(&mut **transaction)
+        .execute(&mut **transaction)
         .await
         .map_err(|err| {
             tracing::error!(
