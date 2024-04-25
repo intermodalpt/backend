@@ -414,7 +414,7 @@ CREATE TABLE news_imgs
 (
     id         integer PRIMARY KEY,
     sha1       character(40) NOT NULL,
-    filename   text,
+    filename   text          NOT NULL,
     transcript text
 );
 

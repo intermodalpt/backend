@@ -49,4 +49,5 @@ pub struct NewsItem {
 
     pub visible: bool,
     pub operator_ids: Vec<i32>,
+    pub region_ids: Vec<i32>,
 }

@@ -104,3 +104,19 @@ pub struct PanoPic {
     pub capture_date: Option<NaiveDateTime>,
     pub sensitive: bool,
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct NewsImage {
+    pub id: i32,
+    pub sha1: String,
+    pub filename: Option<String>,
+    pub transcript: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ExternalNewsImage {
+    pub id: i32,
+    pub sha1: String,
+    pub has_copyright_issues: Option<bool>,
+    pub transcript: Option<String>,
+}

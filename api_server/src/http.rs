@@ -431,9 +431,14 @@ pub fn build_paths(state: AppState) -> Router {
             "/v1/news",
             get(info::handlers::get_news).post(info::handlers::post_news),
         )
+        .route("/v1/news/images", post(pics::handlers::post_news_image))
+        .route(
+            "/v1/news/images/:image_id",
+            patch(pics::handlers::patch_news_image_meta),
+        )
         .route(
             "/v1/news/:item_id/images",
-            post(pics::handlers::post_news_image),
+            post(pics::handlers::post_news_item_image),
         )
         .route(
             "/v1/news/external",

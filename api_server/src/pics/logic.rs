@@ -34,16 +34,16 @@ use crate::Error;
 
 const THUMBNAIL_MAX_WIDTH: u32 = 300;
 const THUMBNAIL_MAX_HEIGHT: u32 = 200;
-const THUMBNAIL_MAX_QUALITY: f32 = 90.0;
+const THUMBNAIL_MAX_QUALITY: f32 = 80.0;
 
 const MEDIUM_IMG_MAX_WIDTH: u32 = 1200;
 const MEDIUM_IMG_MAX_HEIGHT: u32 = 800;
-const MEDIUM_IMG_MAX_QUALITY: f32 = 85.0;
+const MEDIUM_IMG_MAX_QUALITY: f32 = 90.0;
 
 #[allow(clippy::cast_possible_wrap)]
 pub(crate) async fn upload_stop_picture(
     user_id: i32,
-    name: String,
+    filename: String,
     bucket: &s3::Bucket,
     db_pool: &PgPool,
     content: &Bytes,
@@ -62,17 +62,12 @@ pub(crate) async fn upload_stop_picture(
         )));
     }
 
-    let mut original_img = image::load_from_memory(content.as_ref())
-        .map_err(|err| Error::ValidationFailure(err.to_string()))?;
-    let original_img_mime = mime_guess::from_path(&name);
-
-    if !matches!(original_img, image::DynamicImage::ImageRgb8(_)) {
-        original_img = image::DynamicImage::ImageRgb8(original_img.into_rgb8());
-    }
+    let (original_img, original_img_mime, exif) =
+        validate_image(content, &filename)?;
 
     let mut stop_pic_entry = pics::StopPic {
         id: 0,
-        original_filename: name,
+        original_filename: filename,
         sha1: hex_hash.clone(),
         tagged: false,
         uploader: user_id,
@@ -95,48 +90,14 @@ pub(crate) async fn upload_stop_picture(
         },
     };
 
-    let mut source_buffer = BufReader::new(Cursor::new(content.as_ref()));
-    if let Ok(exif) =
-        exif::Reader::new().read_from_container(&mut source_buffer)
-    {
-        let exif_data = Exif::from(exif);
-
-        if let Some(orientation) = exif_data.orientation {
-            match orientation {
-                Orientation::Mirror => {
-                    original_img = original_img.fliph();
-                }
-                Orientation::Rotate180 => {
-                    original_img = original_img.rotate180();
-                }
-                Orientation::MirrorVertical => {
-                    original_img = original_img.flipv();
-                }
-                Orientation::MirrorHorizontalRotate270 => {
-                    // FIXME This is broken
-                    original_img = original_img.fliph().rotate270();
-                }
-                Orientation::Rotate90 => {
-                    original_img = original_img.rotate90();
-                }
-                Orientation::MirrorHorizontalRotate90 => {
-                    // FIXME This is broken
-                    original_img = original_img.fliph().rotate90();
-                }
-                Orientation::Rotate270 => {
-                    original_img = original_img.rotate270();
-                }
-                Orientation::Horizontal => {}
-            }
-        }
-
+    if let Some(exif_data) = exif {
         stop_pic_entry.dyn_meta.lon = exif_data.lon;
         stop_pic_entry.dyn_meta.lat = exif_data.lat;
         stop_pic_entry.camera_ref = exif_data.camera;
         stop_pic_entry.capture_date = exif_data.capture;
-    };
+    }
 
-    upload_picture_to_storage(
+    upload_stop_pic_to_storage(
         bucket,
         content,
         &original_img,
@@ -152,7 +113,7 @@ pub(crate) async fn upload_stop_picture(
 
     // TODO Delete if insertion fails
     let pic =
-        sql::insert_picture(&mut transaction, stop_pic_entry, stops).await?;
+        sql::insert_stop_pic(&mut transaction, stop_pic_entry, stops).await?;
 
     contrib::sql::insert_changeset_log(
         &mut transaction,
@@ -224,31 +185,20 @@ pub(crate) async fn delete_picture(
     })
 }
 
-async fn upload_picture_to_storage(
+async fn upload_stop_pic_to_storage(
     bucket: &s3::Bucket,
     content: &Bytes,
     original_img: &image::DynamicImage,
     original_img_mime: mime_guess::MimeGuess,
     hex_hash: &str,
 ) -> Result<(), Error> {
-    let medium_img = original_img.resize(
-        MEDIUM_IMG_MAX_WIDTH,
-        MEDIUM_IMG_MAX_HEIGHT,
-        image::imageops::FilterType::CatmullRom,
-    );
+    let (medium_webp, thumb_webp) = derive_scaled_webps(original_img)?;
 
-    let medium_img_webp = webp::Encoder::from_image(&medium_img)
-        .map_err(|err| {
-            tracing::error!(err);
-            Error::Processing
-        })?
-        .encode(MEDIUM_IMG_MAX_QUALITY)
-        .to_vec();
     // TODO handle status codes
     let _status_code = bucket
         .put_object_with_content_type(
             format!("/medium/{hex_hash}"),
-            &medium_img_webp,
+            &medium_webp,
             "image/webp",
         )
         .await
@@ -257,22 +207,10 @@ async fn upload_picture_to_storage(
             Error::ObjectStorageFailure
         })?;
 
-    let thumbnail_img = original_img.resize(
-        THUMBNAIL_MAX_WIDTH,
-        THUMBNAIL_MAX_HEIGHT,
-        image::imageops::FilterType::CatmullRom,
-    );
-    let thumbnail_img_webp = webp::Encoder::from_image(&thumbnail_img)
-        .map_err(|err| {
-            tracing::error!(err);
-            Error::Processing
-        })?
-        .encode(THUMBNAIL_MAX_QUALITY)
-        .to_vec();
     let _status_code = bucket
         .put_object_with_content_type(
             format!("/thumb/{hex_hash}"),
-            &thumbnail_img_webp,
+            &thumb_webp,
             "image/webp",
         )
         .await
@@ -571,13 +509,12 @@ async fn delete_operator_pic_from_storage(
     Ok(())
 }
 
-pub(crate) async fn upload_news_item_img(
-    item_id: i32,
+pub(crate) async fn upload_standalone_news_img(
     bucket: &s3::Bucket,
     db_pool: &PgPool,
-    filename: &str,
+    filename: String,
     content: &Bytes,
-) -> Result<String, Error> {
+) -> Result<pics::NewsImage, Error> {
     let mut hasher = Sha1::new();
     hasher.update(content);
     let hash = hasher.finalize();
@@ -588,32 +525,98 @@ pub(crate) async fn upload_news_item_img(
         Error::DatabaseExecution
     })?;
 
-    let existing_hashes =
-        sql::fetch_news_img_hashes(&mut transaction, item_id).await?;
-    let existing_hashes = existing_hashes.ok_or(Error::NotFoundUpstream)?;
-
-    if existing_hashes.contains(&hex_hash) {
-        return Ok(hex_hash);
+    let same_img =
+        sql::fetch_news_img_by_hash(&mut transaction, &hex_hash).await?;
+    if let Some(img) = same_img {
+        return Ok(img);
     }
 
-    let path = std::path::Path::new(&filename);
-    let ext = path.extension().ok_or(Error::DependenciesNotMet)?;
+    // TODO attach this filename to the known filenames
 
-    if !is_supported_raster(ext, content) {
-        return Err(Error::ValidationFailure("Unsupported image".to_string()));
-    }
+    let (original_img, original_img_mime, _) =
+        validate_image(content, &filename)?;
 
-    let mime = mime_guess::from_path(path).first().ok_or_else(|| {
-        tracing::error!("Unable to deduce MIME despite whitelist");
-        Error::Processing
-    })?;
-
-    upload_news_img_to_storage(bucket, content, &hex_hash, mime.as_ref())
-        .await?;
+    upload_news_img_to_storage(
+        bucket,
+        content,
+        &original_img,
+        original_img_mime,
+        &hex_hash,
+    )
+    .await?;
 
     let db_res =
-        sql::insert_news_img(&mut transaction, item_id, &hex_hash, filename)
-            .await;
+        sql::insert_news_img(&mut transaction, &hex_hash, &filename).await;
+
+    if let Err(db_err) = db_res {
+        let storage_res = delete_news_img_from_storage(bucket, &hex_hash).await;
+        if let Err(storage_err) = storage_res {
+            tracing::error!(
+                "Reversion failure.\
+                {hex_hash} was stored.\
+                Database threw: {db_err}. Storage threw: {storage_err}"
+            );
+        }
+        return Err(db_err);
+    }
+
+    let img_id = db_res?;
+
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
+
+    Ok(pics::NewsImage {
+        id: img_id,
+        sha1: hex_hash,
+        filename: Some(filename),
+        transcript: None,
+    })
+}
+
+pub(crate) async fn upload_news_item_img(
+    item_id: i32,
+    bucket: &s3::Bucket,
+    db_pool: &PgPool,
+    filename: String,
+    content: &Bytes,
+) -> Result<pics::NewsImage, Error> {
+    let mut hasher = Sha1::new();
+    hasher.update(content);
+    let hash = hasher.finalize();
+    let hex_hash = base16ct::lower::encode_string(&hash);
+
+    let mut transaction = db_pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
+
+    let same_img =
+        sql::fetch_news_img_by_hash(&mut transaction, &hex_hash).await?;
+    if let Some(img) = same_img {
+        sql::link_news_item_img(&mut transaction, img.id, item_id).await?;
+        transaction.commit().await.map_err(|err| {
+            tracing::error!("Transaction failed to commit: {err}");
+            Error::DatabaseExecution
+        })?;
+        return Ok(img);
+    }
+
+    let (original_img, original_img_mime, _) =
+        validate_image(content, &filename)?;
+
+    upload_news_img_to_storage(
+        bucket,
+        content,
+        &original_img,
+        original_img_mime,
+        &hex_hash,
+    )
+    .await?;
+
+    let db_res =
+        sql::insert_news_img(&mut transaction, &hex_hash, &filename).await;
 
     if let Err(db_err) = db_res {
         let storage_res = delete_news_img_from_storage(bucket, &hex_hash).await;
@@ -627,31 +630,78 @@ pub(crate) async fn upload_news_item_img(
         return Err(db_err);
     }
 
+    let img_id = db_res?;
+
+    sql::link_news_item_img(&mut transaction, img_id, item_id).await?;
+
     transaction.commit().await.map_err(|err| {
         tracing::error!("Transaction failed to commit: {err}");
         Error::DatabaseExecution
     })?;
 
-    Ok(hex_hash)
+    Ok(pics::NewsImage {
+        id: img_id,
+        sha1: hex_hash,
+        filename: Some(filename),
+        transcript: None,
+    })
 }
 
 async fn upload_news_img_to_storage(
     bucket: &s3::Bucket,
     content: &Bytes,
+    original_img: &image::DynamicImage,
+    original_img_mime: mime_guess::MimeGuess,
     hex_hash: &str,
-    mime: &str,
 ) -> Result<(), Error> {
-    bucket
+    let (medium_webp, thumb_webp) = derive_scaled_webps(original_img)?;
+
+    // TODO handle status codes
+    let _status_code = bucket
         .put_object_with_content_type(
-            format!("/news/{hex_hash}"),
-            content.as_ref(),
-            mime,
+            format!("/news/medium/{hex_hash}"),
+            &medium_webp,
+            "image/webp",
         )
         .await
         .map_err(|err| {
             tracing::error!("Object storage failure: {err}");
             Error::ObjectStorageFailure
         })?;
+
+    let _status_code = bucket
+        .put_object_with_content_type(
+            format!("/news/thumb/{hex_hash}"),
+            &thumb_webp,
+            "image/webp",
+        )
+        .await
+        .map_err(|err| {
+            tracing::error!("Object storage failure: {err}");
+            Error::ObjectStorageFailure
+        })?;
+
+    let _status_code = if let Some(mime) = original_img_mime.first() {
+        bucket
+            .put_object_with_content_type(
+                format!("/news/ori/{hex_hash}"),
+                content.as_ref(),
+                mime.as_ref(),
+            )
+            .await
+            .map_err(|err| {
+                tracing::error!("Object storage failure: {err}");
+                Error::ObjectStorageFailure
+            })?
+    } else {
+        bucket
+            .put_object(format!("/news/ori/{hex_hash}"), content.as_ref())
+            .await
+            .map_err(|err| {
+                tracing::error!("Object storage failure: {err}");
+                Error::ObjectStorageFailure
+            })?
+    };
 
     Ok(())
 }
@@ -661,7 +711,21 @@ async fn delete_news_img_from_storage(
     hex_hash: &str,
 ) -> Result<(), Error> {
     bucket
-        .delete_object(format!("/news/{hex_hash}"))
+        .delete_object(format!("/news/ori/{hex_hash}"))
+        .await
+        .map_err(|err| {
+            tracing::error!("Object storage failure: {err}");
+            Error::ObjectStorageFailure
+        })?;
+    bucket
+        .delete_object(format!("/news/medium/{hex_hash}"))
+        .await
+        .map_err(|err| {
+            tracing::error!("Object storage failure: {err}");
+            Error::ObjectStorageFailure
+        })?;
+    bucket
+        .delete_object(format!("/news/thumb/{hex_hash}"))
         .await
         .map_err(|err| {
             tracing::error!("Object storage failure: {err}");
@@ -920,4 +984,99 @@ fn is_supported_raster_ext(ext: &OsStr) -> bool {
     ext.eq_ignore_ascii_case("png")
         || ext.eq_ignore_ascii_case("jpg")
         || ext.eq_ignore_ascii_case("webp")
+}
+
+fn validate_image(
+    content: &Bytes,
+    filename: &str,
+) -> Result<(image::DynamicImage, mime_guess::MimeGuess, Option<Exif>), Error> {
+    let mut img = image::load_from_memory(content.as_ref()).map_err(|err| {
+        tracing::error!(error = err.to_string(), filename);
+        Error::ValidationFailure("Unsupported image".to_string())
+    })?;
+    let mime = mime_guess::from_path(&filename);
+
+    let path = std::path::Path::new(&filename);
+    let ext = path.extension().ok_or(Error::DependenciesNotMet)?;
+
+    if !is_supported_raster_ext(ext) {
+        tracing::warn!(
+            error = "Unsupported image extension on an otherwise valid image",
+            filename
+        );
+        return Err(Error::ValidationFailure("Unsupported image".to_string()));
+    }
+
+    if !matches!(img, image::DynamicImage::ImageRgb8(_)) {
+        img = image::DynamicImage::ImageRgb8(img.into_rgb8());
+    }
+
+    let mut source_buffer = BufReader::new(Cursor::new(content.as_ref()));
+    if let Ok(exif) =
+        exif::Reader::new().read_from_container(&mut source_buffer)
+    {
+        let exif_data = Exif::from(exif);
+
+        if let Some(orientation) = exif_data.orientation {
+            match orientation {
+                Orientation::Mirror => {
+                    img = img.fliph();
+                }
+                Orientation::Rotate180 => {
+                    img = img.rotate180();
+                }
+                Orientation::MirrorVertical => {
+                    img = img.flipv();
+                }
+                Orientation::MirrorHorizontalRotate270 => {
+                    // FIXME This is broken
+                    img = img.fliph().rotate270();
+                }
+                Orientation::Rotate90 => {
+                    img = img.rotate90();
+                }
+                Orientation::MirrorHorizontalRotate90 => {
+                    // FIXME This is broken
+                    img = img.fliph().rotate90();
+                }
+                Orientation::Rotate270 => {
+                    img = img.rotate270();
+                }
+                Orientation::Horizontal => {}
+            }
+        }
+        return Ok((img, mime, Some(exif_data)));
+    };
+
+    Ok((img, mime, None))
+}
+
+fn derive_scaled_webps(
+    original: &image::DynamicImage,
+) -> Result<(Vec<u8>, Vec<u8>), Error> {
+    let medium_img = original.resize(
+        MEDIUM_IMG_MAX_WIDTH.min(original.width()),
+        MEDIUM_IMG_MAX_HEIGHT.min(original.height()),
+        image::imageops::FilterType::CatmullRom,
+    );
+    let medium_img_webp = webp::Encoder::from_image(&medium_img)
+        .map_err(|err| {
+            tracing::error!(err);
+            Error::Processing
+        })?
+        .encode(MEDIUM_IMG_MAX_QUALITY);
+
+    let thumbnail_img = original.resize(
+        THUMBNAIL_MAX_WIDTH.min(original.width()),
+        THUMBNAIL_MAX_HEIGHT.min(original.height()),
+        image::imageops::FilterType::CatmullRom,
+    );
+    let thumbnail_img_webp = webp::Encoder::from_image(&thumbnail_img)
+        .map_err(|err| {
+            tracing::error!(err);
+            Error::Processing
+        })?
+        .encode(THUMBNAIL_MAX_QUALITY);
+
+    Ok((medium_img_webp.to_vec(), thumbnail_img_webp.to_vec()))
 }

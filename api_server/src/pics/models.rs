@@ -68,6 +68,23 @@ pub(crate) mod requests {
             patch
         }
     }
+
+    #[derive(Debug, Deserialize)]
+    pub struct ChangeNewsImgMeta {
+        pub transcript: Option<String>,
+        //pub attribution: Option<String>,
+        //pub license: Option<String>,
+    }
+
+    impl ChangeNewsImgMeta {
+        pub(crate) fn clean(&mut self) {
+            if let Some(transcript) = &self.transcript {
+                if transcript.is_empty() {
+                    self.transcript = None;
+                }
+            }
+        }
+    }
 }
 
 pub(crate) mod responses {
@@ -244,5 +261,16 @@ pub(crate) mod responses {
     pub struct PanoOnion {
         pub predecessors: Vec<MinimalPicWithStops>,
         pub successors: Vec<MinimalPicWithStops>,
+    }
+
+    #[derive(Debug, Serialize)]
+    pub struct NewsImg {
+        pub id: i32,
+        pub sha1: String,
+        pub original_filename: String,
+        pub transcript: String,
+        pub url_full: String,
+        pub url_medium: String,
+        pub url_thumb: String,
     }
 }
