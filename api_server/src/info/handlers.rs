@@ -102,10 +102,8 @@ pub(crate) async fn get_external_news_item(
     claims: Option<auth::Claims>,
     Path(item_id): Path<i32>,
 ) -> Result<Json<responses::ExternalNewsItem>, Error> {
-    let include_private = claims
-        .as_ref()
-        .map(auth::perms::Trusted::is_valid)
-        .unwrap_or(false);
+    let include_private =
+        claims.as_ref().is_some_and(auth::perms::Trusted::is_valid);
 
     let item =
         sql::fetch_external_news_item(&state.pool, item_id, include_private)
@@ -140,10 +138,8 @@ pub(crate) async fn get_external_news(
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
-    let include_private = claims
-        .as_ref()
-        .map(auth::perms::Trusted::is_valid)
-        .unwrap_or(false);
+    let include_private =
+        claims.as_ref().is_some_and(auth::perms::Trusted::is_valid);
 
     Ok(Json(Pagination {
         items: sql::fetch_external_news(
@@ -166,10 +162,8 @@ pub(crate) async fn get_operator_external_news(
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
-    let include_private = claims
-        .as_ref()
-        .map(auth::perms::Trusted::is_valid)
-        .unwrap_or(false);
+    let include_private =
+        claims.as_ref().is_some_and(auth::perms::Trusted::is_valid);
 
     Ok(Json(Pagination {
         items: sql::fetch_operator_external_news(

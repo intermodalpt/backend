@@ -994,9 +994,9 @@ fn validate_image(
         tracing::error!(error = err.to_string(), filename);
         Error::ValidationFailure("Unsupported image".to_string())
     })?;
-    let mime = mime_guess::from_path(&filename);
+    let mime = mime_guess::from_path(filename);
 
-    let path = std::path::Path::new(&filename);
+    let path = std::path::Path::new(filename);
     let ext = path.extension().ok_or(Error::DependenciesNotMet)?;
 
     if !is_supported_raster_ext(ext) {

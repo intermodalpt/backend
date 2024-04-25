@@ -265,6 +265,7 @@ pub(crate) mod requests {
         }
     }
 
+    #[allow(clippy::struct_excessive_bools)]
     #[derive(Debug, Deserialize)]
     pub struct ChangeExternalNewsItem {
         pub operator_ids: Vec<i32>,
