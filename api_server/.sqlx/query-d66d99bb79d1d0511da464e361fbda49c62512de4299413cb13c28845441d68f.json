@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT id, sha1, filename, transcript\nFROM news_imgs\nWHERE sha1=$1\n",
+  "query": "\nSELECT id, sha1, has_copyright_issues, transcript\nFROM external_news_imgs\nWHERE id=$1",
   "describe": {
     "columns": [
       {
@@ -15,8 +15,8 @@
       },
       {
         "ordinal": 2,
-        "name": "filename",
-        "type_info": "Text"
+        "name": "has_copyright_issues",
+        "type_info": "Bool"
       },
       {
         "ordinal": 3,
@@ -26,7 +26,7 @@
     ],
     "parameters": {
       "Left": [
-        "Bpchar"
+        "Int4"
       ]
     },
     "nullable": [
@@ -36,5 +36,5 @@
       true
     ]
   },
-  "hash": "7f5f37066a144b7cd9aa9ad2689d1dee5c1893f168be2d1c485800d2b68c2fa8"
+  "hash": "d66d99bb79d1d0511da464e361fbda49c62512de4299413cb13c28845441d68f"
 }

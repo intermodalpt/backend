@@ -18,6 +18,7 @@
 
 use std::ffi::OsStr;
 use std::io::{BufReader, Cursor};
+use std::str::FromStr;
 
 use bytes::Bytes;
 use chrono::Utc;
@@ -189,7 +190,7 @@ async fn upload_stop_pic_to_storage(
     bucket: &s3::Bucket,
     content: &Bytes,
     original_img: &image::DynamicImage,
-    original_img_mime: mime_guess::MimeGuess,
+    original_img_mime: Option<mime::Mime>,
     hex_hash: &str,
 ) -> Result<(), Error> {
     let (medium_webp, thumb_webp) = derive_scaled_webps(original_img)?;
@@ -219,7 +220,7 @@ async fn upload_stop_pic_to_storage(
             Error::ObjectStorageFailure
         })?;
 
-    let _status_code = if let Some(mime) = original_img_mime.first() {
+    let _status_code = if let Some(mime) = original_img_mime {
         bucket
             .put_object_with_content_type(
                 format!("/ori/{hex_hash}"),
@@ -546,7 +547,8 @@ pub(crate) async fn upload_standalone_news_img(
     .await?;
 
     let db_res =
-        sql::insert_news_img(&mut transaction, &hex_hash, &filename).await;
+        sql::insert_news_img(&mut transaction, &hex_hash, Some(&filename))
+            .await;
 
     if let Err(db_err) = db_res {
         let storage_res = delete_news_img_from_storage(bucket, &hex_hash).await;
@@ -616,7 +618,8 @@ pub(crate) async fn upload_news_item_img(
     .await?;
 
     let db_res =
-        sql::insert_news_img(&mut transaction, &hex_hash, &filename).await;
+        sql::insert_news_img(&mut transaction, &hex_hash, Some(&filename))
+            .await;
 
     if let Err(db_err) = db_res {
         let storage_res = delete_news_img_from_storage(bucket, &hex_hash).await;
@@ -651,7 +654,7 @@ async fn upload_news_img_to_storage(
     bucket: &s3::Bucket,
     content: &Bytes,
     original_img: &image::DynamicImage,
-    original_img_mime: mime_guess::MimeGuess,
+    original_img_mime: Option<mime::Mime>,
     hex_hash: &str,
 ) -> Result<(), Error> {
     let (medium_webp, thumb_webp) = derive_scaled_webps(original_img)?;
@@ -681,7 +684,7 @@ async fn upload_news_img_to_storage(
             Error::ObjectStorageFailure
         })?;
 
-    let _status_code = if let Some(mime) = original_img_mime.first() {
+    let _status_code = if let Some(mime) = original_img_mime {
         bucket
             .put_object_with_content_type(
                 format!("/news/ori/{hex_hash}"),
@@ -733,6 +736,89 @@ async fn delete_news_img_from_storage(
         })?;
 
     Ok(())
+}
+
+pub(crate) async fn import_external_news_img(
+    bucket: &s3::Bucket,
+    db_pool: &PgPool,
+    external_img_id: i32,
+) -> Result<pics::NewsImage, Error> {
+    let mut transaction = db_pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
+
+    let external_img =
+        sql::fetch_external_news_img_by_id(&mut transaction, external_img_id)
+            .await?
+            .ok_or(Error::NotFoundUpstream)?;
+    let hex_hash = external_img.sha1;
+
+    if let Some(img) =
+        sql::fetch_news_img_by_hash(&mut transaction, &hex_hash).await?
+    {
+        return Ok(img);
+    }
+
+    let img_obj = bucket
+        .get_object(format!("/enews/{}", hex_hash))
+        .await
+        .map_err(|err| {
+            tracing::error!("Object storage failure: {err}");
+            Error::ObjectStorageFailure
+        })?;
+
+    let (head_resp, _) = bucket
+        .head_object(format!("/enews/{}", hex_hash))
+        .await
+        .map_err(|err| {
+            tracing::error!("Object storage failure: {err}");
+            Error::ObjectStorageFailure
+        })?;
+
+    let mime = head_resp
+        .content_type
+        .map(|ct| mime::Mime::from_str(&ct))
+        .transpose()
+        .map_err(|err| {
+            tracing::error!("MIME parsing failure: {err}");
+            Error::ObjectStorageFailure
+        })?;
+
+    let img = image::load_from_memory(img_obj.as_slice()).map_err(|err| {
+        tracing::error!(error = err.to_string(), external_img_id);
+        Error::ValidationFailure("Unsupported image".to_string())
+    })?;
+
+    upload_news_img_to_storage(bucket, img_obj.bytes(), &img, mime, &hex_hash)
+        .await?;
+
+    let db_res = sql::insert_news_img(&mut transaction, &hex_hash, None).await;
+
+    if let Err(db_err) = db_res {
+        let storage_res = delete_news_img_from_storage(bucket, &hex_hash).await;
+        if let Err(storage_err) = storage_res {
+            tracing::error!(
+                "Reversion failure. {hex_hash} was stored into news_imgs.\
+                Database threw: {db_err}. Storage threw: {storage_err}"
+            );
+        }
+        return Err(db_err);
+    }
+
+    let img_id = db_res?;
+
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
+
+    Ok(pics::NewsImage {
+        id: img_id,
+        sha1: hex_hash,
+        filename: None,
+        transcript: None,
+    })
 }
 
 pub(crate) async fn upload_external_news_item_img(
@@ -989,12 +1075,12 @@ fn is_supported_raster_ext(ext: &OsStr) -> bool {
 fn validate_image(
     content: &Bytes,
     filename: &str,
-) -> Result<(image::DynamicImage, mime_guess::MimeGuess, Option<Exif>), Error> {
+) -> Result<(image::DynamicImage, Option<mime::Mime>, Option<Exif>), Error> {
     let mut img = image::load_from_memory(content.as_ref()).map_err(|err| {
         tracing::error!(error = err.to_string(), filename);
         Error::ValidationFailure("Unsupported image".to_string())
     })?;
-    let mime = mime_guess::from_path(filename);
+    let mime = mime_guess::from_path(filename).first();
 
     let path = std::path::Path::new(filename);
     let ext = path.extension().ok_or(Error::DependenciesNotMet)?;

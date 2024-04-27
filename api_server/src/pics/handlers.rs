@@ -25,6 +25,7 @@ use serde::Deserialize;
 use commons::models::{history, pics};
 
 use super::{logic, models::requests, models::responses, sql};
+use crate::pics::logic::import_external_news_img;
 use crate::utils::get_exactly_one_field;
 use crate::Error;
 use crate::{auth, contrib, AppState};
@@ -623,6 +624,18 @@ pub(crate) async fn post_news_item_image(
         &content,
     )
     .await?;
+
+    Ok(Json(img))
+}
+
+pub(crate) async fn post_import_external_news_image(
+    State(state): State<AppState>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    Path(external_image_id): Path<i32>,
+) -> Result<Json<pics::NewsImage>, Error> {
+    let img =
+        import_external_news_img(&state.bucket, &state.pool, external_image_id)
+            .await?;
 
     Ok(Json(img))
 }

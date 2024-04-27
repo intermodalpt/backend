@@ -1270,7 +1270,7 @@ WHERE sha1=$1
 pub(crate) async fn insert_news_img(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     sha1: &str,
-    filename: &str,
+    filename: Option<&str>,
 ) -> Result<i32> {
     let res = sqlx::query!(
         r#"
@@ -1357,6 +1357,26 @@ GROUP BY external_news_items.id"#,
             Error::DatabaseExecution
         })?
         .map(|row| row.hashes))
+}
+
+pub(crate) async fn fetch_external_news_img_by_id(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    img_id: i32,
+) -> Result<Option<pics::ExternalNewsImage>> {
+    sqlx::query_as!(
+        pics::ExternalNewsImage,
+        r#"
+SELECT id, sha1, has_copyright_issues, transcript
+FROM external_news_imgs
+WHERE id=$1"#,
+        img_id
+    )
+    .fetch_optional(&mut **transaction)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), img_id);
+        Error::DatabaseExecution
+    })
 }
 
 pub(crate) async fn insert_external_news_img(
