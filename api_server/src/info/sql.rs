@@ -291,7 +291,7 @@ GROUP BY external_news_items.id
             .map(|(sha1, transcript, has_copyright_issues)| {
                 responses::ExternalNewsImage {
                     transcript,
-                    url: if has_copyright_issues == Some(false) {
+                    url: if has_copyright_issues == Some(false) || incl_private {
                         Some(get_external_news_img_path(sha1.as_ref()))
                     } else {
                         None
