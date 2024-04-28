@@ -25,19 +25,19 @@ use once_cell::sync::OnceCell;
 
 pub(crate) static IMG_ROOT: OnceCell<&'static str> = OnceCell::new();
 
-pub(crate) fn get_original_path(sha: &str, filename: &str) -> String {
-    format!("{}/original/{sha}/{filename}", IMG_ROOT.get().unwrap())
+pub(crate) fn get_stop_pic_ori_named_path(sha: &str, filename: &str) -> String {
+    format!("{}/ori/{sha}/{filename}", IMG_ROOT.get().unwrap())
 }
 
-pub(crate) fn get_full_path(sha: &str) -> String {
+pub(crate) fn get_stop_pic_ori_path(sha: &str) -> String {
     format!("{}/ori/{sha}/stop", IMG_ROOT.get().unwrap())
 }
 
-pub(crate) fn get_medium_path(sha: &str) -> String {
+pub(crate) fn get_stop_pic_medium_path(sha: &str) -> String {
     format!("{}/medium/{sha}/preview", IMG_ROOT.get().unwrap())
 }
 
-pub(crate) fn get_thumb_path(sha: &str) -> String {
+pub(crate) fn get_stop_pic_thumb_path(sha: &str) -> String {
     format!("{}/thumb/{sha}/preview", IMG_ROOT.get().unwrap())
 }
 

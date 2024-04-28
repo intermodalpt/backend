@@ -25,7 +25,9 @@ use sqlx::PgPool;
 use commons::models::pics;
 
 use super::{models::requests, models::responses};
-use crate::pics::{get_full_path, get_medium_path, get_thumb_path};
+use crate::pics::{
+    get_stop_pic_medium_path, get_stop_pic_ori_path, get_stop_pic_thumb_path,
+};
 use crate::Error;
 
 type Result<T> = std::result::Result<T, Error>;
@@ -163,9 +165,9 @@ GROUP BY stop_pics.id
     })?
     .map(|r| responses::PicWithStops {
         id: r.id,
-        url_full: get_full_path(&r.sha1),
-        url_medium: get_medium_path(&r.sha1),
-        url_thumb: get_thumb_path(&r.sha1),
+        url_full: get_stop_pic_ori_path(&r.sha1),
+        url_medium: get_stop_pic_medium_path(&r.sha1),
+        url_thumb: get_stop_pic_thumb_path(&r.sha1),
         original_filename: r.original_filename,
         sha1: r.sha1,
         tagged: r.tagged,
@@ -217,9 +219,9 @@ GROUP BY stop_pics.id
     .into_iter()
     .map(|r| responses::PicWithStops {
         id: r.id,
-        url_full: get_full_path(&r.sha1),
-        url_medium: get_medium_path(&r.sha1),
-        url_thumb: get_thumb_path(&r.sha1),
+        url_full: get_stop_pic_ori_path(&r.sha1),
+        url_medium: get_stop_pic_medium_path(&r.sha1),
+        url_thumb: get_stop_pic_thumb_path(&r.sha1),
         original_filename: r.original_filename,
         sha1: r.sha1,
         tagged: r.tagged,
@@ -335,9 +337,9 @@ ORDER BY stop_pics.capture_date DESC
         .into_iter()
         .map(|r| responses::PublicStopPic {
             id: r.id,
-            url_full: get_full_path(&r.sha1),
-            url_medium: get_medium_path(&r.sha1),
-            url_thumb: get_thumb_path(&r.sha1),
+            url_full: get_stop_pic_ori_path(&r.sha1),
+            url_medium: get_stop_pic_medium_path(&r.sha1),
+            url_thumb: get_stop_pic_thumb_path(&r.sha1),
             sha1: r.sha1,
             capture_date: r.capture_date,
             lon: r.lon,
@@ -389,9 +391,9 @@ ORDER BY quality DESC
     .into_iter()
     .map(|r| responses::PicWithStops {
         id: r.id,
-        url_full: get_full_path(&r.sha1),
-        url_medium: get_medium_path(&r.sha1),
-        url_thumb: get_thumb_path(&r.sha1),
+        url_full: get_stop_pic_ori_path(&r.sha1),
+        url_medium: get_stop_pic_medium_path(&r.sha1),
+        url_thumb: get_stop_pic_thumb_path(&r.sha1),
         original_filename: r.original_filename,
         sha1: r.sha1,
         tagged: r.tagged,
@@ -461,9 +463,9 @@ LIMIT $2 OFFSET $3
     .into_iter()
     .map(|r| responses::PicWithStops {
         id: r.id,
-        url_full: get_full_path(&r.sha1),
-        url_medium: get_medium_path(&r.sha1),
-        url_thumb: get_thumb_path(&r.sha1),
+        url_full: get_stop_pic_ori_path(&r.sha1),
+        url_medium: get_stop_pic_medium_path(&r.sha1),
+        url_thumb: get_stop_pic_thumb_path(&r.sha1),
         original_filename: r.original_filename,
         sha1: r.sha1,
         tagged: r.tagged,
@@ -528,9 +530,9 @@ LIMIT $3 OFFSET $4
     .into_iter()
     .map(|r| responses::PicWithStops {
         id: r.id,
-        url_full: get_full_path(&r.sha1),
-        url_medium: get_medium_path(&r.sha1),
-        url_thumb: get_thumb_path(&r.sha1),
+        url_full: get_stop_pic_ori_path(&r.sha1),
+        url_medium: get_stop_pic_medium_path(&r.sha1),
+        url_thumb: get_stop_pic_thumb_path(&r.sha1),
         original_filename: r.original_filename,
         sha1: r.sha1,
         tagged: r.tagged,
@@ -596,9 +598,9 @@ LIMIT $3 OFFSET $4
     .into_iter()
     .map(|r| responses::PicWithStops {
         id: r.id,
-        url_full: get_full_path(&r.sha1),
-        url_medium: get_medium_path(&r.sha1),
-        url_thumb: get_thumb_path(&r.sha1),
+        url_full: get_stop_pic_ori_path(&r.sha1),
+        url_medium: get_stop_pic_medium_path(&r.sha1),
+        url_thumb: get_stop_pic_thumb_path(&r.sha1),
         original_filename: r.original_filename,
         sha1: r.sha1,
         tagged: r.tagged,
@@ -664,9 +666,9 @@ LIMIT $3 OFFSET $4
     .into_iter()
     .map(|r| responses::PicWithStops {
         id: r.id,
-        url_full: get_full_path(&r.sha1),
-        url_medium: get_medium_path(&r.sha1),
-        url_thumb: get_thumb_path(&r.sha1),
+        url_full: get_stop_pic_ori_path(&r.sha1),
+        url_medium: get_stop_pic_medium_path(&r.sha1),
+        url_thumb: get_stop_pic_thumb_path(&r.sha1),
         original_filename: r.original_filename,
         sha1: r.sha1,
         tagged: r.tagged,
@@ -751,9 +753,9 @@ LIMIT $3 OFFSET $4
     .into_iter()
     .map(|r| responses::MinimalPic {
         id: r.id,
-        url_full: get_full_path(&r.sha1),
-        url_medium: get_medium_path(&r.sha1),
-        url_thumb: get_thumb_path(&r.sha1),
+        url_full: get_stop_pic_ori_path(&r.sha1),
+        url_medium: get_stop_pic_medium_path(&r.sha1),
+        url_thumb: get_stop_pic_thumb_path(&r.sha1),
     })
     .collect())
 }

@@ -110,9 +110,10 @@ pub(crate) mod responses {
     use commons::models::pics;
 
     use crate::pics::{
-        get_external_news_img_path, get_full_path, get_medium_path,
-        get_news_img_full_path, get_news_img_medium_path,
-        get_news_img_thumb_path, get_original_path, get_thumb_path,
+        get_external_news_img_path, get_news_img_full_path,
+        get_news_img_medium_path, get_news_img_thumb_path,
+        get_stop_pic_medium_path, get_stop_pic_ori_named_path,
+        get_stop_pic_ori_path, get_stop_pic_thumb_path,
     };
 
     #[derive(Debug, Serialize)]
@@ -143,9 +144,9 @@ pub(crate) mod responses {
         fn from(value: pics::StopPic) -> Self {
             PublicStopPic {
                 id: value.id,
-                url_full: get_full_path(&value.sha1),
-                url_medium: get_medium_path(&value.sha1),
-                url_thumb: get_thumb_path(&value.sha1),
+                url_full: get_stop_pic_ori_path(&value.sha1),
+                url_medium: get_stop_pic_medium_path(&value.sha1),
+                url_thumb: get_stop_pic_thumb_path(&value.sha1),
                 sha1: value.sha1,
                 capture_date: value.capture_date,
                 lon: value.dyn_meta.lon,
@@ -191,9 +192,12 @@ pub(crate) mod responses {
             let (pic, stops) = value;
             Self {
                 id: pic.id,
-                url_full: get_original_path(&pic.sha1, &pic.original_filename),
-                url_medium: get_medium_path(&pic.sha1),
-                url_thumb: get_thumb_path(&pic.sha1),
+                url_full: get_stop_pic_ori_named_path(
+                    &pic.sha1,
+                    &pic.original_filename,
+                ),
+                url_medium: get_stop_pic_medium_path(&pic.sha1),
+                url_thumb: get_stop_pic_thumb_path(&pic.sha1),
                 original_filename: pic.original_filename,
                 sha1: pic.sha1,
                 public: pic.dyn_meta.public,
