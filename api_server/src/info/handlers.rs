@@ -86,6 +86,7 @@ pub(crate) async fn get_news_item(
             .ok_or(Error::NotFoundUpstream)?,
     ))
 }
+
 pub(crate) async fn get_full_news_item(
     State(state): State<AppState>,
     Path(item_id): Path<i32>,

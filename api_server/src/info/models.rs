@@ -19,21 +19,6 @@
 use chrono::{DateTime, Local};
 use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Debug)]
-pub struct NewsImage {
-    pub id: i32,
-    pub sha1: String,
-    pub transcript: Option<String>,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct ExternalNewsImage {
-    pub id: i32,
-    pub sha1: String,
-    pub has_copyright_issues: Option<bool>,
-    pub transcript: Option<String>,
-}
-
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ExternalRel {
     pub id: i32,
@@ -50,10 +35,7 @@ pub(crate) mod responses {
 
     use commons::models::info;
 
-    use crate::pics::{
-        get_external_news_img_path, get_news_img_full_path,
-        get_news_img_medium_path, get_news_img_thumb_path,
-    };
+    use crate::pics::models::responses as pic_responses;
 
     #[derive(Debug, Serialize)]
     pub struct NewsItem {
@@ -65,7 +47,7 @@ pub(crate) mod responses {
         pub edit_datetime: Option<DateTime<Local>>,
         pub is_visible: bool,
 
-        pub images: Vec<NewsImage>,
+        pub images: Vec<pic_responses::NewsImage>,
         pub external_rels: Vec<super::ExternalRel>,
 
         pub operator_ids: Vec<i32>,
@@ -82,7 +64,7 @@ pub(crate) mod responses {
         pub edit_datetime: Option<DateTime<Local>>,
         pub is_visible: bool,
 
-        pub images: Vec<NewsImage>,
+        pub images: Vec<pic_responses::NewsImage>,
         pub external_rels: Vec<super::ExternalRel>,
 
         pub operator_ids: Vec<i32>,
@@ -113,7 +95,7 @@ pub(crate) mod responses {
 
         pub operator_ids: Vec<i32>,
         pub region_ids: Vec<i32>,
-        pub images: Vec<ExternalNewsImage>,
+        pub images: Vec<pic_responses::ExternalNewsImage>,
     }
 
     #[derive(Debug, Serialize)]
@@ -143,7 +125,7 @@ pub(crate) mod responses {
 
         pub operator_ids: Vec<i32>,
         pub region_ids: Vec<i32>,
-        pub images: Vec<FullExternalNewsImage>,
+        pub images: Vec<pic_responses::FullExternalNewsImage>,
         pub screenshot_url: Option<String>,
     }
 
@@ -169,79 +151,6 @@ pub(crate) mod responses {
         pub raw: JsonValue,
 
         pub is_complete: bool,
-    }
-
-    #[derive(Serialize, Debug)]
-    pub struct NewsImage {
-        pub transcript: Option<String>,
-        pub url_full: String,
-        pub url_medium: String,
-        pub url_thumb: String,
-    }
-
-    #[derive(Serialize, Debug)]
-    pub struct FullNewsImage {
-        pub id: i32,
-        pub transcript: Option<String>,
-        pub url_full: String,
-        pub url_medium: String,
-        pub url_thumb: String,
-    }
-
-    #[derive(Serialize, Debug)]
-    pub struct ExternalNewsImage {
-        pub transcript: Option<String>,
-        pub url: Option<String>,
-    }
-
-    #[derive(Serialize, Debug)]
-    pub struct FullExternalNewsImage {
-        pub id: i32,
-        pub has_copyright_issues: Option<bool>,
-        pub transcript: Option<String>,
-        pub url: String,
-    }
-
-    impl From<super::NewsImage> for NewsImage {
-        fn from(image: super::NewsImage) -> Self {
-            NewsImage {
-                transcript: image.transcript,
-                url_full: get_news_img_full_path(&image.sha1),
-                url_medium: get_news_img_medium_path(&image.sha1),
-                url_thumb: get_news_img_thumb_path(&image.sha1),
-            }
-        }
-    }
-
-    impl From<super::NewsImage> for FullNewsImage {
-        fn from(image: super::NewsImage) -> Self {
-            FullNewsImage {
-                id: image.id,
-                transcript: image.transcript,
-                url_full: get_news_img_full_path(&image.sha1),
-                url_medium: get_news_img_medium_path(&image.sha1),
-                url_thumb: get_news_img_thumb_path(&image.sha1),
-            }
-        }
-    }
-
-    impl From<super::ExternalNewsImage> for ExternalNewsImage {
-        fn from(image: super::ExternalNewsImage) -> Self {
-            ExternalNewsImage {
-                transcript: image.transcript,
-                url: Some(get_external_news_img_path(&image.sha1)),
-            }
-        }
-    }
-    impl From<super::ExternalNewsImage> for FullExternalNewsImage {
-        fn from(image: super::ExternalNewsImage) -> Self {
-            FullExternalNewsImage {
-                id: image.id,
-                has_copyright_issues: image.has_copyright_issues,
-                transcript: image.transcript,
-                url: get_external_news_img_path(&image.sha1),
-            }
-        }
     }
 }
 
@@ -402,53 +311,6 @@ pub(crate) mod requests {
 
 // Manual implementations of sqlx::Type due to
 // https://github.com/rust-lang/rust/issues/82219
-impl sqlx::Type<sqlx::Postgres> for NewsImage {
-    fn type_info() -> sqlx::postgres::PgTypeInfo {
-        sqlx::postgres::PgTypeInfo::with_name("NewsImage")
-    }
-}
-impl<'r> sqlx::decode::Decode<'r, sqlx::Postgres> for NewsImage {
-    fn decode(
-        value: sqlx::postgres::PgValueRef<'r>,
-    ) -> Result<Self, Box<dyn ::std::error::Error + 'static + Send + Sync>>
-    {
-        let mut decoder = sqlx::postgres::types::PgRecordDecoder::new(value)?;
-        let id = decoder.try_decode::<i32>()?;
-        let sha1 = decoder.try_decode::<String>()?;
-        let transcript = decoder.try_decode::<Option<String>>()?;
-        Ok(NewsImage {
-            id,
-            sha1,
-            transcript,
-        })
-    }
-}
-
-impl<'r> sqlx::decode::Decode<'r, sqlx::Postgres> for ExternalNewsImage {
-    fn decode(
-        value: sqlx::postgres::PgValueRef<'r>,
-    ) -> Result<Self, Box<dyn ::std::error::Error + 'static + Send + Sync>>
-    {
-        let mut decoder = sqlx::postgres::types::PgRecordDecoder::new(value)?;
-        let id = decoder.try_decode::<i32>()?;
-        let sha1 = decoder.try_decode::<String>()?;
-        let has_copyright_issues = decoder.try_decode::<Option<bool>>()?;
-        let transcript = decoder.try_decode::<Option<String>>()?;
-        Ok(ExternalNewsImage {
-            id,
-            sha1,
-            has_copyright_issues,
-            transcript,
-        })
-    }
-}
-
-impl sqlx::Type<sqlx::Postgres> for ExternalNewsImage {
-    fn type_info() -> sqlx::postgres::PgTypeInfo {
-        sqlx::postgres::PgTypeInfo::with_name("ExternalNewsImage")
-    }
-}
-
 impl<'r> sqlx::decode::Decode<'r, sqlx::Postgres> for ExternalRel {
     fn decode(
         value: sqlx::postgres::PgValueRef<'r>,
