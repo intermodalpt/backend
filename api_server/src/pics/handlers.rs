@@ -572,7 +572,7 @@ pub(crate) async fn post_news_image(
     State(state): State<AppState>,
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     mut multipart: Multipart,
-) -> Result<Json<responses::FullNewsImage>, Error> {
+) -> Result<Json<responses::FullNewsPic>, Error> {
     let field = get_exactly_one_field(&mut multipart).await?;
 
     let filename = field
@@ -602,7 +602,7 @@ pub(crate) async fn post_news_item_image(
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     Path(item_id): Path<i32>,
     mut multipart: Multipart,
-) -> Result<Json<responses::FullNewsImage>, Error> {
+) -> Result<Json<responses::FullNewsPic>, Error> {
     let field = get_exactly_one_field(&mut multipart).await?;
 
     let filename = field
@@ -632,7 +632,7 @@ pub(crate) async fn post_import_external_news_image(
     State(state): State<AppState>,
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     Path(external_image_id): Path<i32>,
-) -> Result<Json<responses::FullNewsImage>, Error> {
+) -> Result<Json<responses::FullNewsPic>, Error> {
     let img =
         import_external_news_img(&state.bucket, &state.pool, external_image_id)
             .await?;
@@ -644,7 +644,7 @@ pub(crate) async fn patch_news_image_meta(
     State(state): State<AppState>,
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     Path(img_id): Path<i32>,
-    Json(mut news_img_meta): Json<requests::ChangeNewsImgMeta>,
+    Json(mut news_img_meta): Json<requests::ChangeNewsPicMeta>,
 ) -> Result<(), Error> {
     news_img_meta.clean();
 
@@ -693,7 +693,7 @@ pub(crate) async fn post_external_news_image(
 
     Ok({
         let mut map = HashMap::new();
-        map.insert("url".to_string(), super::get_external_news_img_path(&sha1));
+        map.insert("url".to_string(), super::get_external_news_pic_path(&sha1));
         Json(map)
     })
 }

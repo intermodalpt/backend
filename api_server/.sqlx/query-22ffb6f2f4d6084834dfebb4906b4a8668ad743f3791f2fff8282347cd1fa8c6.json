@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT external_news_items.id, title, summary, author, content_md,\n    array_remove(array_agg(distinct operator_id), NULL) as \"operator_ids!: Vec<i32>\",\n    array_remove(array_agg(distinct region_id), NULL) as \"region_ids!: Vec<i32>\",\n    prepro_content_md, content_text, prepro_content_text, publish_datetime, edit_datetime,\n    source, url, is_complete, is_validated, is_relevant, is_sensitive, ss_sha1, raw,\n    CASE\n        WHEN count(external_news_imgs.id) > 0\n        THEN array_agg(\n            ROW(external_news_imgs.id, sha1, has_copyright_issues, transcript))\n        ELSE array[]::record[]\n    END as \"imgs!: Vec<pic_models::ExternalNewsImage>\"\nFROM external_news_items\nLEFT JOIN external_news_items_imgs\n    ON external_news_items.id=external_news_items_imgs.item_id\nLEFT JOIN external_news_imgs\n    ON external_news_items_imgs.img_id=external_news_imgs.id\nJOIN external_news_items_operators\n    ON external_news_items.id=external_news_items_operators.item_id\nLEFT JOIN external_news_items_regions\n    ON external_news_items.id=external_news_items_regions.item_id\nWHERE operator_id=$1 AND NOT is_validated\nGROUP BY external_news_items.id\nLIMIT $2 OFFSET $3\n",
+  "query": "\nSELECT external_news_items.id, title, summary, author, content_md,\n    array_remove(array_agg(distinct operator_id), NULL) as \"operator_ids!: Vec<i32>\",\n    array_remove(array_agg(distinct region_id), NULL) as \"region_ids!: Vec<i32>\",\n    prepro_content_md, content_text, prepro_content_text, publish_datetime, edit_datetime,\n    source, url, is_complete, is_validated, is_relevant, is_sensitive, ss_sha1, raw,\n    CASE\n        WHEN count(external_news_imgs.id) > 0\n        THEN array_agg(\n            ROW(external_news_imgs.id, sha1, has_copyright_issues, transcript))\n        ELSE array[]::record[]\n    END as \"imgs!: Vec<pic_models::ExternalNewsPic>\"\nFROM external_news_items\nLEFT JOIN external_news_items_imgs\n    ON external_news_items.id=external_news_items_imgs.item_id\nLEFT JOIN external_news_imgs\n    ON external_news_items_imgs.img_id=external_news_imgs.id\nJOIN external_news_items_operators\n    ON external_news_items.id=external_news_items_operators.item_id\nLEFT JOIN external_news_items_regions\n    ON external_news_items.id=external_news_items_regions.item_id\nWHERE operator_id=$1 AND NOT is_validated\nGROUP BY external_news_items.id\nLIMIT $2 OFFSET $3\n",
   "describe": {
     "columns": [
       {
@@ -105,7 +105,7 @@
       },
       {
         "ordinal": 20,
-        "name": "imgs!: Vec<pic_models::ExternalNewsImage>",
+        "name": "imgs!: Vec<pic_models::ExternalNewsPic>",
         "type_info": "RecordArray"
       }
     ],
@@ -140,5 +140,5 @@
       null
     ]
   },
-  "hash": "94f81028fd171969dedab600332e08deb1efb5fa2e208251e37606bcfc273637"
+  "hash": "22ffb6f2f4d6084834dfebb4906b4a8668ad743f3791f2fff8282347cd1fa8c6"
 }

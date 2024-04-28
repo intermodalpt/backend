@@ -1251,9 +1251,9 @@ WHERE operators.id=$2
 pub(crate) async fn fetch_news_img_by_hash(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     sha1: &str,
-) -> Result<Option<pics::NewsImage>> {
+) -> Result<Option<pics::NewsPic>> {
     sqlx::query_as!(
-        pics::NewsImage,
+        pics::NewsPic,
         r#"
 SELECT id, sha1, filename, transcript
 FROM news_imgs
@@ -1319,7 +1319,7 @@ VALUES ($1, $2)
 pub(crate) async fn update_news_img_meta(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     item_id: i32,
-    meta: &requests::ChangeNewsImgMeta,
+    meta: &requests::ChangeNewsPicMeta,
 ) -> Result<()> {
     sqlx::query!(
         r#"
@@ -1364,9 +1364,9 @@ GROUP BY external_news_items.id"#,
 pub(crate) async fn fetch_external_news_img_by_id(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     img_id: i32,
-) -> Result<Option<pics::ExternalNewsImage>> {
+) -> Result<Option<pics::ExternalNewsPic>> {
     sqlx::query_as!(
-        pics::ExternalNewsImage,
+        pics::ExternalNewsPic,
         r#"
 SELECT id, sha1, has_copyright_issues, transcript
 FROM external_news_imgs

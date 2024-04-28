@@ -515,7 +515,7 @@ pub(crate) async fn upload_standalone_news_img(
     db_pool: &PgPool,
     filename: String,
     content: &Bytes,
-) -> Result<pics::NewsImage, Error> {
+) -> Result<pics::NewsPic, Error> {
     let mut hasher = Sha1::new();
     hasher.update(content);
     let hash = hasher.finalize();
@@ -569,7 +569,7 @@ pub(crate) async fn upload_standalone_news_img(
         Error::DatabaseExecution
     })?;
 
-    Ok(pics::NewsImage {
+    Ok(pics::NewsPic {
         id: img_id,
         sha1: hex_hash,
         filename: Some(filename),
@@ -583,7 +583,7 @@ pub(crate) async fn upload_news_item_img(
     db_pool: &PgPool,
     filename: String,
     content: &Bytes,
-) -> Result<pics::NewsImage, Error> {
+) -> Result<pics::NewsPic, Error> {
     let mut hasher = Sha1::new();
     hasher.update(content);
     let hash = hasher.finalize();
@@ -642,7 +642,7 @@ pub(crate) async fn upload_news_item_img(
         Error::DatabaseExecution
     })?;
 
-    Ok(pics::NewsImage {
+    Ok(pics::NewsPic {
         id: img_id,
         sha1: hex_hash,
         filename: Some(filename),
@@ -742,7 +742,7 @@ pub(crate) async fn import_external_news_img(
     bucket: &s3::Bucket,
     db_pool: &PgPool,
     external_img_id: i32,
-) -> Result<pics::NewsImage, Error> {
+) -> Result<pics::NewsPic, Error> {
     let mut transaction = db_pool.begin().await.map_err(|err| {
         tracing::error!("Failed to open transaction: {err}");
         Error::DatabaseExecution
@@ -813,7 +813,7 @@ pub(crate) async fn import_external_news_img(
         Error::DatabaseExecution
     })?;
 
-    Ok(pics::NewsImage {
+    Ok(pics::NewsPic {
         id: img_id,
         sha1: hex_hash,
         filename: None,

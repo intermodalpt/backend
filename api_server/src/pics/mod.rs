@@ -48,19 +48,19 @@ pub(crate) fn get_logo_path(operator_id: i32, sha: &str) -> String {
     )
 }
 
-pub(crate) fn get_news_img_full_path(sha: &str) -> String {
+pub(crate) fn get_news_pic_full_path(sha: &str) -> String {
     format!("{}/news/ori/{sha}/stop", IMG_ROOT.get().unwrap())
 }
 
-pub(crate) fn get_news_img_medium_path(sha: &str) -> String {
+pub(crate) fn get_news_pic_medium_path(sha: &str) -> String {
     format!("{}/news/medium/{sha}/preview", IMG_ROOT.get().unwrap())
 }
 
-pub(crate) fn get_news_img_thumb_path(sha: &str) -> String {
+pub(crate) fn get_news_pic_thumb_path(sha: &str) -> String {
     format!("{}/news/thumb/{sha}/preview", IMG_ROOT.get().unwrap())
 }
 
-pub(crate) fn get_external_news_img_path(sha: &str) -> String {
+pub(crate) fn get_external_news_pic_path(sha: &str) -> String {
     format!("{}/enews/{sha}/img", IMG_ROOT.get().unwrap())
 }
 

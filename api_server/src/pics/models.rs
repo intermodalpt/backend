@@ -19,14 +19,14 @@
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]
-pub struct NewsImage {
+pub struct NewsPic {
     pub id: i32,
     pub sha1: String,
     pub transcript: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
-pub struct ExternalNewsImage {
+pub struct ExternalNewsPic {
     pub id: i32,
     pub sha1: String,
     pub has_copyright_issues: Option<bool>,
@@ -86,13 +86,13 @@ pub(crate) mod requests {
     }
 
     #[derive(Debug, Deserialize)]
-    pub struct ChangeNewsImgMeta {
+    pub struct ChangeNewsPicMeta {
         pub transcript: Option<String>,
         //pub attribution: Option<String>,
         //pub license: Option<String>,
     }
 
-    impl ChangeNewsImgMeta {
+    impl ChangeNewsPicMeta {
         pub(crate) fn clean(&mut self) {
             if let Some(transcript) = &self.transcript {
                 if transcript.is_empty() {
@@ -110,8 +110,8 @@ pub(crate) mod responses {
     use commons::models::pics;
 
     use crate::pics::{
-        get_external_news_img_path, get_news_img_full_path,
-        get_news_img_medium_path, get_news_img_thumb_path,
+        get_external_news_pic_path, get_news_pic_full_path,
+        get_news_pic_medium_path, get_news_pic_thumb_path,
         get_stop_pic_medium_path, get_stop_pic_ori_named_path,
         get_stop_pic_ori_path, get_stop_pic_thumb_path,
     };
@@ -285,49 +285,38 @@ pub(crate) mod responses {
         pub successors: Vec<MinimalPicWithStops>,
     }
 
-    #[derive(Debug, Serialize)]
-    pub struct NewsImg {
-        pub id: i32,
-        pub sha1: String,
-        pub original_filename: String,
-        pub transcript: String,
-        pub url_full: String,
-        pub url_medium: String,
-        pub url_thumb: String,
-    }
-
     #[derive(Serialize, Debug)]
-    pub struct NewsImage {
+    pub struct NewsPic {
         pub transcript: Option<String>,
         pub url_full: String,
         pub url_medium: String,
         pub url_thumb: String,
     }
 
-    impl From<pics::NewsImage> for NewsImage {
-        fn from(value: pics::NewsImage) -> Self {
-            NewsImage {
+    impl From<pics::NewsPic> for NewsPic {
+        fn from(value: pics::NewsPic) -> Self {
+            NewsPic {
                 transcript: value.transcript,
-                url_full: get_news_img_full_path(&value.sha1),
-                url_medium: get_news_img_medium_path(&value.sha1),
-                url_thumb: get_news_img_thumb_path(&value.sha1),
+                url_full: get_news_pic_full_path(&value.sha1),
+                url_medium: get_news_pic_medium_path(&value.sha1),
+                url_thumb: get_news_pic_thumb_path(&value.sha1),
             }
         }
     }
 
-    impl From<crate::pics::models::NewsImage> for NewsImage {
-        fn from(image: crate::pics::models::NewsImage) -> Self {
-            NewsImage {
+    impl From<crate::pics::models::NewsPic> for NewsPic {
+        fn from(image: crate::pics::models::NewsPic) -> Self {
+            NewsPic {
                 transcript: image.transcript,
-                url_full: get_news_img_full_path(&image.sha1),
-                url_medium: get_news_img_medium_path(&image.sha1),
-                url_thumb: get_news_img_thumb_path(&image.sha1),
+                url_full: get_news_pic_full_path(&image.sha1),
+                url_medium: get_news_pic_medium_path(&image.sha1),
+                url_thumb: get_news_pic_thumb_path(&image.sha1),
             }
         }
     }
 
     #[derive(Serialize, Debug)]
-    pub struct FullNewsImage {
+    pub struct FullNewsPic {
         pub id: i32,
         pub transcript: Option<String>,
         pub url_full: String,
@@ -335,79 +324,79 @@ pub(crate) mod responses {
         pub url_thumb: String,
     }
 
-    impl From<pics::NewsImage> for FullNewsImage {
-        fn from(value: pics::NewsImage) -> Self {
-            FullNewsImage {
+    impl From<pics::NewsPic> for FullNewsPic {
+        fn from(value: pics::NewsPic) -> Self {
+            FullNewsPic {
                 id: value.id,
                 transcript: value.transcript,
-                url_full: get_news_img_full_path(&value.sha1),
-                url_medium: get_news_img_medium_path(&value.sha1),
-                url_thumb: get_news_img_thumb_path(&value.sha1),
+                url_full: get_news_pic_full_path(&value.sha1),
+                url_medium: get_news_pic_medium_path(&value.sha1),
+                url_thumb: get_news_pic_thumb_path(&value.sha1),
             }
         }
     }
 
-    impl From<crate::pics::models::NewsImage> for FullNewsImage {
-        fn from(image: crate::pics::models::NewsImage) -> Self {
-            FullNewsImage {
-                id: image.id,
-                transcript: image.transcript,
-                url_full: get_news_img_full_path(&image.sha1),
-                url_medium: get_news_img_medium_path(&image.sha1),
-                url_thumb: get_news_img_thumb_path(&image.sha1),
+    impl From<crate::pics::models::NewsPic> for FullNewsPic {
+        fn from(pic: crate::pics::models::NewsPic) -> Self {
+            FullNewsPic {
+                id: pic.id,
+                transcript: pic.transcript,
+                url_full: get_news_pic_full_path(&pic.sha1),
+                url_medium: get_news_pic_medium_path(&pic.sha1),
+                url_thumb: get_news_pic_thumb_path(&pic.sha1),
             }
         }
     }
 
     #[derive(Serialize, Debug)]
-    pub struct ExternalNewsImage {
+    pub struct ExternalNewsPic {
         pub transcript: Option<String>,
         pub url: Option<String>,
     }
 
-    impl From<pics::ExternalNewsImage> for ExternalNewsImage {
-        fn from(value: pics::ExternalNewsImage) -> Self {
+    impl From<pics::ExternalNewsPic> for ExternalNewsPic {
+        fn from(value: pics::ExternalNewsPic) -> Self {
             Self {
                 transcript: value.transcript,
-                url: Some(get_external_news_img_path(&value.sha1)),
+                url: Some(get_external_news_pic_path(&value.sha1)),
             }
         }
     }
 
     #[derive(Serialize, Debug)]
-    pub struct FullExternalNewsImage {
+    pub struct FullExternalNewsPic {
         pub id: i32,
         pub has_copyright_issues: Option<bool>,
         pub transcript: Option<String>,
         pub url: String,
     }
 
-    impl From<pics::ExternalNewsImage> for FullExternalNewsImage {
-        fn from(value: pics::ExternalNewsImage) -> Self {
-            FullExternalNewsImage {
+    impl From<pics::ExternalNewsPic> for FullExternalNewsPic {
+        fn from(value: pics::ExternalNewsPic) -> Self {
+            FullExternalNewsPic {
                 id: value.id,
                 has_copyright_issues: value.has_copyright_issues,
                 transcript: value.transcript,
-                url: get_external_news_img_path(&value.sha1),
+                url: get_external_news_pic_path(&value.sha1),
             }
         }
     }
 
-    impl From<crate::pics::models::ExternalNewsImage> for ExternalNewsImage {
-        fn from(image: crate::pics::models::ExternalNewsImage) -> Self {
-            ExternalNewsImage {
+    impl From<crate::pics::models::ExternalNewsPic> for ExternalNewsPic {
+        fn from(image: crate::pics::models::ExternalNewsPic) -> Self {
+            ExternalNewsPic {
                 transcript: image.transcript,
-                url: Some(get_external_news_img_path(&image.sha1)),
+                url: Some(get_external_news_pic_path(&image.sha1)),
             }
         }
     }
-    impl From<crate::pics::models::ExternalNewsImage> for FullExternalNewsImage {
-        fn from(image: crate::pics::models::ExternalNewsImage) -> Self {
-            FullExternalNewsImage {
+    impl From<crate::pics::models::ExternalNewsPic> for FullExternalNewsPic {
+        fn from(image: crate::pics::models::ExternalNewsPic) -> Self {
+            FullExternalNewsPic {
                 id: image.id,
                 has_copyright_issues: image.has_copyright_issues,
                 transcript: image.transcript,
-                url: get_external_news_img_path(&image.sha1),
+                url: get_external_news_pic_path(&image.sha1),
             }
         }
     }
@@ -415,12 +404,12 @@ pub(crate) mod responses {
 
 // Manual implementations of sqlx::Type due to
 // https://github.com/rust-lang/rust/issues/82219
-impl sqlx::Type<sqlx::Postgres> for NewsImage {
+impl sqlx::Type<sqlx::Postgres> for NewsPic {
     fn type_info() -> sqlx::postgres::PgTypeInfo {
-        sqlx::postgres::PgTypeInfo::with_name("NewsImage")
+        sqlx::postgres::PgTypeInfo::with_name("NewsPic")
     }
 }
-impl<'r> sqlx::decode::Decode<'r, sqlx::Postgres> for NewsImage {
+impl<'r> sqlx::decode::Decode<'r, sqlx::Postgres> for NewsPic {
     fn decode(
         value: sqlx::postgres::PgValueRef<'r>,
     ) -> Result<Self, Box<dyn ::std::error::Error + 'static + Send + Sync>>
@@ -429,7 +418,7 @@ impl<'r> sqlx::decode::Decode<'r, sqlx::Postgres> for NewsImage {
         let id = decoder.try_decode::<i32>()?;
         let sha1 = decoder.try_decode::<String>()?;
         let transcript = decoder.try_decode::<Option<String>>()?;
-        Ok(NewsImage {
+        Ok(NewsPic {
             id,
             sha1,
             transcript,
@@ -437,7 +426,7 @@ impl<'r> sqlx::decode::Decode<'r, sqlx::Postgres> for NewsImage {
     }
 }
 
-impl<'r> sqlx::decode::Decode<'r, sqlx::Postgres> for ExternalNewsImage {
+impl<'r> sqlx::decode::Decode<'r, sqlx::Postgres> for ExternalNewsPic {
     fn decode(
         value: sqlx::postgres::PgValueRef<'r>,
     ) -> Result<Self, Box<dyn ::std::error::Error + 'static + Send + Sync>>
@@ -447,7 +436,7 @@ impl<'r> sqlx::decode::Decode<'r, sqlx::Postgres> for ExternalNewsImage {
         let sha1 = decoder.try_decode::<String>()?;
         let has_copyright_issues = decoder.try_decode::<Option<bool>>()?;
         let transcript = decoder.try_decode::<Option<String>>()?;
-        Ok(ExternalNewsImage {
+        Ok(ExternalNewsPic {
             id,
             sha1,
             has_copyright_issues,
@@ -456,8 +445,8 @@ impl<'r> sqlx::decode::Decode<'r, sqlx::Postgres> for ExternalNewsImage {
     }
 }
 
-impl sqlx::Type<sqlx::Postgres> for ExternalNewsImage {
+impl sqlx::Type<sqlx::Postgres> for ExternalNewsPic {
     fn type_info() -> sqlx::postgres::PgTypeInfo {
-        sqlx::postgres::PgTypeInfo::with_name("ExternalNewsImage")
+        sqlx::postgres::PgTypeInfo::with_name("ExternalNewsPic")
     }
 }

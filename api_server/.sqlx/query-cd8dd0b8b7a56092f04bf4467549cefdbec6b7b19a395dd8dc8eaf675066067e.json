@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT external_news_items.id, title, summary, author,\n    array_remove(array_agg(distinct operator_id), NULL) as \"operator_ids!: Vec<i32>\",\n    array_remove(array_agg(distinct region_id), NULL) as \"region_ids!: Vec<i32>\",\n    content_md, prepro_content_md, content_text, prepro_content_text,\n    edit_datetime, publish_datetime, source, url, is_complete,\n    is_validated, is_relevant, is_sensitive, raw, ss_sha1,\n    CASE\n        WHEN count(external_news_imgs.id) > 0\n        THEN array_agg(\n            ROW(external_news_imgs.id, sha1, has_copyright_issues, transcript))\n        ELSE array[]::record[]\n    END as \"imgs!: Vec<pic_models::ExternalNewsImage>\"\nFROM external_news_items\nLEFT JOIN external_news_items_imgs\n    ON external_news_items.id=external_news_items_imgs.item_id\nLEFT JOIN external_news_imgs\n    ON external_news_items_imgs.img_id=external_news_imgs.id\nLEFT JOIN external_news_items_operators\n    ON external_news_items.id=external_news_items_operators.item_id\nLEFT JOIN external_news_items_regions\n    ON external_news_items.id=external_news_items_regions.item_id\nWHERE external_news_items.id=$1\nGROUP BY external_news_items.id\n",
+  "query": "\nSELECT external_news_items.id, title, summary, author,\n    array_remove(array_agg(distinct operator_id), NULL) as \"operator_ids!: Vec<i32>\",\n    array_remove(array_agg(distinct region_id), NULL) as \"region_ids!: Vec<i32>\",\n    content_md, prepro_content_md, content_text, prepro_content_text,\n    edit_datetime, publish_datetime, source, url, is_complete,\n    is_validated, is_relevant, is_sensitive, raw, ss_sha1,\n    CASE\n        WHEN count(external_news_imgs.id) > 0\n        THEN array_agg(\n            ROW(external_news_imgs.id, sha1, has_copyright_issues, transcript))\n        ELSE array[]::record[]\n    END as \"imgs!: Vec<pic_models::ExternalNewsPic>\"\nFROM external_news_items\nLEFT JOIN external_news_items_imgs\n    ON external_news_items.id=external_news_items_imgs.item_id\nLEFT JOIN external_news_imgs\n    ON external_news_items_imgs.img_id=external_news_imgs.id\nLEFT JOIN external_news_items_operators\n    ON external_news_items.id=external_news_items_operators.item_id\nLEFT JOIN external_news_items_regions\n    ON external_news_items.id=external_news_items_regions.item_id\nWHERE external_news_items.id=$1\nGROUP BY external_news_items.id\n",
   "describe": {
     "columns": [
       {
@@ -105,7 +105,7 @@
       },
       {
         "ordinal": 20,
-        "name": "imgs!: Vec<pic_models::ExternalNewsImage>",
+        "name": "imgs!: Vec<pic_models::ExternalNewsPic>",
         "type_info": "RecordArray"
       }
     ],
@@ -138,5 +138,5 @@
       null
     ]
   },
-  "hash": "d1c163baf03d6d8a073bd68b6019d98a4db35d0695469fb832e43cc4c3f7cfe0"
+  "hash": "cd8dd0b8b7a56092f04bf4467549cefdbec6b7b19a395dd8dc8eaf675066067e"
 }

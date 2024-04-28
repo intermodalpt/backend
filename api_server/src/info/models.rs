@@ -47,7 +47,7 @@ pub(crate) mod responses {
         pub edit_datetime: Option<DateTime<Local>>,
         pub is_visible: bool,
 
-        pub images: Vec<pic_responses::NewsImage>,
+        pub images: Vec<pic_responses::NewsPic>,
         pub external_rels: Vec<super::ExternalRel>,
 
         pub operator_ids: Vec<i32>,
@@ -64,7 +64,7 @@ pub(crate) mod responses {
         pub edit_datetime: Option<DateTime<Local>>,
         pub is_visible: bool,
 
-        pub images: Vec<pic_responses::NewsImage>,
+        pub images: Vec<pic_responses::NewsPic>,
         pub external_rels: Vec<super::ExternalRel>,
 
         pub operator_ids: Vec<i32>,
@@ -95,7 +95,7 @@ pub(crate) mod responses {
 
         pub operator_ids: Vec<i32>,
         pub region_ids: Vec<i32>,
-        pub images: Vec<pic_responses::ExternalNewsImage>,
+        pub images: Vec<pic_responses::ExternalNewsPic>,
     }
 
     #[derive(Debug, Serialize)]
@@ -125,7 +125,7 @@ pub(crate) mod responses {
 
         pub operator_ids: Vec<i32>,
         pub region_ids: Vec<i32>,
-        pub images: Vec<pic_responses::FullExternalNewsImage>,
+        pub images: Vec<pic_responses::FullExternalNewsPic>,
         pub screenshot_url: Option<String>,
     }
 
