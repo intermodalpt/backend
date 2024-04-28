@@ -429,12 +429,21 @@ pub fn build_paths(state: AppState) -> Router {
         .route("/v1/calendars", get(operators::handlers::get_calendars))
         .route(
             "/v1/news",
-            get(info::handlers::get_news).post(info::handlers::post_news),
+            get(info::handlers::get_news).post(info::handlers::post_news_item),
         )
         .route("/v1/news/images", post(pics::handlers::post_news_image))
         .route(
             "/v1/news/images/:image_id",
             patch(pics::handlers::patch_news_image_meta),
+        )
+        .route(
+            "/v1/news/:item_id",
+            get(info::handlers::get_news_item)
+                .patch(info::handlers::patch_news_item),
+        )
+        .route(
+            "/v1/news/:item_id/full",
+            get(info::handlers::get_full_news_item),
         )
         .route(
             "/v1/news/:item_id/images",

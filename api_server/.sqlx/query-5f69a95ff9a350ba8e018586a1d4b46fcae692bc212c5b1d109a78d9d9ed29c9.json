@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE news_items\nSET title=$1, summary=$2, author_id=$3, author_override=$4, content=$5,\n    publish_datetime=$6, edit_datetime=$7, is_visible=$8\nWHERE id=$9",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Int4",
+        "Text",
+        "Jsonb",
+        "Timestamptz",
+        "Timestamptz",
+        "Bool",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "5f69a95ff9a350ba8e018586a1d4b46fcae692bc212c5b1d109a78d9d9ed29c9"
+}

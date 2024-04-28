@@ -37,7 +37,7 @@ pub(crate) async fn fetch_news(
         r#"
 SELECT id, title, summary,
     content as "content!: sqlx::types::Json<Vec<info::ContentBlock>>",
-    publish_datetime, edit_datetime, visible,
+    publish_datetime, edit_datetime, is_visible,
     array_remove(array_agg(operator_id), NULL) as "operator_ids!: Vec<i32>",
     array_remove(array_agg(region_id), NULL) as "region_ids!: Vec<i32>"
 FROM news_items
@@ -66,7 +66,7 @@ LIMIT $1 OFFSET $2
             edit_datetime: row
                 .edit_datetime
                 .map(|datetime| datetime.with_timezone(&Local)),
-            visible: row.visible,
+            is_visible: row.is_visible,
             operator_ids: row.operator_ids,
             region_ids: row.region_ids,
         })
@@ -102,7 +102,7 @@ SELECT id, title, summary,
     array_remove(array_agg(distinct operator_id), NULL) as "operator_ids!: Vec<i32>",
     array_remove(array_agg(distinct region_id), NULL) as "region_ids!: Vec<i32>",
     content as "content!: sqlx::types::Json<Vec<info::ContentBlock>>",
-    publish_datetime, edit_datetime, visible
+    publish_datetime, edit_datetime, is_visible
 FROM news_items
 LEFT JOIN news_items_operators ON news_items.id=news_items_operators.item_id
 LEFT JOIN news_items_regions ON news_items.id=news_items_regions.item_id
@@ -131,7 +131,7 @@ LIMIT $2 OFFSET $3
             edit_datetime: row
                 .edit_datetime
                 .map(|datetime| datetime.with_timezone(&Local)),
-            visible: row.visible,
+            is_visible: row.is_visible,
             operator_ids: row.operator_ids,
             region_ids: row.region_ids,
         })
@@ -161,14 +161,148 @@ WHERE operator_id=$1
     .map_or(0, |row| row.cnt))
 }
 
+pub(crate) async fn fetch_news_item(
+    pool: &PgPool,
+    item_id: i32,
+) -> Result<Option<responses::NewsItem>> {
+    Ok(sqlx::query!(
+        r#"
+SELECT news_items.id, news_items.title, news_items.summary,
+    content as "content!: sqlx::types::Json<Vec<info::ContentBlock>>",
+    news_items.publish_datetime, news_items.edit_datetime, news_items.is_visible,
+    array_remove(array_agg(operator_id), NULL) as "operator_ids!: Vec<i32>",
+    array_remove(array_agg(region_id), NULL) as "region_ids!: Vec<i32>",
+    CASE
+        WHEN count(news_imgs.id) > 0
+        THEN array_agg(ROW(news_imgs.id, sha1, transcript))
+        ELSE array[]::record[]
+    END as "imgs!: Vec<models::NewsImage>",
+    CASE
+        WHEN count(news_items_external_news_items.item_id) > 0
+        THEN array_agg(ROW(
+            external_news_items.id,
+            external_news_items.title,
+            external_news_items.summary,
+            external_news_items.source,
+            external_news_items.publish_datetime
+            ))
+        ELSE array[]::record[]
+    END as "external_rels!: Vec<models::ExternalRel>"
+FROM news_items
+LEFT JOIN news_items_operators ON news_items.id=news_items_operators.item_id
+LEFT JOIN news_items_regions ON news_items.id=news_items_regions.item_id
+LEFT JOIN news_items_imgs
+    ON news_items.id=news_items_imgs.item_id
+LEFT JOIN news_imgs
+    ON news_items_imgs.img_id=news_imgs.id
+LEFT JOIN news_items_external_news_items
+    ON news_items.id=news_items_external_news_items.item_id
+LEFT JOIN external_news_items
+    ON news_items_external_news_items.external_item_id=external_news_items.id
+WHERE news_items.id=$1
+GROUP BY news_items.id
+"#,
+        item_id,
+    )
+        .fetch_optional(pool)
+        .await
+        .map_err(|err| {
+            tracing::error!(error = err.to_string(), item_id);
+            Error::DatabaseExecution
+        })?
+        .map(|row| {
+            responses::NewsItem {
+                id: row.id,
+                title: row.title,
+                summary: row.summary,
+                content: row.content.0,
+                publish_datetime: row.publish_datetime.with_timezone(&Local),
+                edit_datetime: row.edit_datetime.map(|datetime| datetime.with_timezone(&Local)),
+                is_visible: row.is_visible,
+                images: row.imgs.into_iter().map(Into::into).collect(),
+                external_rels: row.external_rels,
+                operator_ids: row.operator_ids,
+                region_ids: row.region_ids,
+            }
+
+        }))
+}
+
+pub(crate) async fn fetch_full_news_item(
+    pool: &PgPool,
+    item_id: i32,
+) -> Result<Option<responses::FullNewsItem>> {
+    Ok(sqlx::query!(
+        r#"
+SELECT news_items.id, news_items.title, news_items.summary,
+    content as "content!: sqlx::types::Json<Vec<info::ContentBlock>>",
+    news_items.publish_datetime, news_items.edit_datetime, news_items.is_visible,
+    array_remove(array_agg(operator_id), NULL) as "operator_ids!: Vec<i32>",
+    array_remove(array_agg(region_id), NULL) as "region_ids!: Vec<i32>",
+    CASE
+        WHEN count(news_imgs.id) > 0
+        THEN array_agg(ROW(news_imgs.id, sha1, transcript))
+        ELSE array[]::record[]
+    END as "imgs!: Vec<models::NewsImage>",
+    CASE
+        WHEN count(news_items_external_news_items.item_id) > 0
+        THEN array_agg(ROW(
+            external_news_items.id,
+            external_news_items.title,
+            external_news_items.summary,
+            external_news_items.source,
+            external_news_items.publish_datetime
+            ))
+        ELSE array[]::record[]
+    END as "external_rels!: Vec<models::ExternalRel>"
+FROM news_items
+LEFT JOIN news_items_operators ON news_items.id=news_items_operators.item_id
+LEFT JOIN news_items_regions ON news_items.id=news_items_regions.item_id
+LEFT JOIN news_items_imgs
+    ON news_items.id=news_items_imgs.item_id
+LEFT JOIN news_imgs
+    ON news_items_imgs.img_id=news_imgs.id
+LEFT JOIN news_items_external_news_items
+    ON news_items.id=news_items_external_news_items.item_id
+LEFT JOIN external_news_items
+    ON news_items_external_news_items.external_item_id=external_news_items.id
+WHERE news_items.id=$1
+GROUP BY news_items.id
+"#,
+        item_id,
+    )
+        .fetch_optional(pool)
+        .await
+        .map_err(|err| {
+            tracing::error!(error = err.to_string(), item_id);
+            Error::DatabaseExecution
+        })?
+        .map(|row| {
+            responses::FullNewsItem {
+                id: row.id,
+                title: row.title,
+                summary: row.summary,
+                content: row.content.0,
+                publish_datetime: row.publish_datetime.with_timezone(&Local),
+                edit_datetime: row.edit_datetime.map(|datetime| datetime.with_timezone(&Local)),
+                is_visible: row.is_visible,
+                images: row.imgs.into_iter().map(Into::into).collect(),
+                external_rels: row.external_rels,
+                operator_ids: row.operator_ids,
+                region_ids: row.region_ids,
+            }
+
+        }))
+}
+
 pub(crate) async fn insert_news(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-    change: requests::NewNewsItem,
+    change: requests::ChangeNewsItem,
 ) -> Result<i32> {
     let row = sqlx::query!(
         r#"
 INSERT INTO news_items (title, summary, author_id, author_override, content,
-    publish_datetime, edit_datetime, visible)
+    publish_datetime, edit_datetime, is_visible)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 RETURNING id"#,
         change.title,
@@ -178,7 +312,7 @@ RETURNING id"#,
         json!(change.content),
         change.publish_datetime,
         change.edit_datetime,
-        change.visible
+        change.is_visible
     )
     .fetch_one(&mut **transaction)
     .await
@@ -197,7 +331,7 @@ VALUES ($1, $2)"#,
             id,
             operator_id
         )
-        .fetch_one(&mut **transaction)
+        .execute(&mut **transaction)
         .await
         .map_err(|err| {
             tracing::error!(error = err.to_string(), id, operator_id);
@@ -213,7 +347,7 @@ VALUES ($1, $2)"#,
             id,
             region_id
         )
-        .fetch_one(&mut **transaction)
+        .execute(&mut **transaction)
         .await
         .map_err(|err| {
             tracing::error!(error = err.to_string(), id, region_id);
@@ -221,7 +355,141 @@ VALUES ($1, $2)"#,
         })?;
     }
 
+    for external_id in change.external_ids {
+        sqlx::query!(
+            r#"
+INSERT INTO news_items_external_news_items (item_id, external_item_id)
+VALUES ($1, $2)"#,
+            id,
+            external_id
+        )
+        .execute(&mut **transaction)
+        .await
+        .map_err(|err| {
+            tracing::error!(error = err.to_string(), id, external_id);
+            Error::DatabaseExecution
+        })?;
+    }
+
     Ok(id)
+}
+
+pub(crate) async fn update_news_item(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    item_id: i32,
+    change: requests::ChangeNewsItem,
+) -> Result<()> {
+    sqlx::query!(
+        r#"
+UPDATE news_items
+SET title=$1, summary=$2, author_id=$3, author_override=$4, content=$5,
+    publish_datetime=$6, edit_datetime=$7, is_visible=$8
+WHERE id=$9"#,
+        change.title,
+        change.summary,
+        change.author_id,
+        change.author_override,
+        json!(change.content),
+        change.publish_datetime,
+        change.edit_datetime,
+        change.is_visible,
+        item_id,
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), item_id, change = ?change);
+        Error::DatabaseExecution
+    })?;
+
+    sqlx::query!(
+        r#"
+DELETE FROM news_items_operators
+WHERE item_id=$1"#,
+        item_id,
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), item_id);
+        Error::DatabaseExecution
+    })?;
+
+    for operator_id in change.operator_ids {
+        sqlx::query!(
+            r#"
+INSERT INTO news_items_operators (item_id, operator_id)
+VALUES ($1, $2)"#,
+            item_id,
+            operator_id
+        )
+        .execute(&mut **transaction)
+        .await
+        .map_err(|err| {
+            tracing::error!(error = err.to_string(), item_id, operator_id);
+            Error::DatabaseExecution
+        })?;
+    }
+
+    sqlx::query!(
+        r#"
+DELETE FROM news_items_regions
+WHERE item_id=$1"#,
+        item_id,
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), item_id);
+        Error::DatabaseExecution
+    })?;
+
+    for region_id in change.region_ids {
+        sqlx::query!(
+            r#"
+INSERT INTO news_items_regions (item_id, region_id)
+VALUES ($1, $2)"#,
+            item_id,
+            region_id
+        )
+        .execute(&mut **transaction)
+        .await
+        .map_err(|err| {
+            tracing::error!(error = err.to_string(), item_id, region_id);
+            Error::DatabaseExecution
+        })?;
+    }
+
+    sqlx::query!(
+        r#"
+DELETE FROM news_items_external_news_items
+WHERE item_id=$1"#,
+        item_id,
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), item_id);
+        Error::DatabaseExecution
+    })?;
+
+    for external_id in change.external_ids {
+        sqlx::query!(
+            r#"
+INSERT INTO news_items_external_news_items (item_id, external_item_id)
+VALUES ($1, $2)"#,
+            item_id,
+            external_id
+        )
+        .execute(&mut **transaction)
+        .await
+        .map_err(|err| {
+            tracing::error!(error = err.to_string(), item_id, external_id);
+            Error::DatabaseExecution
+        })?;
+    }
+
+    Ok(())
 }
 
 pub(crate) async fn fetch_external_news_item(

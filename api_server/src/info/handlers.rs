@@ -75,10 +75,32 @@ pub(crate) async fn get_operator_news(
     }))
 }
 
-pub(crate) async fn post_news(
+pub(crate) async fn get_news_item(
     State(state): State<AppState>,
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
-    Json(mut news_item): Json<requests::NewNewsItem>,
+    Path(item_id): Path<i32>,
+) -> Result<Json<responses::NewsItem>, Error> {
+    Ok(Json(
+        sql::fetch_news_item(&state.pool, item_id)
+            .await?
+            .ok_or(Error::NotFoundUpstream)?,
+    ))
+}
+pub(crate) async fn get_full_news_item(
+    State(state): State<AppState>,
+    Path(item_id): Path<i32>,
+) -> Result<Json<responses::FullNewsItem>, Error> {
+    Ok(Json(
+        sql::fetch_full_news_item(&state.pool, item_id)
+            .await?
+            .ok_or(Error::NotFoundUpstream)?,
+    ))
+}
+
+pub(crate) async fn post_news_item(
+    State(state): State<AppState>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    Json(mut news_item): Json<requests::ChangeNewsItem>,
 ) -> Result<Json<IdReturn>, Error> {
     news_item.tidy();
 
@@ -95,6 +117,29 @@ pub(crate) async fn post_news(
     })?;
 
     Ok(Json(IdReturn { id }))
+}
+
+pub(crate) async fn patch_news_item(
+    State(state): State<AppState>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    Path(item_id): Path<i32>,
+    Json(mut change): Json<requests::ChangeNewsItem>,
+) -> Result<(), Error> {
+    change.tidy();
+
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
+
+    sql::update_news_item(&mut transaction, item_id, change).await?;
+
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
+
+    Ok(())
 }
 
 pub(crate) async fn get_external_news_item(

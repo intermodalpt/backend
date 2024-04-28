@@ -761,7 +761,7 @@ pub(crate) async fn import_external_news_img(
     }
 
     let img_obj = bucket
-        .get_object(format!("/enews/{}", hex_hash))
+        .get_object(format!("/enews/{hex_hash}"))
         .await
         .map_err(|err| {
             tracing::error!("Object storage failure: {err}");
@@ -769,7 +769,7 @@ pub(crate) async fn import_external_news_img(
         })?;
 
     let (head_resp, _) = bucket
-        .head_object(format!("/enews/{}", hex_hash))
+        .head_object(format!("/enews/{hex_hash}"))
         .await
         .map_err(|err| {
             tracing::error!("Object storage failure: {err}");

@@ -407,7 +407,7 @@ CREATE TABLE news_items
     publish_datetime timestamp with time zone NOT NULL,
     edit_datetime    timestamp with time zone,
 
-    visible          boolean                  NOT NULL
+    is_visible          boolean                  NOT NULL
 );
 
 CREATE TABLE news_imgs
@@ -515,7 +515,7 @@ CREATE TABLE external_news_items_operators
 
 CREATE TABLE news_items_external_news_items
 (
-    news_item_id          integer NOT NULL REFERENCES news_items (id),
-    external_news_item_id integer NOT NULL REFERENCES external_news_items (id),
-    PRIMARY KEY (news_item_id, external_news_item_id)
+    item_id          integer NOT NULL REFERENCES news_items (id),
+    external_item_id integer NOT NULL REFERENCES external_news_items (id),
+    PRIMARY KEY (item_id, external_item_id)
 );
