@@ -31,6 +31,7 @@ pub struct MapContent {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub enum ContentBlock {
     Md(String),
     Img(String), // SHA1 internally, URL externally
@@ -47,7 +48,7 @@ pub struct NewsItem {
     pub publish_datetime: DateTime<Local>,
     pub edit_datetime: Option<DateTime<Local>>,
 
-    pub visible: bool,
+    pub is_visible: bool,
     pub operator_ids: Vec<i32>,
     pub region_ids: Vec<i32>,
 }

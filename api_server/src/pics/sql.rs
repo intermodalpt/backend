@@ -24,7 +24,7 @@ use sqlx::PgPool;
 
 use commons::models::pics;
 
-use super::{models::requests, models::responses};
+use super::models::{requests, responses};
 use crate::pics::{
     get_stop_pic_medium_path, get_stop_pic_ori_path, get_stop_pic_thumb_path,
 };

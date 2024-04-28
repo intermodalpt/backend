@@ -407,12 +407,12 @@ CREATE TABLE news_items
     publish_datetime timestamp with time zone NOT NULL,
     edit_datetime    timestamp with time zone,
 
-    is_visible          boolean                  NOT NULL
+    is_visible       boolean                  NOT NULL
 );
 
 CREATE TABLE news_imgs
 (
-    id         integer PRIMARY KEY,
+    id         serial PRIMARY KEY,
     sha1       character(40) NOT NULL,
     filename   text,
     transcript text
