@@ -47,7 +47,7 @@ pub(crate) mod responses {
         pub edit_datetime: Option<DateTime<Local>>,
         pub is_visible: bool,
 
-        pub images: Vec<pic_responses::NewsPic>,
+        pub pictures: Vec<pic_responses::NewsPic>,
         pub external_rels: Vec<super::ExternalRel>,
 
         pub operator_ids: Vec<i32>,
@@ -64,7 +64,7 @@ pub(crate) mod responses {
         pub edit_datetime: Option<DateTime<Local>>,
         pub is_visible: bool,
 
-        pub images: Vec<pic_responses::NewsPic>,
+        pub pictures: Vec<pic_responses::FullNewsPic>,
         pub external_rels: Vec<super::ExternalRel>,
 
         pub operator_ids: Vec<i32>,
