@@ -30,11 +30,23 @@ pub struct MapContent {
     zoom: Option<f64>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ImgRef {
+    id: i32,
+    url: String,
+    #[serde(default)]
+    description: Option<String>,
+    #[serde(default)]
+    transcript: Option<String>,
+    #[serde(default)]
+    attribution: Option<String>,
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub enum ContentBlock {
     Md(String),
-    Img(String), // SHA1 internally, URL externally
+    Img(ImgRef),
     Map(MapContent),
 }
 
