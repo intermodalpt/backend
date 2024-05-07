@@ -395,6 +395,15 @@ CREATE TABLE ticket_comments
     user_id   integer NOT NULL REFERENCES users (id)
 );
 
+CREATE TABLE news_imgs
+(
+    id          serial PRIMARY KEY,
+    sha1        character(40) NOT NULL,
+    filename    text,
+    transcript  text,
+    upload_date timestamp DEFAULT now()
+);
+
 CREATE TABLE news_items
 (
     id               serial PRIMARY KEY,
@@ -403,19 +412,12 @@ CREATE TABLE news_items
     author_id        integer REFERENCES users (ID),
     author_override  text,
     content          jsonb                    NOT NULL,
+    thumb_id         integer REFERENCES news_imgs (ID),
 
     publish_datetime timestamp with time zone NOT NULL,
     edit_datetime    timestamp with time zone,
 
     is_visible       boolean                  NOT NULL
-);
-
-CREATE TABLE news_imgs
-(
-    id         serial PRIMARY KEY,
-    sha1       character(40) NOT NULL,
-    filename   text,
-    transcript text
 );
 
 CREATE TABLE news_items_imgs
@@ -489,7 +491,8 @@ CREATE TABLE external_news_imgs
     sha1                 character(40) NOT NULL,
     filename             text,
     has_copyright_issues boolean,
-    transcript           text
+    transcript           text,
+    upload_date          timestamp DEFAULT now()
 );
 
 CREATE TABLE external_news_items_imgs

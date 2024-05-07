@@ -168,6 +168,7 @@ pub(crate) mod requests {
         pub author_override: Option<String>,
 
         pub content: Vec<ContentBlock>,
+        pub thumb_id: Option<i32>,
 
         pub publish_datetime: DateTime<Local>,
         pub edit_datetime: Option<DateTime<Local>>,

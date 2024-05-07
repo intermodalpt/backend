@@ -303,14 +303,15 @@ pub(crate) async fn insert_news(
     let row = sqlx::query!(
         r#"
 INSERT INTO news_items (title, summary, author_id, author_override, content,
-    publish_datetime, edit_datetime, is_visible)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    thumb_id, publish_datetime, edit_datetime, is_visible)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 RETURNING id"#,
         change.title,
         change.summary,
         change.author_id,
         change.author_override,
         json!(change.content),
+        change.thumb_id,
         change.publish_datetime,
         change.edit_datetime,
         change.is_visible
@@ -384,8 +385,8 @@ pub(crate) async fn update_news_item(
         r#"
 UPDATE news_items
 SET title=$1, summary=$2, author_id=$3, author_override=$4, content=$5,
-    publish_datetime=$6, edit_datetime=$7, is_visible=$8
-WHERE id=$9"#,
+    publish_datetime=$6, edit_datetime=$7, is_visible=$8, thumb_id=$9
+WHERE id=$10"#,
         change.title,
         change.summary,
         change.author_id,
@@ -394,7 +395,8 @@ WHERE id=$9"#,
         change.publish_datetime,
         change.edit_datetime,
         change.is_visible,
-        item_id,
+        change.thumb_id,
+        item_id
     )
     .execute(&mut **transaction)
     .await
