@@ -19,14 +19,14 @@
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]
-pub struct NewsPic {
+pub struct NewsImg {
     pub id: i32,
     pub sha1: String,
     pub transcript: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
-pub struct ExternalNewsPic {
+pub struct ExternalNewsImg {
     pub id: i32,
     pub sha1: String,
     pub has_copyright_issues: Option<bool>,
@@ -286,16 +286,16 @@ pub(crate) mod responses {
     }
 
     #[derive(Serialize, Debug)]
-    pub struct NewsPic {
+    pub struct NewsImg {
         pub transcript: Option<String>,
         pub url_full: String,
         pub url_medium: String,
         pub url_thumb: String,
     }
 
-    impl From<pics::NewsPic> for NewsPic {
-        fn from(value: pics::NewsPic) -> Self {
-            NewsPic {
+    impl From<pics::NewsImg> for NewsImg {
+        fn from(value: pics::NewsImg) -> Self {
+            NewsImg {
                 transcript: value.transcript,
                 url_full: get_news_pic_full_path(&value.sha1),
                 url_medium: get_news_pic_medium_path(&value.sha1),
@@ -304,9 +304,9 @@ pub(crate) mod responses {
         }
     }
 
-    impl From<crate::pics::models::NewsPic> for NewsPic {
-        fn from(image: crate::pics::models::NewsPic) -> Self {
-            NewsPic {
+    impl From<super::NewsImg> for NewsImg {
+        fn from(image: super::NewsImg) -> Self {
+            NewsImg {
                 transcript: image.transcript,
                 url_full: get_news_pic_full_path(&image.sha1),
                 url_medium: get_news_pic_medium_path(&image.sha1),
@@ -316,7 +316,7 @@ pub(crate) mod responses {
     }
 
     #[derive(Serialize, Debug)]
-    pub struct FullNewsPic {
+    pub struct FullNewsImg {
         pub id: i32,
         pub transcript: Option<String>,
         pub url_full: String,
@@ -324,9 +324,9 @@ pub(crate) mod responses {
         pub url_thumb: String,
     }
 
-    impl From<pics::NewsPic> for FullNewsPic {
-        fn from(value: pics::NewsPic) -> Self {
-            FullNewsPic {
+    impl From<pics::NewsImg> for FullNewsImg {
+        fn from(value: pics::NewsImg) -> Self {
+            FullNewsImg {
                 id: value.id,
                 transcript: value.transcript,
                 url_full: get_news_pic_full_path(&value.sha1),
@@ -336,9 +336,9 @@ pub(crate) mod responses {
         }
     }
 
-    impl From<crate::pics::models::NewsPic> for FullNewsPic {
-        fn from(pic: crate::pics::models::NewsPic) -> Self {
-            FullNewsPic {
+    impl From<crate::pics::models::NewsImg> for FullNewsImg {
+        fn from(pic: crate::pics::models::NewsImg) -> Self {
+            FullNewsImg {
                 id: pic.id,
                 transcript: pic.transcript,
                 url_full: get_news_pic_full_path(&pic.sha1),
@@ -349,13 +349,13 @@ pub(crate) mod responses {
     }
 
     #[derive(Serialize, Debug)]
-    pub struct ExternalNewsPic {
+    pub struct ExternalNewsImg {
         pub transcript: Option<String>,
         pub url: Option<String>,
     }
 
-    impl From<pics::ExternalNewsPic> for ExternalNewsPic {
-        fn from(value: pics::ExternalNewsPic) -> Self {
+    impl From<pics::ExternalNewsImg> for ExternalNewsImg {
+        fn from(value: pics::ExternalNewsImg) -> Self {
             Self {
                 transcript: value.transcript,
                 url: Some(get_external_news_pic_path(&value.sha1)),
@@ -364,16 +364,16 @@ pub(crate) mod responses {
     }
 
     #[derive(Serialize, Debug)]
-    pub struct FullExternalNewsPic {
+    pub struct FullExternalNewsImg {
         pub id: i32,
         pub has_copyright_issues: Option<bool>,
         pub transcript: Option<String>,
         pub url: String,
     }
 
-    impl From<pics::ExternalNewsPic> for FullExternalNewsPic {
-        fn from(value: pics::ExternalNewsPic) -> Self {
-            FullExternalNewsPic {
+    impl From<pics::ExternalNewsImg> for FullExternalNewsImg {
+        fn from(value: pics::ExternalNewsImg) -> Self {
+            FullExternalNewsImg {
                 id: value.id,
                 has_copyright_issues: value.has_copyright_issues,
                 transcript: value.transcript,
@@ -382,17 +382,17 @@ pub(crate) mod responses {
         }
     }
 
-    impl From<crate::pics::models::ExternalNewsPic> for ExternalNewsPic {
-        fn from(image: crate::pics::models::ExternalNewsPic) -> Self {
-            ExternalNewsPic {
+    impl From<crate::pics::models::ExternalNewsImg> for ExternalNewsImg {
+        fn from(image: crate::pics::models::ExternalNewsImg) -> Self {
+            ExternalNewsImg {
                 transcript: image.transcript,
                 url: Some(get_external_news_pic_path(&image.sha1)),
             }
         }
     }
-    impl From<crate::pics::models::ExternalNewsPic> for FullExternalNewsPic {
-        fn from(image: crate::pics::models::ExternalNewsPic) -> Self {
-            FullExternalNewsPic {
+    impl From<crate::pics::models::ExternalNewsImg> for FullExternalNewsImg {
+        fn from(image: crate::pics::models::ExternalNewsImg) -> Self {
+            FullExternalNewsImg {
                 id: image.id,
                 has_copyright_issues: image.has_copyright_issues,
                 transcript: image.transcript,
@@ -404,12 +404,12 @@ pub(crate) mod responses {
 
 // Manual implementations of sqlx::Type due to
 // https://github.com/rust-lang/rust/issues/82219
-impl sqlx::Type<sqlx::Postgres> for NewsPic {
+impl sqlx::Type<sqlx::Postgres> for NewsImg {
     fn type_info() -> sqlx::postgres::PgTypeInfo {
         sqlx::postgres::PgTypeInfo::with_name("NewsPic")
     }
 }
-impl<'r> sqlx::decode::Decode<'r, sqlx::Postgres> for NewsPic {
+impl<'r> sqlx::decode::Decode<'r, sqlx::Postgres> for NewsImg {
     fn decode(
         value: sqlx::postgres::PgValueRef<'r>,
     ) -> Result<Self, Box<dyn ::std::error::Error + 'static + Send + Sync>>
@@ -418,7 +418,7 @@ impl<'r> sqlx::decode::Decode<'r, sqlx::Postgres> for NewsPic {
         let id = decoder.try_decode::<i32>()?;
         let sha1 = decoder.try_decode::<String>()?;
         let transcript = decoder.try_decode::<Option<String>>()?;
-        Ok(NewsPic {
+        Ok(NewsImg {
             id,
             sha1,
             transcript,
@@ -426,7 +426,7 @@ impl<'r> sqlx::decode::Decode<'r, sqlx::Postgres> for NewsPic {
     }
 }
 
-impl<'r> sqlx::decode::Decode<'r, sqlx::Postgres> for ExternalNewsPic {
+impl<'r> sqlx::decode::Decode<'r, sqlx::Postgres> for ExternalNewsImg {
     fn decode(
         value: sqlx::postgres::PgValueRef<'r>,
     ) -> Result<Self, Box<dyn ::std::error::Error + 'static + Send + Sync>>
@@ -436,7 +436,7 @@ impl<'r> sqlx::decode::Decode<'r, sqlx::Postgres> for ExternalNewsPic {
         let sha1 = decoder.try_decode::<String>()?;
         let has_copyright_issues = decoder.try_decode::<Option<bool>>()?;
         let transcript = decoder.try_decode::<Option<String>>()?;
-        Ok(ExternalNewsPic {
+        Ok(ExternalNewsImg {
             id,
             sha1,
             has_copyright_issues,
@@ -445,7 +445,7 @@ impl<'r> sqlx::decode::Decode<'r, sqlx::Postgres> for ExternalNewsPic {
     }
 }
 
-impl sqlx::Type<sqlx::Postgres> for ExternalNewsPic {
+impl sqlx::Type<sqlx::Postgres> for ExternalNewsImg {
     fn type_info() -> sqlx::postgres::PgTypeInfo {
         sqlx::postgres::PgTypeInfo::with_name("ExternalNewsPic")
     }

@@ -1251,9 +1251,9 @@ WHERE operators.id=$2
 pub(crate) async fn fetch_news_img_by_hash(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     sha1: &str,
-) -> Result<Option<pics::NewsPic>> {
+) -> Result<Option<pics::NewsImg>> {
     sqlx::query_as!(
-        pics::NewsPic,
+        pics::NewsImg,
         r#"
 SELECT id, sha1, filename, transcript
 FROM news_imgs
@@ -1342,9 +1342,9 @@ WHERE id=$2"#,
 pub(crate) async fn fetch_external_news_item_imgs(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     item_id: i32,
-) -> Result<Vec<pics::ExternalNewsPic>> {
+) -> Result<Vec<pics::ExternalNewsImg>> {
     sqlx::query_as!(
-        pics::ExternalNewsPic,
+        pics::ExternalNewsImg,
         r#"
 SELECT external_news_imgs.id, external_news_imgs.sha1,
     external_news_imgs.has_copyright_issues, external_news_imgs.transcript
@@ -1365,9 +1365,9 @@ WHERE external_news_items_imgs.item_id=$1"#,
 pub(crate) async fn fetch_external_news_img_by_id(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     img_id: i32,
-) -> Result<Option<pics::ExternalNewsPic>> {
+) -> Result<Option<pics::ExternalNewsImg>> {
     sqlx::query_as!(
-        pics::ExternalNewsPic,
+        pics::ExternalNewsImg,
         r#"
 SELECT id, sha1, has_copyright_issues, transcript
 FROM external_news_imgs

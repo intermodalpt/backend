@@ -106,7 +106,7 @@ pub struct PanoPic {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct NewsPic {
+pub struct NewsImg {
     pub id: i32,
     pub sha1: String,
     pub filename: Option<String>,
@@ -114,7 +114,7 @@ pub struct NewsPic {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct ExternalNewsPic {
+pub struct ExternalNewsImg {
     pub id: i32,
     pub sha1: String,
     pub has_copyright_issues: Option<bool>,

@@ -177,7 +177,7 @@ SELECT news_items.id, news_items.title, news_items.summary,
         WHEN count(news_imgs.id) > 0
         THEN array_agg(ROW(news_imgs.id, sha1, transcript))
         ELSE array[]::record[]
-    END as "imgs!: Vec<pic_models::NewsPic>",
+    END as "imgs!: Vec<pic_models::NewsImg>",
     CASE
         WHEN count(news_items_external_news_items.item_id) > 0
         THEN array_agg(ROW(
@@ -220,7 +220,7 @@ GROUP BY news_items.id
                 publish_datetime: row.publish_datetime.with_timezone(&Local),
                 edit_datetime: row.edit_datetime.map(|datetime| datetime.with_timezone(&Local)),
                 is_visible: row.is_visible,
-                pictures: row.imgs.into_iter().map(Into::into).collect(),
+                images: row.imgs.into_iter().map(Into::into).collect(),
                 external_rels: row.external_rels,
                 operator_ids: row.operator_ids,
                 region_ids: row.region_ids,
@@ -244,7 +244,7 @@ SELECT news_items.id, news_items.title, news_items.summary,
         WHEN count(news_imgs.id) > 0
         THEN array_agg(ROW(news_imgs.id, sha1, transcript))
         ELSE array[]::record[]
-    END as "imgs!: Vec<pic_models::NewsPic>",
+    END as "imgs!: Vec<pic_models::NewsImg>",
     CASE
         WHEN count(news_items_external_news_items.item_id) > 0
         THEN array_agg(ROW(
@@ -287,7 +287,7 @@ GROUP BY news_items.id
                 publish_datetime: row.publish_datetime.with_timezone(&Local),
                 edit_datetime: row.edit_datetime.map(|datetime| datetime.with_timezone(&Local)),
                 is_visible: row.is_visible,
-                pictures: row.imgs.into_iter().map(Into::into).collect(),
+                images: row.imgs.into_iter().map(Into::into).collect(),
                 external_rels: row.external_rels,
                 operator_ids: row.operator_ids,
                 region_ids: row.region_ids,
@@ -608,7 +608,7 @@ GROUP BY external_news_items.id
             .imgs
             .into_iter()
             .map(|(sha1, transcript, has_copyright_issues)| {
-                pic_models::responses::ExternalNewsPic {
+                pic_models::responses::ExternalNewsImg {
                     transcript,
                     url: if has_copyright_issues == Some(false) || incl_private {
                         Some(get_external_news_pic_path(sha1.as_ref()))
@@ -638,7 +638,7 @@ SELECT external_news_items.id, title, summary, author,
         THEN array_agg(
             ROW(external_news_imgs.id, sha1, has_copyright_issues, transcript))
         ELSE array[]::record[]
-    END as "imgs!: Vec<pic_models::ExternalNewsPic>"
+    END as "imgs!: Vec<pic_models::ExternalNewsImg>"
 FROM external_news_items
 LEFT JOIN external_news_items_imgs
     ON external_news_items.id=external_news_items_imgs.item_id
@@ -754,7 +754,7 @@ LIMIT $2 OFFSET $3
                 .imgs
                 .into_iter()
                 .map(|(sha1, transcript, has_copyright_issues)| {
-                    pic_models::responses::ExternalNewsPic {
+                    pic_models::responses::ExternalNewsImg {
                         transcript,
                         url: if has_copyright_issues == Some(false)
                             || incl_private
@@ -870,7 +870,7 @@ LIMIT $3 OFFSET $4
                 .imgs
                 .into_iter()
                 .map(|(sha1, transcript, has_copyright_issues)| {
-                    pic_models::responses::ExternalNewsPic {
+                    pic_models::responses::ExternalNewsImg {
                         transcript,
                         url: if has_copyright_issues == Some(false)
                             || incl_private
@@ -930,7 +930,7 @@ SELECT external_news_items.id, title, summary, author,
         THEN array_agg(
             ROW(external_news_imgs.id, sha1, has_copyright_issues, transcript))
         ELSE array[]::record[]
-    END as "imgs!: Vec<pic_models::ExternalNewsPic>"
+    END as "imgs!: Vec<pic_models::ExternalNewsImg>"
 FROM external_news_items
 LEFT JOIN external_news_items_imgs
     ON external_news_items.id=external_news_items_imgs.item_id
@@ -1015,7 +1015,7 @@ SELECT external_news_items.id, title, summary, author, content_md,
         THEN array_agg(
             ROW(external_news_imgs.id, sha1, has_copyright_issues, transcript))
         ELSE array[]::record[]
-    END as "imgs!: Vec<pic_models::ExternalNewsPic>"
+    END as "imgs!: Vec<pic_models::ExternalNewsImg>"
 FROM external_news_items
 LEFT JOIN external_news_items_imgs
     ON external_news_items.id=external_news_items_imgs.item_id

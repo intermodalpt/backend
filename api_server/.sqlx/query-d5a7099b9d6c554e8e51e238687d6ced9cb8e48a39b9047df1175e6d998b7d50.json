@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT external_news_items.id, title, summary, author,\n    array_remove(array_agg(distinct operator_id), NULL) as \"operator_ids!: Vec<i32>\",\n    array_remove(array_agg(distinct region_id), NULL) as \"region_ids!: Vec<i32>\",\n    content_md, prepro_content_md, content_text, prepro_content_text,\n    edit_datetime, publish_datetime, source, url, is_complete,\n    is_validated, is_relevant, is_sensitive, raw, ss_sha1,\n    CASE\n        WHEN count(external_news_imgs.id) > 0\n        THEN array_agg(\n            ROW(external_news_imgs.id, sha1, has_copyright_issues, transcript))\n        ELSE array[]::record[]\n    END as \"imgs!: Vec<pic_models::ExternalNewsPic>\"\nFROM external_news_items\nLEFT JOIN external_news_items_imgs\n    ON external_news_items.id=external_news_items_imgs.item_id\nLEFT JOIN external_news_imgs\n    ON external_news_items_imgs.img_id=external_news_imgs.id\nLEFT JOIN external_news_items_operators\n    ON external_news_items.id=external_news_items_operators.item_id\nLEFT JOIN external_news_items_regions\n    ON external_news_items.id=external_news_items_regions.item_id\nWHERE external_news_items.id=$1\nGROUP BY external_news_items.id\n",
+  "query": "\nSELECT external_news_items.id, title, summary, author, content_md,\n    array_remove(array_agg(distinct operator_id), NULL) as \"operator_ids!: Vec<i32>\",\n    array_remove(array_agg(distinct region_id), NULL) as \"region_ids!: Vec<i32>\",\n    prepro_content_md, content_text, prepro_content_text, publish_datetime, edit_datetime,\n    source, url, is_complete, is_validated, is_relevant, is_sensitive, ss_sha1, raw,\n    CASE\n        WHEN count(external_news_imgs.id) > 0\n        THEN array_agg(\n            ROW(external_news_imgs.id, sha1, has_copyright_issues, transcript))\n        ELSE array[]::record[]\n    END as \"imgs!: Vec<pic_models::ExternalNewsImg>\"\nFROM external_news_items\nLEFT JOIN external_news_items_imgs\n    ON external_news_items.id=external_news_items_imgs.item_id\nLEFT JOIN external_news_imgs\n    ON external_news_items_imgs.img_id=external_news_imgs.id\nJOIN external_news_items_operators\n    ON external_news_items.id=external_news_items_operators.item_id\nLEFT JOIN external_news_items_regions\n    ON external_news_items.id=external_news_items_regions.item_id\nWHERE operator_id=$1 AND NOT is_validated\nGROUP BY external_news_items.id\nLIMIT $2 OFFSET $3\n",
   "describe": {
     "columns": [
       {
@@ -25,18 +25,18 @@
       },
       {
         "ordinal": 4,
+        "name": "content_md",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
         "name": "operator_ids!: Vec<i32>",
         "type_info": "Int4Array"
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "region_ids!: Vec<i32>",
         "type_info": "Int4Array"
-      },
-      {
-        "ordinal": 6,
-        "name": "content_md",
-        "type_info": "Text"
       },
       {
         "ordinal": 7,
@@ -55,12 +55,12 @@
       },
       {
         "ordinal": 10,
-        "name": "edit_datetime",
+        "name": "publish_datetime",
         "type_info": "Timestamptz"
       },
       {
         "ordinal": 11,
-        "name": "publish_datetime",
+        "name": "edit_datetime",
         "type_info": "Timestamptz"
       },
       {
@@ -95,23 +95,25 @@
       },
       {
         "ordinal": 18,
-        "name": "raw",
-        "type_info": "Jsonb"
-      },
-      {
-        "ordinal": 19,
         "name": "ss_sha1",
         "type_info": "Bpchar"
       },
       {
+        "ordinal": 19,
+        "name": "raw",
+        "type_info": "Jsonb"
+      },
+      {
         "ordinal": 20,
-        "name": "imgs!: Vec<pic_models::ExternalNewsPic>",
+        "name": "imgs!: Vec<pic_models::ExternalNewsImg>",
         "type_info": "RecordArray"
       }
     ],
     "parameters": {
       "Left": [
-        "Int4"
+        "Int4",
+        "Int8",
+        "Int8"
       ]
     },
     "nullable": [
@@ -119,24 +121,24 @@
       true,
       true,
       true,
+      true,
       null,
       null,
       true,
       true,
       true,
-      true,
-      true,
-      false,
       false,
       true,
-      false,
       false,
       true,
       false,
       false,
       true,
+      false,
+      true,
+      false,
       null
     ]
   },
-  "hash": "cd8dd0b8b7a56092f04bf4467549cefdbec6b7b19a395dd8dc8eaf675066067e"
+  "hash": "d5a7099b9d6c554e8e51e238687d6ced9cb8e48a39b9047df1175e6d998b7d50"
 }
