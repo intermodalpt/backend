@@ -58,6 +58,7 @@ pub(crate) async fn upload_stop_picture(
     let res = sql::fetch_picture_by_hash(db_pool, &hex_hash).await?;
 
     if let Some(pic) = res {
+        tracing::warn!("Duplicated stop pic uploaded ({})", pic.id);
         return Err(Error::DuplicatedResource(Box::new(
             pics::Resource::StopPic(pic),
         )));
@@ -296,6 +297,7 @@ pub(crate) async fn upload_pano_picture(
     let res = sql::fetch_pano_by_hash(db_pool, &hex_hash).await?;
 
     if let Some(pic) = res {
+        tracing::warn!("Duplicated stop pano uploaded ({})", pic.id);
         return Err(Error::DuplicatedResource(Box::new(
             pics::Resource::PanoPic(pic),
         )));
@@ -529,6 +531,7 @@ pub(crate) async fn upload_standalone_news_img(
     let same_img =
         sql::fetch_news_img_by_hash(&mut transaction, &hex_hash).await?;
     if let Some(img) = same_img {
+        tracing::warn!("Duplicated news pic uploaded ({})", img.id);
         return Ok(img);
     }
 
@@ -827,7 +830,7 @@ pub(crate) async fn upload_external_news_item_img(
     db_pool: &PgPool,
     filename: &str,
     content: &Bytes,
-) -> Result<String, Error> {
+) -> Result<pics::ExternalNewsPic, Error> {
     let mut hasher = Sha1::new();
     hasher.update(content);
     let hash = hasher.finalize();
@@ -838,12 +841,17 @@ pub(crate) async fn upload_external_news_item_img(
         Error::DatabaseExecution
     })?;
 
-    let existing_hashes =
-        sql::fetch_external_news_img_hashes(&mut transaction, item_id).await?;
-    let existing_hashes = existing_hashes.ok_or(Error::NotFoundUpstream)?;
+    let existing_pics =
+        sql::fetch_external_news_item_imgs(&mut transaction, item_id).await?;
 
-    if existing_hashes.contains(&hex_hash) {
-        return Ok(hex_hash);
+    for pic in existing_pics {
+        if pic.sha1 == hex_hash {
+            tracing::warn!(
+                "Duplicated external news image uploaded ({})",
+                pic.id
+            );
+            return Ok(pic);
+        }
     }
 
     let path = std::path::Path::new(&filename);
@@ -892,7 +900,12 @@ pub(crate) async fn upload_external_news_item_img(
         Error::DatabaseExecution
     })?;
 
-    Ok(hex_hash)
+    Ok(pics::ExternalNewsPic {
+        id: db_res?,
+        sha1: hex_hash,
+        has_copyright_issues: None,
+        transcript: None,
+    })
 }
 
 async fn upload_external_news_img_to_storage(

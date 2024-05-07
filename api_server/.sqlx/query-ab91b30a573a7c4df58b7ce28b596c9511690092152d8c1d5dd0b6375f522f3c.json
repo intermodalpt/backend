@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT external_news_imgs.id, external_news_imgs.sha1,\n    external_news_imgs.has_copyright_issues, external_news_imgs.transcript\nFROM external_news_imgs\nLEFT JOIN external_news_items_imgs\n    ON external_news_items_imgs.img_id = external_news_imgs.id\nWHERE external_news_items_imgs.item_id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "sha1",
+        "type_info": "Bpchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "has_copyright_issues",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 3,
+        "name": "transcript",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "ab91b30a573a7c4df58b7ce28b596c9511690092152d8c1d5dd0b6375f522f3c"
+}

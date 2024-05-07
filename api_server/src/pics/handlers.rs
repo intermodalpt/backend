@@ -668,7 +668,7 @@ pub(crate) async fn post_external_news_image(
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     Path(item_id): Path<i32>,
     mut multipart: Multipart,
-) -> Result<Json<HashMap<String, String>>, Error> {
+) -> Result<Json<responses::ExternalNewsPic>, Error> {
     let field = get_exactly_one_field(&mut multipart).await?;
 
     let filename = field
@@ -682,7 +682,7 @@ pub(crate) async fn post_external_news_image(
         .await
         .map_err(|err| Error::ValidationFailure(err.to_string()))?;
 
-    let sha1 = logic::upload_external_news_item_img(
+    let pic = logic::upload_external_news_item_img(
         item_id,
         &state.bucket,
         &state.pool,
@@ -691,11 +691,7 @@ pub(crate) async fn post_external_news_image(
     )
     .await?;
 
-    Ok({
-        let mut map = HashMap::new();
-        map.insert("url".to_string(), super::get_external_news_pic_path(&sha1));
-        Json(map)
-    })
+    Ok(Json(pic.into()))
 }
 
 pub(crate) async fn put_external_news_screenshot(
