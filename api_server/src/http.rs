@@ -18,7 +18,7 @@
 
 use axum::body::Body;
 use axum::extract::{DefaultBodyLimit, Request};
-use axum::http::Method;
+use axum::http::{header, Method};
 use axum::routing::{delete, get, patch, post, put};
 use axum::Router;
 use axum_client_ip::SecureClientIpSource;
@@ -44,8 +44,7 @@ pub fn build_paths(state: AppState) -> Router {
             Method::PATCH,
             Method::DELETE,
         ])
-        // .allow_headers([header::CONTENT_TYPE, header::AUTHORIZATION])
-        .allow_headers(Any)
+        .allow_headers([header::CONTENT_TYPE, header::AUTHORIZATION])
         .allow_origin(Any);
 
     Router::new()
