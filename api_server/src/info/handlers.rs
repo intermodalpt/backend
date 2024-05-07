@@ -55,7 +55,7 @@ pub(crate) async fn get_news(
     let take = i64::from(PAGE_SIZE);
 
     Ok(Json(Pagination {
-        items: sql::fetch_news(&state.pool, take, offset).await?,
+        items: sql::fetch_news(&state.pool, offset, take).await?,
         total: sql::count_news(&state.pool).await?,
     }))
 }
@@ -69,7 +69,7 @@ pub(crate) async fn get_operator_news(
     let take = i64::from(PAGE_SIZE);
 
     Ok(Json(Pagination {
-        items: sql::fetch_operator_news(&state.pool, operator_id, take, offset)
+        items: sql::fetch_operator_news(&state.pool, operator_id, offset, take)
             .await?,
         total: sql::count_operator_news(&state.pool, operator_id).await?,
     }))
