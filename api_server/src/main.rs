@@ -92,10 +92,11 @@ async fn main() {
     )
     .unwrap();
 
+    let bucket_name = settings
+        .get_string("s3_bucket_name")
+        .expect("s3_bucket_name not set");
     let bucket = s3::Bucket::new(
-        &settings
-            .get_string("s3_bucket_name")
-            .expect("s3_bucket_name not set"),
+        &bucket_name,
         s3::Region::R2 {
             account_id: settings
                 .get_string("s3_account_id")
@@ -105,10 +106,24 @@ async fn main() {
     )
     .unwrap()
     .with_path_style();
+    tracing::info!("Configured to use the {bucket_name} bucket");
+    if !(bucket_name.ends_with("dev") || bucket_name.ends_with("test")) {
+        tracing::warn!("Using a production bucket");
+    }
 
-    let pool = PgPool::connect(&settings.get_string("db").expect("db not set"))
+    let db_url = settings
+        .get_string("db")
+        .expect("The 'db' field is not set in the config");
+    let (_, db_selection) =
+        db_url.rsplit_once('@').expect("Invalid database URL");
+    let pool = PgPool::connect(&db_url)
         .await
         .expect("Unable to connect to the database");
+    tracing::info!("Connected to the {db_selection} database");
+    if !(db_selection.ends_with("tests") || db_selection.ends_with("dev")) {
+        tracing::warn!("Using the production database");
+    }
+
     let state = Arc::new(State {
         bucket,
         pool,
