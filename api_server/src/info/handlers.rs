@@ -103,7 +103,9 @@ pub(crate) async fn post_news_item(
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     Json(mut news_item): Json<requests::ChangeNewsItem>,
 ) -> Result<Json<IdReturn>, Error> {
-    news_item.tidy();
+    news_item
+        .validate()
+        .map_err(|err| Error::ValidationFailure(err.to_string()))?;
 
     let mut transaction = state.pool.begin().await.map_err(|err| {
         tracing::error!("Failed to open transaction: {err}");
@@ -126,7 +128,9 @@ pub(crate) async fn patch_news_item(
     Path(item_id): Path<i32>,
     Json(mut change): Json<requests::ChangeNewsItem>,
 ) -> Result<(), Error> {
-    change.tidy();
+    change
+        .validate()
+        .map_err(|err| Error::ValidationFailure(err.to_string()))?;
 
     let mut transaction = state.pool.begin().await.map_err(|err| {
         tracing::error!("Failed to open transaction: {err}");

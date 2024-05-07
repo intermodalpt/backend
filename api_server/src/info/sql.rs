@@ -300,6 +300,9 @@ pub(crate) async fn insert_news(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     change: requests::ChangeNewsItem,
 ) -> Result<i32> {
+    let publish_datetime =
+        change.publish_datetime.unwrap_or(chrono::Local::now());
+
     let row = sqlx::query!(
         r#"
 INSERT INTO news_items (title, summary, author_id, author_override, content,
@@ -310,9 +313,9 @@ RETURNING id"#,
         change.summary,
         change.author_id,
         change.author_override,
-        json!(change.content),
+        json!(&change.content),
         change.thumb_id,
-        change.publish_datetime,
+        publish_datetime,
         change.edit_datetime,
         change.is_visible
     )
@@ -325,7 +328,7 @@ RETURNING id"#,
 
     let id = row.id;
 
-    for operator_id in change.operator_ids {
+    for operator_id in &change.operator_ids {
         sqlx::query!(
             r#"
 INSERT INTO news_items_operators (item_id, operator_id)
@@ -341,7 +344,7 @@ VALUES ($1, $2)"#,
         })?;
     }
 
-    for region_id in change.region_ids {
+    for region_id in &change.region_ids {
         sqlx::query!(
             r#"
 INSERT INTO news_items_regions (item_id, region_id)
@@ -357,7 +360,7 @@ VALUES ($1, $2)"#,
         })?;
     }
 
-    for external_id in change.external_ids {
+    for external_id in &change.external_ids {
         sqlx::query!(
             r#"
 INSERT INTO news_items_external_news_items (item_id, external_item_id)
@@ -369,6 +372,22 @@ VALUES ($1, $2)"#,
         .await
         .map_err(|err| {
             tracing::error!(error = err.to_string(), id, external_id);
+            Error::DatabaseExecution
+        })?;
+    }
+
+    for img_id in change.get_linked_images() {
+        sqlx::query!(
+            r#"
+INSERT INTO news_items_imgs (item_id, img_id)
+VALUES ($1, $2)"#,
+            id,
+            img_id
+        )
+        .execute(&mut **transaction)
+        .await
+        .map_err(|err| {
+            tracing::error!(error = err.to_string(), id, img_id);
             Error::DatabaseExecution
         })?;
     }
@@ -418,7 +437,7 @@ WHERE item_id=$1"#,
         Error::DatabaseExecution
     })?;
 
-    for operator_id in change.operator_ids {
+    for operator_id in &change.operator_ids {
         sqlx::query!(
             r#"
 INSERT INTO news_items_operators (item_id, operator_id)
@@ -447,7 +466,7 @@ WHERE item_id=$1"#,
         Error::DatabaseExecution
     })?;
 
-    for region_id in change.region_ids {
+    for region_id in &change.region_ids {
         sqlx::query!(
             r#"
 INSERT INTO news_items_regions (item_id, region_id)
@@ -476,7 +495,7 @@ WHERE item_id=$1"#,
         Error::DatabaseExecution
     })?;
 
-    for external_id in change.external_ids {
+    for external_id in &change.external_ids {
         sqlx::query!(
             r#"
 INSERT INTO news_items_external_news_items (item_id, external_item_id)
@@ -488,6 +507,35 @@ VALUES ($1, $2)"#,
         .await
         .map_err(|err| {
             tracing::error!(error = err.to_string(), item_id, external_id);
+            Error::DatabaseExecution
+        })?;
+    }
+
+    sqlx::query!(
+        r#"
+DELETE FROM news_items_imgs
+WHERE item_id=$1"#,
+        item_id,
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), item_id);
+        Error::DatabaseExecution
+    })?;
+
+    for img_id in change.get_linked_images() {
+        sqlx::query!(
+            r#"
+INSERT INTO news_items_imgs (item_id, img_id)
+VALUES ($1, $2)"#,
+            item_id,
+            img_id
+        )
+        .execute(&mut **transaction)
+        .await
+        .map_err(|err| {
+            tracing::error!(error = err.to_string(), item_id, img_id);
             Error::DatabaseExecution
         })?;
     }

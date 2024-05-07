@@ -159,18 +159,19 @@ pub(crate) mod requests {
     use commons::models::info::ContentBlock;
     use serde::Deserialize;
     use sqlx::types::JsonValue;
+    use std::collections::HashSet;
 
     #[derive(Debug, Deserialize)]
     pub struct ChangeNewsItem {
-        pub title: Option<String>,
-        pub summary: Option<String>,
+        pub title: String,
+        pub summary: String,
         pub author_id: Option<i32>,
         pub author_override: Option<String>,
 
         pub content: Vec<ContentBlock>,
         pub thumb_id: Option<i32>,
 
-        pub publish_datetime: DateTime<Local>,
+        pub publish_datetime: Option<DateTime<Local>>,
         pub edit_datetime: Option<DateTime<Local>>,
 
         pub is_visible: bool,
@@ -181,22 +182,39 @@ pub(crate) mod requests {
     }
 
     impl ChangeNewsItem {
-        pub(crate) fn tidy(&mut self) {
-            if let Some(title) = &self.title {
-                if title.is_empty() {
-                    self.title = None;
-                }
-            }
-            if let Some(summary) = &self.summary {
-                if summary.is_empty() {
-                    self.summary = None;
-                }
-            }
+        pub(crate) fn validate(&mut self) -> Result<(), &'static str> {
             if let Some(author_override) = &self.author_override {
                 if author_override.is_empty() {
                     self.author_override = None;
                 }
             }
+
+            if self.title.is_empty() {
+                return Err("Empty title");
+            }
+            if self.summary.is_empty() {
+                return Err("Empty summary");
+            }
+            for block in &self.content {
+                block.validate()?
+            }
+            Ok(())
+        }
+
+        pub(crate) fn get_linked_images(&self) -> HashSet<i32> {
+            let mut ids: HashSet<i32> = self
+                .content
+                .iter()
+                .filter_map(|block| match block {
+                    ContentBlock::Img(img) => Some(img.id),
+                    _ => None,
+                })
+                .collect();
+            if let Some(thumb_id) = self.thumb_id {
+                ids.insert(thumb_id);
+            }
+
+            ids
         }
     }
 
