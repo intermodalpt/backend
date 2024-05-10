@@ -341,68 +341,22 @@ RETURNING id"#,
 
     let id = row.id;
 
+    // These functions can be optimized to do bulk inserts but big fat whatever
     for operator_id in &change.operator_ids {
-        sqlx::query!(
-            r#"
-INSERT INTO news_items_operators (item_id, operator_id)
-VALUES ($1, $2)"#,
-            id,
-            operator_id
-        )
-        .execute(&mut **transaction)
-        .await
-        .map_err(|err| {
-            tracing::error!(error = err.to_string(), id, operator_id);
-            Error::DatabaseExecution
-        })?;
+        insert_news_item_operator(transaction, id, *operator_id).await?;
     }
 
     for region_id in &change.region_ids {
-        sqlx::query!(
-            r#"
-INSERT INTO news_items_regions (item_id, region_id)
-VALUES ($1, $2)"#,
-            id,
-            region_id
-        )
-        .execute(&mut **transaction)
-        .await
-        .map_err(|err| {
-            tracing::error!(error = err.to_string(), id, region_id);
-            Error::DatabaseExecution
-        })?;
+        insert_news_item_region(transaction, id, *region_id).await?;
     }
 
     for external_id in &change.external_ids {
-        sqlx::query!(
-            r#"
-INSERT INTO news_items_external_news_items (item_id, external_item_id)
-VALUES ($1, $2)"#,
-            id,
-            external_id
-        )
-        .execute(&mut **transaction)
-        .await
-        .map_err(|err| {
-            tracing::error!(error = err.to_string(), id, external_id);
-            Error::DatabaseExecution
-        })?;
+        insert_news_item_external_news_item(transaction, id, *external_id)
+            .await?;
     }
 
     for img_id in change.get_linked_images() {
-        sqlx::query!(
-            r#"
-INSERT INTO news_items_imgs (item_id, img_id)
-VALUES ($1, $2)"#,
-            id,
-            img_id
-        )
-        .execute(&mut **transaction)
-        .await
-        .map_err(|err| {
-            tracing::error!(error = err.to_string(), id, img_id);
-            Error::DatabaseExecution
-        })?;
+        insert_news_item_img(transaction, id, img_id).await?;
     }
 
     Ok(id)
@@ -492,19 +446,8 @@ WHERE item_id=$1 AND operator_id = ANY($2)"#,
 
     for operator_id in &change.operator_ids {
         if !current.operator_ids.contains(operator_id) {
-            sqlx::query!(
-                r#"
-INSERT INTO news_items_operators (item_id, operator_id)
-VALUES ($1, $2)"#,
-                item_id,
-                operator_id
-            )
-            .execute(&mut **transaction)
-            .await
-            .map_err(|err| {
-                tracing::error!(error = err.to_string(), item_id, operator_id);
-                Error::DatabaseExecution
-            })?;
+            insert_news_item_operator(transaction, item_id, *operator_id)
+                .await?;
         }
     }
 
@@ -535,19 +478,7 @@ WHERE item_id=$1 AND region_id = ANY($2)"#,
 
     for region_id in &change.region_ids {
         if !current.region_ids.contains(region_id) {
-            sqlx::query!(
-                r#"
-INSERT INTO news_items_regions (item_id, region_id)
-VALUES ($1, $2)"#,
-                item_id,
-                region_id
-            )
-            .execute(&mut **transaction)
-            .await
-            .map_err(|err| {
-                tracing::error!(error = err.to_string(), item_id, region_id);
-                Error::DatabaseExecution
-            })?;
+            insert_news_item_region(transaction, item_id, *region_id).await?;
         }
     }
 
@@ -578,19 +509,12 @@ WHERE item_id=$1 AND external_item_id = ANY($2)"#,
 
     for external_id in &change.external_ids {
         if !common_external_ids.contains(external_id) {
-            sqlx::query!(
-                r#"
-    INSERT INTO news_items_external_news_items (item_id, external_item_id)
-    VALUES ($1, $2)"#,
+            insert_news_item_external_news_item(
+                transaction,
                 item_id,
-                external_id
+                *external_id,
             )
-            .execute(&mut **transaction)
-            .await
-            .map_err(|err| {
-                tracing::error!(error = err.to_string(), item_id, external_id);
-                Error::DatabaseExecution
-            })?;
+            .await?;
         }
     }
 
@@ -623,21 +547,93 @@ WHERE item_id=$1 AND img_id = ANY($2)"#,
     })?;
 
     for img_id in new_imgs {
-        sqlx::query!(
-            r#"
-INSERT INTO news_items_imgs (item_id, img_id)
-VALUES ($1, $2)"#,
-            item_id,
-            img_id
-        )
-        .execute(&mut **transaction)
-        .await
-        .map_err(|err| {
-            tracing::error!(error = err.to_string(), item_id, img_id);
-            Error::DatabaseExecution
-        })?;
+        insert_news_item_img(transaction, item_id, *img_id).await?;
     }
 
+    Ok(())
+}
+
+async fn insert_news_item_operator(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    item_id: i32,
+    operator_id: i32,
+) -> Result<()> {
+    sqlx::query!(
+        r#"
+INSERT INTO news_items_operators (item_id, operator_id)
+VALUES ($1, $2)"#,
+        item_id,
+        operator_id
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), item_id, operator_id);
+        Error::DatabaseExecution
+    })?;
+    Ok(())
+}
+
+async fn insert_news_item_region(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    item_id: i32,
+    region_id: i32,
+) -> Result<()> {
+    sqlx::query!(
+        r#"
+INSERT INTO news_items_regions (item_id, region_id)
+VALUES ($1, $2)"#,
+        item_id,
+        region_id
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), item_id, region_id);
+        Error::DatabaseExecution
+    })?;
+    Ok(())
+}
+
+async fn insert_news_item_external_news_item(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    item_id: i32,
+    external_id: i32,
+) -> Result<()> {
+    sqlx::query!(
+        r#"
+INSERT INTO news_items_external_news_items (item_id, external_item_id)
+VALUES ($1, $2)"#,
+        item_id,
+        external_id
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), item_id, external_id);
+        Error::DatabaseExecution
+    })?;
+    Ok(())
+}
+
+async fn insert_news_item_img(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    item_id: i32,
+    img_id: i32,
+) -> Result<()> {
+    sqlx::query!(
+        r#"
+INSERT INTO news_items_imgs (item_id, img_id)
+VALUES ($1, $2)"#,
+        item_id,
+        img_id
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), item_id, img_id);
+        Error::DatabaseExecution
+    })?;
     Ok(())
 }
 
