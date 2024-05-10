@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nINSERT INTO news_items (title, summary, author_id, author_override, content,\n    thumb_id, publish_datetime, edit_datetime, is_visible)\nVALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)\nRETURNING id",
+  "query": "\nINSERT INTO news_items (title, summary, author_id, author_override, content,\n    publish_datetime, edit_datetime, is_visible, thumb_id, thumb_url)\nVALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)\nRETURNING id",
   "describe": {
     "columns": [
       {
@@ -16,15 +16,16 @@
         "Int4",
         "Text",
         "Jsonb",
+        "Timestamptz",
+        "Timestamptz",
+        "Bool",
         "Int4",
-        "Timestamptz",
-        "Timestamptz",
-        "Bool"
+        "Text"
       ]
     },
     "nullable": [
       false
     ]
   },
-  "hash": "557c59a5273dd6a3394f0bd250c1bca04770b8f61a09ca029656cebc0a2b5c44"
+  "hash": "048ddb9f09129b5bbea1a97b6733bef9d221162588e1f8f17213d748fd30eb9c"
 }

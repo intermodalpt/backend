@@ -313,24 +313,36 @@ pub(crate) async fn insert_news(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     change: requests::ChangeNewsItem,
 ) -> Result<i32> {
-    let publish_datetime =
-        change.publish_datetime.unwrap_or(chrono::Local::now());
+    let publish_datetime = change.publish_datetime.unwrap_or(Local::now());
+
+    let thumb_url: Option<String> = if let Some(thumb_id) = change.thumb_id {
+        let thumb_sha1 = select_news_img_sha1(transaction, thumb_id)
+            .await?
+            .ok_or(Error::ValidationFailure(
+                "The referenced thumb_id does not exist".to_string(),
+            ))?;
+
+        Some(get_news_pic_thumb_path(&thumb_sha1))
+    } else {
+        None
+    };
 
     let row = sqlx::query!(
         r#"
 INSERT INTO news_items (title, summary, author_id, author_override, content,
-    thumb_id, publish_datetime, edit_datetime, is_visible)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    publish_datetime, edit_datetime, is_visible, thumb_id, thumb_url)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 RETURNING id"#,
         change.title,
         change.summary,
         change.author_id,
         change.author_override,
         json!(&change.content),
-        change.thumb_id,
         publish_datetime,
         change.edit_datetime,
-        change.is_visible
+        change.is_visible,
+        change.thumb_id,
+        thumb_url
     )
     .fetch_one(&mut **transaction)
     .await
@@ -373,20 +385,11 @@ pub(crate) async fn update_news_item(
         .ok_or(Error::NotFoundUpstream)?;
 
     let thumb_url: Option<String> = if let Some(thumb_id) = change.thumb_id {
-        let thumb_sha1 = sqlx::query!(
-            r#"SELECT id, sha1 FROM news_imgs WHERE id=$1"#,
-            thumb_id
-        )
-        .fetch_optional(&mut **transaction)
-        .await
-        .map_err(|err| {
-            tracing::error!(error = err.to_string(), change.thumb_id);
-            Error::DatabaseExecution
-        })?
-        .ok_or(Error::ValidationFailure(
-            "The referenced thumb_id does not exist".to_string(),
-        ))?
-        .sha1;
+        let thumb_sha1 = select_news_img_sha1(transaction, thumb_id)
+            .await?
+            .ok_or(Error::ValidationFailure(
+                "The referenced thumb_id does not exist".to_string(),
+            ))?;
 
         Some(get_news_pic_thumb_path(&thumb_sha1))
     } else {
@@ -551,6 +554,20 @@ WHERE item_id=$1 AND img_id = ANY($2)"#,
     }
 
     Ok(())
+}
+
+async fn select_news_img_sha1(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    img_id: i32,
+) -> Result<Option<String>> {
+    sqlx::query!(r#"SELECT sha1 FROM news_imgs WHERE id=$1"#, img_id)
+        .fetch_optional(&mut **transaction)
+        .await
+        .map_err(|err| {
+            tracing::error!(error = err.to_string(), img_id);
+            Error::DatabaseExecution
+        })
+        .map(|row| row.map(|row| row.sha1))
 }
 
 async fn insert_news_item_operator(

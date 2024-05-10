@@ -1,15 +1,10 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, sha1 FROM news_imgs WHERE id=$1",
+  "query": "SELECT sha1 FROM news_imgs WHERE id=$1",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
-        "name": "id",
-        "type_info": "Int4"
-      },
-      {
-        "ordinal": 1,
         "name": "sha1",
         "type_info": "Bpchar"
       }
@@ -20,9 +15,8 @@
       ]
     },
     "nullable": [
-      false,
       false
     ]
   },
-  "hash": "8d8b119bbae2cc7013a25ee68bb85a7b56dbb4888935381e0236f155bc018547"
+  "hash": "575672a20b13df040683f471871548bd5d110790f3f605bb87d4d5e41ae9fede"
 }
