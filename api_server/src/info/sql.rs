@@ -39,8 +39,8 @@ pub(crate) async fn fetch_news(
 SELECT id, title, summary,
     content as "content!: sqlx::types::Json<Vec<info::ContentBlock>>",
     publish_datetime, edit_datetime, is_visible,
-    array_remove(array_agg(operator_id), NULL) as "operator_ids!: Vec<i32>",
-    array_remove(array_agg(region_id), NULL) as "region_ids!: Vec<i32>"
+    array_remove(array_agg(distinct operator_id), NULL) as "operator_ids!: Vec<i32>",
+    array_remove(array_agg(distinct region_id), NULL) as "region_ids!: Vec<i32>"
 FROM news_items
 LEFT JOIN news_items_operators ON news_items.id=news_items_operators.item_id
 LEFT JOIN news_items_regions ON news_items.id=news_items_regions.item_id
@@ -100,14 +100,15 @@ pub(crate) async fn fetch_operator_news(
     sqlx::query!(
         r#"
 SELECT id, title, summary,
-    array_remove(array_agg(distinct operator_id), NULL) as "operator_ids!: Vec<i32>",
+    array_agg(distinct news_items_operators.operator_id) as "operator_ids!: Vec<i32>",
     array_remove(array_agg(distinct region_id), NULL) as "region_ids!: Vec<i32>",
     content as "content!: sqlx::types::Json<Vec<info::ContentBlock>>",
     publish_datetime, edit_datetime, is_visible
 FROM news_items
-LEFT JOIN news_items_operators ON news_items.id=news_items_operators.item_id
+JOIN news_items_operators as rel ON news_items.id=rel.item_id
+JOIN news_items_operators ON news_items.id=news_items_operators.item_id
 LEFT JOIN news_items_regions ON news_items.id=news_items_regions.item_id
-WHERE operator_id=$1
+WHERE rel.operator_id=$1
 GROUP BY news_items.id
 LIMIT $2 OFFSET $3
 "#,
@@ -171,8 +172,8 @@ pub(crate) async fn fetch_news_item(
 SELECT news_items.id, news_items.title, news_items.summary,
     content as "content!: sqlx::types::Json<Vec<info::ContentBlock>>",
     news_items.publish_datetime, news_items.edit_datetime, news_items.is_visible,
-    array_remove(array_agg(operator_id), NULL) as "operator_ids!: Vec<i32>",
-    array_remove(array_agg(region_id), NULL) as "region_ids!: Vec<i32>",
+    array_remove(array_agg(distinct operator_id), NULL) as "operator_ids!: Vec<i32>",
+    array_remove(array_agg(distinct region_id), NULL) as "region_ids!: Vec<i32>",
     CASE
         WHEN count(news_imgs.id) > 0
         THEN array_agg(ROW(news_imgs.id, sha1, transcript))
@@ -238,8 +239,8 @@ pub(crate) async fn fetch_full_news_item(
 SELECT news_items.id, news_items.title, news_items.summary,
     content as "content!: sqlx::types::Json<Vec<info::ContentBlock>>",
     news_items.publish_datetime, news_items.edit_datetime, news_items.is_visible,
-    array_remove(array_agg(operator_id), NULL) as "operator_ids!: Vec<i32>",
-    array_remove(array_agg(region_id), NULL) as "region_ids!: Vec<i32>",
+    array_remove(array_agg(distinct operator_id), NULL) as "operator_ids!: Vec<i32>",
+    array_remove(array_agg(distinct region_id), NULL) as "region_ids!: Vec<i32>",
     CASE
         WHEN count(news_imgs.id) > 0
         THEN array_agg(ROW(news_imgs.id, sha1, transcript))
@@ -802,7 +803,7 @@ pub(crate) async fn fetch_operator_external_news(
     sqlx::query!(
         r#"
 SELECT external_news_items.id, title, author, summary,
-    array_remove(array_agg(distinct operator_id), NULL) as "operator_ids!: Vec<i32>",
+    array_agg(distinct external_news_items_operators.operator_id) as "operator_ids!: Vec<i32>",
     array_remove(array_agg(distinct region_id), NULL) as "region_ids!: Vec<i32>",
     COALESCE(content_md, prepro_content_md) as content_md,
     COALESCE(content_text, prepro_content_text) as content_text,
@@ -819,11 +820,12 @@ LEFT JOIN external_news_items_imgs
     ON external_news_items.id=external_news_items_imgs.item_id
 LEFT JOIN external_news_imgs
     ON external_news_items_imgs.img_id=external_news_imgs.id
+JOIN external_news_items_operators AS rel ON external_news_items.id=rel.item_id
 JOIN external_news_items_operators
     ON external_news_items.id=external_news_items_operators.item_id
 LEFT JOIN external_news_items_regions
     ON external_news_items.id=external_news_items_regions.item_id
-WHERE operator_id=$1 
+WHERE rel.operator_id=$1
     AND ($2 OR (is_validated AND NOT is_sensitive))
 GROUP BY external_news_items.id
 LIMIT $3 OFFSET $4

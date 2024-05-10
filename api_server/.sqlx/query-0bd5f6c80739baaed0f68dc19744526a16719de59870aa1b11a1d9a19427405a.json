@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT id, title, summary,\n    array_remove(array_agg(distinct operator_id), NULL) as \"operator_ids!: Vec<i32>\",\n    array_remove(array_agg(distinct region_id), NULL) as \"region_ids!: Vec<i32>\",\n    content as \"content!: sqlx::types::Json<Vec<info::ContentBlock>>\",\n    publish_datetime, edit_datetime, is_visible\nFROM news_items\nLEFT JOIN news_items_operators ON news_items.id=news_items_operators.item_id\nLEFT JOIN news_items_regions ON news_items.id=news_items_regions.item_id\nWHERE operator_id=$1\nGROUP BY news_items.id\nLIMIT $2 OFFSET $3\n",
+  "query": "\nSELECT id, title, summary,\n    array_agg(distinct news_items_operators.operator_id) as \"operator_ids!: Vec<i32>\",\n    array_remove(array_agg(distinct region_id), NULL) as \"region_ids!: Vec<i32>\",\n    content as \"content!: sqlx::types::Json<Vec<info::ContentBlock>>\",\n    publish_datetime, edit_datetime, is_visible\nFROM news_items\nJOIN news_items_operators as rel ON news_items.id=rel.item_id\nJOIN news_items_operators ON news_items.id=news_items_operators.item_id\nLEFT JOIN news_items_regions ON news_items.id=news_items_regions.item_id\nWHERE rel.operator_id=$1\nGROUP BY news_items.id\nLIMIT $2 OFFSET $3\n",
   "describe": {
     "columns": [
       {
@@ -68,5 +68,5 @@
       false
     ]
   },
-  "hash": "115c9e436e007d6eede28a4177aa53d112c485afddce1a2a85cceff08c5e08a0"
+  "hash": "0bd5f6c80739baaed0f68dc19744526a16719de59870aa1b11a1d9a19427405a"
 }
