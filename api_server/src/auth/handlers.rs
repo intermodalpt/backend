@@ -19,6 +19,7 @@
 use axum::extract::{Path, Query, State};
 use axum::Json;
 use axum_client_ip::SecureClientIp;
+use futures::future;
 use serde::Deserialize;
 
 use commons::models::auth;
@@ -97,10 +98,15 @@ pub(crate) async fn get_user_audit_log(
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
+    let (items, total) = future::join(
+        sql::fetch_user_audit_log(&state.pool, user_id, offset, take),
+        sql::count_user_audit_logs(&state.pool, user_id),
+    )
+    .await;
+
     Ok(Json(Pagination {
-        items: sql::fetch_user_audit_log(&state.pool, user_id, offset, take)
-            .await?,
-        total: sql::count_user_audit_logs(&state.pool, user_id).await?,
+        items: items?,
+        total: total?,
     }))
 }
 
@@ -115,8 +121,14 @@ pub(crate) async fn get_audit_log(
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
+    let (items, total) = future::join(
+        sql::fetch_audit_log_entries(&state.pool, offset, take),
+        sql::count_audit_logs(&state.pool),
+    )
+    .await;
+
     Ok(Json(Pagination {
-        items: sql::fetch_audit_log_entries(&state.pool, offset, take).await?,
-        total: sql::count_audit_logs(&state.pool).await?,
+        items: items?,
+        total: total?,
     }))
 }

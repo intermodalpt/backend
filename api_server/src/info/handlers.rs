@@ -18,6 +18,7 @@
 
 use axum::extract::{Path, Query, State};
 use axum::Json;
+use futures::future;
 use serde::Deserialize;
 use serde_with::serde_derive::Serialize;
 
@@ -52,9 +53,15 @@ pub(crate) async fn get_news(
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
+    let (items, total) = future::join(
+        sql::fetch_news(&state.pool, offset, take),
+        sql::count_news(&state.pool),
+    )
+    .await;
+
     Ok(Json(Pagination {
-        items: sql::fetch_news(&state.pool, offset, take).await?,
-        total: sql::count_news(&state.pool).await?,
+        items: items?,
+        total: total?,
     }))
 }
 
@@ -66,10 +73,15 @@ pub(crate) async fn get_operator_news(
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
+    let (items, total) = future::join(
+        sql::fetch_operator_news(&state.pool, operator_id, offset, take),
+        sql::count_operator_news(&state.pool, operator_id),
+    )
+    .await;
+
     Ok(Json(Pagination {
-        items: sql::fetch_operator_news(&state.pool, operator_id, offset, take)
-            .await?,
-        total: sql::count_operator_news(&state.pool, operator_id).await?,
+        items: items?,
+        total: total?,
     }))
 }
 
@@ -81,10 +93,15 @@ pub(crate) async fn get_region_news(
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
+    let (items, total) = future::join(
+        sql::fetch_region_news(&state.pool, region_id, offset, take),
+        sql::count_region_news(&state.pool, region_id),
+    )
+    .await;
+
     Ok(Json(Pagination {
-        items: sql::fetch_region_news(&state.pool, region_id, offset, take)
-            .await?,
-        total: sql::count_region_news(&state.pool, region_id).await?,
+        items: items?,
+        total: total?,
     }))
 }
 
@@ -204,15 +221,15 @@ pub(crate) async fn get_external_news(
     let include_private =
         claims.as_ref().is_some_and(auth::perms::Trusted::is_valid);
 
+    let (items, total) = future::join(
+        sql::fetch_external_news(&state.pool, offset, take, include_private),
+        sql::count_external_news(&state.pool, include_private),
+    )
+    .await;
+
     Ok(Json(Pagination {
-        items: sql::fetch_external_news(
-            &state.pool,
-            offset,
-            take,
-            include_private,
-        )
-        .await?,
-        total: sql::count_external_news(&state.pool, include_private).await?,
+        items: items?,
+        total: total?,
     }))
 }
 
@@ -228,21 +245,25 @@ pub(crate) async fn get_operator_external_news(
     let include_private =
         claims.as_ref().is_some_and(auth::perms::Trusted::is_valid);
 
-    Ok(Json(Pagination {
-        items: sql::fetch_operator_external_news(
+    let (items, total) = future::join(
+        sql::fetch_operator_external_news(
             &state.pool,
             operator_id,
             offset,
             take,
             include_private,
-        )
-        .await?,
-        total: sql::count_operator_external_news(
+        ),
+        sql::count_operator_external_news(
             &state.pool,
             operator_id,
             include_private,
-        )
-        .await?,
+        ),
+    )
+    .await;
+
+    Ok(Json(Pagination {
+        items: items?,
+        total: total?,
     }))
 }
 
@@ -254,10 +275,15 @@ pub(crate) async fn get_pending_external_news(
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
+    let (items, total) = future::join(
+        sql::fetch_pending_external_news(&state.pool, offset, take),
+        sql::count_pending_external_news(&state.pool),
+    )
+    .await;
+
     Ok(Json(Pagination {
-        items: sql::fetch_pending_external_news(&state.pool, offset, take)
-            .await?,
-        total: sql::count_pending_external_news(&state.pool).await?,
+        items: items?,
+        total: total?,
     }))
 }
 
@@ -270,19 +296,20 @@ pub(crate) async fn get_operator_pending_external_news(
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
-    Ok(Json(Pagination {
-        items: sql::fetch_pending_operator_external_news(
+    let (items, total) = future::join(
+        sql::fetch_pending_operator_external_news(
             &state.pool,
             operator_id,
             offset,
             take,
-        )
-        .await?,
-        total: sql::count_pending_operator_external_news(
-            &state.pool,
-            operator_id,
-        )
-        .await?,
+        ),
+        sql::count_pending_operator_external_news(&state.pool, operator_id),
+    )
+    .await;
+
+    Ok(Json(Pagination {
+        items: items?,
+        total: total?,
     }))
 }
 

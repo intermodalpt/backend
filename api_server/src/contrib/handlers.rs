@@ -21,6 +21,7 @@ use std::collections::HashMap;
 use axum::extract::{Multipart, Path, Query, State};
 use axum::Json;
 use chrono::Local;
+use futures::future;
 use serde::Deserialize;
 
 use commons::models::{history, stops};
@@ -157,16 +158,20 @@ pub(crate) async fn get_latest_undecided_contributions(
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
-    Ok(Json(Pagination {
-        items: sql::fetch_undecided_contributions(
+    let (items, total) = future::join(
+        sql::fetch_undecided_contributions(
             &state.pool,
             paginator.uid,
             offset,
             take,
-        )
-        .await?,
-        total: sql::count_undecided_contributions(&state.pool, paginator.uid)
-            .await?,
+        ),
+        sql::count_undecided_contributions(&state.pool, paginator.uid),
+    )
+    .await;
+
+    Ok(Json(Pagination {
+        items: items?,
+        total: total?,
     }))
 }
 
@@ -182,10 +187,15 @@ pub(crate) async fn get_latest_decided_contributions(
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
+    let (items, total) = future::join(
+        sql::fetch_decided_contributions(&state.pool, offset, take),
+        sql::count_decided_contributions(&state.pool),
+    )
+    .await;
+
     Ok(Json(Pagination {
-        items: sql::fetch_decided_contributions(&state.pool, offset, take)
-            .await?,
-        total: sql::count_decided_contributions(&state.pool).await?,
+        items: items?,
+        total: total?,
     }))
 }
 
@@ -201,9 +211,15 @@ pub(crate) async fn get_changelog(
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
+    let (items, total) = future::join(
+        sql::fetch_changeset_logs(&state.pool, offset, take),
+        sql::count_changeset_logs(&state.pool),
+    )
+    .await;
+
     Ok(Json(Pagination {
-        items: sql::fetch_changeset_logs(&state.pool, offset, take).await?,
-        total: sql::count_changeset_logs(&state.pool).await?,
+        items: items?,
+        total: total?,
     }))
 }
 
