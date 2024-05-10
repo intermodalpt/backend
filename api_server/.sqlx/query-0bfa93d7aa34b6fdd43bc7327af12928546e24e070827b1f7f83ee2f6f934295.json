@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nDELETE FROM news_items_imgs\nWHERE item_id=$1 AND img_id = ANY($2)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int4Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "0bfa93d7aa34b6fdd43bc7327af12928546e24e070827b1f7f83ee2f6f934295"
+}

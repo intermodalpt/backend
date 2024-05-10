@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nUPDATE news_items\nSET title=$1, summary=$2, author_id=$3, author_override=$4, content=$5,\n    publish_datetime=$6, edit_datetime=$7, is_visible=$8, thumb_id=$9\nWHERE id=$10",
+  "query": "\nUPDATE news_items\nSET title=$1, summary=$2, author_id=$3, author_override=$4, content=$5,\n    publish_datetime=$6, edit_datetime=$7, is_visible=$8, thumb_id=$9,\n    thumb_url=$10\nWHERE id=$11",
   "describe": {
     "columns": [],
     "parameters": {
@@ -14,10 +14,11 @@
         "Timestamptz",
         "Bool",
         "Int4",
+        "Text",
         "Int4"
       ]
     },
     "nullable": []
   },
-  "hash": "e18515310b51e1e7466005ef3528443d5e55c7ce24cc20f833407c8202b51a55"
+  "hash": "9f58c59c72ff2371a043fd9c03f33722fc829eb53a40b9cee49020d9e4583f38"
 }

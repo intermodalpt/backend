@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nDELETE FROM news_items_external_news_items\nWHERE item_id=$1 AND external_item_id = ANY($2)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int4Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "dc9560d62019a7a7d48dbd911ea30f4445cbdb2471945c1bc61ca24d7e0a7fb3"
+}

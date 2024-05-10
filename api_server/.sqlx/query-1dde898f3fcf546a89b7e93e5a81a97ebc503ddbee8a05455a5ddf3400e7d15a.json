@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nDELETE FROM news_items_operators\nWHERE item_id=$1 AND operator_id = ANY($2)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int4Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "1dde898f3fcf546a89b7e93e5a81a97ebc503ddbee8a05455a5ddf3400e7d15a"
+}

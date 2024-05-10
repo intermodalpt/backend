@@ -17,14 +17,19 @@
 */
 
 use chrono::Local;
+use itertools::Itertools;
 use serde_json::json;
 use sqlx::PgPool;
+use std::collections::HashSet;
 
 use commons::models::info;
 
 use super::models::{self, requests, responses};
 use crate::pics::models as pic_models;
-use crate::pics::{get_external_news_pic_path, get_external_news_ss_path};
+use crate::pics::{
+    get_external_news_pic_path, get_external_news_ss_path,
+    get_news_pic_thumb_path,
+};
 use crate::Error;
 
 type Result<T> = std::result::Result<T, Error>;
@@ -233,10 +238,13 @@ GROUP BY news_items.id
         }))
 }
 
-pub(crate) async fn fetch_full_news_item(
-    pool: &PgPool,
+pub(crate) async fn fetch_full_news_item<'c, E>(
+    executor: E,
     item_id: i32,
-) -> Result<Option<responses::FullNewsItem>> {
+) -> Result<Option<responses::FullNewsItem>>
+where
+    E: sqlx::Executor<'c, Database = sqlx::Postgres>,
+{
     Ok(sqlx::query!(
         r#"
 SELECT news_items.id, news_items.title, news_items.summary,
@@ -276,7 +284,7 @@ GROUP BY news_items.id
 "#,
         item_id,
     )
-        .fetch_optional(pool)
+        .fetch_optional(executor)
         .await
         .map_err(|err| {
             tracing::error!(error = err.to_string(), item_id);
@@ -405,12 +413,39 @@ pub(crate) async fn update_news_item(
     item_id: i32,
     change: requests::ChangeNewsItem,
 ) -> Result<()> {
+    // This function has quite some slack for optimization
+    let current = fetch_full_news_item(&mut **transaction, item_id)
+        .await?
+        .ok_or(Error::NotFoundUpstream)?;
+
+    let thumb_url: Option<String> = if let Some(thumb_id) = change.thumb_id {
+        let thumb_sha1 = sqlx::query!(
+            r#"SELECT id, sha1 FROM news_imgs WHERE id=$1"#,
+            thumb_id
+        )
+        .fetch_optional(&mut **transaction)
+        .await
+        .map_err(|err| {
+            tracing::error!(error = err.to_string(), change.thumb_id);
+            Error::DatabaseExecution
+        })?
+        .ok_or(Error::ValidationFailure(
+            "The referenced thumb_id does not exist".to_string(),
+        ))?
+        .sha1;
+
+        Some(get_news_pic_thumb_path(&thumb_sha1))
+    } else {
+        None
+    };
+
     sqlx::query!(
         r#"
 UPDATE news_items
 SET title=$1, summary=$2, author_id=$3, author_override=$4, content=$5,
-    publish_datetime=$6, edit_datetime=$7, is_visible=$8, thumb_id=$9
-WHERE id=$10"#,
+    publish_datetime=$6, edit_datetime=$7, is_visible=$8, thumb_id=$9,
+    thumb_url=$10
+WHERE id=$11"#,
         change.title,
         change.summary,
         change.author_id,
@@ -420,6 +455,7 @@ WHERE id=$10"#,
         change.edit_datetime,
         change.is_visible,
         change.thumb_id,
+        thumb_url,
         item_id
     )
     .execute(&mut **transaction)
@@ -429,107 +465,164 @@ WHERE id=$10"#,
         Error::DatabaseExecution
     })?;
 
+    let deleted_operator_ids = current
+        .operator_ids
+        .iter()
+        .filter(|operator_id| !change.operator_ids.contains(operator_id))
+        .copied()
+        .collect::<Vec<_>>();
+
     sqlx::query!(
         r#"
 DELETE FROM news_items_operators
-WHERE item_id=$1"#,
+WHERE item_id=$1 AND operator_id = ANY($2)"#,
         item_id,
+        &deleted_operator_ids[..]
     )
     .execute(&mut **transaction)
     .await
     .map_err(|err| {
-        tracing::error!(error = err.to_string(), item_id);
+        tracing::error!(
+            error = err.to_string(),
+            item_id,
+            deleted_operator_ids = format!("{:?}", deleted_operator_ids)
+        );
         Error::DatabaseExecution
     })?;
 
     for operator_id in &change.operator_ids {
-        sqlx::query!(
-            r#"
+        if !current.operator_ids.contains(operator_id) {
+            sqlx::query!(
+                r#"
 INSERT INTO news_items_operators (item_id, operator_id)
 VALUES ($1, $2)"#,
-            item_id,
-            operator_id
-        )
-        .execute(&mut **transaction)
-        .await
-        .map_err(|err| {
-            tracing::error!(error = err.to_string(), item_id, operator_id);
-            Error::DatabaseExecution
-        })?;
+                item_id,
+                operator_id
+            )
+            .execute(&mut **transaction)
+            .await
+            .map_err(|err| {
+                tracing::error!(error = err.to_string(), item_id, operator_id);
+                Error::DatabaseExecution
+            })?;
+        }
     }
+
+    let deleted_region_ids = current
+        .region_ids
+        .iter()
+        .filter(|region_id| !change.region_ids.contains(region_id))
+        .copied()
+        .collect::<Vec<_>>();
 
     sqlx::query!(
         r#"
 DELETE FROM news_items_regions
-WHERE item_id=$1"#,
+WHERE item_id=$1 AND region_id = ANY($2)"#,
         item_id,
+        &deleted_region_ids[..]
     )
     .execute(&mut **transaction)
     .await
     .map_err(|err| {
-        tracing::error!(error = err.to_string(), item_id);
+        tracing::error!(
+            error = err.to_string(),
+            item_id,
+            deleted_region_ids = format!("{:?}", deleted_region_ids)
+        );
         Error::DatabaseExecution
     })?;
 
     for region_id in &change.region_ids {
-        sqlx::query!(
-            r#"
+        if !current.region_ids.contains(region_id) {
+            sqlx::query!(
+                r#"
 INSERT INTO news_items_regions (item_id, region_id)
 VALUES ($1, $2)"#,
-            item_id,
-            region_id
-        )
-        .execute(&mut **transaction)
-        .await
-        .map_err(|err| {
-            tracing::error!(error = err.to_string(), item_id, region_id);
-            Error::DatabaseExecution
-        })?;
+                item_id,
+                region_id
+            )
+            .execute(&mut **transaction)
+            .await
+            .map_err(|err| {
+                tracing::error!(error = err.to_string(), item_id, region_id);
+                Error::DatabaseExecution
+            })?;
+        }
     }
+
+    let (common_external_ids, deleted_external_ids): (Vec<i32>, Vec<i32>) =
+        current
+            .external_rels
+            .iter()
+            .map(|rel| rel.id)
+            .partition(|id| change.external_ids.contains(id));
 
     sqlx::query!(
         r#"
 DELETE FROM news_items_external_news_items
-WHERE item_id=$1"#,
+WHERE item_id=$1 AND external_item_id = ANY($2)"#,
         item_id,
+        &deleted_external_ids[..]
     )
     .execute(&mut **transaction)
     .await
     .map_err(|err| {
-        tracing::error!(error = err.to_string(), item_id);
+        tracing::error!(
+            error = err.to_string(),
+            item_id,
+            deleted_external_ids = format!("{:?}", deleted_external_ids)
+        );
         Error::DatabaseExecution
     })?;
 
     for external_id in &change.external_ids {
-        sqlx::query!(
-            r#"
-INSERT INTO news_items_external_news_items (item_id, external_item_id)
-VALUES ($1, $2)"#,
-            item_id,
-            external_id
-        )
-        .execute(&mut **transaction)
-        .await
-        .map_err(|err| {
-            tracing::error!(error = err.to_string(), item_id, external_id);
-            Error::DatabaseExecution
-        })?;
+        if !common_external_ids.contains(external_id) {
+            sqlx::query!(
+                r#"
+    INSERT INTO news_items_external_news_items (item_id, external_item_id)
+    VALUES ($1, $2)"#,
+                item_id,
+                external_id
+            )
+            .execute(&mut **transaction)
+            .await
+            .map_err(|err| {
+                tracing::error!(error = err.to_string(), item_id, external_id);
+                Error::DatabaseExecution
+            })?;
+        }
     }
+
+    let change_imgs = change.get_linked_images();
+    let curr_imgs = current
+        .images
+        .iter()
+        .map(|img| img.id)
+        .collect::<HashSet<_>>();
+    let new_imgs = change_imgs.difference(&curr_imgs);
+    let deleted_imgs =
+        curr_imgs.difference(&change_imgs).copied().collect_vec();
 
     sqlx::query!(
         r#"
 DELETE FROM news_items_imgs
-WHERE item_id=$1"#,
+WHERE item_id=$1 AND img_id = ANY($2)"#,
         item_id,
+        &deleted_imgs[..]
     )
     .execute(&mut **transaction)
     .await
     .map_err(|err| {
-        tracing::error!(error = err.to_string(), item_id);
+        tracing::error!(
+            error = err.to_string(),
+            item_id,
+            deleted_imgs = format!("{:?}", deleted_imgs)
+        );
         Error::DatabaseExecution
     })?;
 
-    for img_id in change.get_linked_images() {
+    for img_id in new_imgs {
         sqlx::query!(
             r#"
 INSERT INTO news_items_imgs (item_id, img_id)

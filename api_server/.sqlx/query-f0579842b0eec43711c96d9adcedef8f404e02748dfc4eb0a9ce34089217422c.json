@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nDELETE FROM news_items_regions\nWHERE item_id=$1 AND region_id = ANY($2)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int4Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "f0579842b0eec43711c96d9adcedef8f404e02748dfc4eb0a9ce34089217422c"
+}
