@@ -93,6 +93,10 @@ pub fn build_paths(state: AppState) -> Router {
             get(geo::handlers::get_region_stops_osm_quality),
         )
         .route(
+            "/v1/regions/:region_id/news",
+            get(info::handlers::get_region_news),
+        )
+        .route(
             "/v1/stops",
             get(stops::handlers::get_all_stops)
                 .post(stops::handlers::post_stop),

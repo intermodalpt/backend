@@ -73,6 +73,21 @@ pub(crate) async fn get_operator_news(
     }))
 }
 
+pub(crate) async fn get_region_news(
+    State(state): State<AppState>,
+    Path(region_id): Path<i32>,
+    paginator: Query<Page>,
+) -> Result<Json<Pagination<responses::NewsItemListing>>, Error> {
+    let offset = i64::from(paginator.p * PAGE_SIZE);
+    let take = i64::from(PAGE_SIZE);
+
+    Ok(Json(Pagination {
+        items: sql::fetch_region_news(&state.pool, region_id, offset, take)
+            .await?,
+        total: sql::count_region_news(&state.pool, region_id).await?,
+    }))
+}
+
 pub(crate) async fn get_news_item(
     State(state): State<AppState>,
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,

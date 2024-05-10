@@ -170,6 +170,79 @@ WHERE operator_id=$1
     .map_or(0, |row| row.cnt))
 }
 
+pub(crate) async fn fetch_region_news(
+    pool: &PgPool,
+    region_id: i32,
+    skip: i64,
+    take: i64,
+) -> Result<Vec<responses::NewsItemListing>> {
+    sqlx::query!(
+        r#"
+SELECT id, title, summary,
+    content as "content!: sqlx::types::Json<Vec<info::ContentBlock>>",
+    publish_datetime, edit_datetime, is_visible, thumb_url,
+    array_remove(array_agg(distinct operator_id), NULL) as "operator_ids!: Vec<i32>",
+    array_agg(distinct news_items_regions.region_id) as "region_ids!: Vec<i32>"
+FROM news_items
+LEFT JOIN news_items_operators ON news_items.id=news_items_operators.item_id
+JOIN news_items_regions as rel ON news_items.id=rel.item_id
+JOIN news_items_regions ON news_items.id=news_items_regions.item_id
+WHERE rel.region_id=$1
+GROUP BY news_items.id
+LIMIT $2 OFFSET $3
+"#,
+        region_id,
+        take,
+        skip,
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), region_id, take, skip);
+        Error::DatabaseExecution
+    })?
+    .into_iter()
+    .map(|row| {
+        Ok(responses::NewsItemListing {
+            id: row.id,
+            title: row.title,
+            summary: row.summary,
+            content: row.content.0,
+            thumb_url: row.thumb_url,
+            publish_datetime: row.publish_datetime.with_timezone(&Local),
+            edit_datetime: row
+                .edit_datetime
+                .map(|datetime| datetime.with_timezone(&Local)),
+            is_visible: row.is_visible,
+            operator_ids: row.operator_ids,
+            region_ids: row.region_ids,
+        })
+    })
+    .collect()
+}
+
+pub(crate) async fn count_region_news(
+    pool: &PgPool,
+    region_id: i32,
+) -> Result<i64> {
+    Ok(sqlx::query!(
+        r#"
+SELECT count(*) as "cnt!: i64"
+FROM news_items
+LEFT JOIN news_items_regions ON news_items.id=news_items_regions.item_id
+WHERE region_id=$1
+"#,
+        region_id,
+    )
+    .fetch_optional(pool)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), region_id);
+        Error::DatabaseExecution
+    })?
+    .map_or(0, |row| row.cnt))
+}
+
 pub(crate) async fn fetch_news_item(
     pool: &PgPool,
     item_id: i32,
