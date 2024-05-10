@@ -32,14 +32,22 @@ pub struct MapContent {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ImgRef {
-    id: i32,
-    url: String,
+    pub id: i32,
+    pub url: String,
     #[serde(default)]
-    description: Option<String>,
+    pub description: Option<String>,
     #[serde(default)]
-    transcript: Option<String>,
+    pub transcript: Option<String>,
     #[serde(default)]
-    attribution: Option<String>,
+    pub attribution: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ContentRef {
+    #[serde(default)]
+    name: Option<String>,
+    #[serde(default)]
+    url: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -48,6 +56,42 @@ pub enum ContentBlock {
     Md(String),
     Img(ImgRef),
     Map(MapContent),
+    Ref(ContentRef),
+}
+
+impl ContentBlock {
+    pub fn validate(&self) -> Result<(), &'static str> {
+        // There's a lot of room for improvement here.
+        match self {
+            ContentBlock::Md(_) => Ok(()),
+            ContentBlock::Img(_) => {
+                // TODO: Validate URL
+                Ok(())
+            }
+            ContentBlock::Map(map) => {
+                if let Some(lat) = map.lat {
+                    if map.lon.is_none() || lat < -90.0 || lat > 90.0 {
+                        return Err("Invalid latitude");
+                    }
+                }
+
+                if let Some(lon) = map.lon {
+                    if map.lat.is_none() || lon < -180.0 || lon > 180.0 {
+                        return Err("Invalid longitude");
+                    }
+                }
+
+                Ok(())
+            }
+            ContentBlock::Ref(content) => {
+                if content.name.is_some() || content.url.is_some() {
+                    Ok(())
+                } else {
+                    Err("ContentRef must have at least one of name or url")
+                }
+            }
+        }
+    }
 }
 
 #[derive(Debug, Serialize)]
