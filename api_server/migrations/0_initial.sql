@@ -413,6 +413,7 @@ CREATE TABLE news_items
     author_override  text,
     content          jsonb                    NOT NULL,
     thumb_id         integer REFERENCES news_imgs (ID),
+    thumb_url        text, -- Cache field for thumb_id
 
     publish_datetime timestamp with time zone NOT NULL,
     edit_datetime    timestamp with time zone,

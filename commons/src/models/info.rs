@@ -16,7 +16,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use chrono::{DateTime, Local};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -92,19 +91,4 @@ impl ContentBlock {
             }
         }
     }
-}
-
-#[derive(Debug, Serialize)]
-pub struct NewsItem {
-    pub id: i32,
-    pub title: String,
-    pub summary: String,
-    pub content: Vec<ContentBlock>,
-
-    pub publish_datetime: DateTime<Local>,
-    pub edit_datetime: Option<DateTime<Local>>,
-
-    pub is_visible: bool,
-    pub operator_ids: Vec<i32>,
-    pub region_ids: Vec<i32>,
 }

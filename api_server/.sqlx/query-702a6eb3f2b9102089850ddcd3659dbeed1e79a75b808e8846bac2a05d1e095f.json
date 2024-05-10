@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT id, title, summary,\n    content as \"content!: sqlx::types::Json<Vec<info::ContentBlock>>\",\n    publish_datetime, edit_datetime, is_visible,\n    array_remove(array_agg(distinct operator_id), NULL) as \"operator_ids!: Vec<i32>\",\n    array_remove(array_agg(distinct region_id), NULL) as \"region_ids!: Vec<i32>\"\nFROM news_items\nLEFT JOIN news_items_operators ON news_items.id=news_items_operators.item_id\nLEFT JOIN news_items_regions ON news_items.id=news_items_regions.item_id\nGROUP BY news_items.id\nLIMIT $1 OFFSET $2\n",
+  "query": "\nSELECT id, title, summary,\n    content as \"content!: sqlx::types::Json<Vec<info::ContentBlock>>\",\n    publish_datetime, edit_datetime, is_visible, thumb_url,\n    array_remove(array_agg(distinct operator_id), NULL) as \"operator_ids!: Vec<i32>\",\n    array_remove(array_agg(distinct region_id), NULL) as \"region_ids!: Vec<i32>\"\nFROM news_items\nLEFT JOIN news_items_operators ON news_items.id=news_items_operators.item_id\nLEFT JOIN news_items_regions ON news_items.id=news_items_regions.item_id\nGROUP BY news_items.id\nLIMIT $1 OFFSET $2\n",
   "describe": {
     "columns": [
       {
@@ -40,11 +40,16 @@
       },
       {
         "ordinal": 7,
+        "name": "thumb_url",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
         "name": "operator_ids!: Vec<i32>",
         "type_info": "Int4Array"
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "region_ids!: Vec<i32>",
         "type_info": "Int4Array"
       }
@@ -63,9 +68,10 @@
       false,
       true,
       false,
+      true,
       null,
       null
     ]
   },
-  "hash": "d459b7a89bcbee709fdc6239ba57c3dcb944e122515d31bcf04d0273fd8a3f2e"
+  "hash": "702a6eb3f2b9102089850ddcd3659dbeed1e79a75b808e8846bac2a05d1e095f"
 }

@@ -33,20 +33,37 @@ pub(crate) mod responses {
     use serde::Serialize;
     use sqlx::types::JsonValue;
 
-    use commons::models::info;
+    use commons::models::info::ContentBlock;
 
     use crate::pics::models::responses as pic_responses;
+
+    #[derive(Debug, Serialize)]
+    pub struct NewsItemListing {
+        pub id: i32,
+        pub title: String,
+        pub summary: String,
+        pub content: Vec<ContentBlock>,
+        pub thumb_url: Option<String>,
+
+        pub publish_datetime: DateTime<Local>,
+        pub edit_datetime: Option<DateTime<Local>>,
+
+        pub is_visible: bool,
+        pub operator_ids: Vec<i32>,
+        pub region_ids: Vec<i32>,
+    }
 
     #[derive(Debug, Serialize)]
     pub struct NewsItem {
         pub id: i32,
         pub title: String,
         pub summary: String,
-        pub content: Vec<info::ContentBlock>,
+        pub content: Vec<ContentBlock>,
         pub publish_datetime: DateTime<Local>,
         pub edit_datetime: Option<DateTime<Local>>,
         pub is_visible: bool,
 
+        pub thumb_url: Option<String>,
         pub images: Vec<pic_responses::NewsImg>,
         pub external_rels: Vec<super::ExternalRel>,
 
@@ -59,11 +76,12 @@ pub(crate) mod responses {
         pub id: i32,
         pub title: String,
         pub summary: String,
-        pub content: Vec<info::ContentBlock>,
+        pub content: Vec<ContentBlock>,
         pub publish_datetime: DateTime<Local>,
         pub edit_datetime: Option<DateTime<Local>>,
         pub is_visible: bool,
 
+        pub thumb_id: Option<i32>,
         pub images: Vec<pic_responses::FullNewsImg>,
         pub external_rels: Vec<super::ExternalRel>,
 

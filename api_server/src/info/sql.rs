@@ -33,12 +33,12 @@ pub(crate) async fn fetch_news(
     pool: &PgPool,
     skip: i64,
     take: i64,
-) -> Result<Vec<info::NewsItem>> {
+) -> Result<Vec<responses::NewsItemListing>> {
     sqlx::query!(
         r#"
 SELECT id, title, summary,
     content as "content!: sqlx::types::Json<Vec<info::ContentBlock>>",
-    publish_datetime, edit_datetime, is_visible,
+    publish_datetime, edit_datetime, is_visible, thumb_url,
     array_remove(array_agg(distinct operator_id), NULL) as "operator_ids!: Vec<i32>",
     array_remove(array_agg(distinct region_id), NULL) as "region_ids!: Vec<i32>"
 FROM news_items
@@ -58,11 +58,12 @@ LIMIT $1 OFFSET $2
     })?
     .into_iter()
     .map(|row| {
-        Ok(info::NewsItem {
+        Ok(responses::NewsItemListing {
             id: row.id,
             title: row.title,
             summary: row.summary,
             content: row.content.0,
+            thumb_url: row.thumb_url,
             publish_datetime: row.publish_datetime.with_timezone(&Local),
             edit_datetime: row
                 .edit_datetime
@@ -96,14 +97,14 @@ pub(crate) async fn fetch_operator_news(
     operator_id: i32,
     skip: i64,
     take: i64,
-) -> Result<Vec<info::NewsItem>> {
+) -> Result<Vec<responses::NewsItemListing>> {
     sqlx::query!(
         r#"
 SELECT id, title, summary,
-    array_agg(distinct news_items_operators.operator_id) as "operator_ids!: Vec<i32>",
-    array_remove(array_agg(distinct region_id), NULL) as "region_ids!: Vec<i32>",
     content as "content!: sqlx::types::Json<Vec<info::ContentBlock>>",
-    publish_datetime, edit_datetime, is_visible
+    publish_datetime, edit_datetime, is_visible, thumb_url,
+    array_agg(distinct news_items_operators.operator_id) as "operator_ids!: Vec<i32>",
+    array_remove(array_agg(distinct region_id), NULL) as "region_ids!: Vec<i32>"
 FROM news_items
 JOIN news_items_operators as rel ON news_items.id=rel.item_id
 JOIN news_items_operators ON news_items.id=news_items_operators.item_id
@@ -124,11 +125,12 @@ LIMIT $2 OFFSET $3
     })?
     .into_iter()
     .map(|row| {
-        Ok(info::NewsItem {
+        Ok(responses::NewsItemListing {
             id: row.id,
             title: row.title,
             summary: row.summary,
             content: row.content.0,
+            thumb_url: row.thumb_url,
             publish_datetime: row.publish_datetime.with_timezone(&Local),
             edit_datetime: row
                 .edit_datetime
@@ -171,7 +173,7 @@ pub(crate) async fn fetch_news_item(
         r#"
 SELECT news_items.id, news_items.title, news_items.summary,
     content as "content!: sqlx::types::Json<Vec<info::ContentBlock>>",
-    news_items.publish_datetime, news_items.edit_datetime, news_items.is_visible,
+    news_items.publish_datetime, news_items.edit_datetime, is_visible, thumb_url,
     array_remove(array_agg(distinct operator_id), NULL) as "operator_ids!: Vec<i32>",
     array_remove(array_agg(distinct region_id), NULL) as "region_ids!: Vec<i32>",
     CASE
@@ -221,6 +223,7 @@ GROUP BY news_items.id
                 publish_datetime: row.publish_datetime.with_timezone(&Local),
                 edit_datetime: row.edit_datetime.map(|datetime| datetime.with_timezone(&Local)),
                 is_visible: row.is_visible,
+                thumb_url: row.thumb_url,
                 images: row.imgs.into_iter().map(Into::into).collect(),
                 external_rels: row.external_rels,
                 operator_ids: row.operator_ids,
@@ -238,7 +241,7 @@ pub(crate) async fn fetch_full_news_item(
         r#"
 SELECT news_items.id, news_items.title, news_items.summary,
     content as "content!: sqlx::types::Json<Vec<info::ContentBlock>>",
-    news_items.publish_datetime, news_items.edit_datetime, news_items.is_visible,
+    news_items.publish_datetime, news_items.edit_datetime, is_visible, thumb_id,
     array_remove(array_agg(distinct operator_id), NULL) as "operator_ids!: Vec<i32>",
     array_remove(array_agg(distinct region_id), NULL) as "region_ids!: Vec<i32>",
     CASE
@@ -288,6 +291,7 @@ GROUP BY news_items.id
                 publish_datetime: row.publish_datetime.with_timezone(&Local),
                 edit_datetime: row.edit_datetime.map(|datetime| datetime.with_timezone(&Local)),
                 is_visible: row.is_visible,
+                thumb_id: row.thumb_id,
                 images: row.imgs.into_iter().map(Into::into).collect(),
                 external_rels: row.external_rels,
                 operator_ids: row.operator_ids,

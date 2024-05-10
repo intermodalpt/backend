@@ -21,8 +21,6 @@ use axum::Json;
 use serde::Deserialize;
 use serde_with::serde_derive::Serialize;
 
-use commons::models::info;
-
 use super::models::{requests, responses};
 use super::sql;
 use crate::auth::ClaimPermission;
@@ -50,7 +48,7 @@ const PAGE_SIZE: u32 = 20;
 pub(crate) async fn get_news(
     State(state): State<AppState>,
     paginator: Query<Page>,
-) -> Result<Json<Pagination<info::NewsItem>>, Error> {
+) -> Result<Json<Pagination<responses::NewsItemListing>>, Error> {
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
@@ -64,7 +62,7 @@ pub(crate) async fn get_operator_news(
     State(state): State<AppState>,
     Path(operator_id): Path<i32>,
     paginator: Query<Page>,
-) -> Result<Json<Pagination<info::NewsItem>>, Error> {
+) -> Result<Json<Pagination<responses::NewsItemListing>>, Error> {
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
