@@ -57,7 +57,7 @@ pub(crate) async fn fetch_operator_with_regions(
     Ok(sqlx::query!(
         r#"
 SELECT id, name, tag, description, logo_sha1, is_complete, website_url,
-    forum_url, contact_uris,
+    forum_url, library_url, contact_uris,
     array_remove(array_agg(region_id), NULL) as "regions!: Vec<i32>"
 FROM operators
 LEFT JOIN region_operators ON region_operators.operator_id = operators.id
@@ -83,6 +83,7 @@ GROUP BY operators.id
         is_complete: row.is_complete,
         website_url: row.website_url,
         forum_url: row.forum_url,
+        library_url: row.library_url,
         contact_uris: row.contact_uris,
         regions: row.regions,
     }))
@@ -94,7 +95,7 @@ pub(crate) async fn fetch_operators(
     Ok(sqlx::query!(
         r#"
 SELECT id, name, tag, description, logo_sha1, is_complete, website_url,
-    forum_url, contact_uris,
+    forum_url, library_url, contact_uris,
     array_remove(array_agg(region_id), NULL) as "regions!: Vec<i32>"
 FROM operators
 LEFT JOIN region_operators ON region_operators.operator_id = operators.id
@@ -119,6 +120,7 @@ GROUP BY operators.id
         is_complete: row.is_complete,
         website_url: row.website_url,
         forum_url: row.forum_url,
+        library_url: row.library_url,
         contact_uris: row.contact_uris,
         regions: row.regions,
     })
@@ -162,6 +164,7 @@ RETURNING id
         is_complete: change.is_complete,
         website_url: change.website_url,
         forum_url: change.forum_url,
+        library_url: change.library_url,
         contact_uris: change.contact_uris,
     })
 }

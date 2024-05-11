@@ -44,6 +44,7 @@ pub(crate) mod responses {
         pub is_complete: bool,
         pub website_url: Option<String>,
         pub forum_url: Option<String>,
+        pub library_url: Option<String>,
         pub contact_uris: Vec<String>,
     }
 
@@ -57,6 +58,7 @@ pub(crate) mod responses {
         pub is_complete: bool,
         pub website_url: Option<String>,
         pub forum_url: Option<String>,
+        pub library_url: Option<String>,
         pub contact_uris: Vec<String>,
         pub regions: Vec<i32>,
     }
