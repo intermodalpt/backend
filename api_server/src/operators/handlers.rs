@@ -34,6 +34,17 @@ pub(crate) async fn get_operators(
     Ok(Json(sql::fetch_operators(&state.pool).await?))
 }
 
+pub(crate) async fn get_operator(
+    State(state): State<AppState>,
+    Path(operator_id): Path<i32>,
+) -> Result<Json<responses::OperatorWithRegions>, Error> {
+    Ok(Json(
+        sql::fetch_operator_with_regions(&state.pool, operator_id)
+            .await?
+            .ok_or(Error::NotFoundUpstream)?,
+    ))
+}
+
 pub(crate) async fn post_operator(
     State(state): State<AppState>,
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,

@@ -45,9 +45,47 @@ WHERE id = $1
     .fetch_optional(pool)
     .await
     .map_err(|err| {
-        tracing::error!(error = err.to_string(), operator_id = operator_id);
+        tracing::error!(error = err.to_string(), operator_id);
         Error::DatabaseExecution
     })
+}
+
+pub(crate) async fn fetch_operator_with_regions(
+    pool: &PgPool,
+    operator_id: i32,
+) -> Result<Option<responses::OperatorWithRegions>> {
+    Ok(sqlx::query!(
+        r#"
+SELECT id, name, tag, description, logo_sha1, is_complete, website_url,
+    forum_url, contact_uris,
+    array_remove(array_agg(region_id), NULL) as "regions!: Vec<i32>"
+FROM operators
+LEFT JOIN region_operators ON region_operators.operator_id = operators.id
+WHERE operators.id = $1
+GROUP BY operators.id
+"#,
+        operator_id
+    )
+    .fetch_optional(pool)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), operator_id);
+        Error::DatabaseExecution
+    })?
+    .map(|row| responses::OperatorWithRegions {
+        id: row.id,
+        name: row.name,
+        tag: row.tag,
+        description: row.description,
+        logo_url: row
+            .logo_sha1
+            .map(|sha1| get_logo_path(row.id, sha1.as_ref())),
+        is_complete: row.is_complete,
+        website_url: row.website_url,
+        forum_url: row.forum_url,
+        contact_uris: row.contact_uris,
+        regions: row.regions,
+    }))
 }
 
 pub(crate) async fn fetch_operators(

@@ -334,7 +334,8 @@ pub fn build_paths(state: AppState) -> Router {
         )
         .route(
             "/v1/operators/:operator_id",
-            patch(operators::handlers::patch_operator),
+            get(operators::handlers::get_operator)
+                .patch(operators::handlers::patch_operator),
         )
         .route(
             "/v1/operators/:operator_id/calendars",
