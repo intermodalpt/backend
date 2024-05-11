@@ -41,6 +41,10 @@ pub(crate) mod responses {
         pub tag: String,
         pub description: Option<String>,
         pub logo_url: Option<String>,
+        pub is_complete: bool,
+        pub website_url: Option<String>,
+        pub forum_url: Option<String>,
+        pub contact_uris: Option<Vec<String>>,
     }
 
     #[derive(Serialize, Deserialize)]
@@ -50,6 +54,10 @@ pub(crate) mod responses {
         pub tag: String,
         pub description: Option<String>,
         pub logo_url: Option<String>,
+        pub is_complete: bool,
+        pub website_url: Option<String>,
+        pub forum_url: Option<String>,
+        pub contact_uris: Option<Vec<String>>,
         pub regions: Vec<i32>,
     }
 
@@ -139,6 +147,11 @@ pub(crate) mod requests {
         pub name: String,
         pub tag: String,
         pub description: Option<String>,
+        pub is_complete: bool,
+        pub website_url: Option<String>,
+        pub forum_url: Option<String>,
+        pub library_url: Option<String>,
+        pub contact_uris: Option<Vec<String>>,
     }
 
     fn default_stop_operator_source() -> String {

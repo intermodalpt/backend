@@ -55,75 +55,65 @@ pub(crate) async fn fetch_operators(
 ) -> Result<Vec<responses::OperatorWithRegions>> {
     Ok(sqlx::query!(
         r#"
-SELECT id, name, tag, description, logo_sha1, array_remove(array_agg(region_id), NULL) as "regions!: Vec<i32>"
+SELECT id, name, tag, description, logo_sha1, is_complete, website_url,
+    forum_url, contact_uris,
+    array_remove(array_agg(region_id), NULL) as "regions!: Vec<i32>"
 FROM operators
 LEFT JOIN region_operators ON region_operators.operator_id = operators.id
 GROUP BY operators.id
 "#
     )
-        .fetch_all(pool)
-        .await
-        .map_err(|err| {
-            tracing::error!(error=err.to_string());
-            Error::DatabaseExecution
-        })?
-        .into_iter()
-        .map(|row| responses::OperatorWithRegions {
-            id: row.id,
-            name: row.name,
-            tag: row.tag,
-            description: row.description,
-            logo_url: row.logo_sha1.map(|sha1| get_logo_path(row.id, &sha1)),
-            regions: row.regions,
-        })
-        .collect())
+    .fetch_all(pool)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string());
+        Error::DatabaseExecution
+    })?
+    .into_iter()
+    .map(|row| responses::OperatorWithRegions {
+        id: row.id,
+        name: row.name,
+        tag: row.tag,
+        description: row.description,
+        logo_url: row
+            .logo_sha1
+            .map(|sha1| get_logo_path(row.id, sha1.as_ref())),
+        is_complete: row.is_complete,
+        website_url: row.website_url,
+        forum_url: row.forum_url,
+        contact_uris: row.contact_uris,
+        regions: row.regions,
+    })
+    .collect())
 }
 
 pub(crate) async fn insert_operator(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     change: requests::ChangeOperator,
 ) -> Result<responses::Operator> {
-    // FIXME this is a workaround because SQLX is not figuring the description's Option<String> properly
-    let id = if let Some(description) = &change.description {
-        sqlx::query!(
-            r#"
-INSERT INTO operators(name, tag, description)
-VALUES ($1, $2, $3)
+    let id = sqlx::query!(
+        r#"
+INSERT INTO operators(name, tag, description, is_complete, website_url,
+    forum_url, library_url, contact_uris)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 RETURNING id
 "#,
-            &change.name,
-            &change.tag,
-            description
-        )
-        .fetch_one(&mut **transaction)
-        .await
-        .map_err(|err| {
-            tracing::error!(error = err.to_string(), change = ?change, description);
-            Error::DatabaseExecution
-        })?
-        .id
-    } else {
-        sqlx::query!(
-            r#"
-INSERT INTO operators(name, tag)
-VALUES ($1, $2)
-RETURNING id
-"#,
-            &change.name,
-            &change.tag
-        )
-        .fetch_one(&mut **transaction)
-        .await
-        .map_err(|err| {
-            tracing::error!(
-                error = err.to_string(),
-                name = change.name,
-                tag = change.tag
-            );
-            Error::DatabaseExecution
-        })?
-        .id
-    };
+        &change.name,
+        &change.tag,
+        change.description,
+        change.is_complete,
+        change.website_url,
+        change.forum_url,
+        change.library_url,
+        change.contact_uris.as_ref().map(|uris| uris.as_slice()),
+    )
+    .fetch_one(&mut **transaction)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), change = ?change);
+        Error::DatabaseExecution
+    })?
+    .id;
 
     Ok(responses::Operator {
         id,
@@ -131,6 +121,10 @@ RETURNING id
         tag: change.tag,
         description: change.description,
         logo_url: None,
+        is_complete: change.is_complete,
+        website_url: change.website_url,
+        forum_url: change.forum_url,
+        contact_uris: change.contact_uris,
     })
 }
 
@@ -139,57 +133,39 @@ pub(crate) async fn update_operator(
     operator_id: i32,
     change: requests::ChangeOperator,
 ) -> Result<()> {
-    // FIXME this is a workaround because SQLX is not figuring the description's Option<String> properly
-    if let Some(description) = change.description {
-        sqlx::query!(
-            r#"
+    sqlx::query!(
+        r#"
 UPDATE operators
 SET name = $1,
     tag = $2,
-    description = $3
-WHERE id = $4
+    description = $3,
+    is_complete = $4,
+    website_url = $5,
+    forum_url = $6,
+    library_url = $7,
+    contact_uris = $8
+WHERE id = $9
 "#,
-            &change.name,
-            &change.tag,
-            &description,
+        &change.name,
+        &change.tag,
+        change.description,
+        change.is_complete,
+        change.website_url,
+        change.forum_url,
+        change.library_url,
+        change.contact_uris.as_ref().map(|uris| uris.as_slice()),
+        operator_id
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| {
+        tracing::error!(
+            error = err.to_string(),
+            change = ?change,
             operator_id
-        )
-        .execute(&mut **transaction)
-        .await
-        .map_err(|err| {
-            tracing::error!(
-                error = err.to_string(),
-                name = &change.name,
-                tag = &change.tag,
-                description = description,
-                operator_id = operator_id
-            );
-            Error::DatabaseExecution
-        })?;
-    } else {
-        sqlx::query!(
-            r#"
-UPDATE operators
-SET name = $1,
-    tag = $2
-WHERE id = $3
-"#,
-            &change.name,
-            &change.tag,
-            operator_id
-        )
-        .execute(&mut **transaction)
-        .await
-        .map_err(|err| {
-            tracing::error!(
-                error = err.to_string(),
-                name = &change.name,
-                tag = &change.tag,
-                operator_id = operator_id
-            );
-            Error::DatabaseExecution
-        })?;
-    };
+        );
+        Error::DatabaseExecution
+    })?;
 
     Ok(())
 }

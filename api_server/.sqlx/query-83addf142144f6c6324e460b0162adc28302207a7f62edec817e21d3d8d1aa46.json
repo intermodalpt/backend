@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO operators(name, tag, description, is_complete, website_url,\n    forum_url, library_url, contact_uris)\nVALUES ($1, $2, $3, $4, $5, $6, $7, $8)\nRETURNING id\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Bool",
+        "Text",
+        "Text",
+        "Text",
+        "TextArray"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "83addf142144f6c6324e460b0162adc28302207a7f62edec817e21d3d8d1aa46"
+}
