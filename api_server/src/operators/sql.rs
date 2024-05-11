@@ -105,7 +105,7 @@ RETURNING id
         change.website_url,
         change.forum_url,
         change.library_url,
-        change.contact_uris.as_ref().map(|uris| uris.as_slice()),
+        &change.contact_uris,
     )
     .fetch_one(&mut **transaction)
     .await
@@ -153,7 +153,7 @@ WHERE id = $9
         change.website_url,
         change.forum_url,
         change.library_url,
-        change.contact_uris.as_ref().map(|uris| uris.as_slice()),
+        &change.contact_uris,
         operator_id
     )
     .execute(&mut **transaction)

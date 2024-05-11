@@ -37,13 +37,14 @@ pub(crate) async fn get_operators(
 pub(crate) async fn post_operator(
     State(state): State<AppState>,
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
-    Json(change): Json<requests::ChangeOperator>,
+    Json(mut change): Json<requests::ChangeOperator>,
 ) -> Result<Json<responses::Operator>, Error> {
     let mut transaction = state.pool.begin().await.map_err(|err| {
         tracing::error!("Failed to open transaction: {err}");
         Error::DatabaseExecution
     })?;
 
+    change.tidy();
     let operator = sql::insert_operator(&mut transaction, change).await?;
 
     transaction.commit().await.map_err(|err| {
@@ -58,13 +59,14 @@ pub(crate) async fn patch_operator(
     State(state): State<AppState>,
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     Path(operator_id): Path<i32>,
-    Json(change): Json<requests::ChangeOperator>,
+    Json(mut change): Json<requests::ChangeOperator>,
 ) -> Result<(), Error> {
     let mut transaction = state.pool.begin().await.map_err(|err| {
         tracing::error!("Failed to open transaction: {err}");
         Error::DatabaseExecution
     })?;
 
+    change.tidy();
     sql::update_operator(&mut transaction, operator_id, change).await?;
 
     transaction.commit().await.map_err(|err| {

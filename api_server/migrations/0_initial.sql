@@ -71,22 +71,22 @@ CREATE TABLE parishes
 CREATE TABLE operators
 (
     id           serial PRIMARY KEY,
-    name         text                  NOT NULL,
-    tag          text                  NOT NULL,
+    name         text                             NOT NULL,
+    tag          text                             NOT NULL,
     description  text,
     logo_sha1    character(40),
     -- TODO implement; Cached version logo_sha1-derived url
     -- logo_url          text,
     validation   jsonb,
     -- If IML is complete and updated
-    is_complete  boolean DEFAULT false NOT NULL,
+    is_complete  boolean DEFAULT false            NOT NULL,
     -- TODO implement; The official state of relations between IML and the operator
     -- iml_relations     int     DEFAULT 0     NOT NULL,
-    website_url          text,
+    website_url  text,
     forum_url    text,
     library_url  text,
     -- The URL to the operator's contact page
-    contact_uris text[]  DEFAULT ARRAY []::text[]
+    contact_uris text[]  DEFAULT ARRAY []::text[] NOT NULL
 );
 
 ALTER TABLE ONLY users

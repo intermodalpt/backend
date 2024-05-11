@@ -44,7 +44,7 @@ pub(crate) mod responses {
         pub is_complete: bool,
         pub website_url: Option<String>,
         pub forum_url: Option<String>,
-        pub contact_uris: Option<Vec<String>>,
+        pub contact_uris: Vec<String>,
     }
 
     #[derive(Serialize, Deserialize)]
@@ -57,7 +57,7 @@ pub(crate) mod responses {
         pub is_complete: bool,
         pub website_url: Option<String>,
         pub forum_url: Option<String>,
-        pub contact_uris: Option<Vec<String>>,
+        pub contact_uris: Vec<String>,
         pub regions: Vec<i32>,
     }
 
@@ -151,7 +151,34 @@ pub(crate) mod requests {
         pub website_url: Option<String>,
         pub forum_url: Option<String>,
         pub library_url: Option<String>,
-        pub contact_uris: Option<Vec<String>>,
+        pub contact_uris: Vec<String>,
+    }
+
+    impl ChangeOperator {
+        pub fn tidy(&mut self) {
+            if let Some(description) = &self.description {
+                if description.is_empty() {
+                    self.description = None;
+                }
+            }
+
+            if let Some(website_url) = &self.website_url {
+                if website_url.is_empty() {
+                    self.website_url = None;
+                }
+            }
+            if let Some(forum_url) = &self.forum_url {
+                if forum_url.is_empty() {
+                    self.forum_url = None;
+                }
+            }
+            if let Some(library_url) = &self.library_url {
+                if library_url.is_empty() {
+                    self.library_url = None;
+                }
+            }
+            self.contact_uris.retain(|uri| !uri.is_empty());
+        }
     }
 
     fn default_stop_operator_source() -> String {
