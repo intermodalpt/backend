@@ -21,6 +21,8 @@ use std::collections::HashMap;
 
 use commons::models::geo;
 
+use super::models::responses;
+
 use crate::Error;
 
 type Result<T> = std::result::Result<T, Error>;

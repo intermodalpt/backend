@@ -127,6 +127,45 @@ GROUP BY operators.id
     .collect())
 }
 
+pub(crate) async fn fetch_region_operators(
+    pool: &PgPool,
+    region_id: i32,
+) -> Result<Vec<operators::Operator>> {
+    Ok(sqlx::query!(
+        r#"
+SELECT id, name, tag, description, logo_sha1, is_complete, website_url,
+    forum_url, library_url, contact_uris
+FROM operators
+JOIN region_operators ON region_operators.operator_id = operators.id
+WHERE region_id = $1
+GROUP BY operators.id
+"#,
+        region_id
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string());
+        Error::DatabaseExecution
+    })?
+    .into_iter()
+    .map(|row| operators::Operator {
+        id: row.id,
+        name: row.name,
+        tag: row.tag,
+        description: row.description,
+        logo_url: row
+            .logo_sha1
+            .map(|sha1| get_logo_path(row.id, sha1.as_ref())),
+        is_complete: row.is_complete,
+        website_url: row.website_url,
+        forum_url: row.forum_url,
+        library_url: row.library_url,
+        contact_uris: row.contact_uris,
+    })
+    .collect())
+}
+
 pub(crate) async fn insert_operator(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     change: requests::ChangeOperator,

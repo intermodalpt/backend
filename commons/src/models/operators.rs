@@ -31,7 +31,12 @@ pub struct Operator {
     pub name: String,
     pub tag: String,
     pub description: Option<String>,
-    pub validation: Option<gtfs::OperatorValidation>,
+    pub logo_url: Option<String>,
+    pub is_complete: bool,
+    pub website_url: Option<String>,
+    pub forum_url: Option<String>,
+    pub library_url: Option<String>,
+    pub contact_uris: Vec<String>,
 }
 
 #[derive(Debug, Serialize)]

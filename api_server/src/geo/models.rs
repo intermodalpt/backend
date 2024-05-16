@@ -1,6 +1,6 @@
 /*
     Intermodal, transportation information aggregator
-    Copyright (C) 2022 - 2023  Cláudio Pereira
+    Copyright (C) 2024  Cláudio Pereira
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -16,6 +16,20 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-pub(crate) mod handlers;
-pub(crate) mod models;
-pub(crate) mod sql;
+use serde::{Deserialize, Serialize};
+
+pub(crate) mod responses {
+    use commons::models::operators;
+    use serde::Serialize;
+
+    #[derive(Serialize, Debug)]
+    pub struct RegionWithOperators {
+        pub id: i32,
+        pub name: String,
+        pub geometry: serde_json::Value,
+        pub center_lat: Option<f64>,
+        pub center_lon: Option<f64>,
+        pub zoom: Option<f64>,
+        pub operators: Vec<operators::Operator>,
+    }
+}

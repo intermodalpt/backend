@@ -18,12 +18,15 @@
 
 use axum::extract::{Path, State};
 use axum::Json;
+use futures::future;
 use std::collections::HashMap;
 
 use crate::auth;
 use commons::models::geo;
 
+use super::models::responses;
 use super::sql;
+use crate::operators::sql as operators_sql;
 use crate::{AppState, Error};
 
 pub(crate) async fn get_regions(
@@ -35,11 +38,26 @@ pub(crate) async fn get_regions(
 pub(crate) async fn get_region(
     State(state): State<AppState>,
     Path(region_id): Path<i32>,
-) -> Result<Json<geo::Region>, Error> {
-    let region = sql::fetch_region(&state.pool, region_id)
-        .await?
-        .ok_or(Error::NotFoundUpstream)?;
-    Ok(Json(region))
+) -> Result<Json<responses::RegionWithOperators>, Error> {
+    let (region, region_operators) = future::join(
+        sql::fetch_region(&state.pool, region_id),
+        operators_sql::fetch_region_operators(&state.pool, region_id),
+    )
+    .await;
+
+    let region = region?.ok_or(Error::NotFoundUpstream)?;
+    let region_operators = region_operators?;
+
+    let region_with_operators = responses::RegionWithOperators {
+        id: region.id,
+        name: region.name,
+        geometry: region.geometry,
+        center_lat: region.center_lat,
+        center_lon: region.center_lon,
+        zoom: region.zoom,
+        operators: region_operators,
+    };
+    Ok(Json(region_with_operators))
 }
 
 pub(crate) async fn get_operator_regions(
