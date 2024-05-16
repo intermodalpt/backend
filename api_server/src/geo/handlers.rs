@@ -32,6 +32,16 @@ pub(crate) async fn get_regions(
     Ok(Json(sql::fetch_regions(&state.pool).await?))
 }
 
+pub(crate) async fn get_region(
+    State(state): State<AppState>,
+    Path(region_id): Path<i32>,
+) -> Result<Json<geo::Region>, Error> {
+    let region = sql::fetch_region(&state.pool, region_id)
+        .await?
+        .ok_or(Error::NotFoundUpstream)?;
+    Ok(Json(region))
+}
+
 pub(crate) async fn get_operator_regions(
     State(state): State<AppState>,
     Path(operator_id): Path<i32>,

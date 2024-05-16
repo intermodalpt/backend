@@ -41,6 +41,27 @@ FROM regions
     })
 }
 
+pub(crate) async fn fetch_region(
+    pool: &PgPool,
+    region_id: i32,
+) -> Result<Option<geo::Region>> {
+    sqlx::query_as!(
+        geo::Region,
+        r#"
+SELECT id, name, geometry, center_lat, center_lon, zoom
+FROM regions
+WHERE id = $1
+    "#,
+        region_id
+    )
+    .fetch_optional(pool)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string());
+        Error::DatabaseExecution
+    })
+}
+
 pub(crate) async fn fetch_operator_regions(
     pool: &PgPool,
     operator_id: i32,

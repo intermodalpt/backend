@@ -49,6 +49,7 @@ pub fn build_paths(state: AppState) -> Router {
 
     Router::new()
         .route("/v1/regions", get(geo::handlers::get_regions))
+        .route("/v1/regions/:region_id", get(geo::handlers::get_region))
         .route(
             "/v1/regions/:region_id/parishes",
             get(geo::handlers::get_parishes),
