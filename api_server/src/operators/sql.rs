@@ -250,12 +250,12 @@ WHERE id = $9
     Ok(())
 }
 
-pub(crate) async fn fetch_operator_stops(
+pub(crate) async fn fetch_operator_stop_refs(
     pool: &PgPool,
     operator_id: i32,
-) -> Result<Vec<responses::OperatorStop>> {
+) -> Result<Vec<responses::OperatorStopRef>> {
     sqlx::query_as!(
-        responses::OperatorStop,
+        responses::OperatorStopRef,
         r#"
 SELECT stops.id, stops.lat, stops.lon, stop_operators.official_name, stop_ref, stop_operators.source
 FROM stops

@@ -88,12 +88,12 @@ pub(crate) async fn patch_operator(
     Ok(())
 }
 
-pub(crate) async fn get_operator_stops(
+pub(crate) async fn get_operator_stop_refs(
     State(state): State<AppState>,
     Path(operator_id): Path<i32>,
-) -> Result<Json<Vec<responses::OperatorStop>>, Error> {
+) -> Result<Json<Vec<responses::OperatorStopRef>>, Error> {
     Ok(Json(
-        sql::fetch_operator_stops(&state.pool, operator_id).await?,
+        sql::fetch_operator_stop_refs(&state.pool, operator_id).await?,
     ))
 }
 
