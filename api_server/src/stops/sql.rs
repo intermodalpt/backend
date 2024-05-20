@@ -159,7 +159,7 @@ r#"SELECT id, name, short_name, locality, street, door, lat, lon, notes, parish,
                 stop_operators.operator_id, stop_operators.stop_ref,
                 stop_operators.official_name, stop_operators.source))
         ELSE array[]::record[]
-    END as "operators!: Vec<responses::OperatorStop>"
+    END as "operators!: Vec<responses::OperatorStopRel>"
 FROM Stops
 LEFT JOIN stop_operators ON stops.id = stop_operators.stop_id
 WHERE id IN (
@@ -314,6 +314,75 @@ WHERE stop_operators.operator_id = $1"#,
             tracing::error!(error=err.to_string(), operator_id);
             Error::DatabaseExecution
         })
+}
+
+pub(crate) async fn fetch_operator_full_stops(
+    pool: &PgPool,
+    operator_id: i32,
+) -> Result<Vec<responses::FullStop>> {
+    sqlx::query!(
+r#"SELECT id, name, short_name, locality, street, door, lat, lon, notes, parish,
+    tags, updater, update_date, verification_level,
+    service_check_date, infrastructure_check_date, verified_position,
+    accessibility_meta as "a11y!: sqlx::types::Json<stops::A11yMeta>", osm_id,
+    CASE
+        WHEN count(stop_operators.stop_id) > 0
+        THEN array_agg(
+            ROW(
+                stop_operators.operator_id, stop_operators.stop_ref,
+                stop_operators.official_name, stop_operators.source))
+        ELSE array[]::record[]
+    END as "operators!: Vec<responses::OperatorStopRel>"
+FROM Stops
+LEFT JOIN stop_operators ON stops.id = stop_operators.stop_id
+WHERE id IN (
+    SELECT stop_id
+    FROM stop_operators
+    WHERE operator_id = $1
+)
+GROUP BY stops.id
+"#,
+        operator_id
+    )
+        .fetch_all(pool)
+        .await
+        .map_err(|err| {
+            tracing::error!(error=err.to_string(), operator_id);
+            Error::DatabaseExecution
+        })?
+        .into_iter()
+        .map(|r| {
+            let Json(a11y) = r.a11y;
+            Ok(responses::FullStop {
+                stop: responses::Stop {
+                    id: r.id,
+                    osm_id: r.osm_id,
+                    name: r.name,
+                    short_name: r.short_name,
+                    locality: r.locality,
+                    street: r.street,
+                    door: r.door,
+                    lat: r.lat,
+                    lon: r.lon,
+                    notes: r.notes,
+                    parish: r.parish,
+                    tags: r.tags,
+                    a11y: Json(a11y),
+                    verification_level: if r.verified_position {
+                        r.verification_level  | 0b1100_0000
+                    } else {
+                        r.verification_level  & 0b0011_1111
+                    },
+                    service_check_date: r.service_check_date,
+                    infrastructure_check_date: r.infrastructure_check_date,
+                },
+                updater: r.updater,
+                verified_position: r.verified_position,
+                update_date: r.update_date,
+                operators: r.operators,
+            })
+        })
+        .collect::<Result<Vec<responses::FullStop>>>()
 }
 
 pub(crate) async fn insert_stop(

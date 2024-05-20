@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, name, short_name, locality, street, door, lat, lon, notes, parish,\n    tags, updater, update_date, verification_level,\n    service_check_date, infrastructure_check_date, verified_position,\n    accessibility_meta as \"a11y!: sqlx::types::Json<stops::A11yMeta>\", osm_id,\n    CASE\n        WHEN count(stop_operators.stop_id) > 0\n        THEN array_agg(\n            ROW(\n                stop_operators.operator_id, stop_operators.stop_ref,\n                stop_operators.official_name, stop_operators.source))\n        ELSE array[]::record[]\n    END as \"operators!: Vec<responses::OperatorStop>\"\nFROM Stops\nLEFT JOIN stop_operators ON stops.id = stop_operators.stop_id\nWHERE id IN (\n    SELECT stop_id\n    FROM region_stops\n    WHERE region_id = $1\n)\nGROUP BY stops.id\n        ",
+  "query": "SELECT id, name, short_name, locality, street, door, lat, lon, notes, parish,\n    tags, updater, update_date, verification_level,\n    service_check_date, infrastructure_check_date, verified_position,\n    accessibility_meta as \"a11y!: sqlx::types::Json<stops::A11yMeta>\", osm_id,\n    CASE\n        WHEN count(stop_operators.stop_id) > 0\n        THEN array_agg(\n            ROW(\n                stop_operators.operator_id, stop_operators.stop_ref,\n                stop_operators.official_name, stop_operators.source))\n        ELSE array[]::record[]\n    END as \"operators!: Vec<responses::OperatorStopRel>\"\nFROM Stops\nLEFT JOIN stop_operators ON stops.id = stop_operators.stop_id\nWHERE id IN (\n    SELECT stop_id\n    FROM region_stops\n    WHERE region_id = $1\n)\nGROUP BY stops.id\n        ",
   "describe": {
     "columns": [
       {
@@ -100,7 +100,7 @@
       },
       {
         "ordinal": 19,
-        "name": "operators!: Vec<responses::OperatorStop>",
+        "name": "operators!: Vec<responses::OperatorStopRel>",
         "type_info": "RecordArray"
       }
     ],
@@ -132,5 +132,5 @@
       null
     ]
   },
-  "hash": "f6b5b1363e9980fc6f58b1d298c9c1aa62ab7adf56f6d9b744b485a537711ba1"
+  "hash": "b58dd5834afb88408348a4d4fdec1e518995a4e07e9d2ac060475c66cc6870c8"
 }

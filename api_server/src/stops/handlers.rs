@@ -206,6 +206,15 @@ pub(crate) async fn get_operator_stops(
     ))
 }
 
+pub(crate) async fn get_operator_full_stops(
+    State(state): State<AppState>,
+    Path(operator_id): Path<i32>,
+) -> Result<Json<Vec<responses::FullStop>>, Error> {
+    Ok(Json(
+        sql::fetch_operator_full_stops(&state.pool, operator_id).await?,
+    ))
+}
+
 pub(crate) async fn get_route_stops(
     State(state): State<AppState>,
     Path(route_id): Path<i32>,

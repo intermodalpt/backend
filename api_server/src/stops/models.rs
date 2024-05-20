@@ -284,7 +284,7 @@ pub(crate) mod responses {
     use commons::models::stops;
 
     #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-    pub struct OperatorStop {
+    pub struct OperatorStopRel {
         pub operator_id: i32,
         pub stop_ref: Option<String>,
         pub name: Option<String>,
@@ -361,7 +361,7 @@ pub(crate) mod responses {
         #[serde(flatten)]
         pub stop: Stop,
         pub updater: i32,
-        pub operators: Vec<OperatorStop>,
+        pub operators: Vec<OperatorStopRel>,
         pub verified_position: bool,
         pub update_date: DateTime<Utc>,
     }
@@ -449,7 +449,7 @@ pub(crate) mod responses {
         }
     }
 
-    impl<'r> sqlx::decode::Decode<'r, sqlx::Postgres> for OperatorStop {
+    impl<'r> sqlx::decode::Decode<'r, sqlx::Postgres> for OperatorStopRel {
         fn decode(
             value: sqlx::postgres::PgValueRef<'r>,
         ) -> Result<Self, Box<dyn ::std::error::Error + 'static + Send + Sync>>
@@ -460,7 +460,7 @@ pub(crate) mod responses {
             let stop_ref = decoder.try_decode::<Option<String>>()?;
             let name = decoder.try_decode::<Option<String>>()?;
             let source = decoder.try_decode::<String>()?;
-            Ok(OperatorStop {
+            Ok(OperatorStopRel {
                 operator_id,
                 stop_ref,
                 name,
@@ -469,7 +469,7 @@ pub(crate) mod responses {
         }
     }
 
-    impl sqlx::Type<sqlx::Postgres> for OperatorStop {
+    impl sqlx::Type<sqlx::Postgres> for OperatorStopRel {
         fn type_info() -> sqlx::postgres::PgTypeInfo {
             sqlx::postgres::PgTypeInfo::with_name("OperatorStop")
         }
