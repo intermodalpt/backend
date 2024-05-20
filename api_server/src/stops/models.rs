@@ -279,14 +279,11 @@ pub(crate) mod requests {
 pub(crate) mod responses {
     use chrono::{DateTime, NaiveDate, Utc};
     use serde::{Deserialize, Serialize};
-    use sqlx::types::Json;
-    use sqlx::{FromRow, Row};
     use std::collections::HashMap;
 
-    use crate::stops::models::responses;
     use commons::models::stops;
 
-    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, FromRow)]
+    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
     pub struct OperatorStopRel {
         pub operator_id: i32,
         pub stop_ref: Option<String>,
@@ -395,139 +392,5 @@ pub(crate) mod responses {
         pub routes: HashMap<i32, SpiderRoute>,
         pub subroutes: HashMap<i32, SpiderSubroute>,
         pub stops: HashMap<i32, SpiderStop>,
-    }
-
-    // Manual implementations of sqlx::Type due to
-    // https://github.com/rust-lang/rust/issues/82219
-    impl<'r> sqlx::decode::Decode<'r, sqlx::Postgres> for Stop {
-        fn decode(
-            value: sqlx::postgres::PgValueRef<'r>,
-        ) -> Result<Self, Box<dyn ::std::error::Error + 'static + Send + Sync>>
-        {
-            let mut decoder =
-                sqlx::postgres::types::PgRecordDecoder::new(value)?;
-            let id = decoder.try_decode::<i32>()?;
-            let name = decoder.try_decode::<String>()?;
-            let short_name = decoder.try_decode::<Option<String>>()?;
-            let locality = decoder.try_decode::<Option<String>>()?;
-            let street = decoder.try_decode::<Option<String>>()?;
-            let door = decoder.try_decode::<Option<String>>()?;
-            let parish = decoder.try_decode::<Option<i32>>()?;
-            let lat = decoder.try_decode::<f64>()?;
-            let lon = decoder.try_decode::<f64>()?;
-            let notes = decoder.try_decode::<Option<String>>()?;
-            let tags = decoder.try_decode::<Vec<String>>()?;
-            let a11y =
-                decoder.try_decode::<sqlx::types::Json<stops::A11yMeta>>()?;
-            let verification_level = decoder.try_decode::<i16>()?;
-            let service_check_date =
-                decoder.try_decode::<Option<NaiveDate>>()?;
-            let infrastructure_check_date =
-                decoder.try_decode::<Option<NaiveDate>>()?;
-            let osm_id = decoder.try_decode::<i64>()?;
-            Ok(Stop {
-                id,
-                name,
-                short_name,
-                locality,
-                street,
-                door,
-                parish,
-                lat,
-                lon,
-                notes,
-                tags,
-                a11y,
-                verification_level,
-                service_check_date,
-                infrastructure_check_date,
-                osm_id,
-            })
-        }
-    }
-
-    impl sqlx::Type<sqlx::Postgres> for Stop {
-        fn type_info() -> sqlx::postgres::PgTypeInfo {
-            sqlx::postgres::PgTypeInfo::with_name("Stop")
-        }
-    }
-
-    impl<'r> sqlx::decode::Decode<'r, sqlx::Postgres> for OperatorStopRel {
-        fn decode(
-            value: sqlx::postgres::PgValueRef<'r>,
-        ) -> Result<Self, Box<dyn ::std::error::Error + 'static + Send + Sync>>
-        {
-            let mut decoder =
-                sqlx::postgres::types::PgRecordDecoder::new(value)?;
-            let operator_id = decoder.try_decode::<i32>()?;
-            let stop_ref = decoder.try_decode::<Option<String>>()?;
-            let name = decoder.try_decode::<Option<String>>()?;
-            let source = decoder.try_decode::<String>()?;
-            Ok(OperatorStopRel {
-                operator_id,
-                stop_ref,
-                name,
-                source,
-            })
-        }
-    }
-
-    impl sqlx::Type<sqlx::Postgres> for OperatorStopRel {
-        fn type_info() -> sqlx::postgres::PgTypeInfo {
-            sqlx::postgres::PgTypeInfo::with_name("OperatorStop")
-        }
-    }
-    impl sqlx::postgres::PgHasArrayType for OperatorStopRel {
-        fn array_type_info() -> sqlx::postgres::PgTypeInfo {
-            sqlx::postgres::PgTypeInfo::with_name("OperatorStop")
-        }
-    }
-
-    impl FromRow<'_, sqlx::postgres::PgRow> for FullStop {
-        fn from_row(row: &sqlx::postgres::PgRow) -> sqlx::Result<Self> {
-            let verified_position: bool = row.try_get("verified_position")?;
-            let verification_level: i16 = row.try_get("verification_level")?;
-            let Json(a11y) = row.try_get("accessibility_meta")?;
-            let operators  = row
-                .try_get::<Vec<(i32, Option<String>, Option<String>, String, )>, _>("operators")?
-                .into_iter()
-                .map(|(operator_id, stop_ref, name, source)| OperatorStopRel {
-                    operator_id,
-                    stop_ref,
-                    name,
-                    source,
-                })
-                .collect();
-
-            Ok(Self {
-                stop: Stop {
-                    id: row.try_get("id")?,
-                    osm_id: row.try_get("osm_id")?,
-                    name: row.try_get("name")?,
-                    short_name: row.try_get("short_name")?,
-                    locality: row.try_get("locality")?,
-                    street: row.try_get("street")?,
-                    door: row.try_get("door")?,
-                    lat: row.try_get("lat")?,
-                    lon: row.try_get("lon")?,
-                    notes: row.try_get("notes")?,
-                    parish: row.try_get("parish")?,
-                    tags: row.try_get("tags")?,
-                    a11y: Json(a11y),
-                    verification_level: if verified_position {
-                        verification_level | 0b1100_0000
-                    } else {
-                        verification_level & 0b0011_1111
-                    },
-                    service_check_date: row.try_get("service_check_date")?,
-                    infrastructure_check_date: row
-                        .try_get("infrastructure_check_date")?,
-                },
-                updater: row.try_get("updater")?,
-                verified_position: row.try_get("verified_position")?,
-                update_date: row.try_get("update_date")?,
-                operators,
-            })
-        }
     }
 }
