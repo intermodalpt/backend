@@ -179,10 +179,11 @@ GROUP BY stops.id
         })?
         .into_iter()
         .map(|r| {
-            let sqlx::types::Json(a11y) = r.a11y;
+            let Json(a11y) = r.a11y;
             Ok(responses::FullStop {
-                stop: stops::Stop {
+                stop: responses::Stop {
                     id: r.id,
+                    osm_id: r.osm_id,
                     name: r.name,
                     short_name: r.short_name,
                     locality: r.locality,
@@ -193,16 +194,15 @@ GROUP BY stops.id
                     notes: r.notes,
                     parish: r.parish,
                     tags: r.tags,
-                    a11y,
+                    a11y: Json(a11y),
                     verification_level: if r.verified_position {
-                        r.verification_level as u8 | 0b1100_0000
+                        r.verification_level  | 0b1100_0000
                     } else {
-                        r.verification_level as u8 & 0b0011_1111
+                        r.verification_level  & 0b0011_1111
                     },
                     service_check_date: r.service_check_date,
                     infrastructure_check_date: r.infrastructure_check_date,
                 },
-                osm_id: r.osm_id,
                 updater: r.updater,
                 verified_position: r.verified_position,
                 update_date: r.update_date,
@@ -361,6 +361,7 @@ RETURNING id
 
     Ok(stops::Stop {
         id: res.id,
+        osm_id: stop.osm_id,
         name: stop.name,
         short_name: stop.short_name,
         locality: stop.locality,

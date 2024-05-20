@@ -352,8 +352,8 @@ pub fn build_paths(state: AppState) -> Router {
             delete(operators::handlers::delete_operator_calendar),
         )
         .route(
-            "/v1/operators/:operator_id/stops",
-            get(operators::handlers::get_operator_stops),
+            "/v1/operators/:operator_id/stop_refs",
+            get(operators::handlers::get_operator_stop_refs),
         )
         .route(
             "/v1/operators/:operator_id/stops/full",

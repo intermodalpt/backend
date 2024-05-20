@@ -303,7 +303,7 @@ pub(crate) mod responses {
     }
 
     /// Meant to be an information-rich stop for the client
-    #[derive(Debug, Clone, Serialize, PartialEq)]
+    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
     pub struct Stop {
         pub id: i32,
         pub name: String,
@@ -321,7 +321,7 @@ pub(crate) mod responses {
         // The four binary duets are for: Position, Service, Infra and [reserved]
         // 0 => Not verified; 1 => Wrong; 2 => Likely; 3 => Verified
         #[serde(default)]
-        pub verification_level: i32,
+        pub verification_level: i16,
 
         #[serde(default)]
         pub service_check_date: Option<NaiveDate>,
@@ -336,6 +336,7 @@ pub(crate) mod responses {
             let sqlx::types::Json(ally) = stop.a11y;
             stops::Stop {
                 id: stop.id,
+                osm_id: stop.osm_id,
                 name: stop.name,
                 short_name: stop.short_name,
                 locality: stop.locality,
@@ -358,9 +359,8 @@ pub(crate) mod responses {
     #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
     pub struct FullStop {
         #[serde(flatten)]
-        pub stop: stops::Stop,
+        pub stop: Stop,
         pub updater: i32,
-        pub osm_id: i64,
         pub operators: Vec<OperatorStop>,
         pub verified_position: bool,
         pub update_date: DateTime<Utc>,
@@ -416,7 +416,7 @@ pub(crate) mod responses {
             let tags = decoder.try_decode::<Vec<String>>()?;
             let a11y =
                 decoder.try_decode::<sqlx::types::Json<stops::A11yMeta>>()?;
-            let verification_level = decoder.try_decode::<i32>()?;
+            let verification_level = decoder.try_decode::<i16>()?;
             let service_check_date =
                 decoder.try_decode::<Option<NaiveDate>>()?;
             let infrastructure_check_date =
