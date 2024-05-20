@@ -279,11 +279,14 @@ pub(crate) mod requests {
 pub(crate) mod responses {
     use chrono::{DateTime, NaiveDate, Utc};
     use serde::{Deserialize, Serialize};
+    use sqlx::types::Json;
+    use sqlx::{FromRow, Row};
     use std::collections::HashMap;
 
+    use crate::stops::models::responses;
     use commons::models::stops;
 
-    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, FromRow)]
     pub struct OperatorStopRel {
         pub operator_id: i32,
         pub stop_ref: Option<String>,
@@ -472,6 +475,59 @@ pub(crate) mod responses {
     impl sqlx::Type<sqlx::Postgres> for OperatorStopRel {
         fn type_info() -> sqlx::postgres::PgTypeInfo {
             sqlx::postgres::PgTypeInfo::with_name("OperatorStop")
+        }
+    }
+    impl sqlx::postgres::PgHasArrayType for OperatorStopRel {
+        fn array_type_info() -> sqlx::postgres::PgTypeInfo {
+            sqlx::postgres::PgTypeInfo::with_name("OperatorStop")
+        }
+    }
+
+    impl FromRow<'_, sqlx::postgres::PgRow> for FullStop {
+        fn from_row(row: &sqlx::postgres::PgRow) -> sqlx::Result<Self> {
+            let verified_position: bool = row.try_get("verified_position")?;
+            let verification_level: i16 = row.try_get("verification_level")?;
+            let Json(a11y) = row.try_get("accessibility_meta")?;
+            let operators  = row
+                .try_get::<Vec<(i32, Option<String>, Option<String>, String, )>, _>("operators")?
+                .into_iter()
+                .map(|(operator_id, stop_ref, name, source)| OperatorStopRel {
+                    operator_id,
+                    stop_ref,
+                    name,
+                    source,
+                })
+                .collect();
+
+            Ok(Self {
+                stop: Stop {
+                    id: row.try_get("id")?,
+                    osm_id: row.try_get("osm_id")?,
+                    name: row.try_get("name")?,
+                    short_name: row.try_get("short_name")?,
+                    locality: row.try_get("locality")?,
+                    street: row.try_get("street")?,
+                    door: row.try_get("door")?,
+                    lat: row.try_get("lat")?,
+                    lon: row.try_get("lon")?,
+                    notes: row.try_get("notes")?,
+                    parish: row.try_get("parish")?,
+                    tags: row.try_get("tags")?,
+                    a11y: Json(a11y),
+                    verification_level: if verified_position {
+                        verification_level | 0b1100_0000
+                    } else {
+                        verification_level & 0b0011_1111
+                    },
+                    service_check_date: row.try_get("service_check_date")?,
+                    infrastructure_check_date: row
+                        .try_get("infrastructure_check_date")?,
+                },
+                updater: row.try_get("updater")?,
+                verified_position: row.try_get("verified_position")?,
+                update_date: row.try_get("update_date")?,
+                operators,
+            })
         }
     }
 }
