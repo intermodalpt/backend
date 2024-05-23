@@ -64,7 +64,7 @@ pub(crate) mod responses {
     }
 
     #[derive(Serialize)]
-    pub struct OperatorStopRef {
+    pub struct OperatorStopRel {
         pub id: i32,
         pub official_name: Option<String>,
         pub stop_ref: Option<String>,
