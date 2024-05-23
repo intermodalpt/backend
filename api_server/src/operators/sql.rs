@@ -278,32 +278,14 @@ pub(crate) async fn upsert_operator_stop(
     stop_id: i32,
     change: requests::ChangeOperatorStop,
 ) -> Result<()> {
-    let existing = sqlx::query!(
-        r#"
-        SELECT official_name, stop_ref
-        FROM stop_operators
-        WHERE operator_id = $1 AND stop_id = $2
-        "#,
-        operator_id,
-        stop_id
-    )
-    .fetch_all(&mut **transaction)
-    .await
-    .map_err(|err| {
-        tracing::error!(
-            error = err.to_string(),
-            stop_id = stop_id,
-            operator_id = operator_id
-        );
-        Error::DatabaseExecution
-    })?;
-
-    match existing.len() {
-        0 => {
-            sqlx::query!(
+    sqlx::query!(
                 r#"
-                INSERT INTO stop_operators (operator_id, stop_id, official_name, stop_ref, source)
-                VALUES ($1, $2, $3, $4, $5)
+INSERT INTO stop_operators (operator_id, stop_id, official_name, stop_ref, source)
+VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT (operator_id, stop_id) DO UPDATE
+    SET official_name = EXCLUDED.official_name,
+        stop_ref = EXCLUDED.stop_ref,
+        source = EXCLUDED.source
                 "#,
                 operator_id,
                 stop_id,
@@ -311,49 +293,17 @@ pub(crate) async fn upsert_operator_stop(
                 change.stop_ref,
                 change.source
             )
-            .execute(&mut **transaction)
-            .await
-            .map_err(|err| {
-                tracing::error!(
+        .execute(&mut **transaction)
+        .await
+        .map_err(|err| {
+            tracing::error!(
                     error=err.to_string(),
                     stop_id=stop_id,
                     operator_id=operator_id,
                     change=?change
                 );
-                Error::DatabaseExecution
-            })?;
-        }
-        1 => {
-            sqlx::query!(
-                r#"
-                UPDATE stop_operators
-                SET official_name = $1,
-                    stop_ref = $2,
-                    source = $3
-                WHERE operator_id = $4 AND stop_id = $5
-                "#,
-                change.official_name,
-                change.stop_ref,
-                change.source,
-                operator_id,
-                stop_id
-            )
-            .execute(&mut **transaction)
-            .await
-            .map_err(|err| {
-                tracing::error!(error = err.to_string(), stop_id = stop_id);
-                Error::DatabaseExecution
-            })?;
-        }
-        _ => {
-            // TODO This should never happen. Ensure that the constraints are
-            // properly set up.
-            tracing::error!(
-                "Multiple stop_operators for the same operator_id and stop_id"
-            );
-            return Err(Error::DatabaseExecution);
-        }
-    }
+            Error::DatabaseExecution
+        })?;
     Ok(())
 }
 
