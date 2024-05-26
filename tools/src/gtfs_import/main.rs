@@ -168,8 +168,37 @@ struct AppConfig {
     jwt: String,
 }
 
+#[derive(Debug)]
+struct AppArgs {
+    operator: i32,
+}
+
+fn parse_args() -> Result<AppArgs, pico_args::Error> {
+    let mut pargs = pico_args::Arguments::from_env();
+
+    let args = AppArgs {
+        operator: pargs.value_from_str("--op")?,
+    };
+
+    let remaining = pargs.finish();
+    if !remaining.is_empty() {
+        eprintln!("Unknown args: {:?}.", remaining);
+        exit(1);
+    }
+
+    Ok(args)
+}
+
 #[tokio::main]
 async fn main() {
+    let args = match parse_args() {
+        Ok(v) => v,
+        Err(e) => {
+            eprintln!("Error: {}.", e);
+            exit(1);
+        }
+    };
+
     let config = Config::builder()
         .add_source(
             config::Environment::with_prefix("IML")
@@ -187,11 +216,15 @@ async fn main() {
         exit(-1);
     }
 
-    let gtfs = load_gtfs(&PathBuf::from("./data/operators/1/gtfs")).unwrap();
+    let gtfs = load_gtfs(&PathBuf::from(&format!(
+        "./data/operators/{}/gtfs",
+        args.operator
+    )))
+    .unwrap();
     let lints = lint_gtfs(&gtfs);
 
     iml::put_operator_validation(
-        1,
+        args.operator,
         iml::OperatorValidationData { gtfs_lints: lints },
     )
     .await
