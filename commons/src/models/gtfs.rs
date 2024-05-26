@@ -53,11 +53,11 @@ pub struct Route {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Trip {
-    pub route_id: RouteId,
-    pub pattern_id: String,
-    pub service_id: String,
     pub trip_id: TripId,
-    pub trip_headsign: String,
+    pub route_id: RouteId,
+    pub service_id: String,
+    pub pattern_id: Option<String>,
+    pub trip_headsign: Option<String>,
 }
 
 pub enum File {

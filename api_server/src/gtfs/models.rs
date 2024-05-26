@@ -26,7 +26,7 @@ use commons::models::gtfs;
 #[derive(Debug, Eq, Clone, Serialize, Deserialize)]
 pub struct TMLTrip {
     pub(crate) id: String,
-    pub(crate) headsign: String,
+    pub(crate) headsign: Option<String>,
     pub(crate) stops: Vec<String>,
 }
 

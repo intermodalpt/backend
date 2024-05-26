@@ -22,6 +22,7 @@ use std::{fs, io};
 use itertools::Itertools;
 use once_cell::sync::Lazy;
 use regex::Regex;
+use tracing::log;
 
 use commons::models::gtfs::{self, File};
 use commons::utils::gtfs::calculate_gtfs_stop_sequence;
@@ -96,8 +97,11 @@ pub(crate) fn gtfs_trips(
 
     Ok(rdr
         .deserialize()
-        .map(Result::unwrap)
-        .collect::<Vec<gtfs::Trip>>())
+        .collect::<Result<Vec<gtfs::Trip>, _>>()
+        .map_err(|err| {
+            log::error!("{:?}", err);
+            Error::Processing
+        })?)
 }
 
 // Read stop times from GTFS tile

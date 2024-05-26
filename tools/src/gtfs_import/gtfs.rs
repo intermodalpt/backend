@@ -92,9 +92,13 @@ pub(crate) fn load_gtfs(root: &PathBuf) -> Result<Data, Error> {
                 let mut headsigns = HashSet::new();
 
                 trips.into_iter().for_each(|trip| {
-                    pattern_ids.insert(trip.pattern_id.clone());
+                    if let Some(pattern_id) = &trip.pattern_id {
+                        pattern_ids.insert(pattern_id.clone());
+                    }
                     trip_ids.insert(trip.trip_id.clone());
-                    headsigns.insert(trip.trip_headsign.to_lowercase());
+                    if let Some(trip_headsign) = &trip.trip_headsign {
+                        headsigns.insert(trip_headsign.to_lowercase());
+                    }
                 });
 
                 let cluster = PatternCluster {

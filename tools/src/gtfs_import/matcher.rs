@@ -120,23 +120,28 @@ pub(crate) async fn match_gtfs_routes<'iml, 'gtfs>(
     let iml_to_gtfs_stops = iml
         .stops
         .iter()
-        .filter_map(|(iml_id, iml_stop)| {
+        .map(|(iml_id, iml_stop)| {
             let gtfs_id = iml_stop
                 .operators
                 .iter()
                 .find(|rel| rel.operator_id == 1)
                 .map(|rel| rel.stop_ref.as_ref().unwrap().clone());
-
+            (iml_id, gtfs_id)
+        })
+        .filter(|(iml_id, gtfs_id)| {
             if let Some(id) = &gtfs_id {
                 if !gtfs.stops.contains_key(id) {
                     println!("Missing GTFS stop {}", id);
                     // TODO add hint to unlink
-                    return None;
+                    false
+                } else {
+                    true
                 }
+            } else {
+                false
             }
-
-            gtfs_id.map(|gtfs_id| (iml_id.clone(), gtfs_id))
         })
+        .map(|(iml_id, gtfs_id)| (iml_id.clone(), gtfs_id.unwrap()))
         .collect::<HashMap<i32, gtfs::StopId>>();
 
     let mut gtfs_to_iml_stops = iml_to_gtfs_stops

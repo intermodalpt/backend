@@ -274,7 +274,9 @@ async fn main() {
                     .gtfs
                     .trip_ids
                     .iter()
-                    .map(|id| gtfs.trips.get(id).unwrap().trip_headsign.clone())
+                    .filter_map(|id| {
+                        gtfs.trips.get(id).unwrap().trip_headsign.clone()
+                    })
                     .unique()
                     .collect::<Vec<_>>()
                     .join(";");
@@ -356,7 +358,9 @@ async fn main() {
                 let trip_headsigns = data
                     .trip_ids
                     .iter()
-                    .map(|id| gtfs.trips.get(id).unwrap().trip_headsign.clone())
+                    .filter_map(|id| {
+                        gtfs.trips.get(id).unwrap().trip_headsign.clone()
+                    })
                     .unique()
                     .collect::<Vec<_>>()
                     .join(";");
