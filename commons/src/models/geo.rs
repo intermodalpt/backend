@@ -18,7 +18,7 @@
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct Region {
     pub id: i32,
     pub name: String,

@@ -69,13 +69,13 @@ impl ContentBlock {
             }
             ContentBlock::Map(map) => {
                 if let Some(lat) = map.lat {
-                    if map.lon.is_none() || lat < -90.0 || lat > 90.0 {
+                    if map.lon.is_none() || !(-90.0..=90.0).contains(&lat) {
                         return Err("Invalid latitude");
                     }
                 }
 
                 if let Some(lon) = map.lon {
-                    if map.lat.is_none() || lon < -180.0 || lon > 180.0 {
+                    if map.lat.is_none() || !(-180.0..=180.0).contains(&lon) {
                         return Err("Invalid longitude");
                     }
                 }

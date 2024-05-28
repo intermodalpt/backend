@@ -23,7 +23,6 @@ use serde::{Deserialize, Serialize};
 use serde_repr::Serialize_repr;
 
 use super::calendar::Calendar;
-use super::gtfs;
 
 #[derive(Debug, Serialize)]
 pub struct Operator {

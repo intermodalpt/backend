@@ -214,7 +214,7 @@ pub(crate) mod requests {
                 return Err("Empty summary");
             }
             for block in &self.content {
-                block.validate()?
+                block.validate()?;
             }
             Ok(())
         }

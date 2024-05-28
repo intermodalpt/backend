@@ -16,8 +16,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use serde::{Deserialize, Serialize};
-
 pub(crate) mod responses {
     use commons::models::operators;
     use serde::Serialize;
