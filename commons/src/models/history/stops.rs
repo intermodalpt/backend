@@ -322,7 +322,7 @@ impl From<current::Stop> for Stop {
     fn from(stop: current::Stop) -> Self {
         Stop {
             id: stop.id,
-            osm_id: Some(stop.osm_id),
+            osm_id: stop.osm_id,
             name: Some(stop.name),
             short_name: stop.short_name,
             locality: stop.locality,
@@ -347,10 +347,7 @@ impl TryFrom<Stop> for current::Stop {
     fn try_from(stop: Stop) -> Result<Self, Self::Error> {
         Ok(current::Stop {
             id: stop.id,
-            osm_id: stop.osm_id.ok_or_else(|| Error::Patching {
-                field: "osm_id",
-                value: "None".to_string(),
-            })?,
+            osm_id: stop.osm_id,
             name: stop.name.ok_or(Error::Conversion)?,
             short_name: stop.short_name,
             locality: stop.locality,

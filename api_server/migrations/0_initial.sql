@@ -143,11 +143,13 @@ CREATE TABLE stops
     verified_position         boolean                  DEFAULT false            NOT NULL,
     survey_method             int,
 
-    osm_id                    bigint                                            NOT NULL,
+    osm_id                    bigint UNIQUE, -- TODO add foreign key
     -- This is bound to the IML stop instead of the OSM stop to prevent volatility
     -- We're assuring that OSM is in a good shape for this stop
     osm_map_quality           boolean                  DEFAULT false            NOT NULL
 );
+
+CREATE UNIQUE INDEX stops_by_osm_id ON stops (osm_id);
 
 CREATE TABLE osm_stops
 (

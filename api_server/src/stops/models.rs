@@ -47,7 +47,7 @@ pub(crate) mod requests {
         pub service_check_date: Option<NaiveDate>,
         #[serde(default)]
         pub infrastructure_check_date: Option<NaiveDate>,
-        pub osm_id: i64,
+        pub osm_id: Option<i64>,
     }
 
     #[derive(Clone, Deserialize)]
@@ -327,7 +327,7 @@ pub(crate) mod responses {
         pub service_check_date: Option<NaiveDate>,
         #[serde(default)]
         pub infrastructure_check_date: Option<NaiveDate>,
-        pub osm_id: i64,
+        pub osm_id: Option<i64>,
     }
 
     impl From<Stop> for stops::Stop {

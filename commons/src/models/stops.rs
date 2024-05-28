@@ -76,7 +76,7 @@ pub enum AreaParkingLimitation {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Stop {
     pub id: i32,
-    pub osm_id: i64,
+    pub osm_id: Option<i64>,
     pub name: String,
     pub short_name: Option<String>,
     pub locality: Option<String>,
