@@ -366,6 +366,14 @@ pub(crate) mod responses {
         pub update_date: DateTime<Utc>,
     }
 
+    #[derive(Debug, Clone, Serialize, PartialEq)]
+    pub struct StopQuality {
+        pub id: i32,
+        pub lon: f64,
+        pub lat: f64,
+        pub map_quality: bool,
+    }
+
     #[derive(Serialize)]
     pub struct SpiderRoute {
         pub code: Option<String>,

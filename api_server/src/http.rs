@@ -107,6 +107,10 @@ pub fn build_paths(state: AppState) -> Router {
             get(stops::handlers::get_all_detailed_stops),
         )
         .route(
+            "/v1/stops/map_quality",
+            get(stops::handlers::get_stops_quality),
+        )
+        .route(
             "/v1/stops/:stop_id",
             get(stops::handlers::get_stop).patch(stops::handlers::patch_stop),
         )

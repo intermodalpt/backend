@@ -266,3 +266,9 @@ pub(crate) async fn get_stop_by_operator_ref(
             .await?,
     ))
 }
+
+pub(crate) async fn get_stops_quality(
+    State(state): State<AppState>,
+) -> Result<Json<Vec<responses::StopQuality>>, Error> {
+    Ok(Json(sql::fetch_stops_quality(&state.pool).await?))
+}

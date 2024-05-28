@@ -454,6 +454,22 @@ pub(crate) async fn update_stop_position(
 
     Ok(res.rows_affected() != 0)
 }
+
+pub(crate) async fn fetch_stops_quality(
+    pool: &PgPool,
+) -> Result<Vec<responses::StopQuality>> {
+    sqlx::query_as!(
+        responses::StopQuality,
+        "SELECT id, lon, lat, osm_map_quality as map_quality FROM stops"
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string());
+        Error::DatabaseExecution
+    })
+}
+
 pub(crate) async fn fetch_stop_routes(
     pool: &PgPool,
     stop_id: i32,
