@@ -114,6 +114,7 @@ impl Stop {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
 pub struct A11yMeta {
+    // These two fields should probably be elsewhere. They're not quite A11y
     #[serde(default)]
     pub schedules: Option<Vec<Schedule>>,
     #[serde(default)]

@@ -33,7 +33,6 @@ pub(crate) mod requests {
         pub locality: Option<String>,
         pub street: Option<String>,
         pub door: Option<String>,
-        #[serde(flatten)]
         pub a11y: stops::A11yMeta,
         pub tags: Vec<String>,
         pub notes: Option<String>,

@@ -68,7 +68,7 @@ pub(crate) mod requests {
         pub notes: Option<String>,
         #[serde(default)]
         pub tags: Vec<String>,
-        #[serde(flatten)]
+
         pub a11y: stops::A11yMeta,
         pub verification_level: u8,
         #[serde(default)]
