@@ -26,11 +26,18 @@ pub(crate) mod requests {
         pub id: i64,
         pub history: osm::NodeHistory,
     }
+
+    #[derive(Debug, Deserialize)]
+    pub struct OsmFeaturesChange {
+        pub features: osm::MapFeatures,
+        pub authors: Vec<String>,
+    }
 }
 
 pub(crate) mod responses {
-    use chrono::{DateTime, Utc};
+    use chrono::{DateTime, NaiveDateTime, Utc};
     use serde::Serialize;
+    use sqlx::types::Json;
 
     use commons::models::osm;
 
@@ -60,7 +67,20 @@ pub(crate) mod responses {
         pub modification: DateTime<Utc>,
         pub version: i32,
         pub deleted: bool,
-        pub osm_map_quality: bool,
-        pub history: sqlx::types::Json<osm::NodeHistory>,
+        pub history: Json<osm::NodeHistory>,
+        pub env_features: Json<osm::MapFeatures>,
+        pub env_authors: Vec<String>,
+        pub env_update: Option<NaiveDateTime>,
+    }
+
+    #[derive(Debug, Clone, Serialize, PartialEq)]
+    pub struct StopMapFeatures {
+        pub id: i32,
+        pub osm_id: Option<i64>,
+        pub lon: f64,
+        pub lat: f64,
+        pub env_features: Json<osm::MapFeatures>,
+        pub env_authors: Vec<String>,
+        pub env_update: Option<NaiveDateTime>,
     }
 }

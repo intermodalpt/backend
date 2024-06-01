@@ -19,7 +19,6 @@
 use axum::extract::{Path, State};
 use axum::Json;
 use futures::future;
-use std::collections::HashMap;
 
 use crate::auth;
 use commons::models::geo;
@@ -196,15 +195,6 @@ pub(crate) async fn delete_stop_from_region(
     })?;
 
     Ok(())
-}
-
-pub(crate) async fn get_region_stops_osm_quality(
-    State(state): State<AppState>,
-    Path(region_id): Path<i32>,
-) -> Result<Json<HashMap<i32, bool>>, Error> {
-    Ok(Json(
-        sql::fetch_region_osm_quality(&state.pool, region_id).await?,
-    ))
 }
 
 pub(crate) async fn get_parishes(

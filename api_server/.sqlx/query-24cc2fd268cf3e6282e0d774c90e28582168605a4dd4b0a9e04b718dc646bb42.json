@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE stops\nSET osm_env_features=$1, osm_env_authors=$2, osm_env_update_date=$3\nWHERE id = $4",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Jsonb",
+        "TextArray",
+        "Timestamp",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "24cc2fd268cf3e6282e0d774c90e28582168605a4dd4b0a9e04b718dc646bb42"
+}

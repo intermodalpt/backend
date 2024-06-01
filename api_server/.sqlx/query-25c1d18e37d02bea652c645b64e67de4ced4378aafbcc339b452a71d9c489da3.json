@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT osm_stops.id, osm_stops.name, osm_stops.lat, osm_stops.lon,\n    osm_stops.pos_author, osm_stops.last_author, osm_stops.creation,\n    osm_stops.modification, osm_stops.version, osm_stops.deleted,\n    osm_stops.history as \"history!: sqlx::types::Json<osm::NodeHistory>\",\n    stops.osm_map_quality\nFROM stops\nJOIN osm_stops ON stops.osm_id = osm_stops.id\nWHERE stops.id = $1\n",
+  "query": "SELECT osm_stops.id, osm_stops.name, osm_stops.lat, osm_stops.lon,\n    osm_stops.pos_author, osm_stops.last_author, osm_stops.creation,\n    osm_stops.modification, osm_stops.version, osm_stops.deleted,\n    osm_stops.history as \"history!: sqlx::types::Json<osm::NodeHistory>\",\n    stops.osm_env_features as \"env_features!: sqlx::types::Json<osm::MapFeatures>\",\n    stops.osm_env_authors as env_authors,\n    stops.osm_env_update_date as env_update\nFROM stops\nJOIN osm_stops ON stops.osm_id = osm_stops.id\nWHERE stops.id = $1\n",
   "describe": {
     "columns": [
       {
@@ -60,8 +60,18 @@
       },
       {
         "ordinal": 11,
-        "name": "osm_map_quality",
-        "type_info": "Bool"
+        "name": "env_features!: sqlx::types::Json<osm::MapFeatures>",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 12,
+        "name": "env_authors",
+        "type_info": "TextArray"
+      },
+      {
+        "ordinal": 13,
+        "name": "env_update",
+        "type_info": "Timestamp"
       }
     ],
     "parameters": {
@@ -81,8 +91,10 @@
       false,
       false,
       false,
-      false
+      false,
+      false,
+      true
     ]
   },
-  "hash": "9b7d3d791eaa9f84691ad52fb0f02dbe778147179cc08c37369d1fba9c2c478c"
+  "hash": "25c1d18e37d02bea652c645b64e67de4ced4378aafbcc339b452a71d9c489da3"
 }

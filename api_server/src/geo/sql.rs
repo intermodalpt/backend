@@ -17,7 +17,6 @@
 */
 
 use sqlx::PgPool;
-use std::collections::HashMap;
 
 use commons::models::geo;
 
@@ -308,28 +307,4 @@ pub(crate) async fn update_stop_parish(
     })?;
 
     Ok(())
-}
-
-pub(crate) async fn fetch_region_osm_quality(
-    pool: &PgPool,
-    region_id: i32,
-) -> Result<HashMap<i32, bool>> {
-    Ok(sqlx::query!(
-        r#"
-SELECT stop_id, osm_map_quality
-FROM Stops
-JOIN region_stops ON region_stops.stop_id = Stops.id
-WHERE region_stops.region_id = $1
-    "#,
-        region_id
-    )
-    .fetch_all(pool)
-    .await
-    .map_err(|err| {
-        tracing::error!(error = err.to_string(), region_id);
-        Error::DatabaseExecution
-    })?
-    .into_iter()
-    .map(|row| (row.stop_id, row.osm_map_quality))
-    .collect())
 }

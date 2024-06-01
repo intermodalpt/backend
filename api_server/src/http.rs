@@ -90,8 +90,8 @@ pub fn build_paths(state: AppState) -> Router {
                 .delete(geo::handlers::delete_route_from_region),
         )
         .route(
-            "/v1/regions/:region_id/osm_stops_quality",
-            get(geo::handlers::get_region_stops_osm_quality),
+            "/v1/regions/:region_id/map_features",
+            get(osm::handlers::get_region_stops_map_features),
         )
         .route(
             "/v1/regions/:region_id/news",
@@ -107,8 +107,8 @@ pub fn build_paths(state: AppState) -> Router {
             get(stops::handlers::get_all_detailed_stops),
         )
         .route(
-            "/v1/stops/map_quality",
-            get(stops::handlers::get_stops_quality),
+            "/v1/stops/map_features",
+            get(osm::handlers::get_stops_map_features),
         )
         .route(
             "/v1/stops/:stop_id",
@@ -149,6 +149,10 @@ pub fn build_paths(state: AppState) -> Router {
         .route(
             "/v1/stops/:stop_id/parish/:parish_id",
             put(geo::handlers::put_stop_parish),
+        )
+        .route(
+            "/v1/stops/:stop_id/map_features",
+            put(osm::handlers::put_stop_map_features),
         )
         .route(
             "/v1/stops/:stop_id/spider",

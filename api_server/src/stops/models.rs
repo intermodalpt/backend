@@ -22,8 +22,6 @@ pub(crate) mod requests {
 
     use commons::models::{history, stops};
 
-    use crate::utils::canonicalize_optional_string;
-
     #[derive(Debug, Deserialize)]
     pub struct NewStop {
         pub lon: f64,
@@ -366,14 +364,6 @@ pub(crate) mod responses {
         pub operators: Vec<OperatorStopRel>,
         pub verified_position: bool,
         pub update_date: DateTime<Utc>,
-    }
-
-    #[derive(Debug, Clone, Serialize, PartialEq)]
-    pub struct StopQuality {
-        pub id: i32,
-        pub lon: f64,
-        pub lat: f64,
-        pub map_quality: bool,
     }
 
     #[derive(Serialize)]

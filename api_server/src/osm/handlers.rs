@@ -25,7 +25,6 @@ use commons::models::osm;
 
 use super::models::{requests, responses};
 use super::sql;
-use crate::osm::models::responses::FullOsmStop;
 use crate::{auth, AppState, Error};
 
 pub(crate) async fn get_osm_stops(
@@ -114,8 +113,43 @@ pub(crate) async fn get_osm_stop_versions(
 pub(crate) async fn get_paired_osm_stop(
     State(state): State<AppState>,
     Path(iml_stop_id): Path<i32>,
-) -> Result<Json<Option<FullOsmStop>>, Error> {
+) -> Result<Json<Option<responses::FullOsmStop>>, Error> {
     Ok(Json(
         sql::fetch_paired_osm_stop(&state.pool, iml_stop_id).await?,
     ))
+}
+
+pub(crate) async fn get_stops_map_features(
+    State(state): State<AppState>,
+) -> Result<Json<Vec<responses::StopMapFeatures>>, Error> {
+    Ok(Json(sql::fetch_stops_map_features(&state.pool).await?))
+}
+
+pub(crate) async fn get_region_stops_map_features(
+    State(state): State<AppState>,
+    Path(region_id): Path<i32>,
+) -> Result<Json<Vec<responses::StopMapFeatures>>, Error> {
+    Ok(Json(
+        sql::fetch_region_stops_map_features(&state.pool, region_id).await?,
+    ))
+}
+
+pub(crate) async fn put_stop_map_features(
+    State(state): State<AppState>,
+    Path(stop_id): Path<i32>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    Json(change): Json<requests::OsmFeaturesChange>,
+) -> Result<(), Error> {
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
+
+    sql::update_stop_map_features(&mut transaction, stop_id, change).await?;
+    // TODO changelog
+
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })
 }

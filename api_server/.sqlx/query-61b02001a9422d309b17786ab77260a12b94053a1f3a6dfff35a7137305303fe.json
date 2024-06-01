@@ -1,0 +1,58 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT id, osm_id, lon, lat,\n    osm_env_features as \"env_features!: sqlx::types::Json<osm::MapFeatures>\",\n    osm_env_update_date as env_update,\n    osm_env_authors as env_authors\nFROM Stops\nJOIN region_stops ON region_stops.stop_id = Stops.id\nWHERE region_stops.region_id = $1\n    ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "osm_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "lon",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 3,
+        "name": "lat",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 4,
+        "name": "env_features!: sqlx::types::Json<osm::MapFeatures>",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 5,
+        "name": "env_update",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 6,
+        "name": "env_authors",
+        "type_info": "TextArray"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "61b02001a9422d309b17786ab77260a12b94053a1f3a6dfff35a7137305303fe"
+}

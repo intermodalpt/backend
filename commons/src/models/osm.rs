@@ -72,3 +72,13 @@ impl Ord for NodeVersion {
         self.version.cmp(&other.version)
     }
 }
+
+#[allow(clippy::struct_excessive_bools)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MapFeatures {
+    pub highways: bool,
+    pub addresses: bool,
+    pub buildings: bool,
+    pub terrain: bool,
+    pub amenities: bool,
+}

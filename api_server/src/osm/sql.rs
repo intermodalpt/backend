@@ -16,6 +16,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+use chrono::Utc;
+use serde_json::json;
 use sqlx::types::Json;
 use sqlx::{PgPool, QueryBuilder};
 use std::collections::HashMap;
@@ -233,7 +235,9 @@ pub(crate) async fn fetch_paired_osm_stop(
     osm_stops.pos_author, osm_stops.last_author, osm_stops.creation,
     osm_stops.modification, osm_stops.version, osm_stops.deleted,
     osm_stops.history as "history!: sqlx::types::Json<osm::NodeHistory>",
-    stops.osm_map_quality
+    stops.osm_env_features as "env_features!: sqlx::types::Json<osm::MapFeatures>",
+    stops.osm_env_authors as env_authors,
+    stops.osm_env_update_date as env_update
 FROM stops
 JOIN osm_stops ON stops.osm_id = osm_stops.id
 WHERE stops.id = $1
@@ -246,4 +250,78 @@ WHERE stops.id = $1
         tracing::error!(error = err.to_string(), iml_stop_id);
         Error::DatabaseExecution
     })
+}
+
+pub(crate) async fn fetch_stops_map_features(
+    pool: &PgPool,
+) -> Result<Vec<responses::StopMapFeatures>> {
+    sqlx::query_as!(
+        responses::StopMapFeatures,
+        r#"SELECT id, osm_id, lon, lat,
+            osm_env_features as "env_features!: sqlx::types::Json<osm::MapFeatures>",
+            osm_env_update_date as env_update,
+            osm_env_authors as env_authors
+        FROM stops"#
+    )
+        .fetch_all(pool)
+        .await
+        .map_err(|err| {
+            tracing::error!(error = err.to_string());
+            Error::DatabaseExecution
+        })
+}
+
+pub(crate) async fn fetch_region_stops_map_features(
+    pool: &PgPool,
+    region_id: i32,
+) -> Result<Vec<responses::StopMapFeatures>> {
+    sqlx::query_as!(
+        responses::StopMapFeatures,
+        r#"
+SELECT id, osm_id, lon, lat,
+    osm_env_features as "env_features!: sqlx::types::Json<osm::MapFeatures>",
+    osm_env_update_date as env_update,
+    osm_env_authors as env_authors
+FROM Stops
+JOIN region_stops ON region_stops.stop_id = Stops.id
+WHERE region_stops.region_id = $1
+    "#,
+        region_id
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), region_id);
+        Error::DatabaseExecution
+    })
+}
+
+pub(crate) async fn update_stop_map_features(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    stop_id: i32,
+    change: requests::OsmFeaturesChange,
+) -> Result<()> {
+    let now = Utc::now().naive_utc();
+    let res = sqlx::query!(
+        "
+UPDATE stops
+SET osm_env_features=$1, osm_env_authors=$2, osm_env_update_date=$3
+WHERE id = $4",
+        json!(change.features),
+        &change.authors,
+        now,
+        stop_id
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), stop_id, change=?change);
+        Error::DatabaseExecution
+    })?;
+
+    match res.rows_affected() {
+        0 => Err(Error::NotFoundUpstream),
+        1 => Ok(()),
+        _ => unreachable!("Multiple rows updated after stop_id: {}", stop_id),
+    }
 }
