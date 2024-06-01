@@ -34,6 +34,7 @@ pub(crate) static TOKEN: OnceCell<&'static str> = OnceCell::new();
 pub struct OsmStop {
     pub id: i64,
     pub version: i32,
+    pub deleted: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -42,8 +43,8 @@ pub struct OsmHistoryPatch {
     pub history: osm::NodeHistory,
 }
 
-pub(crate) async fn fetch_cached_osm_stop_versions(
-) -> Result<HashMap<i64, i32>, Box<dyn std::error::Error>> {
+pub(crate) async fn fetch_cached_osm_stops(
+) -> Result<Vec<OsmStop>, Box<dyn std::error::Error>> {
     let url = format!("{}/v1/osm/stops", API_URL);
     println!("Fetching {}", url);
     let res = reqwest::Client::new()
@@ -54,10 +55,7 @@ pub(crate) async fn fetch_cached_osm_stop_versions(
 
     if res.status().is_success() {
         let stops: Vec<OsmStop> = res.json().await?;
-        Ok(stops
-            .into_iter()
-            .map(|stop| (stop.id, stop.version))
-            .collect())
+        Ok(stops)
     } else {
         eprintln!("API error");
         eprintln!("Status: {}", res.status());
@@ -68,7 +66,7 @@ pub(crate) async fn fetch_cached_osm_stop_versions(
 pub(crate) async fn fetch_cached_osm_stop_history(
     stop_id: i64,
 ) -> Result<osm::NodeHistory, Box<dyn std::error::Error>> {
-    let url = format!("{}/v1/osm/stop/{}", API_URL, stop_id);
+    let url = format!("{}/v1/osm/stops/{}", API_URL, stop_id);
     println!("Fetching {}", url);
     let res = reqwest::Client::new()
         .get(&url)
@@ -107,7 +105,7 @@ pub(crate) async fn patch_osm_stops_history(
     }
 }
 
-pub(crate) async fn fetch_osm_stops(
+pub async fn fetch_overpass_stops_raw(
 ) -> Result<models::XmlOsm, Box<dyn std::error::Error>> {
     let query = r#"
     area[name="Portugal"][admin_level=2];
@@ -126,6 +124,21 @@ pub(crate) async fn fetch_osm_stops(
     // TODO wrong errors
     let xml = reqwest::get(&osm_query_url).await?.text().await?;
     Ok(serde_xml_rs::from_str(&xml)?)
+}
+pub(crate) async fn fetch_overpass_stops(
+) -> Result<Vec<models::OverpassStop>, Box<dyn std::error::Error>> {
+    let overpass_xml = fetch_overpass_stops_raw().await?;
+    Ok(overpass_xml
+        .nodes
+        .into_iter()
+        .filter_map(|node| {
+            if let models::XmlNodeTypes::Node(node) = node {
+                Some(models::OverpassStop::from(node))
+            } else {
+                None
+            }
+        })
+        .collect_vec())
 }
 
 pub(crate) async fn fetch_osm_node_versions(

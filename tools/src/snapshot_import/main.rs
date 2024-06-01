@@ -17,7 +17,7 @@
 */
 
 use config::Config;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::process::exit;
 
 use itertools::Itertools;
@@ -67,49 +67,40 @@ struct ImportStats {
 }
 pub(crate) async fn import() -> Result<ImportStats, Box<dyn std::error::Error>>
 {
-    let stop_versions = api::fetch_cached_osm_stop_versions().await.unwrap();
-    let osm_stops = api::fetch_osm_stops().await.unwrap();
+    let cached_osm_stops = api::fetch_cached_osm_stops().await.unwrap();
+    let cached_osm_stop_index = cached_osm_stops
+        .iter()
+        .map(|stop| (stop.id, stop))
+        .collect::<HashMap<_, _>>();
+    let overpass_stops = api::fetch_overpass_stops().await.unwrap();
 
     let mut new_stops = vec![];
 
-    let mut unreturned_ids =
-        stop_versions.keys().copied().collect::<HashSet<_>>();
+    let mut unreturned_ids = cached_osm_stops
+        .iter()
+        .filter_map(|s| if s.deleted { None } else { Some(s.id) })
+        .collect::<HashSet<_>>();
+
     let mut ids_pending_history = vec![];
 
     let mut stats = ImportStats::default();
 
-    let overpass_stops = osm_stops
-        .nodes
-        .into_iter()
-        .filter_map(|node| {
-            if let models::XmlNodeTypes::Node(node) = node {
-                Some(models::OverpassStop::from(node))
-            } else {
-                None
-            }
-        })
-        .collect_vec();
-
     let mut predicted_osm_calls: usize = overpass_stops
         .iter()
         .map(|overpass_stop| {
-            if let Some(cached_version) = stop_versions.get(&overpass_stop.id) {
+            let version_diff = if let Some(cached_stop) =
+                cached_osm_stop_index.get(&overpass_stop.id)
+            {
                 unreturned_ids.remove(&overpass_stop.id);
-                if overpass_stop.version > *cached_version {
-                    if overpass_stop.version == cached_version + 1 {
-                        0
-                    } else {
-                        1
-                    }
-                } else {
-                    0
-                }
+                overpass_stop.version - cached_stop.version
             } else {
-                if overpass_stop.version == 1 {
-                    0
-                } else {
-                    1
-                }
+                overpass_stop.version
+            };
+
+            if version_diff == 0 || version_diff == 1 {
+                0
+            } else {
+                1
             }
         })
         .sum();
@@ -117,14 +108,17 @@ pub(crate) async fn import() -> Result<ImportStats, Box<dyn std::error::Error>>
     predicted_osm_calls += unreturned_ids.len();
 
     if predicted_osm_calls > MAX_OSM_CALLS {
-        println!("Snapshot exceeds the maximum number of OSM calls ({} calls predicted)", predicted_osm_calls);
+        eprintln!("Snapshot exceeds reasonable OSM calls ({} calls predicted). Skipping non-immediate additions.", predicted_osm_calls);
 
         let patch = overpass_stops
             .into_iter()
-            .map(|overpass_stop| {
+            .filter_map(|overpass_stop| {
+                if overpass_stop.version != 1 {
+                    return None;
+                }
                 let id = overpass_stop.id.clone();
                 let history = vec![NodeVersion::from(overpass_stop)];
-                api::OsmHistoryPatch { id, history }
+                Some(api::OsmHistoryPatch { id, history })
             })
             .collect_vec();
 
@@ -135,37 +129,49 @@ pub(crate) async fn import() -> Result<ImportStats, Box<dyn std::error::Error>>
 
     // Calculate new stops and updates figuring which needs additional queries
     for overpass_stop in overpass_stops {
-        if let Some(cached_version) = stop_versions.get(&overpass_stop.id) {
-            unreturned_ids.remove(&overpass_stop.id);
+        if let Some(cached_stop) = cached_osm_stop_index.get(&overpass_stop.id)
+        {
+            if overpass_stop.version == cached_stop.version + 1 {
+                let id = overpass_stop.id;
 
-            if overpass_stop.version > *cached_version {
-                if overpass_stop.version == cached_version + 1 {
-                    let mut history =
-                        api::fetch_cached_osm_stop_history(overpass_stop.id)
-                            .await?;
+                println!(
+                    "Patching stop {id}. Versions {}->{}",
+                    cached_stop.version, overpass_stop.version
+                );
 
-                    let id = overpass_stop.id.clone();
-                    history.push(NodeVersion::from(overpass_stop));
+                let mut history =
+                    api::fetch_cached_osm_stop_history(overpass_stop.id)
+                        .await?;
 
-                    let version_integrity = history
-                        .iter()
-                        .map(|version| version.version)
-                        .sorted()
-                        .enumerate()
-                        .all(|(i, version)| i + 1 == version as usize);
+                history.push(NodeVersion::from(overpass_stop));
 
-                    if !version_integrity {
-                        eprintln!("Version integrity failed for {}", id);
-                    }
+                let version_integrity = history
+                    .iter()
+                    .map(|node| node.version)
+                    .sorted()
+                    .enumerate()
+                    .all(|(i, version)| i + 1 == version as usize);
 
-                    api::patch_osm_stops_history(&[api::OsmHistoryPatch {
-                        id,
-                        history,
-                    }])
-                    .await?;
-                } else {
-                    ids_pending_history.push(overpass_stop.id);
+                if !version_integrity {
+                    eprintln!("Version integrity failed for {}", id);
                 }
+
+                api::patch_osm_stops_history(&[api::OsmHistoryPatch {
+                    id,
+                    history,
+                }])
+                .await?;
+
+                stats.updated_stops += 1;
+            } else if overpass_stop.version > cached_stop.version {
+                println!(
+                    "Stop {} needs history query. ({} -> {})",
+                    overpass_stop.id,
+                    cached_stop.version,
+                    overpass_stop.version
+                );
+                ids_pending_history
+                    .push((overpass_stop.id, cached_stop.version));
             }
         } else {
             // Postpone the addition of new stops so we can bulk
@@ -174,8 +180,14 @@ pub(crate) async fn import() -> Result<ImportStats, Box<dyn std::error::Error>>
     }
 
     // Update the old stops that need history-queries
-    for id in ids_pending_history {
+    for (id, current_version) in ids_pending_history {
         let history = api::fetch_osm_node_versions(id).await.unwrap();
+        let upstream_version =
+            history.iter().map(|node| node.version).max().unwrap_or(0);
+        println!(
+            "Patching stop {id}. Versions {}->{}",
+            current_version, upstream_version
+        );
 
         api::patch_osm_stops_history(&[api::OsmHistoryPatch { id, history }])
             .await?;
@@ -228,6 +240,12 @@ pub(crate) async fn import() -> Result<ImportStats, Box<dyn std::error::Error>>
 
     // Update deleted stops
     for id in unreturned_ids {
+        let cached_stop = cached_osm_stop_index.get(&id).unwrap();
+        if cached_stop.deleted {
+            continue;
+        }
+
+        println!("Fetching history for deleted stop {}", id);
         let history = api::fetch_osm_node_versions(id).await.unwrap();
 
         api::patch_osm_stops_history(&[api::OsmHistoryPatch { id, history }])
