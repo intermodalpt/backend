@@ -1293,29 +1293,6 @@ RETURNING id
     Ok(res.id)
 }
 
-pub(crate) async fn link_news_item_img(
-    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-    img_id: i32,
-    item_id: i32,
-) -> Result<()> {
-    let _res = sqlx::query!(
-        r#"
-INSERT INTO news_items_imgs(item_id, img_id)
-VALUES ($1, $2)
-        "#,
-        item_id,
-        img_id,
-    )
-    .fetch_one(&mut **transaction)
-    .await
-    .map_err(|err| {
-        tracing::error!(error = err.to_string(), item_id, img_id);
-        Error::DatabaseExecution
-    })?;
-
-    Ok(())
-}
-
 pub(crate) async fn update_news_img_meta(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     item_id: i32,
