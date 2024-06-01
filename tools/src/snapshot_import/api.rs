@@ -108,11 +108,12 @@ pub(crate) async fn patch_osm_stops_history(
 pub async fn fetch_overpass_stops_raw(
 ) -> Result<models::XmlOsm, Box<dyn std::error::Error>> {
     let query = r#"
-    area[name="Portugal"][admin_level=2];
-        node["highway"="bus_stop"](area)->.a;
-    area[name="Portugal"][admin_level=2];
-        node["station"="light_rail"](area)->.b;
-    (.a;.b;);
+    area[name="Portugal"][admin_level=2]->.searchArea;
+    (
+      node["station"="light_rail"](area.searchArea);
+      node["highway"="bus_stop"](area.searchArea);
+      node["disused:highway"="bus_stop"](area.searchArea);
+    );
     out meta;"#;
 
     let osm_query_url = format!(
