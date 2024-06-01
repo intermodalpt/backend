@@ -174,10 +174,13 @@ pub(crate) mod responses {
 
 pub(crate) mod requests {
     use chrono::{DateTime, Local};
-    use commons::models::info::ContentBlock;
     use serde::Deserialize;
     use sqlx::types::JsonValue;
     use std::collections::HashSet;
+
+    use commons::models::info::ContentBlock;
+
+    use crate::utils::canonicalize_optional_string;
 
     #[derive(Debug, Deserialize)]
     pub struct ChangeNewsItem {
@@ -201,16 +204,12 @@ pub(crate) mod requests {
 
     impl ChangeNewsItem {
         pub(crate) fn validate(&mut self) -> Result<(), &'static str> {
-            if let Some(author_override) = &self.author_override {
-                if author_override.is_empty() {
-                    self.author_override = None;
-                }
-            }
+            canonicalize_optional_string(&mut self.author_override);
 
-            if self.title.is_empty() {
+            if self.title.trim().is_empty() {
                 return Err("Empty title");
             }
-            if self.summary.is_empty() {
+            if self.summary.trim().is_empty() {
                 return Err("Empty summary");
             }
             for block in &self.content {
@@ -259,36 +258,12 @@ pub(crate) mod requests {
 
     impl NewExternalNewsItem {
         pub(crate) fn tidy(&mut self) {
-            if let Some(title) = &self.title {
-                if title.is_empty() {
-                    self.title = None;
-                }
-            }
-            if let Some(summary) = &self.summary {
-                if summary.is_empty() {
-                    self.summary = None;
-                }
-            }
-            if let Some(author) = &self.author {
-                if author.is_empty() {
-                    self.author = None;
-                }
-            }
-            if let Some(prepro_content_md) = &self.prepro_content_md {
-                if prepro_content_md.is_empty() {
-                    self.prepro_content_md = None;
-                }
-            }
-            if let Some(prepro_content_text) = &self.prepro_content_text {
-                if prepro_content_text.is_empty() {
-                    self.prepro_content_text = None;
-                }
-            }
-            if let Some(url) = &self.url {
-                if url.is_empty() {
-                    self.url = None;
-                }
-            }
+            canonicalize_optional_string(&mut self.title);
+            canonicalize_optional_string(&mut self.summary);
+            canonicalize_optional_string(&mut self.author);
+            canonicalize_optional_string(&mut self.prepro_content_md);
+            canonicalize_optional_string(&mut self.prepro_content_text);
+            canonicalize_optional_string(&mut self.url);
         }
     }
 
@@ -317,31 +292,11 @@ pub(crate) mod requests {
 
     impl ChangeExternalNewsItem {
         pub(crate) fn tidy(&mut self) {
-            if let Some(title) = &self.title {
-                if title.is_empty() {
-                    self.title = None;
-                }
-            }
-            if let Some(summary) = &self.summary {
-                if summary.is_empty() {
-                    self.summary = None;
-                }
-            }
-            if let Some(author) = &self.author {
-                if author.is_empty() {
-                    self.author = None;
-                }
-            }
-            if let Some(content_md) = &self.content_md {
-                if content_md.is_empty() {
-                    self.content_md = None;
-                }
-            }
-            if let Some(url) = &self.url {
-                if url.is_empty() {
-                    self.url = None;
-                }
-            }
+            canonicalize_optional_string(&mut self.title);
+            canonicalize_optional_string(&mut self.summary);
+            canonicalize_optional_string(&mut self.author);
+            canonicalize_optional_string(&mut self.content_md);
+            canonicalize_optional_string(&mut self.url);
         }
     }
 }

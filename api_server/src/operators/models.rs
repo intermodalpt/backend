@@ -144,6 +144,8 @@ pub(crate) mod requests {
     use commons::models::history;
     use commons::models::operators;
 
+    use crate::utils::canonicalize_optional_string;
+
     #[derive(Debug, Deserialize)]
     pub struct ChangeOperator {
         pub name: String,
@@ -158,27 +160,11 @@ pub(crate) mod requests {
 
     impl ChangeOperator {
         pub fn tidy(&mut self) {
-            if let Some(description) = &self.description {
-                if description.is_empty() {
-                    self.description = None;
-                }
-            }
+            canonicalize_optional_string(&mut self.description);
+            canonicalize_optional_string(&mut self.website_url);
+            canonicalize_optional_string(&mut self.forum_url);
+            canonicalize_optional_string(&mut self.library_url);
 
-            if let Some(website_url) = &self.website_url {
-                if website_url.is_empty() {
-                    self.website_url = None;
-                }
-            }
-            if let Some(forum_url) = &self.forum_url {
-                if forum_url.is_empty() {
-                    self.forum_url = None;
-                }
-            }
-            if let Some(library_url) = &self.library_url {
-                if library_url.is_empty() {
-                    self.library_url = None;
-                }
-            }
             self.contact_uris.retain(|uri| !uri.is_empty());
         }
     }

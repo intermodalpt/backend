@@ -37,6 +37,8 @@ pub(crate) mod requests {
 
     use commons::models::{history::pics as history, pics};
 
+    use crate::utils::canonicalize_optional_string;
+
     #[derive(Debug, Deserialize)]
     pub struct ChangeStopPic {
         pub public: bool,
@@ -93,12 +95,8 @@ pub(crate) mod requests {
     }
 
     impl ChangeNewsPicMeta {
-        pub(crate) fn clean(&mut self) {
-            if let Some(transcript) = &self.transcript {
-                if transcript.is_empty() {
-                    self.transcript = None;
-                }
-            }
+        pub(crate) fn tidy(&mut self) {
+            canonicalize_optional_string(&mut self.transcript);
         }
     }
 }

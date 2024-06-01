@@ -30,3 +30,20 @@ pub(crate) async fn get_exactly_one_field(
 
     Ok(field)
 }
+
+pub fn canonicalize_optional_string(option: &mut Option<String>) {
+    if let Some(string) = option {
+        if string.is_empty() {
+            *option = None;
+            return;
+        }
+
+        let trimmed = string.trim();
+        let len = trimmed.len();
+        if len == 0 {
+            *option = None;
+        } else if len != string.len() {
+            *option = Some(trimmed.to_string());
+        }
+    }
+}

@@ -646,7 +646,7 @@ pub(crate) async fn patch_news_image_meta(
     Path(img_id): Path<i32>,
     Json(mut news_img_meta): Json<requests::ChangeNewsPicMeta>,
 ) -> Result<(), Error> {
-    news_img_meta.clean();
+    news_img_meta.tidy();
 
     let mut transaction = state.pool.begin().await.map_err(|err| {
         tracing::error!("Failed to open transaction: {err}");

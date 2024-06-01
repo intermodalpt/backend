@@ -22,6 +22,8 @@ pub(crate) mod requests {
 
     use commons::models::{history, stops};
 
+    use crate::utils::canonicalize_optional_string;
+
     #[derive(Debug, Deserialize)]
     pub struct NewStop {
         pub lon: f64,
