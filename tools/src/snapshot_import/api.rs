@@ -19,7 +19,6 @@
 use itertools::Itertools;
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use urlencoding::encode as urlencode;
 
 use commons::models::osm;
