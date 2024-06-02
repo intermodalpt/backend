@@ -266,3 +266,33 @@ pub(crate) async fn get_stop_by_operator_ref(
             .await?,
     ))
 }
+
+pub(crate) async fn get_region_todo(
+    State(state): State<AppState>,
+    Path(region_id): Path<i32>,
+) -> Result<Json<Vec<responses::StopTodos>>, Error> {
+    Ok(Json(
+        sql::fetch_region_todo_stops(&state.pool, region_id).await?,
+    ))
+}
+
+pub(crate) async fn put_stop_todo(
+    State(state): State<AppState>,
+    Path(stop_id): Path<i32>,
+    Json(todo): Json<Vec<stops::StopTodo>>,
+) -> Result<(), Error> {
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
+
+    sql::update_stop_todos(&mut transaction, stop_id, &todo).await?;
+    // todo log
+
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
+
+    Ok(())
+}

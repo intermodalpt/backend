@@ -19,7 +19,7 @@
 use std::collections::{hash_map, HashMap};
 
 use chrono::Utc;
-use sqlx::types::Json;
+use serde_json::json;
 use sqlx::{FromRow, PgPool, Row};
 
 use commons::models::{routes, stops};
@@ -351,7 +351,7 @@ RETURNING id
         stop.lat,
         stop.notes,
         &stop.tags,
-        Json(&stop.a11y) as _,
+        json!(&stop.a11y),
         user_id,
         update_date,
         i16::from(stop.verification_level),
@@ -563,6 +563,57 @@ ORDER BY subroute_stops.idx"#,
         subroutes,
         stops,
     })
+}
+
+pub(crate) async fn fetch_region_todo_stops(
+    pool: &PgPool,
+    region_id: i32,
+) -> Result<Vec<responses::StopTodos>> {
+    sqlx::query_as!(
+        responses::StopTodos,
+        r#"
+SELECT stops.id, stops.name, stops.lat, stops.lon,
+    stops.todo as "todo!: sqlx::types::Json<Vec<stops::StopTodo>>"
+FROM stops
+JOIN region_stops ON stops.id = region_stops.stop_id
+WHERE region_stops.region_id = $1
+"#,
+        region_id
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), region_id);
+        Error::DatabaseExecution
+    })
+}
+
+pub(crate) async fn update_stop_todos(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    stop_id: i32,
+    todo: &[stops::StopTodo],
+) -> Result<()> {
+    let res = sqlx::query!(
+        r#"
+UPDATE stops
+SET todo = $1
+WHERE id = $2
+"#,
+        json!(todo),
+        stop_id
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), stop_id, todo = ?todo);
+        Error::DatabaseExecution
+    })?;
+
+    match res.rows_affected() {
+        0 => Err(Error::NotFoundUpstream),
+        1 => Ok(()),
+        _ => unreachable!("More than one stop with the same id"),
+    }
 }
 
 impl FromRow<'_, sqlx::postgres::PgRow> for responses::Stop {

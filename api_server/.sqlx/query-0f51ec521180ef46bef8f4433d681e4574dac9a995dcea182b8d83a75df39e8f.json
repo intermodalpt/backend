@@ -1,0 +1,46 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT stops.id, stops.name, stops.lat, stops.lon,\n    stops.todo as \"todo!: sqlx::types::Json<Vec<stops::StopTodo>>\"\nFROM stops\nJOIN region_stops ON stops.id = region_stops.stop_id\nWHERE region_stops.region_id = $1\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "lat",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 3,
+        "name": "lon",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 4,
+        "name": "todo!: sqlx::types::Json<Vec<stops::StopTodo>>",
+        "type_info": "Jsonb"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "0f51ec521180ef46bef8f4433d681e4574dac9a995dcea182b8d83a75df39e8f"
+}

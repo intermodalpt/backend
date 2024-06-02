@@ -296,6 +296,28 @@ impl From<StopVerification> for u8 {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum StopTodo {
+    VerifyLocation,
+    ImproveLocation,
+    RecheckLater {
+        req_date: NaiveDate,
+        not_before: Option<NaiveDate>,
+        reason: String,
+    },
+    GatherPics {
+        reason: Option<String>,
+    },
+    GatherPano,
+    RedoOsm {
+        reason: Option<String>,
+    },
+    AssertCopyright {
+        reason: String,
+    },
+}
+
 #[cfg(test)]
 mod test {
     use super::{

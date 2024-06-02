@@ -67,6 +67,10 @@ pub fn build_paths(state: AppState) -> Router {
             get(stops::handlers::get_region_full_stops),
         )
         .route(
+            "/v1/regions/:region_id/stops/todo",
+            get(stops::handlers::get_region_todo),
+        )
+        .route(
             "/v1/regions/:region_id/stops/:stop_id",
             put(geo::handlers::put_stop_into_region)
                 .delete(geo::handlers::delete_stop_from_region),
@@ -153,6 +157,10 @@ pub fn build_paths(state: AppState) -> Router {
         .route(
             "/v1/stops/:stop_id/map_features",
             put(osm::handlers::put_stop_map_features),
+        )
+        .route(
+            "/v1/stops/:stop_id/toto",
+            put(stops::handlers::put_stop_todo),
         )
         .route(
             "/v1/stops/:stop_id/spider",

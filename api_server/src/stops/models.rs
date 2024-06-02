@@ -279,6 +279,7 @@ pub(crate) mod requests {
 pub(crate) mod responses {
     use chrono::{DateTime, NaiveDate, Utc};
     use serde::{Deserialize, Serialize};
+    use sqlx::types::Json;
     use std::collections::HashMap;
 
     use commons::models::stops;
@@ -392,5 +393,14 @@ pub(crate) mod responses {
         pub routes: HashMap<i32, SpiderRoute>,
         pub subroutes: HashMap<i32, SpiderSubroute>,
         pub stops: HashMap<i32, SpiderStop>,
+    }
+
+    #[derive(Debug, Clone, Serialize, PartialEq)]
+    pub struct StopTodos {
+        pub id: i32,
+        pub name: String,
+        pub lat: f64,
+        pub lon: f64,
+        pub todo: Json<Vec<stops::StopTodo>>,
     }
 }
