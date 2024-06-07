@@ -122,7 +122,8 @@ CREATE TABLE stops
     name                      text                                              NOT NULL,
     short_name                text,
     -- If the name is ours or has been externally sourced (needed to make the name NON NULL)
-    is_name_overridden        boolean                  DEFAULT false,
+    is_name_overridden        boolean                  DEFAULT false            NOT NULL,
+    is_ghost                  boolean                  DEFAULT false            NOT NULL,
     locality                  text,
     street                    text,
     door                      text,
@@ -146,7 +147,12 @@ CREATE TABLE stops
     osm_id                    bigint UNIQUE, -- TODO add foreign key
     -- This is bound to the IML stop instead of the OSM stop to prevent volatility
     -- We're assuring that OSM is in a good shape for this stop
-    osm_map_quality           boolean                  DEFAULT false            NOT NULL
+    osm_env_features          jsonb                    DEFAULT '{}'::jsonb      NOT NULL,
+    osm_env_authors           text[]                   default ARRAY []::text[] NOT NULL,
+    osm_env_update_date       timestamp,
+
+    todo                      jsonb                    DEFAULT '[]'::jsonb      NOT NULL,
+    license                   text                                              NOT NULL
 );
 
 CREATE UNIQUE INDEX stops_by_osm_id ON stops (osm_id);

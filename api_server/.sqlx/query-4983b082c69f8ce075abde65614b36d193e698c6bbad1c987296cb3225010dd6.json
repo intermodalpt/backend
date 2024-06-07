@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, name, short_name, locality, street, door, lat, lon, notes, parish,\n    tags, verification_level, service_check_date, infrastructure_check_date,\n    accessibility_meta as \"a11y!: sqlx::types::Json<stops::A11yMeta>\", osm_id\nFROM stops\nWHERE id IN (\n    SELECT DISTINCT stop_id\n    FROM region_stops\n    WHERE region_id = $1\n)",
+  "query": "SELECT id, name, short_name, locality, street, door, lat, lon, notes, parish,\n    tags, verification_level, service_check_date, infrastructure_check_date,\n    accessibility_meta as \"a11y!: sqlx::types::Json<stops::A11yMeta>\", osm_id,\n    is_ghost, license\nFROM Stops\nWHERE lon >= $1 AND lon <= $2 AND lat <= $3 AND lat >= $4\n        ",
   "describe": {
     "columns": [
       {
@@ -82,11 +82,24 @@
         "ordinal": 15,
         "name": "osm_id",
         "type_info": "Int8"
+      },
+      {
+        "ordinal": 16,
+        "name": "is_ghost",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 17,
+        "name": "license",
+        "type_info": "Text"
       }
     ],
     "parameters": {
       "Left": [
-        "Int4"
+        "Float8",
+        "Float8",
+        "Float8",
+        "Float8"
       ]
     },
     "nullable": [
@@ -105,8 +118,10 @@
       true,
       true,
       false,
-      true
+      true,
+      false,
+      false
     ]
   },
-  "hash": "35e3e2de41767239d7854933d6dcd8c69a3a9859d6a75c18fea9761b93f1ee18"
+  "hash": "4983b082c69f8ce075abde65614b36d193e698c6bbad1c987296cb3225010dd6"
 }

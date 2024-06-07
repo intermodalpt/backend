@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, name, short_name, locality, street, door, lat, lon, notes, parish,\n    tags, verification_level, service_check_date, infrastructure_check_date,\n    accessibility_meta as \"a11y!: sqlx::types::Json<stops::A11yMeta>\", osm_id\nFROM Stops\nWHERE id = $1",
+  "query": "SELECT stops.id, name, short_name, locality, street, door, lat, lon, notes,\n    parish, tags, verification_level, osm_id, is_ghost, license,\n    service_check_date, infrastructure_check_date,\n    accessibility_meta as \"a11y!: sqlx::types::Json<stops::A11yMeta>\"\nFROM stops\nJOIN subroute_stops ON stops.id = subroute_stops.stop\nJOIN subroutes ON subroute_stops.subroute = subroutes.id\nWHERE subroutes.route = $1",
   "describe": {
     "columns": [
       {
@@ -65,23 +65,33 @@
       },
       {
         "ordinal": 12,
+        "name": "osm_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 13,
+        "name": "is_ghost",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 14,
+        "name": "license",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 15,
         "name": "service_check_date",
         "type_info": "Date"
       },
       {
-        "ordinal": 13,
+        "ordinal": 16,
         "name": "infrastructure_check_date",
         "type_info": "Date"
       },
       {
-        "ordinal": 14,
+        "ordinal": 17,
         "name": "a11y!: sqlx::types::Json<stops::A11yMeta>",
         "type_info": "Jsonb"
-      },
-      {
-        "ordinal": 15,
-        "name": "osm_id",
-        "type_info": "Int8"
       }
     ],
     "parameters": {
@@ -103,10 +113,12 @@
       false,
       false,
       true,
-      true,
       false,
-      true
+      false,
+      true,
+      true,
+      false
     ]
   },
-  "hash": "1ff11c0ee1ca4b2d311bd3463936273f687e074191f5d202d5ec581327fdf7b0"
+  "hash": "4ed1025d7cee2ce9616217cdc8d7018bab0c6803c07b4f0aee2393c117907f4d"
 }

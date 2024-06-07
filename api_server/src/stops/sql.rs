@@ -38,7 +38,8 @@ pub(crate) async fn fetch_stop(
         responses::Stop,
 r#"SELECT id, name, short_name, locality, street, door, lat, lon, notes, parish,
     tags, verification_level, service_check_date, infrastructure_check_date,
-    accessibility_meta as "a11y!: sqlx::types::Json<stops::A11yMeta>", osm_id
+    accessibility_meta as "a11y!: sqlx::types::Json<stops::A11yMeta>", osm_id,
+    is_ghost, license
 FROM Stops
 WHERE id = $1"#,
         stop_id
@@ -125,7 +126,8 @@ pub(crate) async fn fetch_region_detailed_stops(
         responses::Stop,
 r#"SELECT id, name, short_name, locality, street, door, lat, lon, notes, parish,
     tags, verification_level, service_check_date, infrastructure_check_date,
-    accessibility_meta as "a11y!: sqlx::types::Json<stops::A11yMeta>", osm_id
+    accessibility_meta as "a11y!: sqlx::types::Json<stops::A11yMeta>", osm_id,
+    is_ghost, license
 FROM stops
 WHERE id IN (
     SELECT DISTINCT stop_id
@@ -205,7 +207,8 @@ pub(crate) async fn fetch_all_detailed_stops(
             responses::Stop,
 r#"SELECT id, name, short_name, locality, street, door, lat, lon, notes, parish,
     tags, verification_level, service_check_date, infrastructure_check_date,
-    accessibility_meta as "a11y!: sqlx::types::Json<stops::A11yMeta>", osm_id
+    accessibility_meta as "a11y!: sqlx::types::Json<stops::A11yMeta>", osm_id,
+    is_ghost, license
 FROM stops"#
     )
         .fetch_all(pool)
@@ -224,7 +227,8 @@ pub(crate) async fn fetch_bounded_stops(
         responses::Stop,
 r#"SELECT id, name, short_name, locality, street, door, lat, lon, notes, parish,
     tags, verification_level, service_check_date, infrastructure_check_date,
-    accessibility_meta as "a11y!: sqlx::types::Json<stops::A11yMeta>", osm_id
+    accessibility_meta as "a11y!: sqlx::types::Json<stops::A11yMeta>", osm_id,
+    is_ghost, license
 FROM Stops
 WHERE lon >= $1 AND lon <= $2 AND lat <= $3 AND lat >= $4
         "#,
@@ -248,7 +252,7 @@ pub(crate) async fn fetch_route_stops(
     sqlx::query_as!(
         responses::Stop,
 r#"SELECT stops.id, name, short_name, locality, street, door, lat, lon, notes,
-    parish, tags, verification_level, osm_id,
+    parish, tags, verification_level, osm_id, is_ghost, license,
     service_check_date, infrastructure_check_date,
     accessibility_meta as "a11y!: sqlx::types::Json<stops::A11yMeta>"
 FROM stops
@@ -273,7 +277,8 @@ pub(crate) async fn fetch_operator_stops(
         responses::Stop,
 r#"SELECT id, name, short_name, locality, street, door, lat, lon, notes, parish,
     tags, verification_level, service_check_date, infrastructure_check_date,
-    accessibility_meta as "a11y!: sqlx::types::Json<stops::A11yMeta>", osm_id
+    accessibility_meta as "a11y!: sqlx::types::Json<stops::A11yMeta>", osm_id,
+    is_ghost, license
 FROM stops
 JOIN stop_operators ON stops.id = stop_operators.stop_id
 WHERE stop_operators.operator_id = $1"#,
@@ -338,8 +343,8 @@ pub(crate) async fn insert_stop(
         r#"
 INSERT INTO Stops(name, short_name, locality, street, door, lon, lat, notes,
     tags, accessibility_meta, updater, update_date, verification_level,
-    service_check_date, infrastructure_check_date, osm_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+    service_check_date, infrastructure_check_date, osm_id, license, is_ghost)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
 RETURNING id
     "#,
         stop.name,
@@ -357,7 +362,9 @@ RETURNING id
         i16::from(stop.verification_level),
         stop.service_check_date,
         stop.infrastructure_check_date,
-        stop.osm_id
+        stop.osm_id,
+        &stop.license,
+        &stop.is_ghost
     )
     .fetch_one(&mut **transaction)
     .await
@@ -387,6 +394,8 @@ RETURNING id
         verification_level: stop.verification_level,
         service_check_date: stop.service_check_date,
         infrastructure_check_date: stop.infrastructure_check_date,
+        license: stop.license,
+        is_ghost: stop.is_ghost,
     })
 }
 
@@ -401,10 +410,11 @@ pub(crate) async fn update_stop(
     let _res = sqlx::query!(
         r#"
 UPDATE Stops
-SET name=$1, short_name=$2, locality=$3, street=$4, door=$5, lon=$6, lat=$7, notes=$8,
-    accessibility_meta=$9, updater=$10, update_date=$11, tags=$12, verification_level=$13,
-    service_check_date=$14, infrastructure_check_date=$15
-WHERE id=$16
+SET name=$1, short_name=$2, locality=$3, street=$4, door=$5, lon=$6, lat=$7,
+    notes=$8, accessibility_meta=$9, updater=$10, update_date=$11, tags=$12,
+    verification_level=$13, service_check_date=$14,
+    infrastructure_check_date=$15, license=$16, is_ghost=$17
+WHERE id=$18
     "#,
         changes.name,
         changes.short_name,
@@ -421,14 +431,16 @@ WHERE id=$16
         i16::from(changes.verification_level),
         changes.service_check_date,
         changes.infrastructure_check_date,
+        &changes.license,
+        &changes.is_ghost,
         stop_id
     )
-        .execute(&mut **transaction)
-        .await
-        .map_err(|err| {
-            tracing::error!(error=err.to_string(), stop_id);
-            Error::DatabaseExecution
-        })?;
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), stop_id);
+        Error::DatabaseExecution
+    })?;
 
     Ok(())
 }
@@ -643,6 +655,8 @@ impl FromRow<'_, sqlx::postgres::PgRow> for responses::Stop {
             service_check_date: row.try_get("service_check_date")?,
             infrastructure_check_date: row
                 .try_get("infrastructure_check_date")?,
+            is_ghost: row.try_get("is_ghost")?,
+            license: row.try_get("license")?,
         })
     }
 }

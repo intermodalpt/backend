@@ -47,7 +47,10 @@ pub(crate) mod requests {
         pub service_check_date: Option<NaiveDate>,
         #[serde(default)]
         pub infrastructure_check_date: Option<NaiveDate>,
+
         pub osm_id: Option<i64>,
+        pub license: String,
+        pub is_ghost: bool,
     }
 
     #[derive(Clone, Deserialize)]
@@ -56,25 +59,20 @@ pub(crate) mod requests {
         pub lat: f64,
 
         pub name: String,
-        #[serde(default)]
         pub short_name: Option<String>,
-        #[serde(default)]
         pub locality: Option<String>,
-        #[serde(default)]
         pub street: Option<String>,
-        #[serde(default)]
         pub door: Option<String>,
-        #[serde(default)]
         pub notes: Option<String>,
-        #[serde(default)]
         pub tags: Vec<String>,
 
         pub a11y: stops::A11yMeta,
         pub verification_level: u8,
-        #[serde(default)]
         pub service_check_date: Option<NaiveDate>,
-        #[serde(default)]
         pub infrastructure_check_date: Option<NaiveDate>,
+
+        pub license: String,
+        pub is_ghost: bool,
     }
 
     impl From<stops::Stop> for ChangeStop {
@@ -93,6 +91,8 @@ pub(crate) mod requests {
                 verification_level: stop.verification_level,
                 service_check_date: stop.service_check_date,
                 infrastructure_check_date: stop.infrastructure_check_date,
+                license: stop.license,
+                is_ghost: stop.is_ghost,
             }
         }
     }
@@ -265,6 +265,14 @@ pub(crate) mod requests {
                     Some(self.infrastructure_check_date);
             }
 
+            if self.license != stop.license {
+                patch.license = Some(self.license.clone());
+            }
+
+            if self.is_ghost != stop.is_ghost {
+                patch.is_ghost = Some(self.is_ghost);
+            }
+
             patch
         }
     }
@@ -317,7 +325,7 @@ pub(crate) mod responses {
         pub lon: f64,
         pub notes: Option<String>,
         pub tags: Vec<String>,
-        pub a11y: sqlx::types::Json<stops::A11yMeta>,
+        pub a11y: Json<stops::A11yMeta>,
         // This is an 8 bit flag (u32 because of postgres::Decode) made of 4 duets.
         // The four binary duets are for: Position, Service, Infra and [reserved]
         // 0 => Not verified; 1 => Wrong; 2 => Likely; 3 => Verified
@@ -328,13 +336,16 @@ pub(crate) mod responses {
         pub service_check_date: Option<NaiveDate>,
         #[serde(default)]
         pub infrastructure_check_date: Option<NaiveDate>,
+
         pub osm_id: Option<i64>,
+        pub license: String,
+        pub is_ghost: bool,
     }
 
     impl From<Stop> for stops::Stop {
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         fn from(stop: Stop) -> Self {
-            let sqlx::types::Json(ally) = stop.a11y;
+            let Json(ally) = stop.a11y;
             stops::Stop {
                 id: stop.id,
                 osm_id: stop.osm_id,
@@ -352,6 +363,8 @@ pub(crate) mod responses {
                 verification_level: stop.verification_level as u8,
                 service_check_date: stop.service_check_date,
                 infrastructure_check_date: stop.infrastructure_check_date,
+                is_ghost: stop.is_ghost,
+                license: stop.license,
             }
         }
     }

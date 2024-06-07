@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, name, short_name, locality, street, door, lat, lon, notes, parish,\n    tags, verification_level, service_check_date, infrastructure_check_date,\n    accessibility_meta as \"a11y!: sqlx::types::Json<stops::A11yMeta>\", osm_id\nFROM stops",
+  "query": "SELECT id, name, short_name, locality, street, door, lat, lon, notes, parish,\n    tags, verification_level, service_check_date, infrastructure_check_date,\n    accessibility_meta as \"a11y!: sqlx::types::Json<stops::A11yMeta>\", osm_id,\n    is_ghost, license\nFROM stops",
   "describe": {
     "columns": [
       {
@@ -82,6 +82,16 @@
         "ordinal": 15,
         "name": "osm_id",
         "type_info": "Int8"
+      },
+      {
+        "ordinal": 16,
+        "name": "is_ghost",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 17,
+        "name": "license",
+        "type_info": "Text"
       }
     ],
     "parameters": {
@@ -103,8 +113,10 @@
       true,
       true,
       false,
-      true
+      true,
+      false,
+      false
     ]
   },
-  "hash": "995ffa964cabc1496634fb2c814f8e63defa6415f549291916c9ec8dea3d019b"
+  "hash": "9bdfb055d6b72300e8a5c7cd2293bc9c9de4e21f5155ea89883bda1eb6db03d4"
 }

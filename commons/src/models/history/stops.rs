@@ -297,8 +297,6 @@ impl TryFrom<AreaParkingLimitation> for current::AreaParkingLimitation {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Stop {
     pub id: i32,
-    #[serde(default)]
-    pub osm_id: Option<i64>,
     pub name: Option<String>,
     pub short_name: Option<String>,
     pub locality: Option<String>,
@@ -316,13 +314,17 @@ pub struct Stop {
 
     pub service_check_date: Option<NaiveDate>,
     pub infrastructure_check_date: Option<NaiveDate>,
+
+    #[serde(default)]
+    pub osm_id: Option<i64>,
+    pub license: Option<String>,
+    pub is_ghost: Option<bool>,
 }
 
 impl From<current::Stop> for Stop {
     fn from(stop: current::Stop) -> Self {
         Stop {
             id: stop.id,
-            osm_id: stop.osm_id,
             name: Some(stop.name),
             short_name: stop.short_name,
             locality: stop.locality,
@@ -337,6 +339,10 @@ impl From<current::Stop> for Stop {
             verification_level: stop.verification_level,
             service_check_date: stop.service_check_date,
             infrastructure_check_date: stop.infrastructure_check_date,
+
+            osm_id: stop.osm_id,
+            license: Some(stop.license),
+            is_ghost: Some(stop.is_ghost),
         }
     }
 }
@@ -347,7 +353,6 @@ impl TryFrom<Stop> for current::Stop {
     fn try_from(stop: Stop) -> Result<Self, Self::Error> {
         Ok(current::Stop {
             id: stop.id,
-            osm_id: stop.osm_id,
             name: stop.name.ok_or(Error::Conversion)?,
             short_name: stop.short_name,
             locality: stop.locality,
@@ -368,6 +373,10 @@ impl TryFrom<Stop> for current::Stop {
             verification_level: stop.verification_level,
             service_check_date: stop.service_check_date,
             infrastructure_check_date: stop.infrastructure_check_date,
+
+            osm_id: stop.osm_id,
+            license: stop.license.unwrap_or("?".to_string()),
+            is_ghost: stop.is_ghost.unwrap_or(false),
         })
     }
 }
@@ -842,6 +851,9 @@ pub struct StopPatch {
     pub infrastructure_check_date: Option<Option<NaiveDate>>,
     #[serde(default)]
     pub verification_level: Option<u8>,
+
+    pub license: Option<String>,
+    pub is_ghost: Option<bool>,
 }
 
 impl StopPatch {
@@ -883,6 +895,8 @@ impl StopPatch {
             && self.service_check_date.is_none()
             && self.infrastructure_check_date.is_none()
             && self.verification_level.is_none()
+            && self.license.is_none()
+            && self.is_ghost.is_none()
     }
 
     #[allow(clippy::too_many_lines)]
@@ -1023,6 +1037,12 @@ impl StopPatch {
         if let Some(infrastructure_check_date) = self.infrastructure_check_date
         {
             stop.infrastructure_check_date = infrastructure_check_date;
+        }
+        if let Some(license) = self.license.clone() {
+            stop.license = license;
+        }
+        if let Some(is_ghost) = self.is_ghost {
+            stop.is_ghost = is_ghost;
         }
         Ok(())
     }
@@ -1245,6 +1265,16 @@ impl StopPatch {
                 self.verification_level = None;
             }
         }
+        if let Some(license) = &self.license {
+            if license == &stop.license {
+                self.license = None;
+            }
+        }
+        if let Some(is_ghost) = &self.is_ghost {
+            if is_ghost == &stop.is_ghost {
+                self.is_ghost = None;
+            }
+        }
         Ok(())
     }
     #[allow(clippy::too_many_lines)]
@@ -1357,6 +1387,12 @@ impl StopPatch {
         if fields.contains(&"verification_level") {
             self.verification_level = None;
         }
+        if fields.contains(&"license") {
+            self.license = None;
+        }
+        if fields.contains(&"is_ghost") {
+            self.is_ghost = None;
+        }
     }
 
     pub fn deverify(
@@ -1386,7 +1422,8 @@ impl StopPatch {
             || self.is_visible_from_outside.is_some()
             || self.parking_visibility_impairment.is_some()
             || self.parking_local_access_impairment.is_some()
-            || self.parking_area_access_impairment.is_some();
+            || self.parking_area_access_impairment.is_some()
+            || self.is_ghost.is_some();
 
         let mut new_verification = original_verification;
 
