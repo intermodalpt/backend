@@ -159,7 +159,7 @@ pub fn build_paths(state: AppState) -> Router {
             put(osm::handlers::put_stop_map_features),
         )
         .route(
-            "/v1/stops/:stop_id/toto",
+            "/v1/stops/:stop_id/todo",
             put(stops::handlers::put_stop_todo),
         )
         .route(
