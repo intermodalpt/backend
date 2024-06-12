@@ -59,7 +59,7 @@ pub(crate) struct PatternSummary<'gtfs> {
 #[derive(Debug)]
 pub(crate) struct RoutePairing<'iml, 'gtfs> {
     pub(crate) route_id: iml::RouteId,
-    pub(crate) pairings: Vec<SubroutePatternPairing<'iml, 'gtfs>>,
+    pub(crate) subroute_pairings: Vec<SubroutePatternPairing<'iml, 'gtfs>>,
     pub(crate) unpaired_gtfs: Vec<GtfsPatternData<'gtfs>>,
     pub(crate) unpaired_iml: Vec<ImlSubrouteData<'iml>>,
 }
@@ -634,7 +634,7 @@ pub(crate) fn pair_patterns_with_subroutes<'iml, 'gtfs>(
 
     RoutePairing {
         route_id: summary.iml_route_id,
-        pairings: matches,
+        subroute_pairings: matches,
         unpaired_gtfs: unmatched_gtfs,
         unpaired_iml: unmatched_iml,
     }

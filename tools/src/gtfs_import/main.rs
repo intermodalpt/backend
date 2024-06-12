@@ -23,11 +23,12 @@ use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::process::exit;
 
-use crate::gtfs::load_gtfs;
-use crate::iml::load_base_data;
-use crate::linter::lint_gtfs;
-use crate::matcher::match_gtfs_routes;
 use commons::models::gtfs as gtfs_commons;
+
+use crate::gtfs::{load_gtfs, Data};
+use crate::iml::{load_base_data, Route};
+use crate::linter::lint_gtfs;
+use crate::matcher::{match_gtfs_routes, RoutePairing, SubroutePatternPairing};
 
 mod error;
 mod gtfs;
@@ -246,40 +247,45 @@ async fn main() {
     let mut bad_cnt = 0;
     let mut conflict_cnt = 0;
 
-    for res in matches {
-        let route = iml.routes.get(&res.route_id).unwrap();
+    for route_pairing in matches {
+        let route = iml.routes.get(&route_pairing.route_id).unwrap();
         println!("(#{}) - {:?} - {}", route.id, route.code, route.name);
 
         let route_validation_data = iml::RouteValidationData {
             validation: gtfs_commons::RouteValidation {
-                unmatched: res
+                unmatched: route_pairing
                     .unpaired_gtfs
                     .iter()
                     .map(|pattern| pattern.into())
                     .collect(),
             },
-            subroutes: res
-                .pairings
+            subroutes: route_pairing
+                .subroute_pairings
                 .iter()
                 .map(|pairing| (pairing.iml.subroute_id, pairing.into()))
                 .collect::<HashMap<i32, gtfs_commons::SubrouteValidation>>(),
         };
-        iml::put_route_validation(res.route_id, route_validation_data)
-            .await
-            .unwrap();
+        iml::put_route_validation(
+            route_pairing.route_id,
+            route_validation_data,
+        )
+        .await
+        .unwrap();
 
         let mut conflicts = false;
 
         {
             let mut used_gtfs_pattern_ids = HashSet::new();
             let mut used_iml_subroute_ids = HashSet::new();
-            for m in res.pairings.iter() {
-                let new = used_gtfs_pattern_ids.insert(&m.gtfs.pattern_ids);
+            for subroute_pairing in route_pairing.subroute_pairings.iter() {
+                let new = used_gtfs_pattern_ids
+                    .insert(&subroute_pairing.gtfs.pattern_ids);
                 if !new {
                     conflicts = true;
                     break;
                 }
-                let new = used_iml_subroute_ids.insert(&m.iml.subroute_id);
+                let new = used_iml_subroute_ids
+                    .insert(&subroute_pairing.iml.subroute_id);
                 if !new {
                     conflicts = true;
                     break;
@@ -295,15 +301,17 @@ async fn main() {
         let mut every_match_perfect = true;
         let mut missing_stop_rels = false;
 
-        if !res.pairings.is_empty() {
+        if !route_pairing.subroute_pairings.is_empty() {
             println!("\tMatches:");
-            for m in res.pairings.iter() {
+            for subroute_pairing in route_pairing.subroute_pairings.iter() {
                 let subroute = route
                     .subroutes
                     .iter()
-                    .find(|subroute| subroute.id == m.iml.subroute_id)
+                    .find(|subroute| {
+                        subroute.id == subroute_pairing.iml.subroute_id
+                    })
                     .unwrap();
-                let trip_headsigns = m
+                let trip_headsigns = subroute_pairing
                     .gtfs
                     .trip_ids
                     .iter()
@@ -315,53 +323,38 @@ async fn main() {
                     .join(";");
                 println!(
                     "\t\tIML#{} {} matched with GTFS#{};;{};HS:{}",
-                    m.iml.subroute_id,
+                    subroute_pairing.iml.subroute_id,
                     subroute.flag,
-                    m.gtfs.route_id,
-                    m.gtfs.pattern_ids.join(";"),
+                    subroute_pairing.gtfs.route_id,
+                    subroute_pairing.gtfs.pattern_ids.join(";"),
                     trip_headsigns
                 );
 
                 // Check if the iml.stop_ids are equal to the gtfs.iml_stop_ids
-                let iml_ids_as_optional = m
+                let iml_ids_as_optional = subroute_pairing
                     .iml
                     .stop_ids
                     .iter()
                     .map(|id| Some(*id))
                     .collect::<Vec<_>>();
-                let stop_seq_equal = iml_ids_as_optional == m.gtfs.iml_stop_ids;
+                let stop_seq_equal =
+                    iml_ids_as_optional == subroute_pairing.gtfs.iml_stop_ids;
 
                 if stop_seq_equal {
-                    println!(
-                        "\t\t{}",
-                        serde_json::to_string(&m.gtfs.iml_stop_ids).unwrap()
-                    );
-                    println!("\t\t--- Already upstream!");
+                    print_matching_pattern(subroute_pairing);
                 } else {
-                    println!(
-                        "\t\tG{}",
-                        serde_json::to_string(&m.gtfs.stop_ids).unwrap()
-                    );
-                    println!(
-                        "\t\tG{}",
-                        serde_json::to_string(&m.gtfs.iml_stop_ids).unwrap()
-                    );
-                    println!(
-                        "\t\tI{}",
-                        serde_json::to_string(&m.iml.stop_ids).unwrap()
-                    );
+                    print_diverging_pattern(subroute_pairing);
                     every_match_perfect = false;
-                    println!("\t\t---");
                 }
 
-                if m.gtfs.iml_stop_ids.contains(&None) {
+                if subroute_pairing.gtfs.iml_stop_ids.contains(&None) {
                     missing_stop_rels = true;
                 }
             }
         }
 
-        let no_unmatched =
-            res.unpaired_iml.is_empty() || res.unpaired_gtfs.is_empty();
+        let no_unmatched = route_pairing.unpaired_iml.is_empty()
+            || route_pairing.unpaired_gtfs.is_empty();
 
         if every_match_perfect && no_unmatched {
             good_cnt += 1;
@@ -372,44 +365,12 @@ async fn main() {
             println!("\t\t### BAD MATCH ###")
         }
 
-        if !res.unpaired_iml.is_empty() {
-            println!("\tUnmatched IML:");
-            for data in res.unpaired_iml.iter() {
-                let subroute = route
-                    .subroutes
-                    .iter()
-                    .find(|subroute| subroute.id == data.subroute_id)
-                    .unwrap();
-                println!("\t\tIML#{} - {}", data.subroute_id, subroute.flag);
-                println!("\t\t\t{:?}", data.stop_ids);
-                println!("\t\t---");
-            }
+        if !route_pairing.unpaired_iml.is_empty() {
+            print_unpaired_iml(route, &route_pairing);
         }
-        if !res.unpaired_gtfs.is_empty() {
-            println!("\tUnmatched GTFS:");
-            for data in res.unpaired_gtfs.iter() {
-                let trip_headsigns = data
-                    .trip_ids
-                    .iter()
-                    .filter_map(|id| {
-                        gtfs.trips.get(id).unwrap().trip_headsign.clone()
-                    })
-                    .unique()
-                    .collect::<Vec<_>>()
-                    .join(";");
-                println!(
-                    "\t\tGTFS#{};;{};HS:{} - {:?}",
-                    data.route_id,
-                    data.pattern_ids.join(";"),
-                    trip_headsigns,
-                    data.stop_ids
-                );
-                println!(
-                    "\t\t->IML {:?}",
-                    serde_json::to_string(&data.iml_stop_ids).unwrap()
-                );
-                println!("\t\t---");
-            }
+        // Show unmatched GTFS
+        if !route_pairing.unpaired_gtfs.is_empty() {
+            print_unpaired_gtfs(&gtfs, &route_pairing);
         }
     }
 
@@ -417,4 +378,67 @@ async fn main() {
     println!("Fixable: {}", fixable_cnt);
     println!("Bad: {}", bad_cnt);
     println!("Conflicts: {}", conflict_cnt);
+}
+
+fn print_matching_pattern(subroute_pairing: &SubroutePatternPairing) {
+    println!(
+        "\t\t{}",
+        serde_json::to_string(&subroute_pairing.gtfs.iml_stop_ids).unwrap()
+    );
+    println!("\t\t--- Already upstream!");
+}
+
+fn print_diverging_pattern(subroute_pairing: &SubroutePatternPairing) {
+    println!(
+        "\t\tG{}",
+        serde_json::to_string(&subroute_pairing.gtfs.stop_ids).unwrap()
+    );
+    println!(
+        "\t\tG{}",
+        serde_json::to_string(&subroute_pairing.gtfs.iml_stop_ids).unwrap()
+    );
+    println!(
+        "\t\tI{}",
+        serde_json::to_string(&subroute_pairing.iml.stop_ids).unwrap()
+    );
+    println!("\t\t---");
+}
+
+fn print_unpaired_iml(route: &Route, route_pairing: &RoutePairing) {
+    println!("\tUnmatched IML:");
+    for data in route_pairing.unpaired_iml.iter() {
+        let subroute = route
+            .subroutes
+            .iter()
+            .find(|subroute| subroute.id == data.subroute_id)
+            .unwrap();
+        println!("\t\tIML#{} - {}", data.subroute_id, subroute.flag);
+        println!("\t\t\t{:?}", data.stop_ids);
+        println!("\t\t---");
+    }
+}
+
+fn print_unpaired_gtfs(gtfs: &Data, route_pairing: &RoutePairing) {
+    println!("\tUnmatched GTFS:");
+    for pattern_data in route_pairing.unpaired_gtfs.iter() {
+        let trip_headsigns = pattern_data
+            .trip_ids
+            .iter()
+            .filter_map(|id| gtfs.trips.get(id).unwrap().trip_headsign.clone())
+            .unique()
+            .collect::<Vec<_>>()
+            .join(";");
+        println!(
+            "\t\tGTFS#{};;{};HS:{} - {:?}",
+            pattern_data.route_id,
+            pattern_data.pattern_ids.join(";"),
+            trip_headsigns,
+            pattern_data.stop_ids
+        );
+        println!(
+            "\t\t->IML {:?}",
+            serde_json::to_string(&pattern_data.iml_stop_ids).unwrap()
+        );
+        println!("\t\t---");
+    }
 }

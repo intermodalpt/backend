@@ -76,7 +76,7 @@ fn single_lone_pattern() {
     };
 
     let res = pair_patterns_with_subroutes(summary);
-    assert_eq!(res.pairings.len(), 0);
+    assert_eq!(res.subroute_pairings.len(), 0);
     assert_eq!(res.unpaired_gtfs.len(), 1);
     assert_eq!(res.unpaired_iml.len(), 0);
 }
@@ -103,7 +103,7 @@ fn single_lone_subroute() {
     };
 
     let res = pair_patterns_with_subroutes(summary);
-    assert_eq!(res.pairings.len(), 0);
+    assert_eq!(res.subroute_pairings.len(), 0);
     assert_eq!(res.unpaired_gtfs.len(), 0);
     assert_eq!(res.unpaired_iml.len(), 1);
 }
@@ -161,11 +161,11 @@ fn single_match() {
     };
 
     let res = pair_patterns_with_subroutes(summary);
-    assert_eq!(res.pairings.len(), 1);
+    assert_eq!(res.subroute_pairings.len(), 1);
     assert_eq!(res.unpaired_gtfs.len(), 0);
     assert_eq!(res.unpaired_iml.len(), 0);
 
-    let pairing = &res.pairings[0];
+    let pairing = &res.subroute_pairings[0];
     assert_eq!(pairing.stop_matches, 5);
     assert_eq!(pairing.stop_mismatches, 0);
 }
@@ -264,7 +264,7 @@ fn two_equal_matches() {
     };
 
     let res = pair_patterns_with_subroutes(summary);
-    assert_eq!(res.pairings.len(), 0);
+    assert_eq!(res.subroute_pairings.len(), 0);
     assert_eq!(res.unpaired_gtfs.len(), 2);
     assert_eq!(res.unpaired_iml.len(), 2);
 }
@@ -371,14 +371,14 @@ fn two_perfect_matches() {
     };
 
     let res = pair_patterns_with_subroutes(summary);
-    assert_eq!(res.pairings.len(), 2);
+    assert_eq!(res.subroute_pairings.len(), 2);
     assert_eq!(res.unpaired_gtfs.len(), 0);
     assert_eq!(res.unpaired_iml.len(), 0);
 
-    let pairing = &res.pairings[0];
+    let pairing = &res.subroute_pairings[0];
     assert_eq!(pairing.stop_matches, 5);
     assert_eq!(pairing.stop_mismatches, 0);
-    let pairing = &res.pairings[1];
+    let pairing = &res.subroute_pairings[1];
     assert_eq!(pairing.stop_matches, 5);
     assert_eq!(pairing.stop_mismatches, 0);
 }
@@ -494,14 +494,14 @@ fn imperfect_matches() {
     };
 
     let res = pair_patterns_with_subroutes(summary);
-    assert_eq!(res.pairings.len(), 2);
+    assert_eq!(res.subroute_pairings.len(), 2);
     assert_eq!(res.unpaired_gtfs.len(), 0);
     assert_eq!(res.unpaired_iml.len(), 0);
 
-    let pairing = &res.pairings[0];
+    let pairing = &res.subroute_pairings[0];
     assert_eq!(pairing.stop_matches, 8);
     assert_eq!(pairing.stop_mismatches, 1);
-    let pairing = &res.pairings[1];
+    let pairing = &res.subroute_pairings[1];
     assert_eq!(pairing.stop_matches, 8);
     assert_eq!(pairing.stop_mismatches, 1);
 }
@@ -616,13 +616,13 @@ fn match_through_headsign() {
     };
 
     let res = pair_patterns_with_subroutes(summary);
-    assert_eq!(res.pairings.len(), 2);
+    assert_eq!(res.subroute_pairings.len(), 2);
     assert_eq!(res.unpaired_gtfs.len(), 0);
     assert_eq!(res.unpaired_iml.len(), 0);
-    let pairing = &res.pairings[0];
+    let pairing = &res.subroute_pairings[0];
     assert_eq!(pairing.iml.subroute_id, 1);
     assert_eq!(pairing.gtfs.route_id, "0000_1");
-    let pairing = &res.pairings[1];
+    let pairing = &res.subroute_pairings[1];
     assert_eq!(pairing.iml.subroute_id, 2);
     assert_eq!(pairing.gtfs.route_id, "0000_0");
 }
