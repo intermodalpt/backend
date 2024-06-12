@@ -124,7 +124,7 @@ pub fn build_paths(state: AppState) -> Router {
         )
         .route(
             "/v1/stops/:stop_id/position",
-            post(stops::handlers::post_update_stop_position),
+            put(stops::handlers::put_stop_position),
         )
         .route(
             "/v1/stops/:stop_id/osm",

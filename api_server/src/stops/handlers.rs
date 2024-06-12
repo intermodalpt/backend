@@ -157,7 +157,7 @@ pub(crate) async fn patch_stop(
     Ok(Json(stop))
 }
 
-pub(crate) async fn post_update_stop_position(
+pub(crate) async fn put_stop_position(
     State(state): State<AppState>,
     Path(stop_id): Path<i32>,
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
