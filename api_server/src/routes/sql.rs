@@ -459,6 +459,20 @@ WHERE route=$1
         return Err(Error::DependenciesNotMet);
     }
 
+    sqlx::query!(
+        r#"
+DELETE FROM region_routes
+WHERE route_id=$1
+    "#,
+        route_id
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), route_id);
+        Error::DatabaseExecution
+    })?;
+
     let deleted_rows = sqlx::query!(
         r#"
 DELETE FROM Routes
