@@ -153,7 +153,7 @@ pub(crate) async fn fetch_region_full_stops(
 r#"SELECT id, name, short_name, locality, street, door, lat, lon, notes, parish,
     tags, updater, update_date, verification_level,
     service_check_date, infrastructure_check_date, verified_position,
-    accessibility_meta, osm_id,
+    accessibility_meta, osm_id, is_ghost, license,
     CASE
         WHEN count(stop_operators.stop_id) > 0
         THEN array_agg(
@@ -300,7 +300,7 @@ pub(crate) async fn fetch_operator_full_stops(
 r#"SELECT id, name, short_name, locality, street, door, lat, lon, notes, parish,
     tags, updater, update_date, verification_level,
     service_check_date, infrastructure_check_date, verified_position,
-    accessibility_meta, osm_id,
+    accessibility_meta, osm_id, is_ghost, license,
     CASE
         WHEN count(stop_operators.stop_id) > 0
         THEN array_agg(
