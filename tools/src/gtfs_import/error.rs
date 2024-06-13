@@ -23,6 +23,7 @@ pub enum Error {
     Files(String),
     Deserialization(csv::Error),
     HTTPError(String),
+    MissingData(String),
 }
 
 impl Display for Error {

@@ -50,26 +50,29 @@ impl From<current::PatternCluster> for PatternCluster {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubrouteValidation {
-    pub gtfs_pattern_ids: Vec<PatternId>,
-    pub gtfs_trip_ids: Vec<TripId>,
-    pub iml_stops: Vec<i32>,
+    pub gtfs_pattern_ids: HashSet<PatternId>,
+    pub gtfs_headsigns: HashSet<String>,
+    pub gtfs_trip_ids: HashSet<TripId>,
     pub gtfs_stops: Vec<StopId>,
+    // The IML stops that are thought to match the GTFS data
+    pub iml_stops: Vec<i32>,
 }
 
 impl From<current::SubrouteValidation> for SubrouteValidation {
     fn from(validation: current::SubrouteValidation) -> Self {
         Self {
-            gtfs_pattern_ids: validation.gtfs_pattern_ids,
-            gtfs_trip_ids: validation.gtfs_trip_ids,
-            iml_stops: validation.iml_stops,
-            gtfs_stops: validation.gtfs_stops,
+            gtfs_pattern_ids: validation.gtfs_cluster.patterns,
+            gtfs_trip_ids: validation.gtfs_cluster.trips,
+            gtfs_headsigns: validation.gtfs_cluster.headsigns,
+            gtfs_stops: validation.gtfs_cluster.stops,
+            iml_stops: validation.stops,
         }
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RouteValidation {
-    pub unmatched: Vec<PatternCluster>,
+    pub unmatched: Vec<SubrouteValidation>,
 }
 
 impl From<current::RouteValidation> for RouteValidation {

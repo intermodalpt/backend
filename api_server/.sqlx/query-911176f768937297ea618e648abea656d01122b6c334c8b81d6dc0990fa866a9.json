@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT -- validation_current as current,\n    validation_current_ack as current_ack,\n    -- validation_correspondence as correspondence,\n    validation_correspondence_ack as correspondence_ack\n    -- validation_gtfs as \"gtfs!: Json<gtfs::PatternCluster>\"\nFROM subroutes\nWHERE id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "current_ack",
+        "type_info": "Int4Array"
+      },
+      {
+        "ordinal": 1,
+        "name": "correspondence_ack",
+        "type_info": "Int4Array"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "911176f768937297ea618e648abea656d01122b6c334c8b81d6dc0990fa866a9"
+}

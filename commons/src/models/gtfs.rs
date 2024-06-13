@@ -108,25 +108,22 @@ pub struct PatternCluster {
     // This field is the unique identifier
     pub stops: Vec<StopId>,
     // And these are just agglomerates
-    pub headsigns: HashSet<PatternId>,
+    pub headsigns: HashSet<String>,
     pub patterns: HashSet<PatternId>,
     pub trips: HashSet<TripId>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubrouteValidation {
-    // TODO these four fields should become a `matched: PatternCluster` field
-    pub gtfs_pattern_ids: Vec<PatternId>,
-    pub gtfs_trip_ids: Vec<TripId>,
-    pub gtfs_headsigns: Vec<String>,
-    pub gtfs_stops: Vec<StopId>,
-    // IML stops that corresponded at the time the validation was performed
-    pub iml_stops: Vec<i32>,
+    // The GTFS data that has been considered to be this subroute
+    pub gtfs_cluster: PatternCluster,
+    // These are the IML stops that the GTFS corresponds to match
+    pub stops: Vec<i32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RouteValidation {
-    pub unmatched: Vec<PatternCluster>,
+    pub unmatched: Vec<SubrouteValidation>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

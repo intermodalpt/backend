@@ -202,10 +202,10 @@ pub fn build_paths(state: AppState) -> Router {
         .route(
             "/v1/routes/:route_id/validation",
             get(gtfs::handlers::get_route_validation_data)
-                .put(gtfs::handlers::put_route_validation_data),
+                .patch(gtfs::handlers::patch_route_validation_data),
         )
         .route(
-            "/v1/routes/:route_id/subroute_validation",
+            "/v1/routes/:route_id/assign_unmatched_validation",
             post(gtfs::handlers::post_assign_subroute_validation),
         )
         .route(
@@ -221,8 +221,12 @@ pub fn build_paths(state: AppState) -> Router {
             patch(routes::handlers::patch_subroute_stops),
         )
         .route(
-            "/v1/subroutes/:subroute_id/paired_stops",
-            post(gtfs::handlers::patch_subroute_validation_stops),
+            "/v1/subroutes/:subroute_id/validation/current_ack",
+            post(gtfs::handlers::post_subroute_validation_current_ack),
+        )
+        .route(
+            "/v1/subroutes/:subroute_id/validation/correspondence_ack",
+            post(gtfs::handlers::post_subroute_validation_correspondence_ack),
         )
         .route(
             "/v1/schedules/:subroute_id",

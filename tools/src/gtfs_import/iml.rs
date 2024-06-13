@@ -234,14 +234,14 @@ async fn fetch_route_stops(
         .collect())
 }
 
-pub(crate) async fn put_route_validation(
+pub(crate) async fn patch_route_validation(
     route_id: i32,
     validation_data: RouteValidationData,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let url = format!("{}/v1/routes/{}/validation", API_URL, route_id);
     println!("Calling {}", &url);
     let res = reqwest::Client::new()
-        .put(&url)
+        .patch(&url)
         .bearer_auth(TOKEN.get().unwrap())
         .json(&validation_data)
         .send()

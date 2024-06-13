@@ -49,7 +49,7 @@ pub(crate) struct SubrouteSummary<'iml> {
 #[derive(Clone)]
 pub(crate) struct PatternSummary<'gtfs> {
     pub(crate) gtfs_stop_ids: &'gtfs Vec<gtfs::StopId>,
-    pub(crate) iml_stop_ids: Vec<Option<iml::StopId>>,
+    pub(crate) iml_stop_ids: Vec<iml::StopId>,
     pub(crate) route_id: &'gtfs gtfs::RouteId,
     pub(crate) patterns: &'gtfs HashSet<gtfs::PatternId>,
     pub(crate) trips: &'gtfs HashSet<gtfs::TripId>,
@@ -79,16 +79,19 @@ pub(crate) struct GtfsPatternData<'gtfs> {
     pub(crate) pattern_ids: Vec<gtfs::PatternId>,
     pub(crate) headsigns: Vec<String>,
     pub(crate) trip_ids: Vec<gtfs::TripId>,
-    pub(crate) iml_stop_ids: Vec<Option<iml::StopId>>,
+    pub(crate) iml_stop_ids: Vec<iml::StopId>,
 }
 
-impl From<&GtfsPatternData<'_>> for gtfs_commons::PatternCluster {
-    fn from(cluster: &GtfsPatternData<'_>) -> Self {
-        gtfs_commons::PatternCluster {
-            stops: cluster.stop_ids.iter().cloned().collect(),
-            headsigns: cluster.headsigns.iter().cloned().collect(),
-            patterns: cluster.pattern_ids.iter().cloned().collect(),
-            trips: cluster.trip_ids.iter().cloned().collect(),
+impl From<&GtfsPatternData<'_>> for gtfs_commons::SubrouteValidation {
+    fn from(cluster: GtfsPatternData<'_>) -> Self {
+        gtfs_commons::SubrouteValidation {
+            gtfs_cluster: gtfs_commons::PatternCluster {
+                stops: cluster.stop_ids.iter().cloned().collect(),
+                headsigns: cluster.headsigns.iter().cloned().collect(),
+                patterns: cluster.pattern_ids.iter().cloned().collect(),
+                trips: cluster.trip_ids.iter().cloned().collect(),
+            },
+            stops: cluster.iml_stop_ids.iter().cloned().collect(),
         }
     }
 }
@@ -98,11 +101,13 @@ impl From<&SubroutePatternPairing<'_, '_>>
 {
     fn from(pairing: &SubroutePatternPairing<'_, '_>) -> Self {
         gtfs_commons::SubrouteValidation {
-            gtfs_pattern_ids: pairing.gtfs.pattern_ids.clone(),
-            gtfs_trip_ids: pairing.gtfs.trip_ids.clone(),
-            gtfs_headsigns: pairing.gtfs.headsigns.clone(),
-            iml_stops: pairing.iml.stop_ids.iter().cloned().collect_vec(),
-            gtfs_stops: pairing.gtfs.stop_ids.iter().cloned().collect_vec(),
+            gtfs_cluster: gtfs_commons::PatternCluster {
+                stops: pairing.gtfs.stop_ids.iter().cloned().collect(),
+                headsigns: pairing.gtfs.headsigns.iter().cloned().collect(),
+                patterns: pairing.gtfs.pattern_ids.iter().cloned().collect(),
+                trips: pairing.gtfs.trip_ids.iter().cloned().collect(),
+            },
+            stops: pairing.gtfs.iml_stop_ids.iter().cloned().collect(),
         }
     }
 }
@@ -229,18 +234,30 @@ async fn link_gtfs_to_iml_route<'iml, 'gtfs>(
             gtfs.route_pattern_clusters.get(&gtfs_route.route_id)
         {
             for cluster in gtfs_pattern_cluster {
-                let iml_stop_ids = cluster
+                let mut iml_stop_ids = cluster
                     .stops
                     .iter()
-                    .map(|gtfs_stop_id| {
+                    .filter_map(|gtfs_stop_id| {
+                        if GTFS_TMP_SUPRESS.contains(&gtfs_stop_id.as_ref()) {
+                            println!("Supressing GTFS stop {}", gtfs_stop_id);
+                            return None;
+                        }
+
                         let iml_stop_id =
                             gtfs_to_iml_stops.get(gtfs_stop_id).cloned();
-                        if iml_stop_id.is_none() {
-                            println!("Missing GTFS stop {}", gtfs_stop_id);
-                        }
-                        iml_stop_id
+
+                        let Some(stop_id) = iml_stop_id else {
+                            return Some(Err(Error::MissingData(format!(
+                                "Missing GTFS stop {}",
+                                gtfs_stop_id
+                            ))));
+                        };
+
+                        Some(Ok(stop_id))
                     })
-                    .collect::<Vec<Option<iml::StopId>>>();
+                    .collect::<Result<Vec<iml::StopId>, Error>>()?;
+
+                iml_stop_ids.dedup();
 
                 gtfs_patterns_data.push(PatternSummary {
                     route_id: &gtfs_route.route_id,
@@ -296,7 +313,7 @@ pub(crate) fn pair_patterns_with_subroutes<'iml, 'gtfs>(
         for (gtfs_idx, gtfs_pattern) in summary.patterns.iter().enumerate() {
             matches[iml_idx][gtfs_idx] = stop_seq_error(
                 &gtfs_pattern.iml_stop_ids,
-                &iml_subroute.stop_ids_as_option,
+                &iml_subroute.stop_ids,
             );
         }
     }

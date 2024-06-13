@@ -187,44 +187,56 @@ CREATE TABLE route_types
 
 CREATE TABLE routes
 (
-    id             serial PRIMARY KEY,
-    code           text,
-    name           text                                  NOT NULL,
+    id               serial PRIMARY KEY,
+    code             text,
+    name             text                                  NOT NULL,
 
-    operator       integer                               NOT NULL,
-    active         boolean                               NOT NULL,
-    type           integer                               NOT NULL REFERENCES route_types (id),
-    official_name  text      DEFAULT ''::text            NOT NULL,
-    municipalities integer[] DEFAULT ARRAY []::integer[] NOT NULL,
-    parishes       integer[] DEFAULT ARRAY []::integer[] NOT NULL,
-    main_subroute  integer,
-    validation     jsonb,
+    operator         integer                               NOT NULL,
+    active           boolean                               NOT NULL,
+    type             integer                               NOT NULL REFERENCES route_types (id),
+    official_name    text      DEFAULT ''::text            NOT NULL,
+    municipalities   integer[] DEFAULT ARRAY []::integer[] NOT NULL,
+    parishes         integer[] DEFAULT ARRAY []::integer[] NOT NULL,
+    main_subroute    integer,
+    validation       jsonb,
     badge_text_color character(7),
     badge_bg_color   character(7),
 
     -- TODO consider deprecating
-    circular       boolean                               NOT NULL
+    circular         boolean                               NOT NULL
 );
 
 CREATE TABLE subroutes
 (
-    id          serial PRIMARY KEY,
-    route       integer                    NOT NULL REFERENCES routes (id),
-    circular    boolean DEFAULT false      NOT NULL,
+    id                            serial PRIMARY KEY,
+    route                         integer                         NOT NULL REFERENCES routes (id),
+    circular                      boolean DEFAULT false           NOT NULL,
 
     -- Cached fields
-    polyline    text,
+    polyline                      text,
 
     -- TODO consider dropping
-    flag        text                       NOT NULL,
+    flag                          text                            NOT NULL,
 
-    "group"     integer                    NOT NULL,
-    headsign    text                       NOT NULL,
-    origin      text                       NOT NULL,
-    destination text                       NOT NULL,
-    via         jsonb   DEFAULT '[]'::json NOT NULL,
+    "group"                       integer                         NOT NULL,
+    headsign                      text                            NOT NULL,
+    origin                        text                            NOT NULL,
+    destination                   text                            NOT NULL,
+    via                           jsonb   DEFAULT '[]'::json      NOT NULL,
 
-    validation  jsonb
+    -- TODO deprecate
+    validation                    jsonb,
+
+    -- Cached field. Contains the stops in the order they appear in the subroute
+    validation_current            int[]   DEFAULT ARRAY []::int[] NOT NULL,
+    -- The last acknowledged validation_current
+    validation_current_ack        int[]   DEFAULT ARRAY []::int[] NOT NULL,
+    -- The IML stops that the GTFS claims to be in the subroute
+    validation_correspondence     int[]   DEFAULT ARRAY []::int[] NOT NULL,
+    -- The last acknowledged validation_correspondence
+    validation_correspondence_ack int[]   DEFAULT ARRAY []::int[] NOT NULL,
+    -- The GTFS data that led to validation_correspondence
+    validation_gtfs               jsonb
 );
 
 ALTER TABLE ONLY routes

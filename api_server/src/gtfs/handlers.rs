@@ -21,6 +21,7 @@ use std::{fs, io};
 
 use axum::extract::{Path, State};
 use axum::Json;
+use tracing::log;
 
 use commons::models::gtfs::{self, File};
 use commons::utils::gtfs::{
@@ -180,25 +181,26 @@ pub(crate) async fn put_operator_validation_data(
     })
 }
 
+/// Queries the validation data for a route and its subroutes
 pub(crate) async fn get_route_validation_data(
     State(state): State<AppState>,
     Path(route): Path<i32>,
 ) -> Result<Json<responses::RouteValidation>, Error> {
-    let data = sql::fetch_route_validation_data(&state.pool, route).await?;
-
-    if let Some(data) = data {
-        Ok(Json(data))
-    } else {
-        Err(Error::NotFoundUpstream)
-    }
+    sql::fetch_route_validation_data(&state.pool, route)
+        .await?
+        .map(Json)
+        .ok_or(Error::NotFoundUpstream)
 }
 
-pub(crate) async fn put_route_validation_data(
+/// Accepts the validation data for a route and its subroutes
+/// and proceeds to replace the old data with the new one
+pub(crate) async fn patch_route_validation_data(
     State(state): State<AppState>,
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     Path(route): Path<i32>,
     Json(request): Json<requests::RouteSubroutesValidation>,
 ) -> Result<(), Error> {
+    use crate::routes::sql as routes_sql;
     let mut transaction = state.pool.begin().await.map_err(|err| {
         tracing::error!("Failed to open transaction: {err}");
         Error::DatabaseExecution
@@ -211,11 +213,19 @@ pub(crate) async fn put_route_validation_data(
     )
     .await?;
 
-    for (subroute, validation) in request.subroutes {
+    for (subroute_id, validation) in request.subroutes {
+        let current_stops =
+            routes_sql::fetch_subroute_stops(&mut transaction, subroute_id)
+                .await?;
+        let correspondence_stops = validation.stops;
+        let gtfs_cluster = validation.gtfs_cluster;
+
         sql::update_subroute_validation_data(
             &mut transaction,
-            subroute,
-            validation,
+            subroute_id,
+            &current_stops,
+            &correspondence_stops,
+            &gtfs_cluster,
         )
         .await?;
     }
@@ -226,6 +236,8 @@ pub(crate) async fn put_route_validation_data(
     })
 }
 
+/// Attach unpaired validation data in a route to a subroute
+/// This means that a previously unrecognized pattern is attached to the subroute
 pub(crate) async fn post_assign_subroute_validation(
     State(state): State<AppState>,
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
@@ -248,59 +260,59 @@ pub(crate) async fn post_assign_subroute_validation(
     let sqlx::types::Json(route_validation) =
         validation_data.validation.ok_or(Error::NotFoundUpstream)?;
 
-    let unassigned_cluster = route_validation
+    let (matched_validations, unmatched_validations): (
+        Vec<gtfs::SubrouteValidation>,
+        Vec<gtfs::SubrouteValidation>,
+    ) = route_validation
         .unmatched
-        .iter()
-        .find(|cluster| cluster.patterns.contains(&request.pattern_id))
-        .ok_or(Error::NotFoundUpstream)?;
+        .into_iter()
+        .partition(|validation| {
+            validation
+                .gtfs_cluster
+                .patterns
+                .contains(&request.pattern_id)
+        });
 
-    if let Some(sr_validation) =
-        validation_data.subroutes.get(&request.subroute_id)
-    {
-        // Ensure that the subroute has no assigned cluster
-        if sr_validation.is_some() {
-            return Err(Error::DependenciesNotMet);
-        }
+    // We naturally only want to match one single entry, no more
+    if matched_validations.len() > 1 {
+        log::error!(
+            "Multiple subroutes matched the pattern id: {pattern_id}",
+            pattern_id = request.pattern_id
+        );
+        return Err(Error::DependenciesNotMet);
     }
+    // and no less
+    let Some(subroute_validation) = matched_validations.first() else {
+        log::warn!(
+            "No subroutes matched the pattern id: {pattern_id}",
+            pattern_id = request.pattern_id
+        );
+        return Err(Error::NotFoundUpstream);
+    };
 
-    let sr_stops =
-        routes_sql::fetch_subroute_stops(&mut transaction, request.subroute_id)
-            .await?;
-
+    // Remove the just-matched validation from the unmatched list
     sql::update_route_validation_data(
         &mut transaction,
         route,
         gtfs::RouteValidation {
-            unmatched: route_validation
-                .unmatched
-                .iter()
-                .filter(|cluster| {
-                    cluster.patterns != unassigned_cluster.patterns
-                })
-                .cloned()
-                .collect(),
+            unmatched: unmatched_validations,
         },
     )
     .await?;
 
+    // And attach it to the referenced subroute
+    let current_stops =
+        routes_sql::fetch_subroute_stops(&mut transaction, request.subroute_id)
+            .await?;
+    let correspondence_stops = &subroute_validation.stops;
+    let gtfs_cluster = &subroute_validation.gtfs_cluster;
+
     sql::update_subroute_validation_data(
         &mut transaction,
         request.subroute_id,
-        gtfs::SubrouteValidation {
-            gtfs_pattern_ids: unassigned_cluster
-                .patterns
-                .iter()
-                .cloned()
-                .collect(),
-            gtfs_trip_ids: unassigned_cluster.trips.iter().cloned().collect(),
-            gtfs_headsigns: unassigned_cluster
-                .headsigns
-                .iter()
-                .cloned()
-                .collect(),
-            gtfs_stops: unassigned_cluster.stops.clone(),
-            iml_stops: sr_stops,
-        },
+        &current_stops,
+        &correspondence_stops,
+        &gtfs_cluster,
     )
     .await?;
 
@@ -312,14 +324,13 @@ pub(crate) async fn post_assign_subroute_validation(
     Ok(())
 }
 
-pub(crate) async fn patch_subroute_validation_stops(
+/// Acknowledges the current stops as the last validated against the GTFS data
+pub(crate) async fn post_subroute_validation_current_ack(
     State(state): State<AppState>,
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     Path(subroute_id): Path<i32>,
-    Json(request): Json<requests::UpdateSubrouteValidationStops>,
+    Json(request): Json<requests::MatchedUpdateStopIds>,
 ) -> Result<(), Error> {
-    use crate::routes::sql as routes_sql;
-
     let mut transaction = state.pool.begin().await.map_err(|err| {
         tracing::error!("Failed to open transaction: {err}");
         Error::DatabaseExecution
@@ -330,39 +341,52 @@ pub(crate) async fn patch_subroute_validation_stops(
             .await?
             .ok_or(Error::NotFoundUpstream)?;
 
-    sr_validation_data
-        .gtfs_pattern_ids
-        .contains(&request.pattern_id)
-        .then_some(())
-        .ok_or(Error::ValidationFailure(format!(
-            "Unrecognized pattern '{}' for subroute {}",
-            request.pattern_id, subroute_id
-        )))?;
-
-    let sr_stops =
-        routes_sql::fetch_subroute_stops(&mut transaction, subroute_id).await?;
-
-    if request.from_stop_ids != sr_stops {
+    // Ensure that we're updating from the right value
+    if request.from_stop_ids != sr_validation_data.current_ack {
         return Err(Error::DependenciesNotMet);
     }
 
-    if request.from_stop_ids != request.to_stop_ids {
-        routes_sql::update_subroute_stops(
-            &mut transaction,
-            subroute_id,
-            &request.to_stop_ids,
-            &request.from_stop_ids,
-        )
-        .await?;
-    }
-
-    sql::update_subroute_validation_data(
+    sql::update_subroute_validation_current_ack(
         &mut transaction,
         subroute_id,
-        gtfs::SubrouteValidation {
-            iml_stops: request.to_stop_ids,
-            ..sr_validation_data
-        },
+        &request.to_stop_ids,
+    )
+    .await?;
+
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
+
+    Ok(())
+}
+
+/// Acknowledges the current GTFS correspondence data as the latest validated
+pub(crate) async fn post_subroute_validation_correspondence_ack(
+    State(state): State<AppState>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    Path(subroute_id): Path<i32>,
+    Json(request): Json<requests::MatchedUpdateStopIds>,
+) -> Result<(), Error> {
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
+
+    let sr_validation_data =
+        sql::fetch_subroute_validation_data(&mut *transaction, subroute_id)
+            .await?
+            .ok_or(Error::NotFoundUpstream)?;
+
+    // Ensure that we're updating from the right value
+    if request.from_stop_ids != sr_validation_data.correspondence_ack {
+        return Err(Error::DependenciesNotMet);
+    }
+
+    sql::update_subroute_correspondence_ack(
+        &mut transaction,
+        subroute_id,
+        &request.to_stop_ids,
     )
     .await?;
 

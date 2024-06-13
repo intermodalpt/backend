@@ -58,6 +58,14 @@ pub struct SubrouteValidationPair {
     pub(crate) validation: Option<Json<gtfs::SubrouteValidation>>,
 }
 
+pub(crate) struct SubrouteValidationData {
+    // pub(crate) current: Vec<i32>,
+    pub(crate) current_ack: Vec<i32>,
+    // pub(crate) correspondence: Vec<i32>,
+    pub(crate) correspondence_ack: Vec<i32>,
+    // pub(crate) gtfs: Json<gtfs::PatternCluster>,
+}
+
 pub(crate) mod requests {
     use serde::Deserialize;
     use std::collections::HashMap;
@@ -77,9 +85,10 @@ pub(crate) mod requests {
         pub(crate) pattern_id: PatternId,
     }
 
+    /// An update request that validates what the original data should be
+    /// before inserting the destination data
     #[derive(Debug, Deserialize)]
-    pub(crate) struct UpdateSubrouteValidationStops {
-        pub(crate) pattern_id: PatternId,
+    pub(crate) struct MatchedUpdateStopIds {
         pub(crate) from_stop_ids: Vec<i32>,
         pub(crate) to_stop_ids: Vec<i32>,
     }
@@ -114,7 +123,7 @@ mod tests {
             trips: vec![
                 TMLTrip {
                     id: "p3_306".to_string(),
-                    headsign: "Pinhal Novo (Estação)".to_string(),
+                    headsign: Some("Pinhal Novo (Estação)".to_string()),
                     stops: stringify_vec(vec![
                         130807, 130028, 130026, 130024, 130021, 130020, 130200,
                         130202, 130204, 130205, 130207, 130210, 130212, 130213,
@@ -124,7 +133,7 @@ mod tests {
                 },
                 TMLTrip {
                     id: "p3_307".to_string(),
-                    headsign: "Pinhal Novo (Estação)".to_string(),
+                    headsign: Some("Pinhal Novo (Estação)".to_string()),
                     stops: stringify_vec(vec![
                         130807, 130028, 130026, 130024, 130021, 130020, 130200,
                         130202, 130204, 130205, 130207, 130210, 130212, 130213,
@@ -134,7 +143,7 @@ mod tests {
                 },
                 TMLTrip {
                     id: "p3_308".to_string(),
-                    headsign: "Pinhal Novo (Estação)".to_string(),
+                    headsign: Some("Pinhal Novo (Estação)".to_string()),
                     stops: stringify_vec(vec![
                         130807, 130028, 130026, 130024, 130021, 130020, 130200,
                         130202, 130204, 130205, 130207, 130210, 130212, 130213,
@@ -144,7 +153,7 @@ mod tests {
                 },
                 TMLTrip {
                     id: "p3_309".to_string(),
-                    headsign: "Pinhal Novo (Estação)".to_string(),
+                    headsign: Some("Pinhal Novo (Estação)".to_string()),
                     stops: stringify_vec(vec![
                         130807, 130028, 130026, 130024, 130021, 130020, 130200,
                         130202, 130204, 130205, 130207, 130210, 130212, 130213,
@@ -154,7 +163,7 @@ mod tests {
                 },
                 TMLTrip {
                     id: "p3_310".to_string(),
-                    headsign: "Pinhal Novo (Estação)".to_string(),
+                    headsign: Some("Pinhal Novo (Estação)".to_string()),
                     stops: stringify_vec(vec![
                         130807, 130028, 130026, 130024, 130021, 130020, 130200,
                         130202, 130204, 130205, 130207, 130210, 130212, 130213,
@@ -164,7 +173,7 @@ mod tests {
                 },
                 TMLTrip {
                     id: "p3_311".to_string(),
-                    headsign: "Pinhal Novo (Estação)".to_string(),
+                    headsign: Some("Pinhal Novo (Estação)".to_string()),
                     stops: stringify_vec(vec![
                         130807, 130028, 130026, 130024, 130021, 130020, 130200,
                         130202, 130204, 130205, 130207, 130210, 130212, 130213,
@@ -174,7 +183,7 @@ mod tests {
                 },
                 TMLTrip {
                     id: "p3_312".to_string(),
-                    headsign: "Palmela (Terminal)".to_string(),
+                    headsign: Some("Palmela (Terminal)".to_string()),
                     stops: stringify_vec(vec![
                         130230, 130227, 130225, 130223, 130221, 130219, 130217,
                         130215, 130212, 130213, 130211, 130209, 130231, 130233,
@@ -184,7 +193,7 @@ mod tests {
                 },
                 TMLTrip {
                     id: "p3_313".to_string(),
-                    headsign: "Palmela (Terminal)".to_string(),
+                    headsign: Some("Palmela (Terminal)".to_string()),
                     stops: stringify_vec(vec![
                         130230, 130227, 130225, 130223, 130221, 130219, 130217,
                         130215, 130212, 130213, 130211, 130209, 130231, 130233,
@@ -194,7 +203,7 @@ mod tests {
                 },
                 TMLTrip {
                     id: "p3_314".to_string(),
-                    headsign: "Palmela (Terminal)".to_string(),
+                    headsign: Some("Palmela (Terminal)".to_string()),
                     stops: stringify_vec(vec![
                         130230, 130227, 130225, 130223, 130221, 130219, 130217,
                         130215, 130212, 130213, 130211, 130209, 130231, 130233,
@@ -204,7 +213,7 @@ mod tests {
                 },
                 TMLTrip {
                     id: "p3_315".to_string(),
-                    headsign: "Palmela (Terminal)".to_string(),
+                    headsign: Some("Palmela (Terminal)".to_string()),
                     stops: stringify_vec(vec![
                         130230, 130227, 130225, 130223, 130221, 130219, 130217,
                         130215, 130212, 130213, 130211, 130209, 130231, 130233,
@@ -214,7 +223,7 @@ mod tests {
                 },
                 TMLTrip {
                     id: "p3_316".to_string(),
-                    headsign: "Palmela (Terminal)".to_string(),
+                    headsign: Some("Palmela (Terminal)".to_string()),
                     stops: stringify_vec(vec![
                         130230, 130227, 130225, 130223, 130221, 130219, 130217,
                         130215, 130212, 130213, 130211, 130209, 130231, 130233,
@@ -224,7 +233,7 @@ mod tests {
                 },
                 TMLTrip {
                     id: "p3_317".to_string(),
-                    headsign: "Palmela (Terminal)".to_string(),
+                    headsign: Some("Palmela (Terminal)".to_string()),
                     stops: stringify_vec(vec![
                         130230, 130227, 130225, 130223, 130221, 130219, 130217,
                         130215, 130212, 130213, 130211, 130209, 130231, 130233,
@@ -238,14 +247,15 @@ mod tests {
 
     #[test]
     fn trips_dedup() {
-        assert!(
+        assert_eq!(
             TMLTrip {
                 id: "p3_306".to_string(),
-                headsign: "AAA".to_string(),
+                headsign: Some("AAA".to_string()),
                 stops: stringify_vec(vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10]),
-            } == TMLTrip {
+            },
+            TMLTrip {
                 id: "p3_307".to_string(),
-                headsign: "AAA".to_string(),
+                headsign: Some("AAA".to_string()),
                 stops: stringify_vec(vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10]),
             }
         );
@@ -253,12 +263,12 @@ mod tests {
         let trips = vec![
             TMLTrip {
                 id: "p3_306".to_string(),
-                headsign: "AAA".to_string(),
+                headsign: Some("AAA".to_string()),
                 stops: stringify_vec(vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10]),
             },
             TMLTrip {
                 id: "p3_307".to_string(),
-                headsign: "AAA".to_string(),
+                headsign: Some("AAA".to_string()),
                 stops: stringify_vec(vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10]),
             },
         ]

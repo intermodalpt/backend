@@ -265,7 +265,7 @@ async fn main() {
                 .map(|pairing| (pairing.iml.subroute_id, pairing.into()))
                 .collect::<HashMap<i32, gtfs_commons::SubrouteValidation>>(),
         };
-        iml::put_route_validation(
+        iml::patch_route_validation(
             route_pairing.route_id,
             route_validation_data,
         )
@@ -331,24 +331,14 @@ async fn main() {
                 );
 
                 // Check if the iml.stop_ids are equal to the gtfs.iml_stop_ids
-                let iml_ids_as_optional = subroute_pairing
-                    .iml
-                    .stop_ids
-                    .iter()
-                    .map(|id| Some(*id))
-                    .collect::<Vec<_>>();
-                let stop_seq_equal =
-                    iml_ids_as_optional == subroute_pairing.gtfs.iml_stop_ids;
+                let stop_seq_equal = subroute_pairing.iml.stop_ids
+                    == subroute_pairing.gtfs.iml_stop_ids;
 
                 if stop_seq_equal {
                     print_matching_pattern(subroute_pairing);
                 } else {
                     print_diverging_pattern(subroute_pairing);
                     every_match_perfect = false;
-                }
-
-                if subroute_pairing.gtfs.iml_stop_ids.contains(&None) {
-                    missing_stop_rels = true;
                 }
             }
         }
@@ -358,7 +348,7 @@ async fn main() {
 
         if every_match_perfect && no_unmatched {
             good_cnt += 1;
-        } else if no_unmatched && !missing_stop_rels {
+        } else if no_unmatched {
             fixable_cnt += 1;
         } else {
             bad_cnt += 1;
