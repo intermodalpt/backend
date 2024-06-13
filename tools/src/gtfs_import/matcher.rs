@@ -25,7 +25,7 @@ use commons::models::gtfs as gtfs_commons;
 
 use crate::error::Error;
 use crate::utils::stop_seq_error;
-use crate::{gtfs, iml, GTFS_TMP_OVERRIDES, GTFS_TMP_SUPRESS};
+use crate::{gtfs, iml};
 
 pub(crate) struct RouteSummary<'iml, 'gtfs> {
     // Some of these fields are unnecessary since the subroute has a ref
@@ -121,6 +121,8 @@ pub(crate) async fn match_gtfs_routes<'iml, 'gtfs>(
     iml: &'iml iml::Data,
     operator_id: i32,
 ) -> Result<Vec<RoutePairing<'iml, 'gtfs>>, Error> {
+    let gtfs_remaps = &gtfs::OVERRIDES.get().unwrap().remaps;
+
     let iml_to_gtfs_stops = iml
         .stops
         .iter()
@@ -155,7 +157,7 @@ pub(crate) async fn match_gtfs_routes<'iml, 'gtfs>(
         .map(|(iml_id, gtfs_id)| (gtfs_id.clone(), *iml_id))
         .collect::<HashMap<gtfs::StopId, i32>>();
 
-    GTFS_TMP_OVERRIDES.iter().for_each(|(gtfs_id, iml_id)| {
+    gtfs_remaps.iter().for_each(|(gtfs_id, iml_id)| {
         if !iml.stops.contains_key(iml_id) {
             panic!("IML stop {} does not exist", iml_id);
         }
@@ -199,6 +201,7 @@ async fn link_gtfs_to_iml_route<'iml, 'gtfs>(
     gtfs_to_iml_stops: &HashMap<gtfs::StopId, iml::StopId>,
     gtfs_routes_by_code: &HashMap<String, Vec<&'gtfs gtfs::Route>>,
 ) -> Result<RouteSummary<'iml, 'gtfs>, Error> {
+    let suppressions = &gtfs::OVERRIDES.get().unwrap().suppressions;
     let mut iml_subroute_data = vec![];
     let mut gtfs_patterns_data = vec![];
 
@@ -241,7 +244,7 @@ async fn link_gtfs_to_iml_route<'iml, 'gtfs>(
                     .stops
                     .iter()
                     .filter_map(|gtfs_stop_id| {
-                        if GTFS_TMP_SUPRESS.contains(&gtfs_stop_id.as_ref()) {
+                        if suppressions.contains(&gtfs_stop_id) {
                             println!("Supressing GTFS stop {}", gtfs_stop_id);
                             return None;
                         }

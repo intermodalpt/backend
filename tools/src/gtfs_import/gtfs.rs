@@ -19,7 +19,9 @@
 #![allow(dead_code)]
 
 use itertools::Itertools;
+use once_cell::sync::OnceCell;
 use serde::de::DeserializeOwned;
+use serde_derive::Deserialize;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
@@ -29,6 +31,9 @@ pub(crate) use commons::models::gtfs::{
 };
 
 use crate::error::Error;
+use crate::iml;
+
+pub(crate) static OVERRIDES: OnceCell<Overrides> = OnceCell::new();
 
 pub(crate) struct Data {
     pub(crate) stops: HashMap<StopId, Stop>,
@@ -44,6 +49,12 @@ pub(crate) struct PatternCluster {
     pub(crate) patterns: HashSet<PatternId>,
     pub(crate) trips: HashSet<TripId>,
     pub(crate) headsigns: HashSet<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct Overrides {
+    pub(crate) suppressions: Vec<StopId>,
+    pub(crate) remaps: Vec<(StopId, iml::StopId)>,
 }
 
 pub(crate) fn load_gtfs(root: &Path) -> Result<Data, Error> {
@@ -186,4 +197,27 @@ fn deserialize_gtfs_entity<E: DeserializeOwned>(
 
     println!("Done deserializing {}", path.display());
     res
+}
+
+pub(crate) fn load_overrides(
+    operator_id: i32,
+) -> Result<Overrides, Box<dyn std::error::Error>> {
+    let path = PathBuf::from(format!(
+        "./data/gtfs_import/overrides/{}.json",
+        operator_id
+    ));
+
+    dbg!(&path);
+
+    if !path.exists() {
+        return Ok(Overrides {
+            suppressions: vec![],
+            remaps: vec![],
+        });
+    }
+
+    let file = std::fs::File::open(&path)?;
+    let overrides: Overrides = serde_json::from_reader(file)?;
+
+    Ok(overrides)
 }
