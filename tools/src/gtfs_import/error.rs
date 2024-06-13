@@ -22,7 +22,7 @@ use std::fmt::{Debug, Display, Formatter};
 pub enum Error {
     Files(String),
     Deserialization(csv::Error),
-    HTTPError(String),
+    Http(String),
     MissingData(String),
 }
 

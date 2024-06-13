@@ -175,7 +175,7 @@ pub(crate) async fn fetch_iml_stops(
         let stops: Vec<Stop> = res.json().await?;
         Ok(stops)
     } else {
-        Err(Box::new(Error::HTTPError(format!(
+        Err(Box::new(Error::Http(format!(
             "Status: {} Response: {}",
             res.status(),
             res.text().await?
@@ -207,7 +207,7 @@ pub(crate) async fn fetch_subroute_stops(
     } else {
         let route_stops = fetch_route_stops(route_id)
             .await
-            .map_err(|e| Error::HTTPError(e.to_string()))?;
+            .map_err(|e| Error::Http(e.to_string()))?;
 
         // Create cache dir if it doesn't exist
         fs::create_dir_all("cache/route_stops")
@@ -250,7 +250,7 @@ pub(crate) async fn patch_route_validation(
     if res.status().is_success() {
         Ok(())
     } else {
-        Err(Box::new(Error::HTTPError(format!(
+        Err(Box::new(Error::Http(format!(
             "Status: {}. Response: {}",
             res.status(),
             res.text().await?
@@ -273,7 +273,7 @@ pub(crate) async fn put_operator_validation(
     if res.status().is_success() {
         Ok(())
     } else {
-        Err(Box::new(Error::HTTPError(format!(
+        Err(Box::new(Error::Http(format!(
             "Status: {}. Response: {}",
             res.status(),
             res.text().await?

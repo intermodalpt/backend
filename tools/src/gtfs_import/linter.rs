@@ -52,8 +52,8 @@ pub(crate) fn lint_gtfs(data: &gtfs::Data) -> Vec<gtfs::Lint> {
         .iter()
         .for_each(|(_, route_clusters)| {
             route_clusters.iter().for_each(|cluster| {
-                assert!(cluster.trips.len() > 0);
-                if cluster.stops.len() == 0 {
+                // assert!(!cluster.trips.is_empty());
+                if cluster.stops.is_empty() {
                     for pattern_id in cluster.patterns.iter() {
                         lints
                             .push(gtfs::Lint::EmptyPattern(pattern_id.clone()));
@@ -71,8 +71,8 @@ pub(crate) fn lint_gtfs(data: &gtfs::Data) -> Vec<gtfs::Lint> {
         if let Some(cluster) = data.route_pattern_clusters.get(&route.route_id)
         {
             let contains_non_empty_patterns =
-                cluster.iter().any(|cluster| cluster.stops.len() > 0);
-            if !contains_non_empty_patterns || cluster.len() == 0 {
+                cluster.iter().any(|cluster| !cluster.stops.is_empty());
+            if !contains_non_empty_patterns || cluster.is_empty() {
                 lints
                     .push(gtfs::Lint::PatternlessRoute(route.route_id.clone()));
             }

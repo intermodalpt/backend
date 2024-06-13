@@ -42,8 +42,6 @@ pub(crate) struct SubrouteSummary<'iml> {
     pub(crate) subroute_id: iml::SubrouteId,
     pub(crate) prematched_gtfs_pattern: Option<gtfs::PatternId>,
     pub(crate) stop_ids: &'iml [iml::StopId],
-    // Cached field to aid the comparisons
-    pub(crate) stop_ids_as_option: Vec<Option<iml::StopId>>,
 }
 
 #[derive(Clone)]
@@ -72,26 +70,26 @@ pub(crate) struct SubroutePatternPairing<'iml, 'gtfs> {
     pub(crate) stop_mismatches: usize,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct GtfsPatternData<'gtfs> {
     pub(crate) stop_ids: &'gtfs [gtfs::StopId],
     pub(crate) route_id: &'gtfs gtfs::RouteId,
-    pub(crate) pattern_ids: Vec<gtfs::PatternId>,
-    pub(crate) headsigns: Vec<String>,
-    pub(crate) trip_ids: Vec<gtfs::TripId>,
+    pub(crate) pattern_ids: HashSet<gtfs::PatternId>,
+    pub(crate) headsigns: HashSet<String>,
+    pub(crate) trip_ids: HashSet<gtfs::TripId>,
     pub(crate) iml_stop_ids: Vec<iml::StopId>,
 }
 
-impl From<&GtfsPatternData<'_>> for gtfs_commons::SubrouteValidation {
+impl From<GtfsPatternData<'_>> for gtfs_commons::SubrouteValidation {
     fn from(cluster: GtfsPatternData<'_>) -> Self {
         gtfs_commons::SubrouteValidation {
             gtfs_cluster: gtfs_commons::PatternCluster {
-                stops: cluster.stop_ids.iter().cloned().collect(),
-                headsigns: cluster.headsigns.iter().cloned().collect(),
-                patterns: cluster.pattern_ids.iter().cloned().collect(),
-                trips: cluster.trip_ids.iter().cloned().collect(),
+                stops: cluster.stop_ids.to_vec(),
+                headsigns: cluster.headsigns,
+                patterns: cluster.pattern_ids,
+                trips: cluster.trip_ids,
             },
-            stops: cluster.iml_stop_ids.iter().cloned().collect(),
+            stops: cluster.iml_stop_ids.to_vec(),
         }
     }
 }
@@ -102,12 +100,12 @@ impl From<&SubroutePatternPairing<'_, '_>>
     fn from(pairing: &SubroutePatternPairing<'_, '_>) -> Self {
         gtfs_commons::SubrouteValidation {
             gtfs_cluster: gtfs_commons::PatternCluster {
-                stops: pairing.gtfs.stop_ids.iter().cloned().collect(),
-                headsigns: pairing.gtfs.headsigns.iter().cloned().collect(),
-                patterns: pairing.gtfs.pattern_ids.iter().cloned().collect(),
-                trips: pairing.gtfs.trip_ids.iter().cloned().collect(),
+                stops: pairing.gtfs.stop_ids.to_vec(),
+                headsigns: pairing.gtfs.headsigns.clone(),
+                patterns: pairing.gtfs.pattern_ids.clone(),
+                trips: pairing.gtfs.trip_ids.clone(),
             },
-            stops: pairing.gtfs.iml_stop_ids.iter().cloned().collect(),
+            stops: pairing.gtfs.iml_stop_ids.to_vec(),
         }
     }
 }
@@ -121,6 +119,7 @@ pub(crate) struct ImlSubrouteData<'iml> {
 pub(crate) async fn match_gtfs_routes<'iml, 'gtfs>(
     gtfs: &'gtfs gtfs::Data,
     iml: &'iml iml::Data,
+    operator_id: i32,
 ) -> Result<Vec<RoutePairing<'iml, 'gtfs>>, Error> {
     let iml_to_gtfs_stops = iml
         .stops
@@ -129,24 +128,26 @@ pub(crate) async fn match_gtfs_routes<'iml, 'gtfs>(
             let gtfs_id = iml_stop
                 .operators
                 .iter()
-                .find(|rel| rel.operator_id == 1)
+                .find(|rel| rel.operator_id == operator_id)
                 .map(|rel| rel.stop_ref.as_ref().unwrap().clone());
             (iml_id, gtfs_id)
         })
-        .filter(|(iml_id, gtfs_id)| {
+        .filter_map(|(iml_id, gtfs_id)| {
             if let Some(id) = &gtfs_id {
                 if !gtfs.stops.contains_key(id) {
-                    println!("Missing GTFS stop {}", id);
+                    println!(
+                        "Stop {} is linked against an unknown GTFS stop {}",
+                        iml_id, id
+                    );
                     // TODO add hint to unlink
-                    false
+                    None
                 } else {
-                    true
+                    Some((*iml_id, gtfs_id.unwrap()))
                 }
             } else {
-                false
+                None
             }
         })
-        .map(|(iml_id, gtfs_id)| (iml_id.clone(), gtfs_id.unwrap()))
         .collect::<HashMap<i32, gtfs::StopId>>();
 
     let mut gtfs_to_iml_stops = iml_to_gtfs_stops
@@ -154,12 +155,20 @@ pub(crate) async fn match_gtfs_routes<'iml, 'gtfs>(
         .map(|(iml_id, gtfs_id)| (gtfs_id.clone(), *iml_id))
         .collect::<HashMap<gtfs::StopId, i32>>();
 
+    GTFS_TMP_OVERRIDES.iter().for_each(|(gtfs_id, iml_id)| {
+        if !iml.stops.contains_key(iml_id) {
+            panic!("IML stop {} does not exist", iml_id);
+        }
+        gtfs_to_iml_stops
+            .entry(gtfs_id.to_string())
+            .or_insert(*iml_id);
+    });
+
     let gtfs_routes_by_code = gtfs
         .routes
         .values()
         .into_group_map_by(|route| route.route_short_name.clone())
         .into_iter()
-        .map(|(code, routes)| (code, routes))
         .collect::<HashMap<String, Vec<&gtfs::Route>>>();
 
     // Optional sorting, for determinism
@@ -196,12 +205,7 @@ async fn link_gtfs_to_iml_route<'iml, 'gtfs>(
     for iml_subroute in iml_route.subroutes.iter() {
         iml_subroute_data.push(SubrouteSummary {
             subroute_id: iml_subroute.id,
-            subroute: &iml_subroute,
-            stop_ids_as_option: iml_subroute
-                .stops
-                .iter()
-                .map(|s| Some(*s))
-                .collect(),
+            subroute: iml_subroute,
             stop_ids: &iml_subroute.stops,
             prematched_gtfs_pattern: iml_subroute
                 .prematched_gtfs_pattern
@@ -213,7 +217,7 @@ async fn link_gtfs_to_iml_route<'iml, 'gtfs>(
     let gtfs_route_cluster =
         gtfs_routes_by_code.get(iml_route.code.as_ref().unwrap());
 
-    if gtfs_route_cluster.is_none() {
+    let Some(gtfs_route_cluster) = gtfs_route_cluster else {
         println!(
             "No GTFS route matches IML route {}",
             iml_route.code.as_ref().unwrap()
@@ -225,8 +229,7 @@ async fn link_gtfs_to_iml_route<'iml, 'gtfs>(
             subroutes: iml_subroute_data.clone(),
             patterns: vec![],
         });
-    }
-    let gtfs_route_cluster = gtfs_route_cluster.unwrap();
+    };
 
     // Get the unique patterns for that route
     for gtfs_route in gtfs_route_cluster.iter() {
@@ -294,7 +297,7 @@ pub(crate) fn pair_patterns_with_subroutes<'iml, 'gtfs>(
         .iter()
         .flat_map(|pattern| pattern.patterns.iter())
         .collect::<HashSet<_>>();
-    let valid_prematched_patterns = prematched_patterns
+    let _valid_prematched_patterns = prematched_patterns
         .intersection(&available_patterns)
         .collect::<HashSet<_>>();
     let disappeared_patterns = prematched_patterns
@@ -313,7 +316,7 @@ pub(crate) fn pair_patterns_with_subroutes<'iml, 'gtfs>(
         for (gtfs_idx, gtfs_pattern) in summary.patterns.iter().enumerate() {
             matches[iml_idx][gtfs_idx] = stop_seq_error(
                 &gtfs_pattern.iml_stop_ids,
-                &iml_subroute.stop_ids,
+                iml_subroute.stop_ids,
             );
         }
     }
@@ -372,30 +375,33 @@ pub(crate) fn pair_patterns_with_subroutes<'iml, 'gtfs>(
                 .filter(|p| p.patterns.contains(prematched_pattern))
                 .count();
 
-            if matched_pattern_cnt == 1 {
-                let (gtfs_idx, pattern) = patterns
-                    .iter()
-                    .enumerate()
-                    .find(|(_gtfs_idx, p)| {
-                        p.patterns.contains(prematched_pattern)
-                    })
-                    .unwrap();
+            match matched_pattern_cnt {
+                1 => {
+                    let (gtfs_idx, pattern) = patterns
+                        .iter()
+                        .enumerate()
+                        .find(|(_gtfs_idx, p)| {
+                            p.patterns.contains(prematched_pattern)
+                        })
+                        .unwrap();
 
-                let pattern_stops_len = pattern.gtfs_stop_ids.len();
-                let subroute_stops_len = iml_subroute.stop_ids.len();
-                let (matches, mismatches) = matches[iml_idx][gtfs_idx];
+                    let pattern_stops_len = pattern.gtfs_stop_ids.len();
+                    let subroute_stops_len = iml_subroute.stop_ids.len();
+                    let (matches, mismatches) = matches[iml_idx][gtfs_idx];
 
-                if meets_strong_match_criteria(
-                    (matches, mismatches),
-                    subroute_stops_len,
-                    pattern_stops_len,
-                ) {
-                    strong_match_candidates.push((iml_idx, gtfs_idx));
-                } else {
-                    weak_past_assignments.push((iml_idx, gtfs_idx));
+                    if meets_strong_match_criteria(
+                        (matches, mismatches),
+                        subroute_stops_len,
+                        pattern_stops_len,
+                    ) {
+                        strong_match_candidates.push((iml_idx, gtfs_idx));
+                    } else {
+                        weak_past_assignments.push((iml_idx, gtfs_idx));
+                    }
                 }
-            } else if matched_pattern_cnt > 1 {
-                panic!("GTFS integrity issue")
+                _ => {
+                    panic!("GTFS integrity issue")
+                }
             }
         }
     }
@@ -524,7 +530,7 @@ pub(crate) fn pair_patterns_with_subroutes<'iml, 'gtfs>(
     // Two and the headsigns are very close to the subroute's -> Match them
     // One strong and one weak -> Match the strong
     // Weak assignments from the past pose no conflict -> Add them all
-    if strong_matches.len() == 0 {
+    if strong_matches.is_empty() {
         if patterns.len() == 1 && subroutes.len() == 1 {
             strong_matches.push((0, 0));
         } else if !weak_past_assignments.is_empty() {
@@ -557,16 +563,16 @@ pub(crate) fn pair_patterns_with_subroutes<'iml, 'gtfs>(
             ) {
                 const MIN_SIMILARITY: f64 = 0.9;
                 let sr0_matches_p0 = patterns[0].headsigns.iter().any(|hs| {
-                    normalized_levenshtein(hs, &sr0_hs) > MIN_SIMILARITY
+                    normalized_levenshtein(hs, sr0_hs) > MIN_SIMILARITY
                 });
                 let sr0_matches_p1 = patterns[1].headsigns.iter().any(|hs| {
-                    normalized_levenshtein(hs, &sr0_hs) > MIN_SIMILARITY
+                    normalized_levenshtein(hs, sr0_hs) > MIN_SIMILARITY
                 });
                 let sr1_matches_p0 = patterns[0].headsigns.iter().any(|hs| {
-                    normalized_levenshtein(hs, &sr1_hs) > MIN_SIMILARITY
+                    normalized_levenshtein(hs, sr1_hs) > MIN_SIMILARITY
                 });
                 let sr1_matches_p1 = patterns[1].headsigns.iter().any(|hs| {
-                    normalized_levenshtein(hs, &sr1_hs) > MIN_SIMILARITY
+                    normalized_levenshtein(hs, sr1_hs) > MIN_SIMILARITY
                 });
 
                 if sr0_matches_p0
@@ -601,8 +607,8 @@ pub(crate) fn pair_patterns_with_subroutes<'iml, 'gtfs>(
         .into_iter()
         .map(|(iml_idx, gtfs_idx)| SubroutePatternPairing {
             gtfs: GtfsPatternData {
-                stop_ids: &patterns[gtfs_idx].gtfs_stop_ids,
-                route_id: &patterns[gtfs_idx].route_id,
+                stop_ids: patterns[gtfs_idx].gtfs_stop_ids,
+                route_id: patterns[gtfs_idx].route_id,
                 pattern_ids: patterns[gtfs_idx]
                     .patterns
                     .iter()
@@ -618,7 +624,7 @@ pub(crate) fn pair_patterns_with_subroutes<'iml, 'gtfs>(
             },
             iml: ImlSubrouteData {
                 subroute_id: subroutes[iml_idx].subroute_id,
-                stop_ids: &subroutes[iml_idx].stop_ids,
+                stop_ids: subroutes[iml_idx].stop_ids,
             },
             stop_matches: matches[iml_idx][gtfs_idx].0,
             stop_mismatches: matches[iml_idx][gtfs_idx].1,
@@ -626,12 +632,12 @@ pub(crate) fn pair_patterns_with_subroutes<'iml, 'gtfs>(
         .collect();
 
     let unmatched_gtfs = patterns
-        .into_iter()
+        .iter()
         .enumerate()
         .filter(|(idx, _)| !used_gtfs_idxs.contains(idx))
         .map(|(_, pattern)| GtfsPatternData {
-            stop_ids: &pattern.gtfs_stop_ids,
-            route_id: &pattern.route_id,
+            stop_ids: pattern.gtfs_stop_ids,
+            route_id: pattern.route_id,
             pattern_ids: pattern.patterns.iter().cloned().collect(),
             headsigns: pattern.headsigns.iter().cloned().collect(),
             trip_ids: pattern.trips.iter().cloned().collect(),
@@ -640,12 +646,12 @@ pub(crate) fn pair_patterns_with_subroutes<'iml, 'gtfs>(
         .collect();
 
     let unmatched_iml = subroutes
-        .into_iter()
+        .iter()
         .enumerate()
         .filter(|(idx, _)| !used_iml_idxs.contains(idx))
         .map(|(_, subroute)| ImlSubrouteData {
             subroute_id: subroute.subroute_id,
-            stop_ids: &subroute.stop_ids,
+            stop_ids: subroute.stop_ids,
         })
         .collect();
 

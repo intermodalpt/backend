@@ -233,7 +233,8 @@ async fn main() {
 
     let iml = load_base_data().await.unwrap();
 
-    let mut matches = match_gtfs_routes(&gtfs, &iml).await.unwrap();
+    let mut matches =
+        match_gtfs_routes(&gtfs, &iml, args.operator).await.unwrap();
 
     // Sorting for determinism
     matches.sort_by(|m1, m2| {
@@ -256,6 +257,7 @@ async fn main() {
                 unmatched: route_pairing
                     .unpaired_gtfs
                     .iter()
+                    .cloned()
                     .map(|pattern| pattern.into())
                     .collect(),
             },
@@ -278,12 +280,14 @@ async fn main() {
             let mut used_gtfs_pattern_ids = HashSet::new();
             let mut used_iml_subroute_ids = HashSet::new();
             for subroute_pairing in route_pairing.subroute_pairings.iter() {
-                let new = used_gtfs_pattern_ids
-                    .insert(&subroute_pairing.gtfs.pattern_ids);
-                if !new {
-                    conflicts = true;
-                    break;
+                for pattern_id in &subroute_pairing.gtfs.pattern_ids {
+                    let new = used_gtfs_pattern_ids.insert(pattern_id);
+                    if !new {
+                        conflicts = true;
+                        break;
+                    }
                 }
+
                 let new = used_iml_subroute_ids
                     .insert(&subroute_pairing.iml.subroute_id);
                 if !new {
@@ -299,7 +303,6 @@ async fn main() {
         }
 
         let mut every_match_perfect = true;
-        let mut missing_stop_rels = false;
 
         if !route_pairing.subroute_pairings.is_empty() {
             println!("\tMatches:");
@@ -326,7 +329,7 @@ async fn main() {
                     subroute_pairing.iml.subroute_id,
                     subroute.flag,
                     subroute_pairing.gtfs.route_id,
-                    subroute_pairing.gtfs.pattern_ids.join(";"),
+                    subroute_pairing.gtfs.pattern_ids.iter().join(";"),
                     trip_headsigns
                 );
 
@@ -421,7 +424,7 @@ fn print_unpaired_gtfs(gtfs: &Data, route_pairing: &RoutePairing) {
         println!(
             "\t\tGTFS#{};;{};HS:{} - {:?}",
             pattern_data.route_id,
-            pattern_data.pattern_ids.join(";"),
+            pattern_data.pattern_ids.iter().join(";"),
             trip_headsigns,
             pattern_data.stop_ids
         );

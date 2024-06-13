@@ -21,7 +21,7 @@
 use itertools::Itertools;
 use serde::de::DeserializeOwned;
 use std::collections::{HashMap, HashSet};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
 pub(crate) use commons::models::gtfs::{
@@ -46,7 +46,7 @@ pub(crate) struct PatternCluster {
     pub(crate) headsigns: HashSet<String>,
 }
 
-pub(crate) fn load_gtfs(root: &PathBuf) -> Result<Data, Error> {
+pub(crate) fn load_gtfs(root: &Path) -> Result<Data, Error> {
     let (gtfs_stops, gtfs_routes, gtfs_trips, gtfs_times) =
         load_gtfs_files(root)?;
 
@@ -135,7 +135,7 @@ pub(crate) fn load_gtfs(root: &PathBuf) -> Result<Data, Error> {
     Ok(gtfs)
 }
 fn load_gtfs_files(
-    root: &PathBuf,
+    root: &Path,
 ) -> Result<(Vec<Stop>, Vec<Route>, Vec<Trip>, Vec<StopTime>), Error> {
     let gtfs_stops: OnceLock<Result<Vec<Stop>, Error>> = OnceLock::new();
     let gtfs_times: OnceLock<Result<Vec<StopTime>, Error>> = OnceLock::new();
@@ -179,7 +179,7 @@ fn deserialize_gtfs_entity<E: DeserializeOwned>(
         .map(|mut stops| {
             stops
                 .deserialize::<E>()
-                .map(|stop| stop.map_err(|err| Error::Deserialization(err)))
+                .map(|stop| stop.map_err(Error::Deserialization))
                 .collect::<Result<Vec<E>, Error>>()
         })
         .map_err(|err| Error::Files(err.to_string()))?;
