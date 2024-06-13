@@ -63,11 +63,7 @@ fn single_lone_pattern() {
         subroutes: vec![],
         patterns: vec![PatternSummary {
             gtfs_stop_ids: &gtfs_stop_ids_1,
-            iml_stop_ids: iml_stop_ids_1
-                .iter()
-                .cloned()
-                .map(Some)
-                .collect_vec(),
+            iml_stop_ids: iml_stop_ids_1.clone(),
             route_id: &gtfs_route_id_1,
             patterns: &gtfs_patterns_1,
             trips: &gtfs_trips_1,
@@ -93,11 +89,6 @@ fn single_lone_subroute() {
             subroute_id: 1,
             prematched_gtfs_pattern: None,
             stop_ids: &iml_stop_ids_1,
-            stop_ids_as_option: iml_stop_ids_1
-                .iter()
-                .cloned()
-                .map(Some)
-                .collect_vec(),
         }],
         patterns: vec![],
     };
@@ -140,19 +131,10 @@ fn single_match() {
             subroute_id: 1,
             prematched_gtfs_pattern: None,
             stop_ids: &iml_stop_ids_1,
-            stop_ids_as_option: iml_stop_ids_1
-                .iter()
-                .cloned()
-                .map(Some)
-                .collect_vec(),
         }],
         patterns: vec![PatternSummary {
             gtfs_stop_ids: &gtfs_stop_ids_1,
-            iml_stop_ids: iml_stop_ids_1
-                .iter()
-                .cloned()
-                .map(Some)
-                .collect_vec(),
+            iml_stop_ids: iml_stop_ids_1.clone(),
             route_id: &gtfs_route_id_1,
             patterns: &gtfs_patterns_1,
             trips: &gtfs_trips_1,
@@ -217,32 +199,18 @@ fn two_equal_matches() {
                 subroute_id: 1,
                 prematched_gtfs_pattern: None,
                 stop_ids: &iml_stop_ids_1,
-                stop_ids_as_option: iml_stop_ids_1
-                    .iter()
-                    .cloned()
-                    .map(Some)
-                    .collect_vec(),
             },
             SubrouteSummary {
                 subroute: &DUMMY_REFERENCE_SUBROUTE,
                 subroute_id: 2,
                 prematched_gtfs_pattern: None,
                 stop_ids: &iml_stop_ids_1,
-                stop_ids_as_option: iml_stop_ids_1
-                    .iter()
-                    .cloned()
-                    .map(Some)
-                    .collect_vec(),
             },
         ],
         patterns: vec![
             PatternSummary {
                 gtfs_stop_ids: &gtfs_stop_ids_1,
-                iml_stop_ids: iml_stop_ids_1
-                    .iter()
-                    .cloned()
-                    .map(Some)
-                    .collect_vec(),
+                iml_stop_ids: iml_stop_ids_1.clone(),
                 route_id: &gtfs_route_id_1,
                 patterns: &gtfs_patterns_1,
                 trips: &gtfs_trips_1,
@@ -250,11 +218,7 @@ fn two_equal_matches() {
             },
             PatternSummary {
                 gtfs_stop_ids: &gtfs_stop_ids_1,
-                iml_stop_ids: iml_stop_ids_1
-                    .iter()
-                    .cloned()
-                    .map(Some)
-                    .collect_vec(),
+                iml_stop_ids: iml_stop_ids_1.clone(),
                 route_id: &gtfs_route_id_2,
                 patterns: &gtfs_patterns_2,
                 trips: &gtfs_trips_2,
@@ -324,32 +288,18 @@ fn two_perfect_matches() {
                 subroute_id: 1,
                 prematched_gtfs_pattern: None,
                 stop_ids: &iml_stop_ids_1,
-                stop_ids_as_option: iml_stop_ids_1
-                    .iter()
-                    .cloned()
-                    .map(Some)
-                    .collect_vec(),
             },
             SubrouteSummary {
                 subroute: &DUMMY_REFERENCE_SUBROUTE,
                 subroute_id: 2,
                 prematched_gtfs_pattern: None,
                 stop_ids: &iml_stop_ids_2,
-                stop_ids_as_option: iml_stop_ids_2
-                    .iter()
-                    .cloned()
-                    .map(Some)
-                    .collect_vec(),
             },
         ],
         patterns: vec![
             PatternSummary {
                 gtfs_stop_ids: &gtfs_stop_ids_1,
-                iml_stop_ids: iml_stop_ids_1
-                    .iter()
-                    .cloned()
-                    .map(Some)
-                    .collect_vec(),
+                iml_stop_ids: iml_stop_ids_1.clone(),
                 route_id: &gtfs_route_id_1,
                 patterns: &gtfs_patterns_1,
                 trips: &gtfs_trips_1,
@@ -357,11 +307,7 @@ fn two_perfect_matches() {
             },
             PatternSummary {
                 gtfs_stop_ids: &gtfs_stop_ids_2,
-                iml_stop_ids: iml_stop_ids_2
-                    .iter()
-                    .cloned()
-                    .map(Some)
-                    .collect_vec(),
+                iml_stop_ids: iml_stop_ids_2.clone(),
                 route_id: &gtfs_route_id_2,
                 patterns: &gtfs_patterns_2,
                 trips: &gtfs_trips_2,
@@ -447,32 +393,18 @@ fn imperfect_matches() {
                 subroute_id: 1,
                 prematched_gtfs_pattern: None,
                 stop_ids: &iml_stop_ids_1,
-                stop_ids_as_option: iml_stop_ids_1
-                    .iter()
-                    .cloned()
-                    .map(Some)
-                    .collect_vec(),
             },
             SubrouteSummary {
                 subroute: &DUMMY_REFERENCE_SUBROUTE,
                 subroute_id: 2,
                 prematched_gtfs_pattern: None,
                 stop_ids: &iml_stop_ids_2,
-                stop_ids_as_option: iml_stop_ids_2
-                    .iter()
-                    .cloned()
-                    .map(Some)
-                    .collect_vec(),
             },
         ],
         patterns: vec![
             PatternSummary {
                 gtfs_stop_ids: &gtfs_stop_ids_1,
-                iml_stop_ids: gtfs_iml_stop_ids_1
-                    .iter()
-                    .cloned()
-                    .map(Some)
-                    .collect_vec(),
+                iml_stop_ids: gtfs_iml_stop_ids_1.clone(),
                 route_id: &gtfs_route_id_1,
                 patterns: &gtfs_patterns_1,
                 trips: &gtfs_trips_1,
@@ -480,11 +412,7 @@ fn imperfect_matches() {
             },
             PatternSummary {
                 gtfs_stop_ids: &gtfs_stop_ids_2,
-                iml_stop_ids: gtfs_iml_stop_ids_2
-                    .iter()
-                    .cloned()
-                    .map(Some)
-                    .collect_vec(),
+                iml_stop_ids: gtfs_iml_stop_ids_2.clone(),
                 route_id: &gtfs_route_id_2,
                 patterns: &gtfs_patterns_2,
                 trips: &gtfs_trips_2,
@@ -569,32 +497,18 @@ fn match_through_headsign() {
                 subroute_id: 1,
                 prematched_gtfs_pattern: None,
                 stop_ids: &iml_stop_ids_1,
-                stop_ids_as_option: iml_stop_ids_1
-                    .iter()
-                    .cloned()
-                    .map(Some)
-                    .collect_vec(),
             },
             SubrouteSummary {
                 subroute: &iml_subroute_2,
                 subroute_id: 2,
                 prematched_gtfs_pattern: None,
                 stop_ids: &iml_stop_ids_2,
-                stop_ids_as_option: iml_stop_ids_2
-                    .iter()
-                    .cloned()
-                    .map(Some)
-                    .collect_vec(),
             },
         ],
         patterns: vec![
             PatternSummary {
                 gtfs_stop_ids: &gtfs_stop_ids_1,
-                iml_stop_ids: gtfs_iml_stop_ids_1
-                    .iter()
-                    .cloned()
-                    .map(Some)
-                    .collect_vec(),
+                iml_stop_ids: gtfs_iml_stop_ids_1.clone(),
                 route_id: &gtfs_route_id_1,
                 patterns: &gtfs_patterns_1,
                 trips: &gtfs_trips_1,
@@ -602,11 +516,7 @@ fn match_through_headsign() {
             },
             PatternSummary {
                 gtfs_stop_ids: &gtfs_stop_ids_2,
-                iml_stop_ids: gtfs_iml_stop_ids_2
-                    .iter()
-                    .cloned()
-                    .map(Some)
-                    .collect_vec(),
+                iml_stop_ids: gtfs_iml_stop_ids_2.clone(),
                 route_id: &gtfs_route_id_2,
                 patterns: &gtfs_patterns_2,
                 trips: &gtfs_trips_2,

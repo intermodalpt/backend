@@ -144,6 +144,8 @@ fn stop_patch_deverify_full_patch() {
         service_check_date: Some(None),
         infrastructure_check_date: Some(None),
         verification_level: None,
+        license: None,
+        is_ghost: None,
     };
 
     patch.deverify(stops::StopVerification::verified().into());

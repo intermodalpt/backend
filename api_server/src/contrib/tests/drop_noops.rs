@@ -53,8 +53,11 @@ static STOP1: Lazy<Stop> = Lazy::new(|| Stop {
     infrastructure_check_date: Some(
         NaiveDate::from_ymd_opt(2020, 1, 2).unwrap(),
     ),
+    osm_id: None,
+    license: "IML".to_string(),
     tags: vec!["tags".to_string()],
     notes: Some("notes".to_string()),
+    is_ghost: false,
 });
 
 #[test]
@@ -258,6 +261,49 @@ fn keeps_verification_level() {
 fn drops_verification_level() {
     let mut patch = StopPatch {
         verification_level: Some(0),
+        ..StopPatch::default()
+    };
+
+    assert!(patch.drop_noops(&STOP1).is_ok());
+    assert!(patch.is_empty());
+}
+
+#[test]
+fn keeps_is_ghost() {
+    let mut patch = StopPatch {
+        is_ghost: Some(true),
+        ..StopPatch::default()
+    };
+
+    assert!(patch.drop_noops(&STOP1).is_ok());
+    assert!(!patch.is_empty());
+}
+#[test]
+fn drops_is_ghost() {
+    let mut patch = StopPatch {
+        is_ghost: Some(false),
+        ..StopPatch::default()
+    };
+
+    assert!(patch.drop_noops(&STOP1).is_ok());
+    assert!(patch.is_empty());
+}
+
+#[test]
+fn keeps_license() {
+    let mut patch = StopPatch {
+        license: Some("IML2".to_string()),
+        ..StopPatch::default()
+    };
+
+    assert!(patch.drop_noops(&STOP1).is_ok());
+    assert!(!patch.is_empty());
+}
+
+#[test]
+fn drops_license() {
+    let mut patch = StopPatch {
+        license: Some("IML".to_string()),
         ..StopPatch::default()
     };
 

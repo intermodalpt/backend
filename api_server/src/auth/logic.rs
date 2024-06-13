@@ -494,7 +494,7 @@ mod tests {
         };
         let req_ori = IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4));
 
-        let res = super::change_password(req, 1, req_ori, &pool)
+        super::change_password(req, 1, req_ori, &pool)
             .await
             .unwrap();
 
@@ -531,7 +531,7 @@ mod tests {
         };
         let req_ori = IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4));
 
-        let res = super::admin_change_password(req, 1, req_ori, &pool)
+        super::admin_change_password(req, 1, req_ori, &pool)
             .await
             .unwrap();
 

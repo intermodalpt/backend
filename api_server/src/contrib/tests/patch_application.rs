@@ -56,8 +56,11 @@ static STOP1: Lazy<stops::Stop> = Lazy::new(|| stops::Stop {
     infrastructure_check_date: Some(
         NaiveDate::from_ymd_opt(2020, 1, 2).unwrap(),
     ),
+    osm_id: None,
+    license: "IML".to_string(),
     tags: vec!["tags".to_string()],
     notes: Some("notes".to_string()),
+    is_ghost: false,
 });
 
 #[test]

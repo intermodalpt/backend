@@ -62,8 +62,11 @@ static STOP1: Lazy<Stop> = Lazy::new(|| Stop {
     infrastructure_check_date: Some(
         NaiveDate::from_ymd_opt(2020, 1, 2).unwrap(),
     ),
+    osm_id: None,
+    license: "IML".to_string(),
     tags: vec!["tag1".to_string()],
     notes: Some("foo note".to_string()),
+    is_ghost: false,
 });
 
 static STOP1_NOOP_CHANGE: Lazy<ChangeStop> = Lazy::new(|| ChangeStop {
@@ -80,6 +83,8 @@ static STOP1_NOOP_CHANGE: Lazy<ChangeStop> = Lazy::new(|| ChangeStop {
     verification_level: STOP1.verification_level.clone(),
     service_check_date: STOP1.service_check_date.clone(),
     infrastructure_check_date: STOP1.infrastructure_check_date.clone(),
+    license: STOP1.license.clone(),
+    is_ghost: STOP1.is_ghost,
 });
 
 #[test]

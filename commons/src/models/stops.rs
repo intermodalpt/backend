@@ -528,8 +528,11 @@ mod test {
             infrastructure_check_date: Some(
                 NaiveDate::from_ymd_opt(2020, 1, 2).unwrap(),
             ),
+            osm_id: None,
+            license: "IML".to_string(),
             tags: vec!["test".to_string()],
             notes: Some("test".to_string()),
+            is_ghost: false,
         };
         let json = serde_json::to_string(&stop).unwrap();
 
