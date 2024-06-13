@@ -123,6 +123,10 @@ pub(crate) async fn patch_route(
         return Ok(Json(route));
     }
 
+    let original = route.clone().into();
+    let mut patched = route.clone();
+    patch.clone().apply(&mut patched);
+
     let mut transaction = state.pool.begin().await.map_err(|err| {
         tracing::error!("Failed to open transaction: {err}");
         Error::DatabaseExecution
@@ -132,10 +136,7 @@ pub(crate) async fn patch_route(
     contrib::sql::insert_changeset_log(
         &mut transaction,
         claims.uid,
-        &[history::Change::RouteUpdate {
-            original: route.clone().into(),
-            patch,
-        }],
+        &[history::Change::RouteUpdate { original, patch }],
         None,
     )
     .await?;
@@ -145,7 +146,7 @@ pub(crate) async fn patch_route(
         Error::DatabaseExecution
     })?;
 
-    Ok(Json(route))
+    Ok(Json(patched))
 }
 
 pub(crate) async fn delete_route(
