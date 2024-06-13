@@ -857,6 +857,9 @@ WHERE  subroute=$2 AND idx=$3
             })?;
         }
     }
+
+    regen_subroute_stops_cache(transaction).await?;
+
     Ok(())
 }
 
@@ -1101,5 +1104,35 @@ WHERE stop=$2
         tracing::error!(error = err.to_string(), destination_id, original_id);
         Error::DatabaseExecution
     })?;
+    Ok(())
+}
+
+pub(crate) async fn regen_subroute_stops_cache(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+) -> Result<()> {
+    let stops = sqlx::query!(
+        r#"
+WITH aggregated_subroutes AS (
+    SELECT
+        subroute_stops.subroute AS id,
+        array_agg(stop ORDER BY idx) AS current_stops
+    FROM
+        subroute_stops
+    GROUP BY
+        subroute_stops.subroute
+)
+UPDATE subroutes
+SET validation_current = aggregated_subroutes.current_stops
+FROM aggregated_subroutes
+WHERE subroutes.id = aggregated_subroutes.id;
+    "#,
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string());
+        Error::DatabaseExecution
+    })?;
+
     Ok(())
 }

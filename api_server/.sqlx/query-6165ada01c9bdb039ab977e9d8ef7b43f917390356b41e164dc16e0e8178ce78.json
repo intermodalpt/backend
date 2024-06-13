@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH aggregated_subroutes AS (\n    SELECT\n        subroute_stops.subroute AS id,\n        array_agg(stop ORDER BY idx) AS current_stops\n    FROM\n        subroute_stops\n    GROUP BY\n        subroute_stops.subroute\n)\nUPDATE subroutes\nSET validation_current = aggregated_subroutes.current_stops\nFROM aggregated_subroutes\nWHERE subroutes.id = aggregated_subroutes.id;\n    ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "6165ada01c9bdb039ab977e9d8ef7b43f917390356b41e164dc16e0e8178ce78"
+}
