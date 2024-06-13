@@ -166,8 +166,21 @@ FROM (
         routes.badge_text_color, routes.badge_bg_color,
         array_remove(array_agg(region_id), NULL) as regions,
         COALESCE(
-            array_agg((subroutes.id, subroutes.group, subroutes.flag, subroutes.headsign, subroutes.origin,
-                subroutes.destination, subroutes.via, subroutes.circular, subroutes.polyline, subroutes.validation))
+            array_agg((
+                subroutes.id,
+                subroutes.group,
+                subroutes.flag,
+                subroutes.headsign,
+                subroutes.origin,
+                subroutes.destination,
+                subroutes.via,
+                subroutes.circular,
+                subroutes.polyline,
+                subroutes.validation_current,
+                subroutes.validation_current_ack,
+                subroutes.validation_correspondence,
+                subroutes.validation_correspondence_ack,
+                subroutes.validation_gtfs))
             FILTER (WHERE subroutes.id IS NOT NULL),
             '{}'
         ) AS subroutes
@@ -290,8 +303,21 @@ FROM (
         routes.badge_text_color, routes.badge_bg_color,
         array_remove(array_agg(region_id), NULL) as regions,
         COALESCE(
-            array_agg((subroutes.id, subroutes.group, subroutes.flag, subroutes.headsign, subroutes.origin,
-                subroutes.destination, subroutes.via, subroutes.circular, subroutes.polyline, subroutes.validation))
+            array_agg((
+                subroutes.id,
+                subroutes.group,
+                subroutes.flag,
+                subroutes.headsign,
+                subroutes.origin,
+                subroutes.destination,
+                subroutes.via,
+                subroutes.circular,
+                subroutes.polyline,
+                subroutes.validation_current,
+                subroutes.validation_current_ack,
+                subroutes.validation_correspondence,
+                subroutes.validation_correspondence_ack,
+                subroutes.validation_gtfs))
             FILTER (WHERE subroutes.id IS NOT NULL),
             '{}'
         ) AS subroutes
@@ -334,8 +360,21 @@ FROM (
         routes.badge_text_color, routes.badge_bg_color,
         array_remove(array_agg(region_id), NULL) as regions,
         COALESCE(
-            array_agg((subroutes.id, subroutes.group, subroutes.flag, subroutes.headsign, subroutes.origin,
-                subroutes.destination, subroutes.via, subroutes.circular, subroutes.polyline, subroutes.validation))
+            array_agg((
+                subroutes.id,
+                subroutes.group,
+                subroutes.flag,
+                subroutes.headsign,
+                subroutes.origin,
+                subroutes.destination,
+                subroutes.via,
+                subroutes.circular,
+                subroutes.polyline,
+                subroutes.validation_current,
+                subroutes.validation_current_ack,
+                subroutes.validation_correspondence,
+                subroutes.validation_correspondence_ack,
+                subroutes.validation_gtfs))
             FILTER (WHERE subroutes.id IS NOT NULL),
             '{}'
         ) AS subroutes

@@ -258,7 +258,21 @@ pub(crate) mod responses {
         pub(crate) via: sqlx::types::Json<Vec<routes::SubrouteVia>>,
         pub(crate) circular: bool,
         pub(crate) polyline: Option<String>,
-        pub(crate) validation: Option<sqlx::types::JsonValue>,
+        pub(crate) validation: SubrouteValidationState,
+    }
+
+    #[derive(Debug, Clone, Serialize)]
+    pub struct SubrouteValidationState {
+        // Cached field. Contains the stops in the order they appear in the subroute
+        pub(crate) current: Vec<i32>,
+        // The last acknowledged validation_current
+        pub(crate) current_ack: Vec<i32>,
+        // The IML stops that the GTFS claims to be in the subroute
+        pub(crate) correspondence: Vec<i32>,
+        // The last acknowledged validation_correspondence
+        pub(crate) correspondence_ack: Vec<i32>,
+        // The GTFS data that led to validation_correspondence
+        pub(crate) gtfs: Option<sqlx::types::JsonValue>,
     }
 
     #[derive(Serialize)]
@@ -338,8 +352,23 @@ pub(crate) mod responses {
                 .try_decode::<sqlx::types::Json<Vec<routes::SubrouteVia>>>()?;
             let circular = decoder.try_decode::<bool>()?;
             let polyline = decoder.try_decode::<Option<String>>()?;
-            let validation =
+
+            let validation_current = decoder.try_decode::<Vec<i32>>()?;
+            let validation_current_ack = decoder.try_decode::<Vec<i32>>()?;
+            let validation_correspondence = decoder.try_decode::<Vec<i32>>()?;
+            let validation_correspondence_ack =
+                decoder.try_decode::<Vec<i32>>()?;
+            let validation_gtfs =
                 decoder.try_decode::<Option<sqlx::types::JsonValue>>()?;
+
+            let validation = SubrouteValidationState {
+                current: validation_current,
+                current_ack: validation_current_ack,
+                correspondence: validation_correspondence,
+                correspondence_ack: validation_correspondence_ack,
+                gtfs: validation_gtfs,
+            };
+
             Ok(FullSubroute {
                 id,
                 group,
