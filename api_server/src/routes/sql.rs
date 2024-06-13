@@ -869,6 +869,7 @@ pub(crate) async fn fetch_subroute_stops(
 SELECT stop
 FROM subroute_stops
 WHERE subroute=$1
+ORDER BY idx ASC
 "#,
         subroute_id
     )
