@@ -421,11 +421,17 @@ pub(crate) async fn patch_subroute_stops(
         Error::DatabaseExecution
     })?;
 
+    let sr_stops =
+        sql::fetch_subroute_stops(&mut transaction, subroute_id).await?;
+
+    if sr_stops != request.from.stops {
+        return Err(Error::ValidationFailure("Check mismatch".to_string()));
+    }
+
     sql::update_subroute_stops(
         &mut transaction,
         subroute_id,
         &request.to.stops,
-        &request.from.stops,
     )
     .await?;
 

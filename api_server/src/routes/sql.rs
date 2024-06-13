@@ -718,145 +718,40 @@ ORDER BY subroutes.id ASC, subroute_stops.idx ASC
     Ok(subroute_stops)
 }
 
-#[allow(
-    clippy::cast_possible_truncation,
-    clippy::cast_possible_wrap,
-    clippy::comparison_chain
-)]
 pub(crate) async fn update_subroute_stops(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     subroute_id: i32,
     to_stops: &[i32],
-    from_stops: &[i32],
 ) -> Result<()> {
-    let existing_query_res = sqlx::query!(
+    sqlx::query!(
         r#"
-SELECT subroute_stops.stop as stop
-FROM subroutes
-JOIN subroute_stops on subroute_stops.subroute = subroutes.id
-WHERE subroutes.id=$1
-ORDER BY subroute_stops.idx ASC
+DELETE FROM subroute_stops
+WHERE Subroute=$1
     "#,
         subroute_id
     )
-    .fetch_all(&mut **transaction)
+    .execute(&mut **transaction)
     .await
     .map_err(|err| {
         tracing::error!(error = err.to_string(), subroute_id);
         Error::DatabaseExecution
     })?;
 
-    // Check for the difference from stored to future
-    let stored_len = existing_query_res.len();
-    let check_len = from_stops.len();
-    let to_store_len = to_stops.len() as i16;
-    let stored_changes = to_store_len - stored_len as i16;
-
-    if check_len != stored_len {
-        return Err(Error::ValidationFailure("Check mismatch".to_string()));
-    }
-
-    let check_matched = existing_query_res
-        .iter()
-        .zip(from_stops.iter())
-        .all(|(row, from_stop)| row.stop == *from_stop);
-
-    if !check_matched {
-        return Err(Error::ValidationFailure("Check mismatch".to_string()));
-    }
-
-    let existing_duplicates_count = existing_query_res
-        .iter()
-        .zip(to_stops.iter())
-        .filter(|(row, from_stop)| row.stop == **from_stop)
-        .count();
-
-    if stored_changes == 0 && existing_duplicates_count == stored_len {
-        return Ok(());
-    }
-
-    if stored_changes < 0 {
-        let deleted_rows = sqlx::query!(
-            r#"
-DELETE FROM subroute_stops
-WHERE Subroute=$1 AND idx>=$2
+    let _res = sqlx::query!(
+        r#"
+INSERT INTO subroute_stops(subroute, idx, stop)
+SELECT $1, ordinality, stop_id
+FROM unnest($2::int[]) WITH ORDINALITY AS t(stop_id, ordinality)
     "#,
-            subroute_id,
-            to_store_len
-        )
-        .execute(&mut **transaction)
-        .await
-        .map_err(|err| {
-            tracing::error!(error = err.to_string(), subroute_id, to_store_len);
-            Error::DatabaseExecution
-        })?
-        .rows_affected();
-
-        if deleted_rows != u64::from(stored_changes.unsigned_abs()) {
-            tracing::error!(
-                msg = "Detected an unexpected amount of rows",
-                deleted_rows,
-                stored_changes
-            );
-            return Err(Error::DatabaseExecution);
-        }
-    } else if stored_changes > 0 {
-        let additional_entries = to_stops.iter().skip(stored_len).enumerate();
-
-        for (index, stop) in additional_entries {
-            let index = (stored_len + index) as i16;
-            let _res = sqlx::query!(
-                r#"
-INSERT INTO subroute_stops(subroute, stop, idx)
-VALUES ($1, $2, $3)
-    "#,
-                subroute_id,
-                stop,
-                index
-            )
-            .execute(&mut **transaction)
-            .await
-            .map_err(|err| {
-                tracing::error!(
-                    error = err.to_string(),
-                    subroute_id,
-                    stop,
-                    index
-                );
-                Error::DatabaseExecution
-            })?;
-        }
-    };
-
-    if existing_duplicates_count != stored_len {
-        // Update the already existing records
-        let overlapping_entries = to_stops.iter().take(stored_len).enumerate();
-
-        for (index, stop) in overlapping_entries {
-            let index = index as i16;
-            let _res = sqlx::query!(
-                r#"
-UPDATE subroute_stops
-SET stop=$1
-WHERE  subroute=$2 AND idx=$3
-    "#,
-                stop,
-                subroute_id,
-                index
-            )
-            .execute(&mut **transaction)
-            .await
-            .map_err(|err| {
-                tracing::error!(
-                    error = err.to_string(),
-                    stop,
-                    subroute_id,
-                    index
-                );
-                Error::DatabaseExecution
-            })?;
-        }
-    }
+        subroute_id,
+        to_stops
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), subroute_id, to_stops = ?to_stops);
+        Error::DatabaseExecution
+    })?;
 
     regen_subroute_stops_cache(transaction).await?;
 
@@ -1110,7 +1005,7 @@ WHERE stop=$2
 pub(crate) async fn regen_subroute_stops_cache(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
 ) -> Result<()> {
-    let stops = sqlx::query!(
+    sqlx::query!(
         r#"
 WITH aggregated_subroutes AS (
     SELECT
