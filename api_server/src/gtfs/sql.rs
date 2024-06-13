@@ -112,7 +112,16 @@ GROUP BY routes.id
             subroutes: row
                 .subroutes
                 .into_iter()
-                .map(|pair| (pair.id, pair.validation))
+                .filter_map(|pair|
+                    pair.gtfs.map(|gtfs|
+                        (
+                            pair.id,
+                            gtfs::SubrouteValidation {
+                                gtfs_cluster: gtfs.0,
+                                stops: pair.correspondence,
+                            }
+                        )
+                ))
                 .collect(),
         }))
 }
@@ -171,17 +180,15 @@ WHERE id=$1"#,
 pub(crate) async fn update_subroute_validation_data(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     subroute_id: i32,
-    current_stops: &[i32],
     correspondence_stops: &[i32],
     validation_gtfs: &gtfs::PatternCluster,
 ) -> Result<()> {
     sqlx::query!(
         r#"
 UPDATE Subroutes
-SET validation_current=$1, validation_correspondence=$2, validation_gtfs=$3
-WHERE id=$4
+SET validation_correspondence=$1, validation_gtfs=$2
+WHERE id=$3
     "#,
-        current_stops,
         correspondence_stops,
         json!(validation_gtfs),
         subroute_id
@@ -192,7 +199,6 @@ WHERE id=$4
         tracing::error!(
             error = err.to_string(),
             subroute_id,
-            current_stops = ?current_stops,
             correspondence_stops = ?correspondence_stops,
             validation_gtfs = ?validation_gtfs
         );

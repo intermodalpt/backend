@@ -55,7 +55,11 @@ pub struct TMLRoute {
 #[derive(Debug, Deserialize, sqlx::Type)]
 pub struct SubrouteValidationPair {
     pub(crate) id: i32,
-    pub(crate) validation: Option<Json<gtfs::SubrouteValidation>>,
+    pub(crate) current: Vec<i32>,
+    pub(crate) current_ack: Vec<i32>,
+    pub(crate) correspondence: Vec<i32>,
+    pub(crate) correspondence_ack: Vec<i32>,
+    pub(crate) gtfs: Option<Json<gtfs::PatternCluster>>,
 }
 
 pub(crate) struct SubrouteValidationData {
@@ -83,6 +87,7 @@ pub(crate) mod requests {
     pub(crate) struct ValidateSubroute {
         pub(crate) subroute_id: i32,
         pub(crate) pattern_id: PatternId,
+        pub(crate) sync: bool,
     }
 
     /// An update request that validates what the original data should be
@@ -102,8 +107,7 @@ pub(crate) mod responses {
     #[derive(Debug, Serialize)]
     pub(crate) struct RouteValidation {
         pub(crate) validation: Option<sqlx::types::Json<gtfs::RouteValidation>>,
-        pub(crate) subroutes:
-            HashMap<i32, Option<sqlx::types::Json<gtfs::SubrouteValidation>>>,
+        pub(crate) subroutes: HashMap<i32, gtfs::SubrouteValidation>,
     }
 }
 

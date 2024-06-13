@@ -210,21 +210,19 @@ pub(crate) async fn patch_route_validation_data(
     .await?;
 
     for (subroute_id, validation) in request.subroutes {
-        let current_stops =
-            routes_sql::fetch_subroute_stops(&mut transaction, subroute_id)
-                .await?;
         let correspondence_stops = validation.stops;
         let gtfs_cluster = validation.gtfs_cluster;
 
         sql::update_subroute_validation_data(
             &mut transaction,
             subroute_id,
-            &current_stops,
             &correspondence_stops,
             &gtfs_cluster,
         )
         .await?;
     }
+
+    routes_sql::regen_subroute_stops_cache(&mut transaction).await?;
 
     transaction.commit().await.map_err(|err| {
         tracing::error!("Transaction failed to commit: {err}");
@@ -297,20 +295,48 @@ pub(crate) async fn post_assign_subroute_validation(
     .await?;
 
     // And attach it to the referenced subroute
-    let current_stops =
-        routes_sql::fetch_subroute_stops(&mut transaction, request.subroute_id)
-            .await?;
+    // TODO log this transition
+    // let current_stops =
+    //     routes_sql::fetch_subroute_stops(&mut transaction, request.subroute_id)
+    //         .await?;
     let correspondence_stops = &subroute_validation.stops;
     let gtfs_cluster = &subroute_validation.gtfs_cluster;
 
-    sql::update_subroute_validation_data(
-        &mut transaction,
-        request.subroute_id,
-        &current_stops,
-        correspondence_stops,
-        gtfs_cluster,
-    )
-    .await?;
+    if request.sync {
+        // Stores the extracted GTFS in the subroute validation_data
+        // Also sets `validation_current` to match it
+        sql::update_subroute_validation_data(
+            &mut transaction,
+            request.subroute_id,
+            &correspondence_stops,
+            gtfs_cluster,
+        )
+        .await?;
+        // Sets stops to the GTFS (correspondence) stops
+        routes_sql::update_subroute_stops(
+            &mut transaction,
+            request.subroute_id,
+            correspondence_stops,
+        )
+        .await?;
+        // Consider the GTFS stops (correspondence) acknowledged
+        sql::update_subroute_correspondence_ack(
+            &mut transaction,
+            request.subroute_id,
+            correspondence_stops,
+        )
+        .await?;
+        // Do we also want to consider the IML stops acknowledged?
+    } else {
+        // Just bind them, without copying anything over or acknowledging
+        sql::update_subroute_validation_data(
+            &mut transaction,
+            request.subroute_id,
+            correspondence_stops,
+            gtfs_cluster,
+        )
+        .await?;
+    }
 
     transaction.commit().await.map_err(|err| {
         tracing::error!("Transaction failed to commit: {err}");

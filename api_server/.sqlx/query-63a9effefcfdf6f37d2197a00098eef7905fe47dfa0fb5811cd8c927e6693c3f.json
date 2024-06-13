@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE Subroutes\nSET validation_correspondence=$1, validation_gtfs=$2\nWHERE id=$3\n    ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4Array",
+        "Jsonb",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "63a9effefcfdf6f37d2197a00098eef7905fe47dfa0fb5811cd8c927e6693c3f"
+}
