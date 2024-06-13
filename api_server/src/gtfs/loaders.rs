@@ -95,13 +95,12 @@ pub(crate) fn gtfs_trips(
         // .trim(csv::Trim::All)
         .from_reader(reader);
 
-    Ok(rdr
-        .deserialize()
+    rdr.deserialize()
         .collect::<Result<Vec<gtfs::Trip>, _>>()
         .map_err(|err| {
             log::error!("{:?}", err);
             Error::Processing
-        })?)
+        })
 }
 
 // Read stop times from GTFS tile

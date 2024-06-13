@@ -185,15 +185,10 @@ pub(crate) async fn get_external_news_item(
     let include_private =
         claims.as_ref().is_some_and(auth::perms::Trusted::is_valid);
 
-    let item =
-        sql::fetch_external_news_item(&state.pool, item_id, include_private)
-            .await?;
-
-    if let Some(item) = item {
-        Ok(Json(item))
-    } else {
-        Err(Error::NotFoundUpstream)
-    }
+    sql::fetch_external_news_item(&state.pool, item_id, include_private)
+        .await?
+        .map(Json)
+        .ok_or(Error::NotFoundUpstream)
 }
 
 pub(crate) async fn get_full_external_news_item(
@@ -201,13 +196,10 @@ pub(crate) async fn get_full_external_news_item(
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     Path(item_id): Path<i32>,
 ) -> Result<Json<responses::FullExternalNewsItem>, Error> {
-    let item = sql::fetch_full_external_news_item(&state.pool, item_id).await?;
-
-    if let Some(item) = item {
-        Ok(Json(item))
-    } else {
-        Err(Error::NotFoundUpstream)
-    }
+    sql::fetch_full_external_news_item(&state.pool, item_id)
+        .await?
+        .map(Json)
+        .ok_or(Error::NotFoundUpstream)
 }
 
 pub(crate) async fn get_external_news(

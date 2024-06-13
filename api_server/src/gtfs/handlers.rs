@@ -148,14 +148,10 @@ pub(crate) async fn get_operator_validation_data(
     State(state): State<AppState>,
     Path(operator): Path<i32>,
 ) -> Result<Json<Option<gtfs::OperatorValidation>>, Error> {
-    let data =
-        sql::fetch_operator_validation_data(&state.pool, operator).await?;
-
-    if let Some(data) = data {
-        Ok(Json(data))
-    } else {
-        Err(Error::NotFoundUpstream)
-    }
+    sql::fetch_operator_validation_data(&state.pool, operator)
+        .await?
+        .map(Json)
+        .ok_or(Error::NotFoundUpstream)
 }
 pub(crate) async fn put_operator_validation_data(
     State(state): State<AppState>,
@@ -311,8 +307,8 @@ pub(crate) async fn post_assign_subroute_validation(
         &mut transaction,
         request.subroute_id,
         &current_stops,
-        &correspondence_stops,
-        &gtfs_cluster,
+        correspondence_stops,
+        gtfs_cluster,
     )
     .await?;
 

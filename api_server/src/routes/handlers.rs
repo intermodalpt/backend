@@ -91,26 +91,20 @@ pub(crate) async fn get_route(
     State(state): State<AppState>,
     Path(route_id): Path<i32>,
 ) -> Result<Json<responses::Route>, Error> {
-    if let Some(route) =
-        sql::fetch_route_with_subroutes(&state.pool, route_id).await?
-    {
-        Ok(Json(route))
-    } else {
-        Err(Error::NotFoundUpstream)
-    }
+    sql::fetch_route_with_subroutes(&state.pool, route_id)
+        .await?
+        .map(Json)
+        .ok_or(Error::NotFoundUpstream)
 }
 
 pub(crate) async fn get_route_full(
     State(state): State<AppState>,
     Path(route_id): Path<i32>,
 ) -> Result<Json<responses::FullRoute>, Error> {
-    if let Some(route) =
-        sql::fetch_full_route_with_subroutes(&state.pool, route_id).await?
-    {
-        Ok(Json(route))
-    } else {
-        Err(Error::NotFoundUpstream)
-    }
+    sql::fetch_full_route_with_subroutes(&state.pool, route_id)
+        .await?
+        .map(Json)
+        .ok_or(Error::NotFoundUpstream)
 }
 
 pub(crate) async fn patch_route(
