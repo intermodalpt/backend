@@ -27,7 +27,8 @@ use crate::error::Error;
 use crate::utils::stop_seq_error;
 use crate::{gtfs, iml};
 
-pub(crate) struct RouteSummary<'iml, 'gtfs> {
+/// The intersection between an IML route and GTFS data
+pub(crate) struct ImlGtfsRouteIntersection<'iml, 'gtfs> {
     // Some of these fields are unnecessary since the subroute has a ref
     pub(crate) iml_route: &'iml iml::Route,
     pub(crate) iml_route_id: iml::RouteId,
@@ -116,13 +117,18 @@ pub(crate) struct ImlSubrouteData<'iml> {
     pub(crate) stop_ids: &'iml [iml::StopId],
 }
 
-pub(crate) async fn match_gtfs_routes<'iml, 'gtfs>(
+/// Produces reasonable guesses of which IML subroutes correspond to which
+/// GTFS routes/patterns. Also points what can be dangling data.
+/// It has a relatively high minimum pairing threshold.
+/// It will never pair silly data
+pub(crate) async fn cross_reference_routes<'iml, 'gtfs>(
     gtfs: &'gtfs gtfs::Data,
     iml: &'iml iml::Data,
     operator_id: i32,
 ) -> Result<Vec<RoutePairing<'iml, 'gtfs>>, Error> {
     let gtfs_remaps = &gtfs::OVERRIDES.get().unwrap().remaps;
 
+    // Create a dictionary of IML stops to GTFS stops
     let iml_to_gtfs_stops = iml
         .stops
         .iter()
@@ -152,11 +158,13 @@ pub(crate) async fn match_gtfs_routes<'iml, 'gtfs>(
         })
         .collect::<HashMap<i32, gtfs::StopId>>();
 
+    // Create a dictionary of GTFS stops to IML stops
     let mut gtfs_to_iml_stops = iml_to_gtfs_stops
         .iter()
         .map(|(iml_id, gtfs_id)| (gtfs_id.clone(), *iml_id))
         .collect::<HashMap<gtfs::StopId, i32>>();
 
+    // Change GTFS->IML links based on the configured overrides
     gtfs_remaps.iter().for_each(|(gtfs_id, iml_id)| {
         if !iml.stops.contains_key(iml_id) {
             panic!("IML stop {} does not exist", iml_id);
@@ -166,6 +174,7 @@ pub(crate) async fn match_gtfs_routes<'iml, 'gtfs>(
             .or_insert(*iml_id);
     });
 
+    // Dictionary of GTFS routes by their code (that's usually the route number)
     let gtfs_routes_by_code = gtfs
         .routes
         .values()
@@ -173,34 +182,40 @@ pub(crate) async fn match_gtfs_routes<'iml, 'gtfs>(
         .into_iter()
         .collect::<HashMap<String, Vec<&gtfs::Route>>>();
 
-    // Optional sorting, for determinism
+    // The sorting step is not necessary for the algorithm
+    // but determinism is good for debugging.
+    // TODO put behind debug-build flag
     let iml_routes = iml
         .routes
         .values()
-        .filter(|r| r.operator == 1)
+        .filter(|r| r.operator == operator_id)
         .sorted_by_key(|r| r.id);
 
-    let mut route_summaries = vec![];
+    let mut paired_routes = vec![];
     for iml_route in iml_routes {
-        let res = link_gtfs_to_iml_route(
+        // Intersect the IML route with GTFS data
+        let route_intersection = cross_intersect_route(
             gtfs,
             iml_route,
             &gtfs_to_iml_stops,
             &gtfs_routes_by_code,
         )
         .await?;
-        let matched_res = pair_patterns_with_subroutes(res);
-        route_summaries.push(matched_res);
+
+        paired_routes.push(pair_route_intersection(route_intersection));
     }
-    Ok(route_summaries)
+    Ok(paired_routes)
 }
 
-async fn link_gtfs_to_iml_route<'iml, 'gtfs>(
+/// Aggregates every bit of IML and GTFS data for a given route
+/// It intersects an IML route with GTFS routes/patterns
+/// (convenient to match IML subroutes and GTFS patterns later on)
+async fn cross_intersect_route<'iml, 'gtfs>(
     gtfs: &'gtfs gtfs::Data,
     iml_route: &'iml iml::Route,
     gtfs_to_iml_stops: &HashMap<gtfs::StopId, iml::StopId>,
     gtfs_routes_by_code: &HashMap<String, Vec<&'gtfs gtfs::Route>>,
-) -> Result<RouteSummary<'iml, 'gtfs>, Error> {
+) -> Result<ImlGtfsRouteIntersection<'iml, 'gtfs>, Error> {
     let suppressions = &gtfs::OVERRIDES.get().unwrap().suppressions;
     let mut iml_subroute_data = vec![];
     let mut gtfs_patterns_data = vec![];
@@ -226,11 +241,11 @@ async fn link_gtfs_to_iml_route<'iml, 'gtfs>(
             iml_route.code.as_ref().unwrap()
         );
 
-        return Ok(RouteSummary {
+        return Ok(ImlGtfsRouteIntersection {
             iml_route,
             iml_route_id: iml_route.id,
-            subroutes: iml_subroute_data.clone(),
-            patterns: vec![],
+            subroutes: iml_subroute_data,
+            patterns: gtfs_patterns_data,
         });
     };
 
@@ -277,19 +292,24 @@ async fn link_gtfs_to_iml_route<'iml, 'gtfs>(
         }
     }
 
-    Ok(RouteSummary {
+    Ok(ImlGtfsRouteIntersection {
         iml_route,
         iml_route_id: iml_route.id,
-        subroutes: iml_subroute_data.clone(),
-        patterns: gtfs_patterns_data.clone(),
+        subroutes: iml_subroute_data,
+        patterns: gtfs_patterns_data,
     })
 }
 
-pub(crate) fn pair_patterns_with_subroutes<'iml, 'gtfs>(
-    summary: RouteSummary<'iml, 'gtfs>,
+/// This is the matcher workhorse
+/// It takes the `ImlGtfsRouteIntersection` and takes a series of steps
+/// to pair IML subroutes with GTFS patterns, from the most certain matches
+/// to the longer shots.
+/// It has a relatively high minimum threshold. It will never pair silly data
+pub(crate) fn pair_route_intersection<'iml, 'gtfs>(
+    route_intersection: ImlGtfsRouteIntersection<'iml, 'gtfs>,
 ) -> RoutePairing<'iml, 'gtfs> {
-    let patterns = &summary.patterns;
-    let subroutes = &summary.subroutes;
+    let patterns = &route_intersection.patterns;
+    let subroutes = &route_intersection.subroutes;
 
     // Check the results of past mappings and confirm that they're still valid
     let prematched_patterns = subroutes
@@ -310,13 +330,10 @@ pub(crate) fn pair_patterns_with_subroutes<'iml, 'gtfs>(
     // Matrix of matches and mismatches between IML subroutes and GTFS patterns
     // [IML index][GTFS index]
     let mut matches =
-        vec![
-            vec![(usize::MAX, usize::MAX); summary.patterns.len()];
-            summary.subroutes.len()
-        ];
+        vec![vec![(usize::MAX, usize::MAX); patterns.len()]; subroutes.len()];
 
-    for (iml_idx, iml_subroute) in summary.subroutes.iter().enumerate() {
-        for (gtfs_idx, gtfs_pattern) in summary.patterns.iter().enumerate() {
+    for (iml_idx, iml_subroute) in subroutes.iter().enumerate() {
+        for (gtfs_idx, gtfs_pattern) in patterns.iter().enumerate() {
             matches[iml_idx][gtfs_idx] = stop_seq_error(
                 &gtfs_pattern.iml_stop_ids,
                 iml_subroute.stop_ids,
@@ -324,52 +341,17 @@ pub(crate) fn pair_patterns_with_subroutes<'iml, 'gtfs>(
         }
     }
 
-    // A strong match:
-    // - Is not competing with another would-be strong match
-    // - Has a minimum length of 5 stops
-    // - Has a minium of 12 matches per 15 stops
-    // - Has a maximum of 2 mismatches per 15 stops
-    // - Has a maximum of 10 mismatches total
-    // (This means at most 3 new stops or 2 removed stops per 15 stops)
+    // Waiting to be promoted in a given stage (If no conflicts ensue)
     let mut strong_match_candidates = vec![];
+    // Already promoted. Every match that hits this will be returned
     let mut strong_matches: Vec<_>;
+    // Assignments from previous runs which are not all that strong anymore
+    // (because data has changed elsewhere)
     let mut weak_past_assignments = vec![];
 
-    fn meets_strong_match_criteria(
-        (matches, mismatches): (usize, usize),
-        subroute_stops_len: usize,
-        pattern_stops_len: usize,
-    ) -> bool {
-        const MIN_STOP_LEN: usize = 4;
-        const MIN_MATCH_RATIO: f32 = 12.0 / 15.0;
-        const MAX_MISMATCH_RATIO: f32 = 2.0 / 15.0;
-        const MAX_MISMATCHES: usize = 10;
-
-        if subroute_stops_len < MIN_STOP_LEN || pattern_stops_len < MIN_STOP_LEN
-        {
-            return false;
-        }
-        if pattern_stops_len < MIN_STOP_LEN {
-            return false;
-        }
-
-        let max_stop_len = subroute_stops_len.max(pattern_stops_len);
-
-        if mismatches > MAX_MISMATCHES {
-            return false;
-        }
-        if (matches as f32 / max_stop_len as f32) <= MIN_MATCH_RATIO {
-            return false;
-        }
-        if (mismatches as f32 / max_stop_len as f32) >= MAX_MISMATCH_RATIO {
-            return false;
-        }
-
-        true
-    }
-
+    // ### STAGE 1 ###
     // Raise the past-run matches to strong-candidate status
-    for (iml_idx, iml_subroute) in summary.subroutes.iter().enumerate() {
+    for (iml_idx, iml_subroute) in subroutes.iter().enumerate() {
         let subroute = &subroutes[iml_idx];
 
         if let Some(prematched_pattern) = &subroute.prematched_gtfs_pattern {
@@ -392,7 +374,7 @@ pub(crate) fn pair_patterns_with_subroutes<'iml, 'gtfs>(
                     let subroute_stops_len = iml_subroute.stop_ids.len();
                     let (matches, mismatches) = matches[iml_idx][gtfs_idx];
 
-                    if meets_strong_match_criteria(
+                    if is_strong_sequence_match(
                         (matches, mismatches),
                         subroute_stops_len,
                         pattern_stops_len,
@@ -420,11 +402,9 @@ pub(crate) fn pair_patterns_with_subroutes<'iml, 'gtfs>(
                 })
                 .is_some();
 
-            let subroute = &subroutes[*iml_idx];
-            let pattern = &patterns[*gtfs_idx];
             eprintln!(
                 "{} - {:?} had a conflict",
-                subroute.subroute_id, pattern.patterns
+                &subroutes[*iml_idx].subroute_id, &patterns[*gtfs_idx].patterns
             );
             !conflicts
         })
@@ -432,6 +412,8 @@ pub(crate) fn pair_patterns_with_subroutes<'iml, 'gtfs>(
         .collect();
     strong_match_candidates = vec![];
 
+    // ### STAGE 2 ###
+    // Have the already-strong match indexes in a convenient set
     let already_strong_iml_idxs = strong_matches
         .iter()
         .map(|(strong_iml_idx, _strong_gtfs_idx)| *strong_iml_idx)
@@ -442,7 +424,7 @@ pub(crate) fn pair_patterns_with_subroutes<'iml, 'gtfs>(
         .collect::<HashSet<_>>();
 
     // Raise the previously unmatched matches to strong-candidate status
-    for (iml_idx, iml_subroute) in summary.subroutes.iter().enumerate() {
+    for (iml_idx, iml_subroute) in subroutes.iter().enumerate() {
         let subroute = &subroutes[iml_idx];
         if already_strong_iml_idxs.contains(&iml_idx) {
             continue;
@@ -468,24 +450,18 @@ pub(crate) fn pair_patterns_with_subroutes<'iml, 'gtfs>(
                 // let pattern = &patterns[*gtfx_idx];
                 // available_patterns.contains(&pattern.patterns)
             })
-            // Within the remaining matches, we're going to filter out the ones that
             .filter_map(|(gtfx_idx, matches)| {
                 let pattern = &patterns[gtfx_idx];
-                let subroute_stops_len = iml_subroute.stop_ids.len();
-                let pattern_stops_len = pattern.gtfs_stop_ids.len();
-                if meets_strong_match_criteria(
+                is_strong_sequence_match(
                     *matches,
-                    subroute_stops_len,
-                    pattern_stops_len,
-                ) {
-                    Some((iml_idx, gtfx_idx))
-                } else {
-                    None
-                }
+                    iml_subroute.stop_ids.len(),
+                    pattern.gtfs_stop_ids.len(),
+                )
+                .then_some((iml_idx, gtfx_idx))
             })
             .collect_vec();
 
-        // Calculate the best hypothesis
+        // Calculate the most promising pair
         let best_hypothesis =
             strong_enough_pairs
                 .iter()
@@ -528,6 +504,8 @@ pub(crate) fn pair_patterns_with_subroutes<'iml, 'gtfs>(
             }
         });
 
+    // ### STAGE 3 ###
+    // Deal with the weirdos
     // Notable cases:
     // Only one pattern and subroute -> Match them
     // Two and the headsigns are very close to the subroute's -> Match them
@@ -659,9 +637,105 @@ pub(crate) fn pair_patterns_with_subroutes<'iml, 'gtfs>(
         .collect();
 
     RoutePairing {
-        route_id: summary.iml_route_id,
+        route_id: route_intersection.iml_route_id,
         subroute_pairings: matches,
         unpaired_gtfs: unmatched_gtfs,
         unpaired_iml: unmatched_iml,
+    }
+}
+
+// A strong match:
+// - Is not competing with another would-be strong match
+// - Has a minimum length of 5 stops
+// - Has a minium of 12 matches per 15 stops
+// - Has a maximum of 2 mismatches per 15 stops for long sequences
+// - Has a maximum of 10 mismatches total
+// (This means at most 3 new stops or 2 removed stops per 15 stops)
+fn is_strong_sequence_match(
+    (matches, mismatches): (usize, usize),
+    subroute_stops_len: usize,
+    pattern_stops_len: usize,
+) -> bool {
+    const MIN_STOP_LEN: usize = 4;
+    const MIN_MATCH_RATIO: f32 = 12.0 / 15.0;
+    const MAX_MISMATCHES: usize = 10;
+
+    if subroute_stops_len < MIN_STOP_LEN || pattern_stops_len < MIN_STOP_LEN {
+        return false;
+    }
+
+    let max_stop_len = subroute_stops_len.max(pattern_stops_len);
+    // An asymptote at 2/15 with some slack in smaller sequences
+    // (Accepts a ratio of 23/30 in a 4 stop sequence 1/3 in a 10-stop sequence)
+    let max_mismatch_ratio: f32 = 2.0 / 15.0 + (2.0 / max_stop_len as f32);
+
+    if mismatches > MAX_MISMATCHES {
+        return false;
+    }
+    if (matches as f32 / max_stop_len as f32) <= MIN_MATCH_RATIO {
+        return false;
+    }
+    if (mismatches as f32 / max_stop_len as f32) >= max_mismatch_ratio {
+        return false;
+    }
+
+    true
+}
+
+mod tests {
+    use super::is_strong_sequence_match;
+
+    #[test]
+    fn test_is_strong_sequence_match() {
+        // Null sequence
+        assert!(!is_strong_sequence_match((0, 0), 0, 0));
+        // Too short
+        assert!(!is_strong_sequence_match((1, 0), 1, 1));
+        assert!(!is_strong_sequence_match((0, 1), 1, 1));
+        assert!(!is_strong_sequence_match((1, 1), 2, 2));
+        assert!(!is_strong_sequence_match((2, 0), 2, 2));
+        assert!(!is_strong_sequence_match((0, 2), 2, 2));
+        assert!(!is_strong_sequence_match((3, 0), 3, 3));
+        // Impossible but still bellow minium size
+        assert!(!is_strong_sequence_match((10, 0), 4, 3));
+        assert!(!is_strong_sequence_match((10, 0), 3, 4));
+
+        // Minimum viable match
+        assert!(is_strong_sequence_match((4, 0), 4, 4));
+        assert!(is_strong_sequence_match((4, 0), 4, 4));
+        // Slightly worse
+        assert!(!is_strong_sequence_match((3, 1), 4, 4));
+        assert!(!is_strong_sequence_match((3, 1), 4, 4));
+        // Even worse
+        assert!(!is_strong_sequence_match((2, 2), 4, 4));
+        assert!(!is_strong_sequence_match((2, 2), 4, 4));
+
+        // Half match
+        assert!(!is_strong_sequence_match((5, 5), 10, 10));
+        assert!(!is_strong_sequence_match((500, 500), 1000, 1000));
+
+        // Relatively small sequence matches
+        assert!(!is_strong_sequence_match((5, 15), 20, 20));
+        assert!(!is_strong_sequence_match((100, 500), 600, 600));
+
+        // A small loop causes an insignificant match
+        assert!(!is_strong_sequence_match((3, 97), 100, 100));
+
+        // Long-ish match with a relatively big sequence size difference
+        assert!(!is_strong_sequence_match((10, 10), 10, 20));
+        assert!(!is_strong_sequence_match((8, 12), 10, 20));
+        // Long-ish match with an absolutely big size difference
+        assert!(!is_strong_sequence_match((45, 55), 50, 100));
+
+        // Barely good enough matches
+        assert!(!is_strong_sequence_match((10, 5), 15, 15));
+        assert!(!is_strong_sequence_match((40, 15), 55, 55));
+        assert!(!is_strong_sequence_match((40, 15), 55, 40));
+        assert!(!is_strong_sequence_match((40, 15), 40, 55));
+
+        // Good enough matches
+        assert!(is_strong_sequence_match((23, 4), 23, 27));
+        assert!(is_strong_sequence_match((45, 5), 45, 50));
+        assert!(is_strong_sequence_match((45, 5), 50, 45));
     }
 }

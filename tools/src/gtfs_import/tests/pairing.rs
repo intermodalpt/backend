@@ -1,10 +1,10 @@
-use itertools::Itertools;
 use once_cell::sync::Lazy;
 use std::collections::HashSet;
 
 use crate::iml;
 use crate::matcher::{
-    pair_patterns_with_subroutes, PatternSummary, RouteSummary, SubrouteSummary,
+    pair_route_intersection, ImlGtfsRouteIntersection, PatternSummary,
+    SubrouteSummary,
 };
 
 static DUMMY_REFERENCE_ROUTE: Lazy<iml::Route> = Lazy::new(|| iml::Route {
@@ -57,7 +57,7 @@ fn single_lone_pattern() {
         "05".to_string(),
     ];
 
-    let summary = RouteSummary {
+    let route_intersection = ImlGtfsRouteIntersection {
         iml_route: &DUMMY_REFERENCE_ROUTE,
         iml_route_id: 0,
         subroutes: vec![],
@@ -71,17 +71,17 @@ fn single_lone_pattern() {
         }],
     };
 
-    let res = pair_patterns_with_subroutes(summary);
-    assert_eq!(res.subroute_pairings.len(), 0);
-    assert_eq!(res.unpaired_gtfs.len(), 1);
-    assert_eq!(res.unpaired_iml.len(), 0);
+    let route_pairing = pair_route_intersection(route_intersection);
+    assert_eq!(route_pairing.subroute_pairings.len(), 0);
+    assert_eq!(route_pairing.unpaired_gtfs.len(), 1);
+    assert_eq!(route_pairing.unpaired_iml.len(), 0);
 }
 
 #[test]
 fn single_lone_subroute() {
     let iml_stop_ids_1 = vec![1, 2, 3, 4, 5];
 
-    let summary = RouteSummary {
+    let route_intersection = ImlGtfsRouteIntersection {
         iml_route: &DUMMY_REFERENCE_ROUTE,
         iml_route_id: 0,
         subroutes: vec![SubrouteSummary {
@@ -93,10 +93,10 @@ fn single_lone_subroute() {
         patterns: vec![],
     };
 
-    let res = pair_patterns_with_subroutes(summary);
-    assert_eq!(res.subroute_pairings.len(), 0);
-    assert_eq!(res.unpaired_gtfs.len(), 0);
-    assert_eq!(res.unpaired_iml.len(), 1);
+    let pairing = pair_route_intersection(route_intersection);
+    assert_eq!(pairing.subroute_pairings.len(), 0);
+    assert_eq!(pairing.unpaired_gtfs.len(), 0);
+    assert_eq!(pairing.unpaired_iml.len(), 1);
 }
 
 #[test]
@@ -123,7 +123,7 @@ fn single_match() {
         "05".to_string(),
     ];
 
-    let summary = RouteSummary {
+    let route_intersection = ImlGtfsRouteIntersection {
         iml_route: &DUMMY_REFERENCE_ROUTE,
         iml_route_id: 0,
         subroutes: vec![SubrouteSummary {
@@ -142,12 +142,12 @@ fn single_match() {
         }],
     };
 
-    let res = pair_patterns_with_subroutes(summary);
-    assert_eq!(res.subroute_pairings.len(), 1);
-    assert_eq!(res.unpaired_gtfs.len(), 0);
-    assert_eq!(res.unpaired_iml.len(), 0);
+    let route_pairing = pair_route_intersection(route_intersection);
+    assert_eq!(route_pairing.subroute_pairings.len(), 1);
+    assert_eq!(route_pairing.unpaired_gtfs.len(), 0);
+    assert_eq!(route_pairing.unpaired_iml.len(), 0);
 
-    let pairing = &res.subroute_pairings[0];
+    let pairing = &route_pairing.subroute_pairings[0];
     assert_eq!(pairing.stop_matches, 5);
     assert_eq!(pairing.stop_mismatches, 0);
 }
@@ -190,7 +190,7 @@ fn two_equal_matches() {
         set
     };
 
-    let summary = RouteSummary {
+    let route_intersection = ImlGtfsRouteIntersection {
         iml_route: &DUMMY_REFERENCE_ROUTE,
         iml_route_id: 0,
         subroutes: vec![
@@ -227,7 +227,7 @@ fn two_equal_matches() {
         ],
     };
 
-    let res = pair_patterns_with_subroutes(summary);
+    let res = pair_route_intersection(route_intersection);
     assert_eq!(res.subroute_pairings.len(), 0);
     assert_eq!(res.unpaired_gtfs.len(), 2);
     assert_eq!(res.unpaired_iml.len(), 2);
@@ -279,7 +279,7 @@ fn two_perfect_matches() {
         "050".to_string(),
     ];
 
-    let summary = RouteSummary {
+    let route_intersection = ImlGtfsRouteIntersection {
         iml_route: &DUMMY_REFERENCE_ROUTE,
         iml_route_id: 0,
         subroutes: vec![
@@ -316,15 +316,15 @@ fn two_perfect_matches() {
         ],
     };
 
-    let res = pair_patterns_with_subroutes(summary);
-    assert_eq!(res.subroute_pairings.len(), 2);
-    assert_eq!(res.unpaired_gtfs.len(), 0);
-    assert_eq!(res.unpaired_iml.len(), 0);
+    let route_pairing = pair_route_intersection(route_intersection);
+    assert_eq!(route_pairing.subroute_pairings.len(), 2);
+    assert_eq!(route_pairing.unpaired_gtfs.len(), 0);
+    assert_eq!(route_pairing.unpaired_iml.len(), 0);
 
-    let pairing = &res.subroute_pairings[0];
+    let pairing = &route_pairing.subroute_pairings[0];
     assert_eq!(pairing.stop_matches, 5);
     assert_eq!(pairing.stop_mismatches, 0);
-    let pairing = &res.subroute_pairings[1];
+    let pairing = &route_pairing.subroute_pairings[1];
     assert_eq!(pairing.stop_matches, 5);
     assert_eq!(pairing.stop_mismatches, 0);
 }
@@ -384,7 +384,7 @@ fn imperfect_matches() {
     ];
     let gtfs_iml_stop_ids_2 = vec![10, 20, 30, 40, 60, 70, 80, 90];
 
-    let summary = RouteSummary {
+    let summary = ImlGtfsRouteIntersection {
         iml_route: &DUMMY_REFERENCE_ROUTE,
         iml_route_id: 0,
         subroutes: vec![
@@ -421,15 +421,15 @@ fn imperfect_matches() {
         ],
     };
 
-    let res = pair_patterns_with_subroutes(summary);
-    assert_eq!(res.subroute_pairings.len(), 2);
-    assert_eq!(res.unpaired_gtfs.len(), 0);
-    assert_eq!(res.unpaired_iml.len(), 0);
+    let route_pairing = pair_route_intersection(summary);
+    assert_eq!(route_pairing.subroute_pairings.len(), 2);
+    assert_eq!(route_pairing.unpaired_gtfs.len(), 0);
+    assert_eq!(route_pairing.unpaired_iml.len(), 0);
 
-    let pairing = &res.subroute_pairings[0];
+    let pairing = &route_pairing.subroute_pairings[0];
     assert_eq!(pairing.stop_matches, 8);
     assert_eq!(pairing.stop_mismatches, 1);
-    let pairing = &res.subroute_pairings[1];
+    let pairing = &route_pairing.subroute_pairings[1];
     assert_eq!(pairing.stop_matches, 8);
     assert_eq!(pairing.stop_mismatches, 1);
 }
@@ -488,7 +488,7 @@ fn match_through_headsign() {
     let gtfs_stop_ids_2 = vec![];
     let gtfs_iml_stop_ids_2 = vec![];
 
-    let summary = RouteSummary {
+    let route_intersection = ImlGtfsRouteIntersection {
         iml_route: &DUMMY_REFERENCE_ROUTE,
         iml_route_id: 0,
         subroutes: vec![
@@ -525,14 +525,14 @@ fn match_through_headsign() {
         ],
     };
 
-    let res = pair_patterns_with_subroutes(summary);
-    assert_eq!(res.subroute_pairings.len(), 2);
-    assert_eq!(res.unpaired_gtfs.len(), 0);
-    assert_eq!(res.unpaired_iml.len(), 0);
-    let pairing = &res.subroute_pairings[0];
+    let route_pairing = pair_route_intersection(route_intersection);
+    assert_eq!(route_pairing.subroute_pairings.len(), 2);
+    assert_eq!(route_pairing.unpaired_gtfs.len(), 0);
+    assert_eq!(route_pairing.unpaired_iml.len(), 0);
+    let pairing = &route_pairing.subroute_pairings[0];
     assert_eq!(pairing.iml.subroute_id, 1);
     assert_eq!(pairing.gtfs.route_id, "0000_1");
-    let pairing = &res.subroute_pairings[1];
+    let pairing = &route_pairing.subroute_pairings[1];
     assert_eq!(pairing.iml.subroute_id, 2);
     assert_eq!(pairing.gtfs.route_id, "0000_0");
 }

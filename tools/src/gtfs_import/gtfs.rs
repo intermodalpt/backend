@@ -207,8 +207,6 @@ pub(crate) fn load_overrides(
         operator_id
     ));
 
-    dbg!(&path);
-
     if !path.exists() {
         return Ok(Overrides {
             suppressions: vec![],

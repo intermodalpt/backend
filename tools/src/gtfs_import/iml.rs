@@ -101,8 +101,10 @@ pub(crate) struct Data {
 }
 
 pub(crate) async fn load_base_data() -> Result<Data, Error> {
+    // TODO change to operator stops (instead of region)
     let iml_stops = fetch_iml_stops().await.unwrap();
     println!("Downloaded IML stops");
+    // TODO change to operator routes (instead of region)
     let mut iml_routes = fetch_iml_routes().await.unwrap();
     println!("Downloaded IML routes");
 
