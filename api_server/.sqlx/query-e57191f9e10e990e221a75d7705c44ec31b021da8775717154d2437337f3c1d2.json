@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, name, short_name, locality, street, door, lat, lon, notes, parish,\n    tags, verification_level, service_check_date, infrastructure_check_date,\n    accessibility_meta as \"a11y!: sqlx::types::Json<stops::A11yMeta>\", osm_id,\n    is_ghost, license\nFROM stops\nJOIN stop_operators ON stops.id = stop_operators.stop_id\nWHERE stop_operators.operator_id = $1",
+  "query": "SELECT stops.id, name, short_name, locality, street, door, lat, lon, notes,\n    parish, tags, verification_level, osm_id, is_ghost, license,\n    service_check_date, infrastructure_check_date,\n    accessibility_meta as \"a11y!: sqlx::types::Json<stops::A11yMeta>\"\nFROM stops\nJOIN stop_operators ON stops.id = stop_operators.stop_id\nWHERE stop_operators.operator_id = $1",
   "describe": {
     "columns": [
       {
@@ -65,33 +65,33 @@
       },
       {
         "ordinal": 12,
-        "name": "service_check_date",
-        "type_info": "Date"
-      },
-      {
-        "ordinal": 13,
-        "name": "infrastructure_check_date",
-        "type_info": "Date"
-      },
-      {
-        "ordinal": 14,
-        "name": "a11y!: sqlx::types::Json<stops::A11yMeta>",
-        "type_info": "Jsonb"
-      },
-      {
-        "ordinal": 15,
         "name": "osm_id",
         "type_info": "Int8"
       },
       {
-        "ordinal": 16,
+        "ordinal": 13,
         "name": "is_ghost",
         "type_info": "Bool"
       },
       {
-        "ordinal": 17,
+        "ordinal": 14,
         "name": "license",
         "type_info": "Text"
+      },
+      {
+        "ordinal": 15,
+        "name": "service_check_date",
+        "type_info": "Date"
+      },
+      {
+        "ordinal": 16,
+        "name": "infrastructure_check_date",
+        "type_info": "Date"
+      },
+      {
+        "ordinal": 17,
+        "name": "a11y!: sqlx::types::Json<stops::A11yMeta>",
+        "type_info": "Jsonb"
       }
     ],
     "parameters": {
@@ -113,12 +113,12 @@
       false,
       false,
       true,
+      false,
+      false,
       true,
-      false,
-      false,
-      false,
+      true,
       false
     ]
   },
-  "hash": "67ff4c591cf2b871176711b8e44839874cafc0dd3c9bc481fa16e4f8bde36ba5"
+  "hash": "e57191f9e10e990e221a75d7705c44ec31b021da8775717154d2437337f3c1d2"
 }

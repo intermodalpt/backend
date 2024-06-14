@@ -275,10 +275,10 @@ pub(crate) async fn fetch_operator_stops(
 ) -> Result<Vec<responses::Stop>> {
     sqlx::query_as!(
         responses::Stop,
-r#"SELECT id, name, short_name, locality, street, door, lat, lon, notes, parish,
-    tags, verification_level, service_check_date, infrastructure_check_date,
-    accessibility_meta as "a11y!: sqlx::types::Json<stops::A11yMeta>", osm_id,
-    is_ghost, license
+r#"SELECT stops.id, name, short_name, locality, street, door, lat, lon, notes,
+    parish, tags, verification_level, osm_id, is_ghost, license,
+    service_check_date, infrastructure_check_date,
+    accessibility_meta as "a11y!: sqlx::types::Json<stops::A11yMeta>"
 FROM stops
 JOIN stop_operators ON stops.id = stop_operators.stop_id
 WHERE stop_operators.operator_id = $1"#,
@@ -630,9 +630,6 @@ WHERE id = $2
 
 impl FromRow<'_, sqlx::postgres::PgRow> for responses::Stop {
     fn from_row(row: &sqlx::postgres::PgRow) -> sqlx::Result<Self> {
-        let verified_position: bool = row.try_get("verified_position")?;
-        let verification_level: i16 = row.try_get("verification_level")?;
-
         Ok(Self {
             id: row.try_get("id")?,
             osm_id: row.try_get("osm_id")?,
@@ -647,11 +644,7 @@ impl FromRow<'_, sqlx::postgres::PgRow> for responses::Stop {
             parish: row.try_get("parish")?,
             tags: row.try_get("tags")?,
             a11y: row.try_get("accessibility_meta")?,
-            verification_level: if verified_position {
-                verification_level | 0b1100_0000
-            } else {
-                verification_level & 0b0011_1111
-            },
+            verification_level: row.try_get("verification_level")?,
             service_check_date: row.try_get("service_check_date")?,
             infrastructure_check_date: row
                 .try_get("infrastructure_check_date")?,
@@ -678,8 +671,17 @@ impl FromRow<'_, sqlx::postgres::PgRow> for responses::FullStop {
             })
             .collect();
 
+        let verified_position: bool = row.try_get("verified_position")?;
+        let mut stop = responses::Stop::from_row(row)?;
+
+        stop.verification_level = if verified_position {
+            stop.verification_level | 0b1100_0000
+        } else {
+            stop.verification_level & 0b0011_1111
+        };
+
         Ok(Self {
-            stop: responses::Stop::from_row(row)?,
+            stop,
             updater: row.try_get("updater")?,
             verified_position: row.try_get("verified_position")?,
             update_date: row.try_get("update_date")?,
