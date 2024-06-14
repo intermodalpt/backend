@@ -312,22 +312,6 @@ pub(crate) fn pair_route_intersection<'iml, 'gtfs>(
     let pattern_clusters = &route_intersection.patterns_cluster;
     let subroutes = &route_intersection.subroutes;
 
-    // Check the results of past mappings and confirm that they're still valid
-    let prematched_patterns = subroutes
-        .iter()
-        .flat_map(|subroute| &subroute.gtfs_patterns)
-        .collect::<HashSet<_>>();
-    let available_patterns = pattern_clusters
-        .iter()
-        .flat_map(|cluster| cluster.patterns)
-        .collect::<HashSet<_>>();
-    let valid_prematched_patterns = prematched_patterns
-        .intersection(&available_patterns)
-        .collect::<HashSet<_>>();
-    let no_longer_available_patterns = prematched_patterns
-        .difference(&available_patterns)
-        .collect::<HashSet<_>>();
-
     // Matrix of matches and mismatches between IML subroutes and GTFS patterns
     // [IML index][GTFS index]
     let mut matches =
@@ -573,6 +557,73 @@ pub(crate) fn pair_route_intersection<'iml, 'gtfs>(
         }
     }
 
+    pack_route_pairing(&route_intersection, matches, strong_matches)
+}
+
+fn has_conflicting_pair(
+    iml_gtfs_pairs: &[(usize, usize)],
+    iml_idx: usize,
+    gtfs_idx: usize,
+) -> bool {
+    iml_gtfs_pairs
+        .iter()
+        .any(|(other_iml_idx, other_gtfs_idx)| {
+            iml_idx == *other_iml_idx && gtfs_idx != *other_gtfs_idx
+                || iml_idx != *other_iml_idx && gtfs_idx == *other_gtfs_idx
+        })
+}
+
+// A strong match:
+// - Is not competing with another would-be strong match
+// - Has a minimum length of 5 stops
+// - Has a minium of 12 matches per 15 stops
+// - Has a maximum of 2 mismatches per 15 stops for long sequences
+// - Has a maximum of 10 mismatches total
+// (This means at most 3 new stops or 2 removed stops per 15 stops)
+fn is_strong_sequence_match(
+    (matches, mismatches): (usize, usize),
+    subroute_stops_len: usize,
+    pattern_stops_len: usize,
+) -> bool {
+    const MIN_STOP_LEN: usize = 4;
+    const MIN_MATCH_RATIO: f32 = 12.0 / 15.0;
+    const MAX_MISMATCHES: usize = 10;
+
+    if subroute_stops_len < MIN_STOP_LEN || pattern_stops_len < MIN_STOP_LEN {
+        return false;
+    }
+
+    let max_stop_len = subroute_stops_len.max(pattern_stops_len);
+    // An asymptote at 2/15 with some slack in smaller sequences
+    // (Accepts a ratio of 23/30 in a 4 stop sequence 1/3 in a 10-stop sequence)
+    let max_mismatch_ratio: f32 = 2.0 / 15.0 + (2.0 / max_stop_len as f32);
+
+    if mismatches > MAX_MISMATCHES {
+        return false;
+    }
+    if (matches as f32 / max_stop_len as f32) <= MIN_MATCH_RATIO {
+        return false;
+    }
+    if (mismatches as f32 / max_stop_len as f32) >= max_mismatch_ratio {
+        return false;
+    }
+
+    true
+}
+
+// This aux function takes the calculation results of `pair_route_intersection`
+// and wraps them up in a `RoutePairing`.
+// Consider it to be a part n of the `pair_route_intersection` function as it
+// serves no standalone purpose other than helping unclutter that mess
+#[inline]
+fn pack_route_pairing<'iml, 'gtfs>(
+    route_intersection: &ImlGtfsRouteIntersection<'iml, 'gtfs>,
+    matches: Vec<Vec<(usize, usize)>>,
+    strong_matches: Vec<(usize, usize)>,
+) -> RoutePairing<'iml, 'gtfs> {
+    let pattern_clusters = &route_intersection.patterns_cluster;
+    let subroutes = &route_intersection.subroutes;
+
     let used_iml_idxs = strong_matches
         .iter()
         .map(|(iml_idx, _)| *iml_idx)
@@ -632,57 +683,6 @@ pub(crate) fn pair_route_intersection<'iml, 'gtfs>(
         unpaired_gtfs: unmatched_gtfs,
         unpaired_iml: unmatched_iml,
     }
-}
-
-fn has_conflicting_pair(
-    iml_gtfs_pairs: &[(usize, usize)],
-    iml_idx: usize,
-    gtfs_idx: usize,
-) -> bool {
-    iml_gtfs_pairs
-        .iter()
-        .any(|(other_iml_idx, other_gtfs_idx)| {
-            iml_idx == *other_iml_idx && gtfs_idx != *other_gtfs_idx
-                || iml_idx != *other_iml_idx && gtfs_idx == *other_gtfs_idx
-        })
-}
-
-// A strong match:
-// - Is not competing with another would-be strong match
-// - Has a minimum length of 5 stops
-// - Has a minium of 12 matches per 15 stops
-// - Has a maximum of 2 mismatches per 15 stops for long sequences
-// - Has a maximum of 10 mismatches total
-// (This means at most 3 new stops or 2 removed stops per 15 stops)
-fn is_strong_sequence_match(
-    (matches, mismatches): (usize, usize),
-    subroute_stops_len: usize,
-    pattern_stops_len: usize,
-) -> bool {
-    const MIN_STOP_LEN: usize = 4;
-    const MIN_MATCH_RATIO: f32 = 12.0 / 15.0;
-    const MAX_MISMATCHES: usize = 10;
-
-    if subroute_stops_len < MIN_STOP_LEN || pattern_stops_len < MIN_STOP_LEN {
-        return false;
-    }
-
-    let max_stop_len = subroute_stops_len.max(pattern_stops_len);
-    // An asymptote at 2/15 with some slack in smaller sequences
-    // (Accepts a ratio of 23/30 in a 4 stop sequence 1/3 in a 10-stop sequence)
-    let max_mismatch_ratio: f32 = 2.0 / 15.0 + (2.0 / max_stop_len as f32);
-
-    if mismatches > MAX_MISMATCHES {
-        return false;
-    }
-    if (matches as f32 / max_stop_len as f32) <= MIN_MATCH_RATIO {
-        return false;
-    }
-    if (mismatches as f32 / max_stop_len as f32) >= max_mismatch_ratio {
-        return false;
-    }
-
-    true
 }
 
 #[cfg(test)]
