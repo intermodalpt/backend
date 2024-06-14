@@ -33,7 +33,7 @@ pub(crate) struct ImlGtfsRouteIntersection<'iml, 'gtfs> {
     pub(crate) iml_route: &'iml iml::Route,
     pub(crate) iml_route_id: iml::RouteId,
     pub(crate) subroutes: Vec<SubrouteSummary<'iml>>,
-    pub(crate) patterns: Vec<PatternSummary<'gtfs>>,
+    pub(crate) patterns_cluster: Vec<PatternCluster<'gtfs>>,
 }
 
 #[derive(Clone)]
@@ -41,12 +41,12 @@ pub(crate) struct SubrouteSummary<'iml> {
     // Some of these fields are unnecessary since the subroute has a ref
     pub(crate) subroute: &'iml iml::Subroute,
     pub(crate) subroute_id: iml::SubrouteId,
-    pub(crate) prematched_gtfs_pattern: Option<gtfs::PatternId>,
+    pub(crate) gtfs_patterns: HashSet<gtfs::PatternId>,
     pub(crate) stop_ids: &'iml [iml::StopId],
 }
 
 #[derive(Clone)]
-pub(crate) struct PatternSummary<'gtfs> {
+pub(crate) struct PatternCluster<'gtfs> {
     pub(crate) gtfs_stop_ids: &'gtfs Vec<gtfs::StopId>,
     pub(crate) iml_stop_ids: Vec<iml::StopId>,
     pub(crate) route_id: &'gtfs gtfs::RouteId,
@@ -75,9 +75,9 @@ pub(crate) struct SubroutePatternPairing<'iml, 'gtfs> {
 pub(crate) struct GtfsPatternData<'gtfs> {
     pub(crate) stop_ids: &'gtfs [gtfs::StopId],
     pub(crate) route_id: &'gtfs gtfs::RouteId,
-    pub(crate) pattern_ids: HashSet<gtfs::PatternId>,
-    pub(crate) headsigns: HashSet<String>,
-    pub(crate) trip_ids: HashSet<gtfs::TripId>,
+    pub(crate) pattern_ids: &'gtfs HashSet<gtfs::PatternId>,
+    pub(crate) headsigns: &'gtfs HashSet<String>,
+    pub(crate) trip_ids: &'gtfs HashSet<gtfs::TripId>,
     pub(crate) iml_stop_ids: Vec<iml::StopId>,
 }
 
@@ -86,9 +86,9 @@ impl From<GtfsPatternData<'_>> for gtfs_commons::SubrouteValidation {
         gtfs_commons::SubrouteValidation {
             gtfs_cluster: gtfs_commons::PatternCluster {
                 stops: cluster.stop_ids.to_vec(),
-                headsigns: cluster.headsigns,
-                patterns: cluster.pattern_ids,
-                trips: cluster.trip_ids,
+                headsigns: cluster.headsigns.clone(),
+                patterns: cluster.pattern_ids.clone(),
+                trips: cluster.trip_ids.clone(),
             },
             stops: cluster.iml_stop_ids.to_vec(),
         }
@@ -225,9 +225,10 @@ async fn cross_intersect_route<'iml, 'gtfs>(
             subroute_id: iml_subroute.id,
             subroute: iml_subroute,
             stop_ids: &iml_subroute.stops,
-            prematched_gtfs_pattern: iml_subroute
-                .prematched_gtfs_pattern
-                .clone(),
+            gtfs_patterns: iml_subroute.validation.gtfs.as_ref().map_or_else(
+                || HashSet::new(),
+                |v| v.patterns.iter().cloned().collect::<HashSet<_>>(),
+            ),
         });
     }
 
@@ -245,7 +246,7 @@ async fn cross_intersect_route<'iml, 'gtfs>(
             iml_route,
             iml_route_id: iml_route.id,
             subroutes: iml_subroute_data,
-            patterns: gtfs_patterns_data,
+            patterns_cluster: gtfs_patterns_data,
         });
     };
 
@@ -280,7 +281,7 @@ async fn cross_intersect_route<'iml, 'gtfs>(
 
                 iml_stop_ids.dedup();
 
-                gtfs_patterns_data.push(PatternSummary {
+                gtfs_patterns_data.push(PatternCluster {
                     route_id: &gtfs_route.route_id,
                     gtfs_stop_ids: &cluster.stops,
                     iml_stop_ids,
@@ -296,7 +297,7 @@ async fn cross_intersect_route<'iml, 'gtfs>(
         iml_route,
         iml_route_id: iml_route.id,
         subroutes: iml_subroute_data,
-        patterns: gtfs_patterns_data,
+        patterns_cluster: gtfs_patterns_data,
     })
 }
 
@@ -308,32 +309,35 @@ async fn cross_intersect_route<'iml, 'gtfs>(
 pub(crate) fn pair_route_intersection<'iml, 'gtfs>(
     route_intersection: ImlGtfsRouteIntersection<'iml, 'gtfs>,
 ) -> RoutePairing<'iml, 'gtfs> {
-    let patterns = &route_intersection.patterns;
+    let pattern_clusters = &route_intersection.patterns_cluster;
     let subroutes = &route_intersection.subroutes;
 
     // Check the results of past mappings and confirm that they're still valid
     let prematched_patterns = subroutes
         .iter()
-        .flat_map(|subroute| &subroute.prematched_gtfs_pattern)
+        .flat_map(|subroute| &subroute.gtfs_patterns)
         .collect::<HashSet<_>>();
-    let available_patterns = patterns
+    let available_patterns = pattern_clusters
         .iter()
-        .flat_map(|pattern| pattern.patterns.iter())
+        .flat_map(|cluster| cluster.patterns)
         .collect::<HashSet<_>>();
-    let _valid_prematched_patterns = prematched_patterns
+    let valid_prematched_patterns = prematched_patterns
         .intersection(&available_patterns)
         .collect::<HashSet<_>>();
-    let disappeared_patterns = prematched_patterns
+    let no_longer_available_patterns = prematched_patterns
         .difference(&available_patterns)
         .collect::<HashSet<_>>();
 
     // Matrix of matches and mismatches between IML subroutes and GTFS patterns
     // [IML index][GTFS index]
     let mut matches =
-        vec![vec![(usize::MAX, usize::MAX); patterns.len()]; subroutes.len()];
+        vec![
+            vec![(usize::MAX, usize::MAX); pattern_clusters.len()];
+            subroutes.len()
+        ];
 
     for (iml_idx, iml_subroute) in subroutes.iter().enumerate() {
-        for (gtfs_idx, gtfs_pattern) in patterns.iter().enumerate() {
+        for (gtfs_idx, gtfs_pattern) in pattern_clusters.iter().enumerate() {
             matches[iml_idx][gtfs_idx] = stop_seq_error(
                 &gtfs_pattern.iml_stop_ids,
                 iml_subroute.stop_ids,
@@ -354,39 +358,35 @@ pub(crate) fn pair_route_intersection<'iml, 'gtfs>(
     for (iml_idx, iml_subroute) in subroutes.iter().enumerate() {
         let subroute = &subroutes[iml_idx];
 
-        if let Some(prematched_pattern) = &subroute.prematched_gtfs_pattern {
-            let matched_pattern_cnt = patterns
+        if !subroute.gtfs_patterns.is_empty() {
+            let matched_clusters = pattern_clusters
                 .iter()
-                .filter(|p| p.patterns.contains(prematched_pattern))
-                .count();
+                .enumerate()
+                .filter(|(_, p)| {
+                    !p.patterns.is_disjoint(&subroute.gtfs_patterns)
+                })
+                .collect::<Vec<(usize, &PatternCluster)>>();
 
-            match matched_pattern_cnt {
-                1 => {
-                    let (gtfs_idx, pattern) = patterns
-                        .iter()
-                        .enumerate()
-                        .find(|(_gtfs_idx, p)| {
-                            p.patterns.contains(prematched_pattern)
-                        })
-                        .unwrap();
+            if matched_clusters.len() != 1 {
+                // We could do better here...
+                // but hey, better an explosion than wrong data
+                panic!("GTFS integrity issue")
+            }
 
-                    let pattern_stops_len = pattern.gtfs_stop_ids.len();
-                    let subroute_stops_len = iml_subroute.stop_ids.len();
-                    let (matches, mismatches) = matches[iml_idx][gtfs_idx];
+            let (gtfs_idx, pattern_cluster) = matched_clusters[0];
 
-                    if is_strong_sequence_match(
-                        (matches, mismatches),
-                        subroute_stops_len,
-                        pattern_stops_len,
-                    ) {
-                        strong_match_candidates.push((iml_idx, gtfs_idx));
-                    } else {
-                        weak_past_assignments.push((iml_idx, gtfs_idx));
-                    }
-                }
-                _ => {
-                    panic!("GTFS integrity issue")
-                }
+            let pattern_stops_len = pattern_cluster.gtfs_stop_ids.len();
+            let subroute_stops_len = iml_subroute.stop_ids.len();
+            let (matches, mismatches) = matches[iml_idx][gtfs_idx];
+
+            if is_strong_sequence_match(
+                (matches, mismatches),
+                subroute_stops_len,
+                pattern_stops_len,
+            ) {
+                strong_match_candidates.push((iml_idx, gtfs_idx));
+            } else {
+                weak_past_assignments.push((iml_idx, gtfs_idx));
             }
         }
     }
@@ -395,24 +395,26 @@ pub(crate) fn pair_route_intersection<'iml, 'gtfs>(
     strong_matches = strong_match_candidates
         .iter()
         .filter(|(iml_idx, gtfs_idx)| {
-            let conflicts = strong_match_candidates
-                .iter()
-                .find_position(|(other_iml_idx, other_gtfs_idx)| {
-                    iml_idx == other_iml_idx && gtfs_idx != other_gtfs_idx
-                })
-                .is_some();
-
-            eprintln!(
-                "{} - {:?} had a conflict",
-                &subroutes[*iml_idx].subroute_id, &patterns[*gtfs_idx].patterns
+            let conflicts = has_conflicting_pair(
+                &strong_match_candidates,
+                *iml_idx,
+                *gtfs_idx,
             );
+
+            if conflicts {
+                eprintln!(
+                    "{} - {:?} had a conflict",
+                    &subroutes[*iml_idx].subroute_id,
+                    &pattern_clusters[*gtfs_idx].patterns
+                );
+            }
+
             !conflicts
         })
         .map(|(iml_idx, gtfs_idx)| (*iml_idx, *gtfs_idx))
         .collect();
     strong_match_candidates = vec![];
 
-    // ### STAGE 2 ###
     // Have the already-strong match indexes in a convenient set
     let already_strong_iml_idxs = strong_matches
         .iter()
@@ -423,6 +425,7 @@ pub(crate) fn pair_route_intersection<'iml, 'gtfs>(
         .map(|(_strong_iml_idx, strong_gtfs_idx)| *strong_gtfs_idx)
         .collect::<HashSet<_>>();
 
+    // ### STAGE 2 ###
     // Raise the previously unmatched matches to strong-candidate status
     for (iml_idx, iml_subroute) in subroutes.iter().enumerate() {
         let subroute = &subroutes[iml_idx];
@@ -430,11 +433,12 @@ pub(crate) fn pair_route_intersection<'iml, 'gtfs>(
             continue;
         }
 
-        if let Some(prematched_gtfs_pattern) = &subroute.prematched_gtfs_pattern
+        // Do not attempt to pair against subroutes that are weakly paired
+        if weak_past_assignments
+            .iter()
+            .any(|(weak_iml_idx, _)| weak_iml_idx == &iml_idx)
         {
-            if !disappeared_patterns.contains(&prematched_gtfs_pattern) {
-                continue;
-            }
+            continue;
         }
 
         let subroute_matches = &matches[iml_idx];
@@ -447,11 +451,11 @@ pub(crate) fn pair_route_intersection<'iml, 'gtfs>(
                 // Still unsure between
                 !already_strong_gtfs_idxs.contains(gtfx_idx)
                 // And
-                // let pattern = &patterns[*gtfx_idx];
-                // available_patterns.contains(&pattern.patterns)
+                // let pattern_cluster = &pattern_clusters[*gtfx_idx];
+                // !available_patterns.is_disjoint(pattern_cluster.patterns)
             })
             .filter_map(|(gtfx_idx, matches)| {
-                let pattern = &patterns[gtfx_idx];
+                let pattern = &pattern_clusters[gtfx_idx];
                 is_strong_sequence_match(
                     *matches,
                     iml_subroute.stop_ids.len(),
@@ -490,16 +494,11 @@ pub(crate) fn pair_route_intersection<'iml, 'gtfs>(
                 return;
             }
 
-            let conflicts = strong_match_candidates
-                .iter()
-                .find_position(|(other_iml_idx, other_gtfs_idx)| {
-                    iml_idx == other_iml_idx && gtfs_idx != other_gtfs_idx
-                        || iml_idx != other_iml_idx
-                            && gtfs_idx == other_gtfs_idx
-                })
-                .is_some();
-
-            if !conflicts {
+            if !has_conflicting_pair(
+                &strong_match_candidates,
+                *iml_idx,
+                *gtfs_idx,
+            ) {
                 strong_matches.push((*iml_idx, *gtfs_idx));
             }
         });
@@ -507,54 +506,53 @@ pub(crate) fn pair_route_intersection<'iml, 'gtfs>(
     // ### STAGE 3 ###
     // Deal with the weirdos
     // Notable cases:
+    // Weak assignments from the past pose no conflict -> Add them all
     // Only one pattern and subroute -> Match them
     // Two and the headsigns are very close to the subroute's -> Match them
     // One strong and one weak -> Match the strong
-    // Weak assignments from the past pose no conflict -> Add them all
+
+    weak_past_assignments
+        .iter()
+        .for_each(|(weak_iml_idx, weak_gtfs_idx)| {
+            // Check if there are conflicts with any of the strong matches or other weak matches
+            if !has_conflicting_pair(
+                &strong_matches,
+                *weak_iml_idx,
+                *weak_gtfs_idx,
+            ) && !has_conflicting_pair(
+                &weak_past_assignments,
+                *weak_iml_idx,
+                *weak_gtfs_idx,
+            ) {
+                strong_matches.push((*weak_iml_idx, *weak_gtfs_idx))
+            }
+        });
+
     if strong_matches.is_empty() {
-        if patterns.len() == 1 && subroutes.len() == 1 {
+        if pattern_clusters.len() == 1 && subroutes.len() == 1 {
             strong_matches.push((0, 0));
-        } else if !weak_past_assignments.is_empty() {
-            weak_past_assignments.iter().for_each(
-                |(weak_iml_idx, weak_gtfs_idx)| {
-                    // Check if there are conflicts with any of the strong matches or other weak matches
-                    let conflicts = strong_matches
-                        .iter()
-                        .find_position(|(strong_iml_idx, strong_gtfs_idx)| {
-                            weak_iml_idx == strong_iml_idx
-                                && weak_gtfs_idx != strong_gtfs_idx
-                        })
-                        .is_some()
-                        || weak_past_assignments
-                            .iter()
-                            .find_position(|(other_iml_idx, other_gtfs_idx)| {
-                                weak_iml_idx == other_iml_idx
-                                    && weak_gtfs_idx != other_gtfs_idx
-                            })
-                            .is_some();
-                    if !conflicts {
-                        strong_matches.push((*weak_iml_idx, *weak_gtfs_idx))
-                    }
-                },
-            );
-        } else if patterns.len() == 2 && subroutes.len() == 2 {
+        } else if pattern_clusters.len() == 2 && subroutes.len() == 2 {
             if let (Some(sr0_hs), Some(sr1_hs)) = (
                 &subroutes[0].subroute.headsign,
                 &subroutes[1].subroute.headsign,
             ) {
                 const MIN_SIMILARITY: f64 = 0.9;
-                let sr0_matches_p0 = patterns[0].headsigns.iter().any(|hs| {
-                    normalized_levenshtein(hs, sr0_hs) > MIN_SIMILARITY
-                });
-                let sr0_matches_p1 = patterns[1].headsigns.iter().any(|hs| {
-                    normalized_levenshtein(hs, sr0_hs) > MIN_SIMILARITY
-                });
-                let sr1_matches_p0 = patterns[0].headsigns.iter().any(|hs| {
-                    normalized_levenshtein(hs, sr1_hs) > MIN_SIMILARITY
-                });
-                let sr1_matches_p1 = patterns[1].headsigns.iter().any(|hs| {
-                    normalized_levenshtein(hs, sr1_hs) > MIN_SIMILARITY
-                });
+                let sr0_matches_p0 =
+                    pattern_clusters[0].headsigns.iter().any(|hs| {
+                        normalized_levenshtein(hs, sr0_hs) > MIN_SIMILARITY
+                    });
+                let sr0_matches_p1 =
+                    pattern_clusters[1].headsigns.iter().any(|hs| {
+                        normalized_levenshtein(hs, sr0_hs) > MIN_SIMILARITY
+                    });
+                let sr1_matches_p0 =
+                    pattern_clusters[0].headsigns.iter().any(|hs| {
+                        normalized_levenshtein(hs, sr1_hs) > MIN_SIMILARITY
+                    });
+                let sr1_matches_p1 =
+                    pattern_clusters[1].headsigns.iter().any(|hs| {
+                        normalized_levenshtein(hs, sr1_hs) > MIN_SIMILARITY
+                    });
 
                 if sr0_matches_p0
                     && sr1_matches_p1
@@ -588,20 +586,12 @@ pub(crate) fn pair_route_intersection<'iml, 'gtfs>(
         .into_iter()
         .map(|(iml_idx, gtfs_idx)| SubroutePatternPairing {
             gtfs: GtfsPatternData {
-                stop_ids: patterns[gtfs_idx].gtfs_stop_ids,
-                route_id: patterns[gtfs_idx].route_id,
-                pattern_ids: patterns[gtfs_idx]
-                    .patterns
-                    .iter()
-                    .cloned()
-                    .collect(),
-                headsigns: patterns[gtfs_idx]
-                    .headsigns
-                    .iter()
-                    .cloned()
-                    .collect(),
-                trip_ids: patterns[gtfs_idx].trips.iter().cloned().collect(),
-                iml_stop_ids: patterns[gtfs_idx].iml_stop_ids.clone(),
+                stop_ids: pattern_clusters[gtfs_idx].gtfs_stop_ids,
+                route_id: pattern_clusters[gtfs_idx].route_id,
+                pattern_ids: pattern_clusters[gtfs_idx].patterns,
+                headsigns: pattern_clusters[gtfs_idx].headsigns,
+                trip_ids: pattern_clusters[gtfs_idx].trips,
+                iml_stop_ids: pattern_clusters[gtfs_idx].iml_stop_ids.clone(),
             },
             iml: ImlSubrouteData {
                 subroute_id: subroutes[iml_idx].subroute_id,
@@ -612,16 +602,16 @@ pub(crate) fn pair_route_intersection<'iml, 'gtfs>(
         })
         .collect();
 
-    let unmatched_gtfs = patterns
+    let unmatched_gtfs = pattern_clusters
         .iter()
         .enumerate()
         .filter(|(idx, _)| !used_gtfs_idxs.contains(idx))
         .map(|(_, pattern)| GtfsPatternData {
             stop_ids: pattern.gtfs_stop_ids,
             route_id: pattern.route_id,
-            pattern_ids: pattern.patterns.iter().cloned().collect(),
-            headsigns: pattern.headsigns.iter().cloned().collect(),
-            trip_ids: pattern.trips.iter().cloned().collect(),
+            pattern_ids: pattern.patterns,
+            headsigns: pattern.headsigns,
+            trip_ids: pattern.trips,
             iml_stop_ids: pattern.iml_stop_ids.clone(),
         })
         .collect();
@@ -642,6 +632,19 @@ pub(crate) fn pair_route_intersection<'iml, 'gtfs>(
         unpaired_gtfs: unmatched_gtfs,
         unpaired_iml: unmatched_iml,
     }
+}
+
+fn has_conflicting_pair(
+    iml_gtfs_pairs: &[(usize, usize)],
+    iml_idx: usize,
+    gtfs_idx: usize,
+) -> bool {
+    iml_gtfs_pairs
+        .iter()
+        .any(|(other_iml_idx, other_gtfs_idx)| {
+            iml_idx == *other_iml_idx && gtfs_idx != *other_gtfs_idx
+                || iml_idx != *other_iml_idx && gtfs_idx == *other_gtfs_idx
+        })
 }
 
 // A strong match:
@@ -682,6 +685,7 @@ fn is_strong_sequence_match(
     true
 }
 
+#[cfg(test)]
 mod tests {
     use super::is_strong_sequence_match;
 

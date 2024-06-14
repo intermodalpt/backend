@@ -28,7 +28,9 @@ use commons::models::gtfs as gtfs_commons;
 use crate::gtfs::{load_gtfs, Data};
 use crate::iml::{load_base_data, Route};
 use crate::linter::lint_gtfs;
-use crate::matcher::{cross_reference_routes, RoutePairing, SubroutePatternPairing};
+use crate::matcher::{
+    cross_reference_routes, RoutePairing, SubroutePatternPairing,
+};
 
 mod error;
 mod gtfs;
@@ -109,10 +111,11 @@ async fn main() {
     .await
     .unwrap();
 
-    let iml = load_base_data().await.unwrap();
+    let iml = load_base_data(args.operator).await.unwrap();
 
-    let mut matches =
-        cross_reference_routes(&gtfs, &iml, args.operator).await.unwrap();
+    let mut matches = cross_reference_routes(&gtfs, &iml, args.operator)
+        .await
+        .unwrap();
 
     // Sorting for determinism
     matches.sort_by(|m1, m2| {
@@ -158,7 +161,7 @@ async fn main() {
             let mut used_gtfs_pattern_ids = HashSet::new();
             let mut used_iml_subroute_ids = HashSet::new();
             for subroute_pairing in route_pairing.subroute_pairings.iter() {
-                for pattern_id in &subroute_pairing.gtfs.pattern_ids {
+                for pattern_id in subroute_pairing.gtfs.pattern_ids.iter() {
                     let new = used_gtfs_pattern_ids.insert(pattern_id);
                     if !new {
                         conflicts = true;

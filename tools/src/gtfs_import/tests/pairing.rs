@@ -3,7 +3,7 @@ use std::collections::HashSet;
 
 use crate::iml;
 use crate::matcher::{
-    pair_route_intersection, ImlGtfsRouteIntersection, PatternSummary,
+    pair_route_intersection, ImlGtfsRouteIntersection, PatternCluster,
     SubrouteSummary,
 };
 
@@ -27,7 +27,10 @@ static DUMMY_REFERENCE_SUBROUTE: Lazy<iml::Subroute> =
         headsign: None,
         destination: None,
         stops: vec![],
-        prematched_gtfs_pattern: None,
+        validation: iml::SubrouteValidation {
+            current: vec![],
+            gtfs: None,
+        },
     });
 
 static EMPTY_SET_OF_STRINGS: Lazy<HashSet<String>> =
@@ -61,7 +64,7 @@ fn single_lone_pattern() {
         iml_route: &DUMMY_REFERENCE_ROUTE,
         iml_route_id: 0,
         subroutes: vec![],
-        patterns: vec![PatternSummary {
+        patterns_cluster: vec![PatternCluster {
             gtfs_stop_ids: &gtfs_stop_ids_1,
             iml_stop_ids: iml_stop_ids_1.clone(),
             route_id: &gtfs_route_id_1,
@@ -87,10 +90,10 @@ fn single_lone_subroute() {
         subroutes: vec![SubrouteSummary {
             subroute: &DUMMY_REFERENCE_SUBROUTE,
             subroute_id: 1,
-            prematched_gtfs_pattern: None,
+            gtfs_patterns: HashSet::default(),
             stop_ids: &iml_stop_ids_1,
         }],
-        patterns: vec![],
+        patterns_cluster: vec![],
     };
 
     let pairing = pair_route_intersection(route_intersection);
@@ -129,10 +132,10 @@ fn single_match() {
         subroutes: vec![SubrouteSummary {
             subroute: &DUMMY_REFERENCE_SUBROUTE,
             subroute_id: 1,
-            prematched_gtfs_pattern: None,
+            gtfs_patterns: HashSet::default(),
             stop_ids: &iml_stop_ids_1,
         }],
-        patterns: vec![PatternSummary {
+        patterns_cluster: vec![PatternCluster {
             gtfs_stop_ids: &gtfs_stop_ids_1,
             iml_stop_ids: iml_stop_ids_1.clone(),
             route_id: &gtfs_route_id_1,
@@ -177,7 +180,7 @@ fn two_equal_matches() {
         "05".to_string(),
     ];
     // GTFS route 2
-    let gtfs_route_id_2 = "0000_0".to_string();
+    let gtfs_route_id_2 = "0000_1".to_string();
     let gtfs_patterns_2 = {
         let mut set = HashSet::new();
         set.insert("0000_1_0".to_string());
@@ -197,18 +200,18 @@ fn two_equal_matches() {
             SubrouteSummary {
                 subroute: &DUMMY_REFERENCE_SUBROUTE,
                 subroute_id: 1,
-                prematched_gtfs_pattern: None,
+                gtfs_patterns: HashSet::default(),
                 stop_ids: &iml_stop_ids_1,
             },
             SubrouteSummary {
                 subroute: &DUMMY_REFERENCE_SUBROUTE,
                 subroute_id: 2,
-                prematched_gtfs_pattern: None,
+                gtfs_patterns: HashSet::default(),
                 stop_ids: &iml_stop_ids_1,
             },
         ],
-        patterns: vec![
-            PatternSummary {
+        patterns_cluster: vec![
+            PatternCluster {
                 gtfs_stop_ids: &gtfs_stop_ids_1,
                 iml_stop_ids: iml_stop_ids_1.clone(),
                 route_id: &gtfs_route_id_1,
@@ -216,7 +219,7 @@ fn two_equal_matches() {
                 trips: &gtfs_trips_1,
                 headsigns: &EMPTY_SET_OF_STRINGS,
             },
-            PatternSummary {
+            PatternCluster {
                 gtfs_stop_ids: &gtfs_stop_ids_1,
                 iml_stop_ids: iml_stop_ids_1.clone(),
                 route_id: &gtfs_route_id_2,
@@ -227,10 +230,10 @@ fn two_equal_matches() {
         ],
     };
 
-    let res = pair_route_intersection(route_intersection);
-    assert_eq!(res.subroute_pairings.len(), 0);
-    assert_eq!(res.unpaired_gtfs.len(), 2);
-    assert_eq!(res.unpaired_iml.len(), 2);
+    let route_pairing = pair_route_intersection(route_intersection);
+    assert_eq!(route_pairing.subroute_pairings.len(), 0);
+    assert_eq!(route_pairing.unpaired_gtfs.len(), 2);
+    assert_eq!(route_pairing.unpaired_iml.len(), 2);
 }
 
 #[test]
@@ -286,18 +289,18 @@ fn two_perfect_matches() {
             SubrouteSummary {
                 subroute: &DUMMY_REFERENCE_SUBROUTE,
                 subroute_id: 1,
-                prematched_gtfs_pattern: None,
+                gtfs_patterns: HashSet::default(),
                 stop_ids: &iml_stop_ids_1,
             },
             SubrouteSummary {
                 subroute: &DUMMY_REFERENCE_SUBROUTE,
                 subroute_id: 2,
-                prematched_gtfs_pattern: None,
+                gtfs_patterns: HashSet::default(),
                 stop_ids: &iml_stop_ids_2,
             },
         ],
-        patterns: vec![
-            PatternSummary {
+        patterns_cluster: vec![
+            PatternCluster {
                 gtfs_stop_ids: &gtfs_stop_ids_1,
                 iml_stop_ids: iml_stop_ids_1.clone(),
                 route_id: &gtfs_route_id_1,
@@ -305,7 +308,7 @@ fn two_perfect_matches() {
                 trips: &gtfs_trips_1,
                 headsigns: &EMPTY_SET_OF_STRINGS,
             },
-            PatternSummary {
+            PatternCluster {
                 gtfs_stop_ids: &gtfs_stop_ids_2,
                 iml_stop_ids: iml_stop_ids_2.clone(),
                 route_id: &gtfs_route_id_2,
@@ -391,18 +394,18 @@ fn imperfect_matches() {
             SubrouteSummary {
                 subroute: &DUMMY_REFERENCE_SUBROUTE,
                 subroute_id: 1,
-                prematched_gtfs_pattern: None,
+                gtfs_patterns: HashSet::default(),
                 stop_ids: &iml_stop_ids_1,
             },
             SubrouteSummary {
                 subroute: &DUMMY_REFERENCE_SUBROUTE,
                 subroute_id: 2,
-                prematched_gtfs_pattern: None,
+                gtfs_patterns: HashSet::default(),
                 stop_ids: &iml_stop_ids_2,
             },
         ],
-        patterns: vec![
-            PatternSummary {
+        patterns_cluster: vec![
+            PatternCluster {
                 gtfs_stop_ids: &gtfs_stop_ids_1,
                 iml_stop_ids: gtfs_iml_stop_ids_1.clone(),
                 route_id: &gtfs_route_id_1,
@@ -410,7 +413,7 @@ fn imperfect_matches() {
                 trips: &gtfs_trips_1,
                 headsigns: &EMPTY_SET_OF_STRINGS,
             },
-            PatternSummary {
+            PatternCluster {
                 gtfs_stop_ids: &gtfs_stop_ids_2,
                 iml_stop_ids: gtfs_iml_stop_ids_2.clone(),
                 route_id: &gtfs_route_id_2,
@@ -495,18 +498,18 @@ fn match_through_headsign() {
             SubrouteSummary {
                 subroute: &iml_subroute_1,
                 subroute_id: 1,
-                prematched_gtfs_pattern: None,
+                gtfs_patterns: HashSet::default(),
                 stop_ids: &iml_stop_ids_1,
             },
             SubrouteSummary {
                 subroute: &iml_subroute_2,
                 subroute_id: 2,
-                prematched_gtfs_pattern: None,
+                gtfs_patterns: HashSet::default(),
                 stop_ids: &iml_stop_ids_2,
             },
         ],
-        patterns: vec![
-            PatternSummary {
+        patterns_cluster: vec![
+            PatternCluster {
                 gtfs_stop_ids: &gtfs_stop_ids_1,
                 iml_stop_ids: gtfs_iml_stop_ids_1.clone(),
                 route_id: &gtfs_route_id_1,
@@ -514,7 +517,7 @@ fn match_through_headsign() {
                 trips: &gtfs_trips_1,
                 headsigns: &gtfs_headsigns_1,
             },
-            PatternSummary {
+            PatternCluster {
                 gtfs_stop_ids: &gtfs_stop_ids_2,
                 iml_stop_ids: gtfs_iml_stop_ids_2.clone(),
                 route_id: &gtfs_route_id_2,

@@ -22,8 +22,6 @@ use itertools::Itertools;
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::fs;
-use std::io::{Read, Write};
 
 use commons::models::gtfs;
 
@@ -73,10 +71,16 @@ pub(crate) struct Subroute {
     pub(crate) circular: bool,
     pub(crate) headsign: Option<String>,
     pub(crate) destination: Option<String>,
+    // TODO get rid of this default once the API returns stops for each subroute
     #[serde(default)]
     pub(crate) stops: Vec<StopId>,
-    #[serde(default)]
-    pub(crate) prematched_gtfs_pattern: Option<String>,
+    pub(crate) validation: SubrouteValidation,
+}
+
+#[derive(Clone, Deserialize)]
+pub(crate) struct SubrouteValidation {
+    pub(crate) current: Vec<i32>,
+    pub(crate) gtfs: Option<gtfs::PatternCluster>,
 }
 
 #[derive(Deserialize)]
@@ -100,12 +104,12 @@ pub(crate) struct Data {
     pub(crate) routes: HashMap<RouteId, Route>,
 }
 
-pub(crate) async fn load_base_data() -> Result<Data, Error> {
-    // TODO change to operator stops (instead of region)
-    let iml_stops = fetch_iml_stops().await.unwrap();
+pub(crate) async fn load_base_data(
+    operator_id: OperatorId,
+) -> Result<Data, Error> {
+    let iml_stops = fetch_iml_stops(operator_id).await.unwrap();
     println!("Downloaded IML stops");
-    // TODO change to operator routes (instead of region)
-    let mut iml_routes = fetch_iml_routes().await.unwrap();
+    let mut iml_routes = fetch_iml_routes(operator_id).await.unwrap();
     println!("Downloaded IML routes");
 
     for route in &mut iml_routes {
@@ -130,25 +134,6 @@ pub(crate) async fn load_base_data() -> Result<Data, Error> {
                 .as_ref()
                 .map(|s| s.trim().to_lowercase());
         }
-
-        let iml_subroute_stops = fetch_subroute_stops(route.id).await.unwrap();
-        println!("Downloaded IML subroute stops for route {}", route.id);
-        iml_subroute_stops
-            .into_iter()
-            .for_each(|(subroute_id, stops)| {
-                if let Some(subroute) = route
-                    .subroutes
-                    .iter_mut()
-                    .find(|subroute| subroute.id == subroute_id)
-                {
-                    subroute.stops = stops;
-                } else {
-                    eprintln!(
-                        "Subroute {} not found in route {}",
-                        subroute_id, route.id
-                    );
-                }
-            });
     }
 
     Ok(Data {
@@ -164,8 +149,9 @@ pub(crate) async fn load_base_data() -> Result<Data, Error> {
 }
 
 pub(crate) async fn fetch_iml_stops(
+    operator_id: OperatorId,
 ) -> Result<Vec<Stop>, Box<dyn std::error::Error>> {
-    let url = format!("{}/v1/regions/1/stops/full", API_URL);
+    let url = format!("{}/v1/operators/{operator_id}/stops/full", API_URL);
     println!("Fetching {}", url);
     let res = reqwest::Client::new()
         .get(&url)
@@ -185,57 +171,26 @@ pub(crate) async fn fetch_iml_stops(
     }
 }
 pub(crate) async fn fetch_iml_routes(
+    operator_id: OperatorId,
 ) -> Result<Vec<Route>, Box<dyn std::error::Error>> {
-    let url = format!("{}/v1/regions/1/routes", API_URL);
+    let url = format!("{}/v1/operators/{operator_id}/routes/full", API_URL);
     println!("Fetching {}", url);
-    let routes = reqwest::get(&url).await?.json().await?;
+    let mut routes: Vec<Route> = reqwest::get(&url).await?.json().await?;
+
+    // Do some trickery while the API only returns the current
+    // stops as part of the validation data
+    // FIXME fix the API, drop this
+    routes.iter_mut().for_each(|route| {
+        route.subroutes.iter_mut().for_each(|subroute| {
+            std::mem::swap(
+                &mut subroute.stops,
+                &mut subroute.validation.current,
+            );
+        });
+    });
+
     Ok(routes)
 }
-
-pub(crate) async fn fetch_subroute_stops(
-    route_id: RouteId,
-) -> Result<HashMap<SubrouteId, Vec<StopId>>, Error> {
-    let cache_path = format!("cache/route_stops/{}.json", route_id);
-    if fs::metadata(&cache_path).is_ok() {
-        let mut file = fs::File::open(&cache_path)
-            .map_err(|e| Error::Files(e.to_string()))?;
-        let mut contents = String::new();
-        file.read_to_string(&mut contents)
-            .map_err(|e| Error::Files(e.to_string()))?;
-        let route_stops: HashMap<SubrouteId, Vec<StopId>> =
-            serde_json::from_str(&contents)
-                .map_err(|e| Error::Files(e.to_string()))?;
-        Ok(route_stops)
-    } else {
-        let route_stops = fetch_route_stops(route_id)
-            .await
-            .map_err(|e| Error::Http(e.to_string()))?;
-
-        // Create cache dir if it doesn't exist
-        fs::create_dir_all("cache/route_stops")
-            .map_err(|e| Error::Files(e.to_string()))?;
-
-        let mut file = fs::File::create(&cache_path)
-            .map_err(|e| Error::Files(e.to_string()))?;
-        file.write_all(serde_json::to_string(&route_stops).unwrap().as_bytes())
-            .map_err(|e| Error::Files(e.to_string()))?;
-        Ok(route_stops)
-    }
-}
-
-async fn fetch_route_stops(
-    route_id: RouteId,
-) -> Result<HashMap<SubrouteId, Vec<StopId>>, Box<dyn std::error::Error>> {
-    let url = format!("{}/v1/routes/{}/stops", API_URL, route_id);
-    let subroute_stops: Vec<SubrouteStops> =
-        reqwest::get(&url).await?.json().await?;
-
-    Ok(subroute_stops
-        .into_iter()
-        .map(|ss| (ss.subroute, ss.stops))
-        .collect())
-}
-
 pub(crate) async fn patch_route_validation(
     route_id: i32,
     validation_data: RouteValidationData,
