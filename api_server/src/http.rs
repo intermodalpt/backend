@@ -213,11 +213,11 @@ pub fn build_paths(state: AppState) -> Router {
             get(routes::handlers::get_subroute_stops),
         )
         .route(
-            "/v1/routes/:route_id/stops/full", // <- TODO simplify url
+            "/v1/routes/:route_id/stops/full", // <- TODO simplify url, these are not full stops
             get(stops::handlers::get_route_stops),
         )
         .route(
-            "/v1/routes/:route_id/stops/subroutes/:subroute_id",
+            "/v1/subroutes/:subroute_id/stops",
             patch(routes::handlers::patch_subroute_stops),
         )
         .route(

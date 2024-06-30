@@ -143,14 +143,9 @@ pub(crate) mod requests {
     }
 
     #[derive(Deserialize)]
-    pub struct SubrouteStops {
-        pub stops: Vec<i32>,
-    }
-
-    #[derive(Deserialize)]
     pub struct ChangeSubrouteStops {
-        pub from: SubrouteStops,
-        pub to: SubrouteStops,
+        pub from: Vec<i32>,
+        pub to: Vec<i32>,
     }
 
     #[derive(Debug, Deserialize)]

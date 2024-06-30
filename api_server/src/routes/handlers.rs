@@ -409,11 +409,10 @@ pub(crate) async fn get_subroute_stops(
     Ok(Json(sql::fetch_route_stops(&state.pool, route_id).await?))
 }
 
-#[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
 pub(crate) async fn patch_subroute_stops(
     State(state): State<AppState>,
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
-    Path((route_id, subroute_id)): Path<(i32, i32)>,
+    Path(subroute_id): Path<i32>,
     Json(request): Json<requests::ChangeSubrouteStops>,
 ) -> Result<(), Error> {
     let mut transaction = state.pool.begin().await.map_err(|err| {
@@ -424,16 +423,12 @@ pub(crate) async fn patch_subroute_stops(
     let sr_stops =
         sql::fetch_subroute_stops(&mut transaction, subroute_id).await?;
 
-    if sr_stops != request.from.stops {
+    if sr_stops != request.from {
         return Err(Error::ValidationFailure("Check mismatch".to_string()));
     }
 
-    sql::update_subroute_stops(
-        &mut transaction,
-        subroute_id,
-        &request.to.stops,
-    )
-    .await?;
+    sql::update_subroute_stops(&mut transaction, subroute_id, &request.to)
+        .await?;
 
     // TODO log
     transaction.commit().await.map_err(|err| {
