@@ -99,6 +99,12 @@ pub(crate) struct RouteValidationData {
     pub(crate) subroutes: HashMap<i32, gtfs::SubrouteValidation>,
 }
 
+#[derive(Serialize, Debug)]
+pub struct ChangeSubrouteStops {
+    pub from: Vec<i32>,
+    pub to: Vec<i32>,
+}
+
 pub(crate) struct Data {
     pub(crate) stops: HashMap<StopId, Stop>,
     pub(crate) routes: HashMap<RouteId, Route>,
@@ -224,6 +230,31 @@ pub(crate) async fn patch_operator_validation(
         .patch(&url)
         .bearer_auth(TOKEN.get().unwrap())
         .json(&validation_data)
+        .send()
+        .await?;
+
+    if res.status().is_success() {
+        Ok(())
+    } else {
+        Err(Box::new(Error::Http(format!(
+            "Status: {}. Response: {}",
+            res.status(),
+            res.text().await?
+        ))))
+    }
+}
+
+pub(crate) async fn patch_subroute_stops(
+    subroute_id: i32,
+    change: ChangeSubrouteStops,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let url =
+        format!("{}/v1/subroutes/{}/stops", API_URL, subroute_id);
+    dbg!(&url);
+    let res = reqwest::Client::new()
+        .patch(&url)
+        .bearer_auth(TOKEN.get().unwrap())
+        .json(&change)
         .send()
         .await?;
 

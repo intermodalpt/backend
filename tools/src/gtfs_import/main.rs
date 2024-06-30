@@ -104,7 +104,7 @@ async fn main() {
     .unwrap();
     let lints = lint_gtfs(&gtfs);
 
-    iml::put_operator_validation(
+    iml::patch_operator_validation(
         args.operator,
         iml::OperatorValidationData { gtfs_lints: lints },
     )
@@ -132,28 +132,6 @@ async fn main() {
     for route_pairing in matches {
         let route = iml.routes.get(&route_pairing.route_id).unwrap();
         println!("(#{}) - {:?} - {}", route.id, route.code, route.name);
-
-        let route_validation_data = iml::RouteValidationData {
-            validation: gtfs_commons::RouteValidation {
-                unmatched: route_pairing
-                    .unpaired_gtfs
-                    .iter()
-                    .cloned()
-                    .map(|pattern| pattern.into())
-                    .collect(),
-            },
-            subroutes: route_pairing
-                .subroute_pairings
-                .iter()
-                .map(|pairing| (pairing.iml.subroute_id, pairing.into()))
-                .collect::<HashMap<i32, gtfs_commons::SubrouteValidation>>(),
-        };
-        iml::patch_route_validation(
-            route_pairing.route_id,
-            route_validation_data,
-        )
-        .await
-        .unwrap();
 
         let mut conflicts = false;
 
@@ -222,9 +200,49 @@ async fn main() {
                     print_matching_pattern(subroute_pairing);
                 } else {
                     print_diverging_pattern(subroute_pairing);
+
+                    iml::patch_subroute_stops(
+                        subroute_pairing.iml.subroute_id,
+                        iml::ChangeSubrouteStops {
+                            from: subroute_pairing
+                                .iml
+                                .stop_ids
+                                .iter()
+                                .copied()
+                                .collect_vec(),
+                            to: subroute_pairing.gtfs.iml_stop_ids.clone(),
+                        },
+                    )
+                    .await
+                    .unwrap();
                     every_match_perfect = false;
                 }
             }
+        }
+
+        if !every_match_perfect {
+            let route_validation_data = iml::RouteValidationData {
+                validation: gtfs_commons::RouteValidation {
+                    unmatched: route_pairing
+                        .unpaired_gtfs
+                        .iter()
+                        .cloned()
+                        .map(|pattern| pattern.into())
+                        .collect(),
+                },
+                subroutes: route_pairing
+                    .subroute_pairings
+                    .iter()
+                    .map(|pairing| (pairing.iml.subroute_id, pairing.into()))
+                    .collect::<HashMap<i32, gtfs_commons::SubrouteValidation>>(
+                    ),
+            };
+            iml::patch_route_validation(
+                route_pairing.route_id,
+                route_validation_data,
+            )
+            .await
+            .unwrap();
         }
 
         let no_unmatched = route_pairing.unpaired_iml.is_empty()
