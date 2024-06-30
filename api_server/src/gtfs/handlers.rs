@@ -153,7 +153,7 @@ pub(crate) async fn get_operator_validation_data(
         .map(Json)
         .ok_or(Error::NotFoundUpstream)
 }
-pub(crate) async fn put_operator_validation_data(
+pub(crate) async fn patch_operator_validation_data(
     State(state): State<AppState>,
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     Path(operator_id): Path<i32>,

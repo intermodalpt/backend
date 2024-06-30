@@ -215,13 +215,13 @@ pub(crate) async fn patch_route_validation(
     }
 }
 
-pub(crate) async fn put_operator_validation(
+pub(crate) async fn patch_operator_validation(
     operator_id: i32,
     validation_data: OperatorValidationData,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let url = format!("{}/v1/operators/{}/validation", API_URL, operator_id);
     let res = reqwest::Client::new()
-        .put(&url)
+        .patch(&url)
         .bearer_auth(TOKEN.get().unwrap())
         .json(&validation_data)
         .send()

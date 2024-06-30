@@ -448,7 +448,7 @@ pub fn build_paths(state: AppState) -> Router {
         .route(
             "/v1/operators/:operator_id/validation",
             get(gtfs::handlers::get_operator_validation_data)
-                .put(gtfs::handlers::put_operator_validation_data),
+                .patch(gtfs::handlers::patch_operator_validation_data),
         )
         .route(
             "/v1/operators/:operator_id/logo",
