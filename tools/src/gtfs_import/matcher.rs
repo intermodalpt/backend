@@ -194,15 +194,28 @@ pub(crate) async fn cross_reference_routes<'iml, 'gtfs>(
     let mut paired_routes = vec![];
     for iml_route in iml_routes {
         // Intersect the IML route with GTFS data
-        let route_intersection = cross_intersect_route(
+        let route_intersection_res = cross_intersect_route(
             gtfs,
             iml_route,
             &gtfs_to_iml_stops,
             &gtfs_routes_by_code,
         )
-        .await?;
+        .await;
 
-        paired_routes.push(pair_route_intersection(route_intersection));
+        match route_intersection_res {
+            Ok(route_intersection) => {
+                paired_routes.push(pair_route_intersection(route_intersection));
+            }
+            Err(Error::MissingData(s)) => {
+                println!(
+                    "Skipping route {} ({:?}): {}",
+                    iml_route.id, iml_route.code, s
+                );
+            }
+            _ => {
+                route_intersection_res?;
+            }
+        }
     }
     Ok(paired_routes)
 }
@@ -269,9 +282,11 @@ async fn cross_intersect_route<'iml, 'gtfs>(
                             gtfs_to_iml_stops.get(gtfs_stop_id).cloned();
 
                         let Some(stop_id) = iml_stop_id else {
+                            let gtfs_stop =
+                                gtfs.stops.get(gtfs_stop_id).unwrap();
                             return Some(Err(Error::MissingData(format!(
-                                "Missing GTFS stop {}",
-                                gtfs_stop_id
+                                "Missing GTFS stop {} ({})",
+                                gtfs_stop_id, gtfs_stop.stop_name
                             ))));
                         };
 

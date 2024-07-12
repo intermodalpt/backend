@@ -248,8 +248,7 @@ pub(crate) async fn patch_subroute_stops(
     subroute_id: i32,
     change: ChangeSubrouteStops,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let url =
-        format!("{}/v1/subroutes/{}/stops", API_URL, subroute_id);
+    let url = format!("{}/v1/subroutes/{}/stops", API_URL, subroute_id);
     dbg!(&url);
     let res = reqwest::Client::new()
         .patch(&url)
