@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT id, lat, lon, name, pos_author, last_author, creation, modification,\n    version, deleted\nFROM osm_stops\n    ",
+  "query": "\nSELECT osm_stops.id, stops.id as iml_id, osm_stops.lat, osm_stops.lon,\n    osm_stops.name, pos_author, last_author, creation, modification,\n    version, deleted\nFROM osm_stops\nLEFT JOIN stops on stops.osm_id = osm_stops.id\n    ",
   "describe": {
     "columns": [
       {
@@ -10,46 +10,51 @@
       },
       {
         "ordinal": 1,
+        "name": "iml_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
         "name": "lat",
         "type_info": "Float8"
       },
       {
-        "ordinal": 2,
+        "ordinal": 3,
         "name": "lon",
         "type_info": "Float8"
       },
       {
-        "ordinal": 3,
+        "ordinal": 4,
         "name": "name",
         "type_info": "Text"
       },
       {
-        "ordinal": 4,
+        "ordinal": 5,
         "name": "pos_author",
         "type_info": "Text"
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "last_author",
         "type_info": "Text"
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "creation",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "modification",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "version",
         "type_info": "Int4"
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "deleted",
         "type_info": "Bool"
       }
@@ -59,6 +64,7 @@
     },
     "nullable": [
       false,
+      true,
       false,
       false,
       true,
@@ -70,5 +76,5 @@
       false
     ]
   },
-  "hash": "5207daeb57e586e8ccafa5111951532d02651a1f1f07e3a6be9e3af6395f8b35"
+  "hash": "fc1954abcc7ce2a284a1a4b34c73a43a620632877e812d0db0a8974a07ff1d36"
 }

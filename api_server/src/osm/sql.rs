@@ -35,9 +35,11 @@ pub(crate) async fn fetch_osm_stops(
     sqlx::query_as!(
         responses::OsmStop,
         r#"
-SELECT id, lat, lon, name, pos_author, last_author, creation, modification,
+SELECT osm_stops.id, stops.id as iml_id, osm_stops.lat, osm_stops.lon,
+    osm_stops.name, pos_author, last_author, creation, modification,
     version, deleted
 FROM osm_stops
+LEFT JOIN stops on stops.osm_id = osm_stops.id
     "#,
     )
     .fetch_all(pool)

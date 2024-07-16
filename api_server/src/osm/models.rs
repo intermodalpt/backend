@@ -44,6 +44,7 @@ pub(crate) mod responses {
     #[derive(Serialize)]
     pub struct OsmStop {
         pub id: i64,
+        pub iml_id: Option<i32>,
         pub name: Option<String>,
         pub lat: f64,
         pub lon: f64,
