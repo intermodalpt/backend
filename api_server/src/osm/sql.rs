@@ -53,7 +53,7 @@ LEFT JOIN stops on stops.osm_id = osm_stops.id
 pub(crate) async fn fetch_osm_stop_history(
     pool: &PgPool,
     id: i64,
-) -> Result<osm::NodeHistory> {
+) -> Result<Option<osm::NodeHistory>> {
     sqlx::query!(
         r#"
 SELECT history as "history!: Json<osm::NodeHistory>"
@@ -62,9 +62,9 @@ WHERE id=$1
     "#,
         id
     )
-    .fetch_one(pool)
+    .fetch_optional(pool)
     .await
-    .map(|r| r.history.0)
+    .map(|r| r.map(|r| r.history.0))
     .map_err(|err| {
         tracing::error!(error = err.to_string(), id);
         Error::DatabaseExecution

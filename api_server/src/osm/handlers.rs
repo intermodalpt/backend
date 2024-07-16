@@ -37,7 +37,11 @@ pub(crate) async fn get_osm_stop_history(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<Json<osm::NodeHistory>, Error> {
-    Ok(Json(sql::fetch_osm_stop_history(&state.pool, id).await?))
+    Ok(Json(
+        sql::fetch_osm_stop_history(&state.pool, id)
+            .await?
+            .ok_or(Error::NotFoundUpstream)?,
+    ))
 }
 
 #[allow(clippy::cast_sign_loss)]
