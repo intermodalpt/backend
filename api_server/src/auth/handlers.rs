@@ -35,6 +35,11 @@ pub(crate) struct Page {
     #[serde(default)]
     p: u32,
 }
+#[derive(Deserialize, Default)]
+pub(crate) struct RegistrationArgs {
+    #[serde(default)]
+    dry: bool,
+}
 
 const PAGE_SIZE: u32 = 100;
 
@@ -42,10 +47,15 @@ pub(crate) async fn check_auth(_: models::Claims) {}
 
 pub(crate) async fn post_register(
     State(state): State<AppState>,
+    args: Query<RegistrationArgs>,
     client_ip: SecureClientIp,
     Json(registration): Json<models::requests::Register>,
 ) -> Result<(), Error> {
-    logic::register(registration, client_ip.0, &state.pool).await
+    if args.dry {
+        logic::is_valid_registration(&registration, &state.pool).await
+    } else {
+        logic::register(registration, client_ip.0, &state.pool).await
+    }
 }
 
 pub(crate) async fn post_login(

@@ -120,9 +120,64 @@ fn gen_kdf_password_string(password: &str) -> Result<String, Error> {
         .to_string())
 }
 
-pub(crate) async fn register(
-    request: requests::Register,
-    requester_ip: IpAddr,
+fn validate_username(
+    username: &str,
+    existing_user: &Option<auth::User>,
+) -> Result<(), Error> {
+    // TODO something more robust than this
+    if username.contains(' ') {
+        return Err(Error::ValidationFailure(
+            "Username cannot contain spaces".to_string(),
+        ));
+    }
+
+    if let Some(existing_user) = existing_user {
+        if existing_user.username == username {
+            return Err(Error::ValidationFailure(
+                "Username already in use".to_string(),
+            ));
+        }
+    }
+
+    Ok(())
+}
+
+fn validate_email(
+    email: &str,
+    existing_user: &Option<auth::User>,
+) -> Result<(), Error> {
+    if let Some(existing_user) = existing_user {
+        if existing_user.email == email {
+            return Err(Error::ValidationFailure(
+                "Email already in use".to_string(),
+            ));
+        }
+    }
+
+    let re =
+        regex::Regex::new(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$")
+            .unwrap();
+    if !re.is_match(email) {
+        return Err(Error::ValidationFailure(
+            "Invalid email address".to_string(),
+        ));
+    }
+
+    Ok(())
+}
+
+fn validate_password(password: &str) -> Result<(), Error> {
+    if password.len() < 7 {
+        return Err(Error::ValidationFailure(
+            "Password must be at least 7 characters long".to_string(),
+        ));
+    }
+
+    Ok(())
+}
+
+pub(crate) async fn is_valid_registration(
+    request: &requests::Register,
     db_pool: &PgPool,
 ) -> Result<(), Error> {
     let existing_user = sql::fetch_user_by_username_or_email(
@@ -132,33 +187,19 @@ pub(crate) async fn register(
     )
     .await?;
 
-    // TODO something more robust than this
-    if request.username.contains(' ') {
-        return Err(Error::ValidationFailure(
-            "Username cannot contain spaces".to_string(),
-        ));
-    }
+    validate_username(&request.username, &existing_user)?;
+    validate_email(&request.email, &existing_user)?;
+    validate_password(&request.password)?;
 
-    if request.password.len() < 7 {
-        return Err(Error::ValidationFailure(
-            "Password must be at least 7 characters long".to_string(),
-        ));
-    }
+    Ok(())
+}
 
-    if existing_user.is_some() {
-        let existing_user = existing_user.unwrap();
-        if existing_user.username == request.username {
-            return Err(Error::ValidationFailure(
-                "Username already in use".to_string(),
-            ));
-        }
-
-        if existing_user.email == request.email {
-            return Err(Error::ValidationFailure(
-                "Email already in use".to_string(),
-            ));
-        }
-    }
+pub(crate) async fn register(
+    request: requests::Register,
+    requester_ip: IpAddr,
+    db_pool: &PgPool,
+) -> Result<(), Error> {
+    is_valid_registration(&request, db_pool).await?;
 
     let password_kdf = gen_kdf_password_string(&request.password)?;
     let registration = models::HashedRegistration {
