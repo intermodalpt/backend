@@ -15,6 +15,7 @@ path = "src/main.rs"
 commons = { path = "../commons" }
 
 tokio = { version = "1", features = ["full"] }
+futures = "0.3"
 
 sqlx = { version = "0.7", features = ["runtime-tokio-native-tls", "postgres", "json", "macros", "chrono", "ipnetwork"] }
 
@@ -37,6 +38,8 @@ rand_core = { version = "0.6", features = ["std"] }
 jsonwebtoken = "9.3"
 sha1 = "0.10"
 base16ct = { version = "0.2", features = ["alloc"] }
+base64ct = { version = "1.6", features = ["alloc"] }
+captcha-rs = "0.2.10"
 
 rust-s3 = { version = "0.33", features = ["default"] }
 
@@ -60,7 +63,7 @@ config = { version = "0.14", features = ["toml"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tracing-attributes = "0.1"
-uuid = { version = "1.8", features = ["v4", "fast-rng"] }
+uuid = { version = "1.10", features = ["v4", "fast-rng", "serde"] }
 headers = "0.4.0"
 
 [dev-dependencies]

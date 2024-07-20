@@ -54,6 +54,8 @@ pub enum Error {
     UpstreamResourceDownload,
     #[error("Attempted to duplicate resource`")]
     DuplicatedResource(Box<Resource>),
+    #[error("The API server state is compromised")]
+    IllegalState,
 }
 
 impl IntoResponse for Error {
@@ -97,7 +99,8 @@ impl IntoResponse for Error {
                 }
             },
             Error::Processing | Error::UpstreamResourceDownload |
-            Error::Serialization | Error::Filesystem | Error::ModelCompatibility  => {
+            Error::Serialization | Error::Filesystem |
+            Error::ModelCompatibility  | Error::IllegalState => {
                 JsonErrorResponse::new_response(
                     StatusCode::INTERNAL_SERVER_ERROR,
                     "The server had an internal error".to_string(),

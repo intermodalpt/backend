@@ -57,6 +57,13 @@ pub(crate) async fn post_register(
         logic::register(registration, client_ip.0, &state.pool).await
     }
 }
+pub(crate) async fn get_captcha(
+    State(state): State<AppState>,
+    // _client_ip: SecureClientIp,
+) -> Result<Json<responses::CaptchaChallenge>, Error> {
+    let (uuid, img) = state.captchas.gen_captcha()?;
+    Ok(Json(responses::CaptchaChallenge { png: img, uuid }))
+}
 
 pub(crate) async fn post_login(
     State(state): State<AppState>,

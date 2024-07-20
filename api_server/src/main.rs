@@ -41,16 +41,15 @@ pub(crate) mod state;
 mod stops;
 mod utils;
 
-use std::collections::HashMap;
 use std::net::SocketAddr;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
-use config::Config;
 use sqlx::postgres::PgPool;
 use tokio::net::TcpListener;
 
+use config::Config;
 use errors::Error;
-use state::{AppState, Cached, State};
+use state::{AppState, State};
 
 #[tokio::main]
 async fn main() {
@@ -124,14 +123,7 @@ async fn main() {
         tracing::warn!("Using the production database");
     }
 
-    let state = Arc::new(State {
-        bucket,
-        pool,
-        cached: Cached {
-            gtfs_stops: RwLock::new(HashMap::new()),
-            tml_routes: RwLock::new(HashMap::new()),
-        },
-    });
+    let state = Arc::new(State::new(bucket, pool));
 
     let addr = SocketAddr::from((
         [0, 0, 0, 0],

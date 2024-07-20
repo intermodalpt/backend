@@ -536,6 +536,7 @@ pub fn build_paths(state: AppState) -> Router {
         )
         .route("/v1/auth/login", post(auth::handlers::post_login))
         .route("/v1/auth/register", post(auth::handlers::post_register))
+        .route("/v1/auth/get_captcha", post(auth::handlers::get_captcha))
         .route("/v1/auth/check", get(auth::handlers::check_auth))
         .route(
             "/v1/user/change_password",

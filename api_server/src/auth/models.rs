@@ -107,8 +107,15 @@ pub(crate) mod requests {
 
 pub(crate) mod responses {
     use serde::Serialize;
+    use uuid::Uuid;
 
     use commons::models::auth;
+
+    #[derive(Serialize)]
+    pub struct CaptchaChallenge {
+        pub png: String,
+        pub uuid: Uuid,
+    }
 
     #[derive(Serialize)]
     pub struct AuditLogEntry {
