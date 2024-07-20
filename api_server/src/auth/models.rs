@@ -76,14 +76,24 @@ pub(crate) mod perms {
 }
 
 pub(crate) mod requests {
+    use std::fmt::{Debug, Formatter};
+
     use serde::Deserialize;
     use sqlx::types::JsonValue;
     use uuid::Uuid;
 
-    #[derive(Debug, Deserialize)]
+    #[derive(Deserialize)]
     pub struct Login {
         pub username: String,
         pub password: String,
+    }
+
+    impl Debug for Login {
+        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+            f.debug_struct("Login")
+                .field("username", &self.username)
+                .finish()
+        }
     }
 
     #[derive(Debug, Deserialize)]
@@ -92,7 +102,7 @@ pub(crate) mod requests {
         pub answer: String,
     }
 
-    #[derive(Debug, Deserialize)]
+    #[derive(Deserialize)]
     pub struct Register {
         pub username: String,
         pub password: String,
@@ -101,17 +111,44 @@ pub(crate) mod requests {
         pub inquiry: JsonValue,
     }
 
-    #[derive(Debug, Deserialize)]
+    impl Debug for Register {
+        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+            f.debug_struct("Register")
+                .field("username", &self.username)
+                .field("email", &self.email)
+                .field("captcha", &self.captcha)
+                .field("inquiry", &self.inquiry)
+                .finish()
+        }
+    }
+
+    #[derive(Deserialize)]
     pub struct ChangeKnownPassword {
         pub username: String,
         pub old_password: String,
         pub new_password: String,
     }
 
-    #[derive(Debug, Deserialize)]
+    impl Debug for ChangeKnownPassword {
+        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+            f.debug_struct("ChangeKnownPassword")
+                .field("username", &self.username)
+                .finish()
+        }
+    }
+
+    #[derive(Deserialize)]
     pub struct ChangeUnknownPassword {
         pub username: String,
         pub new_password: String,
+    }
+
+    impl Debug for ChangeUnknownPassword {
+        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+            f.debug_struct("ChangeKnownPassword")
+                .field("username", &self.username)
+                .finish()
+        }
     }
 }
 
