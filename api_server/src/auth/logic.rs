@@ -120,57 +120,35 @@ fn gen_kdf_password_string(password: &str) -> Result<String, Error> {
         .to_string())
 }
 
-fn validate_username(
-    username: &str,
-    existing_user: &Option<auth::User>,
-) -> Result<(), Error> {
-    // TODO something more robust than this
-    if username.contains(' ') {
-        return Err(Error::ValidationFailure(
-            "Username cannot contain spaces".to_string(),
-        ));
+pub(crate) fn validate_username(username: &str) -> Result<(), String> {
+    if username.trim().len() < 3 {
+        return Err("Username must be at least 3 characters long".to_string());
     }
 
-    if let Some(existing_user) = existing_user {
-        if existing_user.username == username {
-            return Err(Error::ValidationFailure(
-                "Username already in use".to_string(),
-            ));
-        }
+    if !username
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || c.is_ascii_punctuation())
+    {
+        return Err("Username must contain only alphanumeric characters".to_string());
     }
 
     Ok(())
 }
 
-fn validate_email(
-    email: &str,
-    existing_user: &Option<auth::User>,
-) -> Result<(), Error> {
-    if let Some(existing_user) = existing_user {
-        if existing_user.email == email {
-            return Err(Error::ValidationFailure(
-                "Email already in use".to_string(),
-            ));
-        }
-    }
-
+fn validate_email(email: &str) -> Result<(), String> {
     let re =
         regex::Regex::new(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$")
             .unwrap();
     if !re.is_match(email) {
-        return Err(Error::ValidationFailure(
-            "Invalid email address".to_string(),
-        ));
+        return Err("Invalid email address".to_string());
     }
 
     Ok(())
 }
 
-fn validate_password(password: &str) -> Result<(), Error> {
+pub(crate) fn validate_password(password: &str) -> Result<(), String> {
     if password.len() < 7 {
-        return Err(Error::ValidationFailure(
-            "Password must be at least 7 characters long".to_string(),
-        ));
+        return Err("Password must be at least 7 characters long".to_string());
     }
 
     Ok(())
@@ -180,6 +158,10 @@ pub(crate) async fn is_valid_registration(
     request: &requests::Register,
     db_pool: &PgPool,
 ) -> Result<(), Error> {
+    validate_username(&request.username).map_err(Error::ValidationFailure)?;
+    validate_password(&request.password).map_err(Error::ValidationFailure)?;
+    validate_email(&request.email).map_err(Error::ValidationFailure)?;
+
     let existing_user = sql::fetch_user_by_username_or_email(
         db_pool,
         &request.username,
@@ -187,9 +169,21 @@ pub(crate) async fn is_valid_registration(
     )
     .await?;
 
-    validate_username(&request.username, &existing_user)?;
-    validate_email(&request.email, &existing_user)?;
-    validate_password(&request.password)?;
+    if let Some(existing_user) = &existing_user {
+        if existing_user.username == request.username {
+            return Err(Error::ValidationFailure(
+                "Username already in use".to_string(),
+            ));
+        }
+    }
+
+    if let Some(existing_user) = &existing_user {
+        if existing_user.email == request.email {
+            return Err(Error::ValidationFailure(
+                "Email already in use".to_string(),
+            ));
+        }
+    }
 
     Ok(())
 }

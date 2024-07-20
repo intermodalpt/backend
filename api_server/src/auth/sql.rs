@@ -73,6 +73,20 @@ WHERE username=$1 or email = $2
     })
 }
 
+pub(crate) async fn fetch_username_exists(
+    pool: &PgPool,
+    username: &str,
+) -> Result<bool> {
+    sqlx::query!("SELECT 1 as _u FROM users WHERE username=$1", username)
+        .fetch_optional(pool)
+        .await
+        .map_err(|err| {
+            tracing::error!(error = err.to_string(), username);
+            Error::DatabaseExecution
+        })
+        .map(|r| r.is_some())
+}
+
 pub(crate) async fn register_user(
     pool: &PgPool,
     request: &models::HashedRegistration,

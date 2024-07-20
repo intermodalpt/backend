@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT 1 as _u FROM users WHERE username=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "_u",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "8c526dac1b0236a5fdafd13aa456c14b6adedc213d0653520702cd58b38b84d7"
+}

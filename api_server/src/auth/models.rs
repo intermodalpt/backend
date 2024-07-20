@@ -150,6 +150,11 @@ pub(crate) mod requests {
                 .finish()
         }
     }
+
+    #[derive(Debug, Deserialize)]
+    pub struct UsernameAvailability {
+        pub username: String,
+    }
 }
 
 pub(crate) mod responses {
@@ -169,5 +174,13 @@ pub(crate) mod responses {
         #[serde(flatten)]
         pub entry: auth::AuditLogEntry,
         pub user_username: String,
+    }
+
+    #[derive(Debug, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub enum UsernameAvailability {
+        Available,
+        Invalid { reason: String },
+        Taken,
     }
 }
