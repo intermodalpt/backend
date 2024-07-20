@@ -54,7 +54,22 @@ pub(crate) async fn post_register(
     if args.dry {
         logic::is_valid_registration(&registration, &state.pool).await
     } else {
-        logic::register(registration, client_ip.0, &state.pool).await
+        if let Some(captcha) = &registration.captcha {
+            let is_valid = state
+                .captchas
+                .attempt_captcha(captcha.uuid, &captcha.answer)?;
+
+            if !is_valid {
+                return Err(Error::Forbidden);
+            }
+
+            logic::register(registration, client_ip.0, &state.pool).await
+        } else {
+            // Are we going to ever have a registration without a captcha?
+            // Maybe if nobody has registered in the past hour
+            // logic::register(registration, client_ip.0, &state.pool).await
+            Err(Error::Forbidden)
+        }
     }
 }
 pub(crate) async fn get_captcha(

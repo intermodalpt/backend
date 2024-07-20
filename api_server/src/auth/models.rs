@@ -77,6 +77,8 @@ pub(crate) mod perms {
 
 pub(crate) mod requests {
     use serde::Deserialize;
+    use sqlx::types::JsonValue;
+    use uuid::Uuid;
 
     #[derive(Debug, Deserialize)]
     pub struct Login {
@@ -85,10 +87,18 @@ pub(crate) mod requests {
     }
 
     #[derive(Debug, Deserialize)]
+    pub struct CaptchaAnswer {
+        pub uuid: Uuid,
+        pub answer: String,
+    }
+
+    #[derive(Debug, Deserialize)]
     pub struct Register {
         pub username: String,
         pub password: String,
         pub email: String,
+        pub captcha: Option<CaptchaAnswer>,
+        pub inquiry: JsonValue,
     }
 
     #[derive(Debug, Deserialize)]
