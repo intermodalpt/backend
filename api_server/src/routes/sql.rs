@@ -707,7 +707,7 @@ ORDER BY subroutes.id ASC, subroute_stops.idx ASC
     // TODO Consider moving the stop indexes to an array (in the DB)
     let subroute_stops = res
         .into_iter()
-        .group_by(|row| row.subroute)
+        .chunk_by(|row| row.subroute)
         .into_iter()
         .map(|(subroute, group)| responses::SubrouteStops {
             subroute,
