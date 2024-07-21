@@ -117,7 +117,7 @@ pub struct PatternCluster {
 pub struct SubrouteValidation {
     // The GTFS data that has been considered to be this subroute
     pub gtfs_cluster: PatternCluster,
-    // These are the IML stops that the GTFS corresponds to match
+    // These are the IML stops that the GTFS corresponds to
     pub stops: Vec<i32>,
 }
 

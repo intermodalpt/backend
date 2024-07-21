@@ -28,20 +28,16 @@ use super::{logic, models::requests, models::responses, sql};
 use crate::pics::logic::import_external_news_img;
 use crate::utils::get_exactly_one_field;
 use crate::Error;
-use crate::{auth, contrib, AppState};
+use crate::{auth, auth::ClaimPermission, contrib, AppState};
 
 pub(crate) async fn get_stop_pictures(
     State(state): State<AppState>,
     Path(stop_id): Path<i32>,
     claims: Option<auth::Claims>,
 ) -> Result<Json<Vec<responses::PicWithStops>>, Error> {
-    let is_trusted = matches!(
-        claims,
-        Some(auth::Claims {
-            permissions: auth::perms::Permissions { is_admin: true, .. },
-            ..
-        })
-    );
+    let is_trusted = claims
+        .as_ref()
+        .is_some_and(|c| auth::perms::Trusted::is_valid(&c.permissions));
     let uid = claims.map(|c| c.uid);
 
     Ok(Json(
@@ -82,13 +78,9 @@ pub(crate) async fn get_pictures_map(
     State(state): State<AppState>,
     claims: Option<auth::Claims>,
 ) -> Result<Json<Vec<responses::MinimalPicWithStops>>, Error> {
-    let is_trusted = matches!(
-        claims,
-        Some(auth::Claims {
-            permissions: auth::perms::Permissions { is_admin: true, .. },
-            ..
-        })
-    );
+    let is_trusted = claims
+        .as_ref()
+        .is_some_and(|c| auth::perms::Trusted::is_valid(&c.permissions));
     let uid = claims.map(|c| c.uid);
 
     Ok(Json(
@@ -122,13 +114,9 @@ pub(crate) async fn get_latest_stop_pictures(
     claims: Option<auth::Claims>,
     qs: Query<PicsPage>,
 ) -> Result<Json<Vec<responses::PicWithStops>>, Error> {
-    let is_trusted = matches!(
-        claims,
-        Some(auth::Claims {
-            permissions: auth::perms::Permissions { is_admin: true, .. },
-            ..
-        })
-    );
+    let is_trusted = claims
+        .as_ref()
+        .is_some_and(|c| auth::perms::Trusted::is_valid(&c.permissions));
 
     let claims_matches_user = matches!(
         claims,
@@ -189,13 +177,9 @@ pub(crate) async fn get_user_stop_pictures(
     page_qs: Query<PicsPage>,
     Path(user_id): Path<i32>,
 ) -> Result<Json<Vec<responses::PicWithStops>>, Error> {
-    let is_trusted = matches!(
-        claims,
-        Some(auth::Claims {
-            permissions: auth::perms::Permissions { is_admin: true, .. },
-            ..
-        })
-    );
+    let is_trusted = claims
+        .as_ref()
+        .is_some_and(|c| auth::perms::Trusted::is_valid(&c.permissions));
 
     let requester_uid = claims.map(|c| c.uid);
 
@@ -224,13 +208,10 @@ pub(crate) async fn get_unpositioned_stop_pictures(
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
-    let is_trusted = matches!(
-        claims,
-        Some(auth::Claims {
-            permissions: auth::perms::Permissions { is_admin: true, .. },
-            ..
-        })
-    );
+    let is_trusted = claims
+        .as_ref()
+        .is_some_and(|c| auth::perms::Trusted::is_valid(&c.permissions));
+
     let uid = claims.map(|c| c.uid);
 
     Ok(Json(
@@ -353,13 +334,10 @@ pub(crate) async fn get_stop_picture_meta(
     claims: Option<auth::Claims>,
     Path(picture_id): Path<i32>,
 ) -> Result<Json<responses::PicWithStops>, Error> {
-    let is_trusted = matches!(
-        claims,
-        Some(auth::Claims {
-            permissions: auth::perms::Permissions { is_admin: true, .. },
-            ..
-        })
-    );
+    let is_trusted = claims
+        .as_ref()
+        .is_some_and(|c| auth::perms::Trusted::is_valid(&c.permissions));
+
     let uid = claims.map(|c| c.uid);
 
     let pic = sql::fetch_picture_with_stops(&state.pool, picture_id)
@@ -389,7 +367,7 @@ pub(crate) async fn patch_stop_picture_meta(
         .await?
         .ok_or(Error::NotFoundUpstream)?;
 
-    if !(claims.permissions.is_admin
+    if !(claims.permissions.contains(&auth::perms::Permission::Admin)
         || !pic.tagged && pic.uploader == claims.uid)
     {
         return Err(Error::Forbidden);
@@ -462,7 +440,9 @@ pub(crate) async fn delete_picture(
         .await?
         .ok_or(Error::NotFoundUpstream)?;
 
-    if !(claims.permissions.is_admin || pic.uploader == claims.uid) {
+    if !(claims.permissions.contains(&auth::perms::Permission::Admin)
+        || pic.uploader == claims.uid)
+    {
         return Err(Error::Forbidden);
     }
 
@@ -516,13 +496,9 @@ pub(crate) async fn get_stop_pano(
     Path(stop_id): Path<i32>,
     claims: Option<auth::Claims>,
 ) -> Result<Json<Option<responses::PanoPic>>, Error> {
-    let is_trusted = matches!(
-        claims,
-        Some(auth::Claims {
-            permissions: auth::perms::Permissions { is_admin: true, .. },
-            ..
-        })
-    );
+    let is_trusted = claims
+        .as_ref()
+        .is_some_and(|c| auth::perms::Trusted::is_valid(&c.permissions));
 
     Ok(Json(
         sql::fetch_stop_pano(&state.pool, stop_id, is_trusted).await?,

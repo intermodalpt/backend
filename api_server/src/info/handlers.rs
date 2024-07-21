@@ -24,9 +24,8 @@ use serde_with::serde_derive::Serialize;
 
 use super::models::{requests, responses};
 use super::sql;
-use crate::auth::ClaimPermission;
 use crate::responses::Pagination;
-use crate::{auth, AppState, Error};
+use crate::{auth, auth::ClaimPermission, AppState, Error};
 
 #[derive(Serialize)]
 pub struct IdReturn {
@@ -183,7 +182,7 @@ pub(crate) async fn get_external_news_item(
     Path(item_id): Path<i32>,
 ) -> Result<Json<responses::ExternalNewsItem>, Error> {
     let include_private =
-        claims.as_ref().is_some_and(auth::perms::Trusted::is_valid);
+        claims.is_some_and(|c| auth::perms::Trusted::is_valid(&c.permissions));
 
     sql::fetch_external_news_item(&state.pool, item_id, include_private)
         .await?
@@ -211,7 +210,7 @@ pub(crate) async fn get_external_news(
     let take = i64::from(PAGE_SIZE);
 
     let include_private =
-        claims.as_ref().is_some_and(auth::perms::Trusted::is_valid);
+        claims.is_some_and(|c| auth::perms::Trusted::is_valid(&c.permissions));
 
     let (items, total) = future::join(
         sql::fetch_external_news(&state.pool, offset, take, include_private),
@@ -235,7 +234,7 @@ pub(crate) async fn get_operator_external_news(
     let take = i64::from(PAGE_SIZE);
 
     let include_private =
-        claims.as_ref().is_some_and(auth::perms::Trusted::is_valid);
+        claims.is_some_and(|c| auth::perms::Trusted::is_valid(&c.permissions));
 
     let (items, total) = future::join(
         sql::fetch_operator_external_news(

@@ -64,11 +64,26 @@ async fn main() {
         .build()
         .unwrap();
 
-    let _ = auth::SECRET_KEY.set(Box::leak(Box::new(
+    let _ = auth::REFRESH_SECRET_KEY.set(Box::leak(Box::new(
         settings
-            .get_string("jwt_secret")
-            .expect("jwt_secret not set"),
+            .get_string("jwt_refresh_secret")
+            .expect("jwt_refresh_secret not set"),
     )));
+    let _ = auth::REFRESH_DAYS.set(
+        settings
+            .get_int("jwt_refresh_days")
+            .expect("jwt_refresh_days not set"),
+    );
+    let _ = auth::ACCESS_SECRET_KEY.set(Box::leak(Box::new(
+        settings
+            .get_string("jwt_access_secret")
+            .expect("jwt_access_secret not set"),
+    )));
+    let _ = auth::ACCESS_MINUTES.set(
+        settings
+            .get_int("jwt_access_minutes")
+            .expect("jwt_access_minutes not set"),
+    );
 
     let _ = pics::IMG_ROOT.set(Box::leak(Box::new(
         settings.get_string("img_root").expect("img_root not set"),

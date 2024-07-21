@@ -20,8 +20,6 @@ use std::net::IpAddr;
 use std::ops::Add;
 
 use chrono::Utc;
-
-use commons::models::auth;
 use pbkdf2::{
     password_hash::{
         rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier,
@@ -30,17 +28,20 @@ use pbkdf2::{
     Pbkdf2,
 };
 use sqlx::PgPool;
+use uuid::Uuid;
 
-use super::SECRET_KEY;
-use super::{models, models::requests, sql};
+use commons::models::auth;
+
+use super::{models, models::requests, perms, sql};
+use super::{ACCESS_SECRET_KEY, REFRESH_SECRET_KEY};
 use crate::errors::Error;
 
 pub(crate) async fn login(
     request: requests::Login,
     requester_ip: IpAddr,
     db_pool: &PgPool,
-) -> Result<String, Error> {
-    let user = sql::fetch_user(db_pool, &request.username)
+) -> Result<models::JwtRefresh, Error> {
+    let user = sql::fetch_user_by_username(db_pool, &request.username)
         .await?
         .ok_or(Error::Forbidden)?;
 
@@ -56,6 +57,18 @@ pub(crate) async fn login(
         .verify_password(request.password.as_bytes(), &parsed_hash)
         .map_err(|_| Error::Forbidden)?;
 
+    let issue_time = Utc::now();
+    let expiration_time =
+        issue_time.add(chrono::Duration::try_days(90).unwrap());
+    let refresh_claims = models::RefreshClaims {
+        iat: issue_time.timestamp(),
+        exp: expiration_time.timestamp(),
+        uid: user.id,
+        jti: Uuid::new_v4(),
+        uname: user.username,
+    };
+    let encoded_claims = encode_refresh_claims(&refresh_claims)?;
+
     let mut transaction = db_pool.begin().await.map_err(|err| {
         tracing::error!("Failed to open transaction: {err}");
         Error::DatabaseExecution
@@ -65,7 +78,11 @@ pub(crate) async fn login(
         &mut transaction,
         user.id,
         &requester_ip.into(),
-        auth::AuditLogAction::Login,
+        auth::AuditLogAction::Login {
+            refresh_jti: refresh_claims.jti,
+            // TODO add me once we also generate access tokens
+            access_jti: None,
+        },
     )
     .await?;
 
@@ -74,20 +91,76 @@ pub(crate) async fn login(
         Error::DatabaseExecution
     })?;
 
+    Ok(encoded_claims)
+}
+
+pub(crate) async fn renew_token(
+    refresh_claims: models::RefreshClaims,
+    requester_ip: IpAddr,
+    db_pool: &PgPool,
+) -> Result<models::JwtAccess, Error> {
+    let user = sql::fetch_user_by_id(db_pool, refresh_claims.uid)
+        .await?
+        .ok_or(Error::IllegalState)
+        .inspect_err(|_| {
+            tracing::error!(
+                msg = "Valid JWT for unknown user".to_string(),
+                jti = refresh_claims.jti.to_string(),
+                uid = refresh_claims.uid
+            )
+        })?;
+
+    let mut transaction = db_pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
+
+    // TODO
+    // Check for token revocation
+
+    // TODO
+    // Better user permission management
+    let permissions = if user.is_admin {
+        perms::Permission::admin_default()
+    } else if user.is_trusted {
+        perms::Permission::trusted_default()
+    } else if let Some(operator_id) = user.works_for {
+        perms::Permission::operator_default(operator_id)
+    } else {
+        perms::Permission::user_default()
+    };
+
     let issue_time = Utc::now();
     let expiration_time =
-        issue_time.add(chrono::Duration::try_days(90).unwrap());
+        issue_time.add(chrono::Duration::try_minutes(30).unwrap());
     let claims = models::Claims {
         iat: issue_time.timestamp(),
+        nbf: issue_time.timestamp(),
         exp: expiration_time.timestamp(),
-        uid: user.id,
-        uname: user.username,
-        permissions: models::perms::Permissions {
-            is_admin: user.is_admin,
-            is_trusted: user.is_trusted,
-        },
+        jti: Uuid::new_v4(),
+        origin: refresh_claims.jti,
+        uid: refresh_claims.uid,
+        permissions,
     };
-    encode_claims(&claims)
+    let encoded_claims = encode_access_claims(&claims)?;
+
+    sql::insert_audit_log_entry(
+        &mut transaction,
+        refresh_claims.uid,
+        &requester_ip.into(),
+        auth::AuditLogAction::RefreshToken {
+            refresh_jti: refresh_claims.jti,
+            access_jti: claims.jti,
+        },
+    )
+    .await?;
+
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
+
+    Ok(encoded_claims)
 }
 
 pub(crate) async fn is_user_password(
@@ -95,7 +168,7 @@ pub(crate) async fn is_user_password(
     password: &str,
     db_pool: &PgPool,
 ) -> Result<bool, Error> {
-    let user = sql::fetch_user(db_pool, username)
+    let user = sql::fetch_user_by_username(db_pool, username)
         .await?
         .ok_or(Error::NotFoundUpstream)?;
 
@@ -129,7 +202,9 @@ pub(crate) fn validate_username(username: &str) -> Result<(), String> {
         .chars()
         .all(|c| c.is_ascii_alphanumeric() || c.is_ascii_punctuation())
     {
-        return Err("Username must contain only alphanumeric characters".to_string());
+        return Err(
+            "Username must contain only alphanumeric characters".to_string()
+        );
     }
 
     Ok(())
@@ -273,7 +348,7 @@ pub(crate) async fn admin_change_password(
 ) -> Result<(), Error> {
     let password_kdf = gen_kdf_password_string(&request.new_password)?;
 
-    let changed_user = sql::fetch_user(db_pool, &request.username)
+    let changed_user = sql::fetch_user_by_username(db_pool, &request.username)
         .await?
         .ok_or(Error::NotFoundUpstream)?;
 
@@ -304,29 +379,75 @@ pub(crate) async fn admin_change_password(
     })
 }
 
-pub(crate) fn encode_claims(claims: &models::Claims) -> Result<String, Error> {
+pub(crate) fn encode_access_claims(
+    claims: &models::Claims,
+) -> Result<models::JwtAccess, Error> {
+    let header = jsonwebtoken::Header::new(jsonwebtoken::Algorithm::HS256);
+    let encoding_key = jsonwebtoken::EncodingKey::from_secret(
+        ACCESS_SECRET_KEY.get().unwrap().as_ref(),
+    );
+    jsonwebtoken::encode(&header, claims, &encoding_key)
+        .map(models::JwtAccess)
+        .map_err(|err| {
+            tracing::error!("Failed to encode Access JWT: {err}");
+            Error::Processing
+        })
+}
+
+pub(crate) fn decode_access_claims(jwt: &str) -> Result<models::Claims, Error> {
+    let mut validation =
+        jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::HS256);
+    validation.validate_nbf = true;
+    let decoding_key = jsonwebtoken::DecodingKey::from_secret(
+        ACCESS_SECRET_KEY.get().unwrap().as_ref(),
+    );
+    let decoded_token =
+        jsonwebtoken::decode::<models::Claims>(jwt, &decoding_key, &validation)
+            .map_err(|err| {
+                tracing::error!("Failed to decode Access JWT: {err}");
+                Error::Forbidden
+            })?;
+
+    Ok(decoded_token.claims)
+}
+
+pub(crate) fn encode_refresh_claims(
+    claims: &models::RefreshClaims,
+) -> Result<models::JwtRefresh, Error> {
+    let header = jsonwebtoken::Header::new(jsonwebtoken::Algorithm::HS256);
     jsonwebtoken::encode(
-        &jsonwebtoken::Header::default(),
+        &header,
         claims,
         &jsonwebtoken::EncodingKey::from_secret(
-            SECRET_KEY.get().unwrap().as_ref(),
+            REFRESH_SECRET_KEY.get().unwrap().as_ref(),
         ),
     )
+    .map(models::JwtRefresh)
     .map_err(|err| {
-        tracing::error!("Failed to encode JWT: {err}");
+        tracing::error!("Failed to encode Refresh JWT: {err}");
         Error::Processing
     })
 }
 
-pub(crate) fn decode_claims(jwt: &str) -> Result<models::Claims, Error> {
-    let decoded_token = jsonwebtoken::decode::<models::Claims>(
+pub(crate) fn decode_refresh_claims(
+    jwt: &str,
+) -> Result<models::RefreshClaims, Error> {
+    let mut validation =
+        jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::HS256);
+    validation.validate_nbf = true;
+    let decoding_key = jsonwebtoken::DecodingKey::from_secret(
+        REFRESH_SECRET_KEY.get().unwrap().as_ref(),
+    );
+    let decoded_token = jsonwebtoken::decode::<models::RefreshClaims>(
         jwt,
-        &jsonwebtoken::DecodingKey::from_secret(
-            SECRET_KEY.get().unwrap().as_ref(),
-        ),
-        &jsonwebtoken::Validation::default(),
+        &decoding_key,
+        &validation,
     )
-    .map_err(|_err| Error::Forbidden)?;
+    .map_err(|err| {
+        tracing::error!("Failed to decode Refresh JWT: {err}");
+        Error::Forbidden
+    })?;
+
     Ok(decoded_token.claims)
 }
 
@@ -339,7 +460,7 @@ mod tests {
     use crate::errors::Error;
 
     #[test]
-    fn encode_decode_claims() {
+    fn encode_decode_access_claims() {
         use super::*;
 
         //The key must be set
@@ -347,14 +468,14 @@ mod tests {
             SECRET_KEY.set(Box::leak(Box::new("super_secret_key".to_string())));
 
         let claims = models::Claims {
+            iss: 0,
             iat: 0,
+            nbf: 0,
+            jti: Default::default(),
             exp: 2000000000,
             uid: 0,
-            uname: "test".to_string(),
-            permissions: models::perms::Permissions {
-                is_admin: false,
-                is_trusted: false,
-            },
+            permissions: vec![],
+            origin: Default::default(),
         };
         let encoded = encode_claims(&claims).unwrap();
         let decoded = decode_claims(&encoded).unwrap();
@@ -368,6 +489,8 @@ mod tests {
             username: "username".to_string(),
             password: "password".to_string(),
             email: "user@intermodal.pt".to_string(),
+            captcha: None,
+            inquiry: Default::default(),
         };
         let req_ori = IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4));
 
@@ -391,6 +514,8 @@ mod tests {
             username: "invalid username".to_string(),
             password: "password".to_string(),
             email: "user@intermodal.pt".to_string(),
+            captcha: None,
+            inquiry: Default::default(),
         };
         let req_ori = IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4));
 
@@ -409,6 +534,8 @@ mod tests {
             username: "username".to_string(),
             password: "".to_string(),
             email: "user@intermodal.pt".to_string(),
+            captcha: None,
+            inquiry: Default::default(),
         };
         let req_ori = IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4));
 
@@ -427,6 +554,8 @@ mod tests {
             username: "username".to_string(),
             password: "password".to_string(),
             email: "user@intermodal.pt".to_string(),
+            captcha: None,
+            inquiry: Default::default(),
         };
         let req_ori = IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4));
 
@@ -437,6 +566,8 @@ mod tests {
             username: "username".to_string(),
             password: "password2".to_string(),
             email: "user2@intermodal.pt".to_string(),
+            captcha: None,
+            inquiry: Default::default(),
         };
         let req_ori = IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4));
 
@@ -455,6 +586,8 @@ mod tests {
             username: "username".to_string(),
             password: "password".to_string(),
             email: "user@intermodal.pt".to_string(),
+            captcha: None,
+            inquiry: Default::default(),
         };
         let req_ori = IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4));
 
@@ -465,6 +598,8 @@ mod tests {
             username: "username2".to_string(),
             password: "password2".to_string(),
             email: "user@intermodal.pt".to_string(),
+            captcha: None,
+            inquiry: Default::default(),
         };
         let req_ori = IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4));
 

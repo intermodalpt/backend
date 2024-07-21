@@ -535,8 +535,13 @@ pub fn build_paths(state: AppState) -> Router {
             post(routes::handlers::post_replace_stop_across_routes),
         )
         .route("/v1/auth/login", post(auth::handlers::post_login))
+        .route("/v1/auth/renew", get(auth::handlers::get_access_token))
         .route("/v1/auth/register", post(auth::handlers::post_register))
         .route("/v1/auth/get_captcha", post(auth::handlers::get_captcha))
+        .route(
+            "/v1/auth/register/username_check",
+            post(auth::handlers::post_username_availability),
+        )
         .route("/v1/auth/check", get(auth::handlers::check_auth))
         .route(
             "/v1/user/change_password",
@@ -567,24 +572,45 @@ pub fn build_paths(state: AppState) -> Router {
                     // I don't know if this has any measurable performance impact
                     // Maybe we could somehow have a layer to make it available here
                     // and for the handlers
-                    let uid = JwtH::decode(&mut jwt_headers)
+                    let claim_ids = JwtH::decode(&mut jwt_headers)
                         .ok()
                         .and_then(|Authorization(bearer)| {
-                            auth::decode_claims(bearer.token()).ok()
-                        })
-                        .map(|claims| claims.uid);
+                            if let Ok(claims) =
+                                auth::decode_access_claims(bearer.token())
+                            {
+                                Some((claims.uid, claims.jti))
+                            } else if let Ok(claims) =
+                                auth::decode_refresh_claims(bearer.token())
+                            {
+                                Some((claims.uid, claims.jti))
+                            } else {
+                                None
+                            }
+                        });
 
                     let request_id = uuid::Uuid::new_v4();
 
-                    tracing::span!(
-                        tracing::Level::INFO,
-                        "req",
-                        method = display(request.method()),
-                        uri = display(request.uri()),
-                        version = debug(request.version()),
-                        uid = debug(uid),
-                        request_id = display(request_id)
-                    )
+                    if let Some((uid, jti)) = claim_ids {
+                        tracing::span!(
+                            tracing::Level::INFO,
+                            "req",
+                            method = display(request.method()),
+                            uri = display(request.uri()),
+                            version = debug(request.version()),
+                            uid = display(uid),
+                            jti = display(jti),
+                            request_id = display(request_id)
+                        )
+                    } else {
+                        tracing::span!(
+                            tracing::Level::INFO,
+                            "req",
+                            method = display(request.method()),
+                            uri = display(request.uri()),
+                            version = debug(request.version()),
+                            request_id = display(request_id)
+                        )
+                    }
                 })
                 .on_response(
                     trace::DefaultOnResponse::new().level(tracing::Level::INFO),

@@ -1,6 +1,7 @@
 use chrono::{DateTime, Utc};
 use ipnetwork::IpNetwork;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct User {
@@ -23,8 +24,16 @@ pub struct AuditLogEntry {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", tag = "action", content = "data")]
 pub enum AuditLogAction {
-    Login,
+    Login {
+        refresh_jti: Uuid,
+        access_jti: Option<Uuid>,
+    },
+    RefreshToken {
+        refresh_jti: Uuid,
+        access_jti: Uuid,
+    },
     // This will require sessions
     // Logout,
     Register {

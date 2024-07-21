@@ -29,7 +29,28 @@ use crate::Error;
 
 type Result<T> = std::result::Result<T, Error>;
 
-pub(crate) async fn fetch_user(
+pub(crate) async fn fetch_user_by_id(
+    pool: &PgPool,
+    uid: i32,
+) -> Result<Option<auth::User>> {
+    sqlx::query_as!(
+        auth::User,
+        r#"
+SELECT id, username, password, email, is_admin, is_trusted, works_for
+FROM Users
+WHERE id=$1
+    "#,
+        uid
+    )
+    .fetch_optional(pool)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), uid);
+        Error::DatabaseExecution
+    })
+}
+
+pub(crate) async fn fetch_user_by_username(
     pool: &PgPool,
     username: &str,
 ) -> Result<Option<auth::User>> {

@@ -17,6 +17,13 @@
 */
 
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
+
+#[derive(Serialize, Deserialize)]
+pub(crate) struct JwtAccess(pub(crate) String);
+
+#[derive(Serialize, Deserialize)]
+pub(crate) struct JwtRefresh(pub(crate) String);
 
 #[derive(Debug)]
 pub struct HashedRegistration {
@@ -27,52 +34,34 @@ pub struct HashedRegistration {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct Claims {
+    // Expiration
+    pub exp: i64,
+    // Issued at
+    pub iat: i64,
+    // Not before
+    pub nbf: i64,
+    // JWT ID
+    pub jti: Uuid,
+    // Refresh token jti
+    pub origin: Uuid,
+    // User id
+    pub uid: i32,
+    // Permissions this user has
+    pub permissions: Vec<super::Permission>,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+pub struct RefreshClaims {
     // Issued at
     pub iat: i64,
     // Expiration
     pub exp: i64,
     // User id
     pub uid: i32,
+    // JWT ID
+    pub jti: Uuid,
     // Username
     pub uname: String,
-    // Perms
-    pub permissions: perms::Permissions,
-}
-pub(crate) trait ClaimPermission {
-    fn is_valid(claims: &Claims) -> bool;
-}
-
-pub(crate) struct ScopedClaim<P: ClaimPermission>(
-    pub(crate) Claims,
-    pub(crate) std::marker::PhantomData<P>,
-);
-
-pub(crate) mod perms {
-    use super::{ClaimPermission, Claims};
-    use serde::{Deserialize, Serialize};
-
-    // TODO complete this later
-    #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
-    pub struct Permissions {
-        pub is_admin: bool,
-        pub is_trusted: bool,
-    }
-
-    pub struct Admin;
-
-    impl ClaimPermission for Admin {
-        fn is_valid(claims: &Claims) -> bool {
-            claims.permissions.is_admin
-        }
-    }
-
-    pub struct Trusted;
-
-    impl ClaimPermission for Trusted {
-        fn is_valid(claims: &Claims) -> bool {
-            claims.permissions.is_admin || claims.permissions.is_trusted
-        }
-    }
 }
 
 pub(crate) mod requests {
@@ -161,12 +150,27 @@ pub(crate) mod responses {
     use serde::Serialize;
     use uuid::Uuid;
 
+    use crate::auth::models::{JwtAccess, JwtRefresh};
     use commons::models::auth;
 
     #[derive(Serialize)]
     pub struct CaptchaChallenge {
         pub png: String,
         pub uuid: Uuid,
+    }
+
+    #[derive(Serialize)]
+    pub struct RefreshToken {
+        #[serde(skip_serializing_if = "Vec::is_empty")]
+        pub pending_tasks: Vec<String>,
+        pub token: JwtRefresh,
+    }
+
+    #[derive(Serialize)]
+    pub struct AccessToken {
+        #[serde(skip_serializing_if = "Vec::is_empty")]
+        pub pending_tasks: Vec<String>,
+        pub token: Option<JwtAccess>,
     }
 
     #[derive(Serialize)]

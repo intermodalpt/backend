@@ -101,9 +101,24 @@ pub(crate) async fn post_login(
     State(state): State<AppState>,
     client_ip: SecureClientIp,
     Json(request): Json<requests::Login>,
-) -> Result<String, Error> {
-    let user = logic::login(request, client_ip.0, &state.pool).await?;
-    Ok(user)
+) -> Result<Json<responses::RefreshToken>, Error> {
+    Ok(Json(responses::RefreshToken {
+        pending_tasks: vec![],
+        token: logic::login(request, client_ip.0, &state.pool).await?,
+    }))
+}
+
+pub(crate) async fn get_access_token(
+    State(state): State<AppState>,
+    claims: models::RefreshClaims,
+    client_ip: SecureClientIp,
+) -> Result<Json<responses::AccessToken>, Error> {
+    Ok(Json(responses::AccessToken {
+        pending_tasks: vec![],
+        token: Some(
+            logic::renew_token(claims, client_ip.0, &state.pool).await?,
+        ),
+    }))
 }
 
 pub(crate) async fn post_admin_change_password(
@@ -121,18 +136,15 @@ pub(crate) async fn post_user_change_password(
     client_ip: SecureClientIp,
     Json(request): Json<requests::ChangeKnownPassword>,
 ) -> Result<(), Error> {
-    let models::Claims {
-        uid: requester_id,
-        uname: requester_username,
-        ..
-    } = claims;
+    let requester = sql::fetch_user_by_id(&state.pool, claims.uid)
+        .await?
+        .ok_or(Error::Forbidden)?;
 
-    if requester_username != request.username {
+    if requester.username != request.username {
         return Err(Error::Forbidden);
     }
 
-    logic::change_password(request, requester_id, client_ip.0, &state.pool)
-        .await
+    logic::change_password(request, claims.uid, client_ip.0, &state.pool).await
 }
 
 pub(crate) async fn get_user_audit_log(

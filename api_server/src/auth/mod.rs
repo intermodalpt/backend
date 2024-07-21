@@ -20,11 +20,16 @@ mod extractor;
 pub(crate) mod handlers;
 mod logic;
 mod models;
+pub(crate) mod perms;
 mod sql;
 
 use once_cell::sync::OnceCell;
 
-pub(crate) static SECRET_KEY: OnceCell<&'static str> = OnceCell::new();
+pub(crate) static ACCESS_SECRET_KEY: OnceCell<&'static str> = OnceCell::new();
+pub(crate) static REFRESH_DAYS: OnceCell<i64> = OnceCell::new();
+pub(crate) static REFRESH_SECRET_KEY: OnceCell<&'static str> = OnceCell::new();
+pub(crate) static ACCESS_MINUTES: OnceCell<i64> = OnceCell::new();
 
-pub(crate) use logic::decode_claims;
-pub(crate) use models::{perms, ClaimPermission, Claims, ScopedClaim};
+pub(crate) use logic::{decode_access_claims, decode_refresh_claims};
+pub(crate) use models::Claims;
+pub(super) use perms::{ClaimPermission, Permission, ScopedClaim};
