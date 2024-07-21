@@ -65,8 +65,6 @@ async fn main() {
 
     let nodes_versions = extract_node_versions(node_set, reader)
         .expect("Unable to extract changesets");
-    // let nodes_versions = par_extract_node_versions(node_set, reader)
-    //     .expect("Unable to extract changesets");
 
     let patch = nodes_versions
         .into_iter()
@@ -88,62 +86,11 @@ async fn main() {
     api::patch_osm_stops_history(&patch).await.unwrap();
 }
 
-fn extract_node_versions(
-    id_set: HashSet<i64>,
-    reader: BufReader<std::fs::File>,
-) -> Result<HashMap<i64, osm::NodeHistory>> {
-    let reader = ElementReader::new(reader);
-
-    let mut node_versions: HashMap<i64, osm::NodeHistory> = HashMap::new();
-
-    reader.for_each(|element| match element {
-        Element::DenseNode(n) => {
-            let id = n.id();
-            if id_set.contains(&id) {
-                if let Some(info) = n.info() {
-                    let version = osm::NodeVersion {
-                        version: info.version(),
-                        author: info.uid(),
-                        author_uname: info.user().unwrap_or("?").to_string(),
-                        lat: n.lat(),
-                        lon: n.lon(),
-                        attributes: n
-                            .tags()
-                            .map(|(k, v)| (k.to_string(), v.to_string()))
-                            .collect(),
-                        timestamp: millis_to_datetime(info.milli_timestamp()),
-                        deleted: info.deleted(),
-                    };
-
-                    match node_versions.entry(id) {
-                        Entry::Occupied(e) => {
-                            e.into_mut().push(version);
-                        }
-                        Entry::Vacant(e) => {
-                            e.insert(vec![version]);
-                        }
-                    }
-                } else {
-                    eprintln!("No info for node {}", id);
-                }
-            }
-        }
-        _ => {}
-    })?;
-
-    node_versions.values_mut().for_each(|versions| {
-        versions.sort_by_key(|v| v.version);
-    });
-
-    Ok(node_versions)
-}
-
 fn millis_to_datetime(millis: i64) -> DateTime<Utc> {
     DateTime::from_timestamp_millis(millis).expect("invalid timestamp")
 }
 
-// This function requires an unmerged patched version of OSMPBF
-fn par_extract_node_versions(
+fn extract_node_versions(
     id_set: HashSet<i64>,
     reader: BufReader<std::fs::File>,
 ) -> Result<HashMap<i64, osm::NodeHistory>> {
@@ -163,31 +110,33 @@ fn par_extract_node_versions(
         deleted: bool,
     }
 
-    let raw_nodes = reader.par_filter_map(|e| match e {
-        Element::DenseNode(n) => {
-            let id = n.id();
-            if id_set.contains(&id) {
-                let info = n.info().unwrap();
-                Some(RawNode {
-                    id,
-                    lat: n.lat(),
-                    lon: n.lon(),
-                    tags: n
-                        .tags()
-                        .map(|(k, v)| (k.to_string(), v.to_string()))
-                        .collect(),
-                    version: info.version(),
-                    author: info.uid(),
-                    author_uname: info.user().unwrap().to_string(),
-                    timestamp: millis_to_datetime(info.milli_timestamp()),
-                    deleted: info.deleted(),
-                })
-            } else {
-                None
+    let raw_nodes: Vec<_> = reader
+        .par_filter_map_collect(|e| match e {
+            Element::DenseNode(n) => {
+                let id = n.id();
+                if id_set.contains(&id) {
+                    let info = n.info().unwrap();
+                    Some(RawNode {
+                        id,
+                        lat: n.lat(),
+                        lon: n.lon(),
+                        tags: n
+                            .tags()
+                            .map(|(k, v)| (k.to_string(), v.to_string()))
+                            .collect(),
+                        version: info.version(),
+                        author: info.uid(),
+                        author_uname: info.user().unwrap().to_string(),
+                        timestamp: millis_to_datetime(info.milli_timestamp()),
+                        deleted: info.deleted(),
+                    })
+                } else {
+                    None
+                }
             }
-        }
-        _ => None,
-    });
+            _ => None,
+        })
+        .unwrap();
 
     raw_nodes.into_iter().for_each(|node| {
         let version = osm::NodeVersion {
