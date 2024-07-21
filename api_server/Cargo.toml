@@ -22,7 +22,7 @@ sqlx = { version = "0.7", features = ["runtime-tokio-native-tls", "postgres", "j
 axum = { version = "0.7", features = ["multipart", "macros"] }
 axum-extra = { version = "0.9", features = ["typed-header"] }
 axum-macros = "0.4"
-axum-client-ip = "0.5"
+axum-client-ip = "0.6"
 tower-http = { version = "0.5", features = ["cors", "limit", "trace"] }
 bytes = "1.6"
 
@@ -41,16 +41,16 @@ base16ct = { version = "0.2", features = ["alloc"] }
 base64ct = { version = "1.6", features = ["alloc"] }
 captcha-rs = "0.2.10"
 
-rust-s3 = { version = "0.33", features = ["default"] }
+rust-s3 = { version = "0.34", features = ["default"] }
 
 thiserror = "1.0"
-itertools = "0.12"
+itertools = "0.13"
 
 chrono = { version = "0.4", features = ["serde"] }
 
-image = { version = "0.24", features = ["default"] }
-webp = "0.2"
-svg = "0.16"
+image = { version = "0.25", features = ["default"] }
+webp = "0.3"
+svg = "0.17"
 kamadak-exif = "0.5"
 mime_guess = "2.0"
 
