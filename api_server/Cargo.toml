@@ -20,7 +20,7 @@ futures = "0.3"
 sqlx = { version = "0.7", features = ["runtime-tokio-native-tls", "postgres", "json", "macros", "chrono", "ipnetwork"] }
 
 axum = { version = "0.7", features = ["multipart", "macros"] }
-axum-extra = { version = "0.9", features = ["typed-header"] }
+axum-extra = { version = "0.9", features = ["typed-header", "cookie"] }
 axum-macros = "0.4"
 axum-client-ip = "0.6"
 tower-http = { version = "0.5", features = ["cors", "limit", "trace"] }
@@ -39,7 +39,7 @@ jsonwebtoken = "9.3"
 sha1 = "0.10"
 base16ct = { version = "0.2", features = ["alloc"] }
 base64ct = { version = "1.6", features = ["alloc"] }
-captcha-rs = "0.2.10"
+captcha-rs = { git = "https://github.com/Reknij/captcha-rs/", commit = "6a13f367dc8bc5894598a020934225efd5577cb6" }
 
 rust-s3 = { version = "0.34", features = ["default"] }
 
@@ -47,8 +47,9 @@ thiserror = "1.0"
 itertools = "0.13"
 
 chrono = { version = "0.4", features = ["serde"] }
+time = "0.3"
 
-image = { version = "0.25", features = ["default"] }
+image = { version = "0.25", features = ["default", "png"] }
 webp = "0.3"
 svg = "0.17"
 kamadak-exif = "0.5"

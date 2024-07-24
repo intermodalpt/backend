@@ -17,6 +17,7 @@
 */
 
 use std::collections::HashMap;
+use std::io::Cursor;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
 
@@ -102,11 +103,11 @@ impl CaptchaStorage {
     pub fn gen_captcha(&self) -> Result<(Uuid, String), Error> {
         let captcha = CaptchaBuilder::new()
             .length(5)
-            .width(130)
-            .height(40)
+            .width(250)
+            .height(60)
             .dark_mode(false)
             .complexity(1)
-            .compression(40)
+            //.compression(40)
             .build();
 
         let captcha_digest = Captcha {
@@ -119,7 +120,16 @@ impl CaptchaStorage {
         let res = if let Ok(mut captchas) = self.captchas.write() {
             captchas.insert(uuid, captcha_digest);
 
-            let img_b64 = Base64::encode_string(captcha.image.as_bytes());
+            let mut bytes: Vec<u8> = Vec::new();
+            captcha
+                .image
+                .write_to(&mut Cursor::new(&mut bytes), image::ImageFormat::Png)
+                .map_err(|err| {
+                    tracing::error!("Error writing captcha image: {}", err);
+                    Error::Processing
+                })?;
+
+            let img_b64 = Base64::encode_string(&bytes);
             (uuid, img_b64)
         } else {
             return Err(Error::IllegalState);
