@@ -40,7 +40,7 @@ pub(crate) async fn login(
     request: requests::Login,
     requester_ip: IpAddr,
     db_pool: &PgPool,
-) -> Result<models::JwtRefresh, Error> {
+) -> Result<(models::RefreshClaims, models::JwtRefresh), Error> {
     let user = sql::fetch_user_by_username(db_pool, &request.username)
         .await?
         .ok_or(Error::Forbidden)?;
@@ -91,14 +91,14 @@ pub(crate) async fn login(
         Error::DatabaseExecution
     })?;
 
-    Ok(encoded_claims)
+    Ok((refresh_claims, encoded_claims))
 }
 
 pub(crate) async fn renew_token(
     refresh_claims: models::RefreshClaims,
     requester_ip: IpAddr,
     db_pool: &PgPool,
-) -> Result<models::JwtAccess, Error> {
+) -> Result<(models::Claims, models::JwtAccess), Error> {
     let user = sql::fetch_user_by_id(db_pool, refresh_claims.uid)
         .await?
         .ok_or(Error::IllegalState)
@@ -115,8 +115,17 @@ pub(crate) async fn renew_token(
         Error::DatabaseExecution
     })?;
 
-    // TODO
-    // Check for token revocation
+    let session = sql::fetch_user_session(&mut *transaction, refresh_claims.jti)
+        .await
+        .map_err(|_| Error::Forbidden)?
+        .ok_or_else(|| {
+            tracing::error!(msg="Problem retrieving the access token", claims=?refresh_claims);
+            Error::IllegalState
+        })?;
+
+    if session.revoked {
+        return Err(Error::Unauthorized);
+    }
 
     // TODO
     // Better user permission management
@@ -160,7 +169,7 @@ pub(crate) async fn renew_token(
         Error::DatabaseExecution
     })?;
 
-    Ok(encoded_claims)
+    Ok((claims, encoded_claims))
 }
 
 pub(crate) async fn is_user_password(

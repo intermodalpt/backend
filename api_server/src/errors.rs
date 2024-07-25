@@ -34,6 +34,8 @@ pub enum Error {
     NotFoundUpstream,
     #[error("Access denied")]
     Forbidden,
+    #[error("Authentication missing")]
+    Unauthorized,
     #[error("Dependencies for this action were not met")]
     DependenciesNotMet,
     #[error("The provided information failed validation:: `{0}`")]
@@ -71,6 +73,9 @@ impl IntoResponse for Error {
             }
             Error::Forbidden => {
                 JsonErrorResponse::new_response(StatusCode::FORBIDDEN, message)
+            }
+            Error::Unauthorized => {
+                JsonErrorResponse::new_response(StatusCode::UNAUTHORIZED, message)
             }
             Error::DependenciesNotMet => JsonErrorResponse::new_response(
                 StatusCode::FAILED_DEPENDENCY,

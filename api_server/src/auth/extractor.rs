@@ -2,6 +2,7 @@ use axum::{
     async_trait, extract::FromRequestParts, http::request::Parts,
     RequestPartsExt,
 };
+use axum_extra::extract::CookieJar;
 use axum_extra::headers::{authorization::Bearer, Authorization};
 use axum_extra::TypedHeader;
 
@@ -19,12 +20,20 @@ where
         parts: &mut Parts,
         _state: &S,
     ) -> Result<Self, Self::Rejection> {
-        let TypedHeader(Authorization(bearer)) = parts
-            .extract::<TypedHeader<Authorization<Bearer>>>()
-            .await
-            .map_err(|_| Error::Forbidden)?;
+        if let Ok(TypedHeader(Authorization(bearer))) =
+            parts.extract::<TypedHeader<Authorization<Bearer>>>().await
+        {
+            return logic::decode_access_claims(bearer.token());
+        }
 
-        logic::decode_access_claims(bearer.token())
+        if let Ok(jar) = parts.extract::<CookieJar>().await {
+            if let Some(cookie) = jar.get("access_token") {
+                let value = cookie.value();
+                return logic::decode_access_claims(value);
+            }
+        }
+
+        Err(Error::Unauthorized)
     }
 }
 
@@ -39,12 +48,20 @@ where
         parts: &mut Parts,
         _state: &S,
     ) -> Result<Self, Self::Rejection> {
-        let TypedHeader(Authorization(bearer)) = parts
-            .extract::<TypedHeader<Authorization<Bearer>>>()
-            .await
-            .map_err(|_| Error::Forbidden)?;
+        if let Ok(TypedHeader(Authorization(bearer))) =
+            parts.extract::<TypedHeader<Authorization<Bearer>>>().await
+        {
+            return logic::decode_refresh_claims(bearer.token());
+        }
 
-        logic::decode_refresh_claims(bearer.token())
+        if let Ok(jar) = parts.extract::<CookieJar>().await {
+            if let Some(cookie) = jar.get("refresh_token") {
+                let value = cookie.value();
+                return logic::decode_refresh_claims(value);
+            }
+        }
+
+        Err(Error::Unauthorized)
     }
 }
 

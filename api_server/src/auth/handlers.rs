@@ -17,10 +17,12 @@
 */
 
 use axum::extract::{Path, Query, State};
+use axum::response::IntoResponse;
 use axum::Json;
 use axum_client_ip::SecureClientIp;
 use futures::future;
 use serde::Deserialize;
+use uuid::Uuid;
 
 use commons::models::auth;
 
@@ -30,7 +32,7 @@ use super::{
     sql,
 };
 use crate::errors::Error;
-use crate::responses::Pagination;
+use crate::responses::{json_response_with_cookie_set, Pagination};
 use crate::AppState;
 
 #[derive(Deserialize, Default)]
@@ -101,24 +103,26 @@ pub(crate) async fn post_login(
     State(state): State<AppState>,
     client_ip: SecureClientIp,
     Json(request): Json<requests::Login>,
-) -> Result<Json<responses::RefreshToken>, Error> {
-    Ok(Json(responses::RefreshToken {
-        pending_tasks: vec![],
-        token: logic::login(request, client_ip.0, &state.pool).await?,
-    }))
+) -> Result<impl IntoResponse, Error> {
+    let (refresh_claims, refresh_token) =
+        logic::login(request, client_ip.0, &state.pool).await?;
+
+    json_response_with_cookie_set(
+        "refresh_token",
+        refresh_token.0,
+        refresh_claims,
+    )
 }
 
-pub(crate) async fn get_access_token(
+pub(crate) async fn get_renew_access_token(
     State(state): State<AppState>,
     claims: models::RefreshClaims,
     client_ip: SecureClientIp,
-) -> Result<Json<responses::AccessToken>, Error> {
-    Ok(Json(responses::AccessToken {
-        pending_tasks: vec![],
-        token: Some(
-            logic::renew_token(claims, client_ip.0, &state.pool).await?,
-        ),
-    }))
+) -> Result<impl IntoResponse, Error> {
+    let (access_claims, access_token) =
+        logic::renew_token(claims, client_ip.0, &state.pool).await?;
+
+    json_response_with_cookie_set("access_token", access_token.0, access_claims)
 }
 
 pub(crate) async fn post_admin_change_password(
