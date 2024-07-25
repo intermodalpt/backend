@@ -15,14 +15,16 @@
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
+use sqlx::types::ipnetwork::IpNetwork;
+use std::collections::HashMap;
 use uuid::Uuid;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub(crate) struct JwtAccess(pub(crate) String);
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub(crate) struct JwtRefresh(pub(crate) String);
 
 #[derive(Debug)]
@@ -64,11 +66,20 @@ pub struct RefreshClaims {
     pub uname: String,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ConsentAnswer {
+    pub copyright: bool,
+    pub privacy: bool,
+    pub terms: bool,
+    #[serde(flatten)]
+    pub(crate) other: HashMap<String, serde_json::Value>,
+}
+
 pub(crate) mod requests {
     use std::fmt::{Debug, Formatter};
 
     use serde::Deserialize;
-    use sqlx::types::JsonValue;
+    use serde_json::Value;
     use uuid::Uuid;
 
     #[derive(Deserialize)]
@@ -97,7 +108,8 @@ pub(crate) mod requests {
         pub password: String,
         pub email: String,
         pub captcha: Option<CaptchaAnswer>,
-        pub inquiry: JsonValue,
+        pub survey: Value,
+        pub consent: super::ConsentAnswer,
     }
 
     impl Debug for Register {
@@ -106,7 +118,7 @@ pub(crate) mod requests {
                 .field("username", &self.username)
                 .field("email", &self.email)
                 .field("captcha", &self.captcha)
-                .field("inquiry", &self.inquiry)
+                .field("inquiry", &self.survey)
                 .finish()
         }
     }

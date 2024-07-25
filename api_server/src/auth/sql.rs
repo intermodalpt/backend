@@ -17,9 +17,11 @@
 */
 
 use chrono::Utc;
+use serde_json::json;
 use sqlx::types::ipnetwork::IpNetwork;
 use sqlx::types::Json;
 use sqlx::PgPool;
+use uuid::Uuid;
 
 use commons::models::auth;
 
@@ -109,18 +111,24 @@ pub(crate) async fn fetch_username_exists(
 }
 
 pub(crate) async fn register_user(
-    pool: &PgPool,
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     request: &models::HashedRegistration,
+    consent: models::ConsentAnswer,
+    survey: serde_json::Value,
 ) -> Result<i32> {
+    let now = Utc::now();
     let res = sqlx::query!(
-        r#"INSERT INTO Users (username, password, email)
-VALUES ($1, $2, $3)
+        r#"INSERT INTO Users (username, password, email, consent, consent_date, survey)
+VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING id"#,
         request.username,
         request.password,
-        request.email
+        request.email,
+        json!(consent),
+        now,
+        survey
     )
-    .fetch_one(pool)
+    .fetch_one(&mut **transaction)
     .await
     .map_err(|err| {
         tracing::error!(

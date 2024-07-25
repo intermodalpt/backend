@@ -238,6 +238,16 @@ pub(crate) fn validate_password(password: &str) -> Result<(), String> {
     Ok(())
 }
 
+pub(crate) fn validate_consent(
+    consent: &models::ConsentAnswer,
+) -> Result<(), String> {
+    if !consent.privacy || !consent.terms || !consent.copyright {
+        return Err("Consent was not adequately given".to_string());
+    }
+
+    Ok(())
+}
+
 pub(crate) async fn is_valid_registration(
     request: &requests::Register,
     db_pool: &PgPool,
@@ -245,6 +255,7 @@ pub(crate) async fn is_valid_registration(
     validate_username(&request.username).map_err(Error::ValidationFailure)?;
     validate_password(&request.password).map_err(Error::ValidationFailure)?;
     validate_email(&request.email).map_err(Error::ValidationFailure)?;
+    validate_consent(&request.consent).map_err(Error::ValidationFailure)?;
 
     let existing_user = sql::fetch_user_by_username_or_email(
         db_pool,
@@ -291,7 +302,13 @@ pub(crate) async fn register(
         Error::DatabaseExecution
     })?;
 
-    let user_id = sql::register_user(db_pool, &registration).await?;
+    let user_id = sql::register_user(
+        &mut transaction,
+        &registration,
+        request.consent,
+        request.survey,
+    )
+    .await?;
     sql::insert_audit_log_entry(
         &mut transaction,
         user_id,
@@ -465,7 +482,7 @@ mod tests {
     use sqlx::PgPool;
     use std::net::{IpAddr, Ipv4Addr};
 
-    use crate::auth::models::requests;
+    use crate::auth::{models, models::requests, Permission};
     use crate::errors::Error;
 
     #[test]
@@ -473,11 +490,10 @@ mod tests {
         use super::*;
 
         //The key must be set
-        let _ =
-            SECRET_KEY.set(Box::leak(Box::new("super_secret_key".to_string())));
+        let _ = ACCESS_SECRET_KEY
+            .set(Box::leak(Box::new("super_secret_key".to_string())));
 
         let claims = models::Claims {
-            iss: 0,
             iat: 0,
             nbf: 0,
             jti: Default::default(),
@@ -486,8 +502,8 @@ mod tests {
             permissions: vec![],
             origin: Default::default(),
         };
-        let encoded = encode_claims(&claims).unwrap();
-        let decoded = decode_claims(&encoded).unwrap();
+        let encoded = encode_access_claims(&claims).unwrap();
+        let decoded = decode_access_claims(&encoded.0).unwrap();
         assert_eq!(claims, decoded);
     }
 
@@ -499,7 +515,13 @@ mod tests {
             password: "password".to_string(),
             email: "user@intermodal.pt".to_string(),
             captcha: None,
-            inquiry: Default::default(),
+            survey: Default::default(),
+            consent: models::ConsentAnswer {
+                privacy: true,
+                terms: true,
+                copyright: true,
+                other: Default::default(),
+            },
         };
         let req_ori = IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4));
 
@@ -524,7 +546,13 @@ mod tests {
             password: "password".to_string(),
             email: "user@intermodal.pt".to_string(),
             captcha: None,
-            inquiry: Default::default(),
+            survey: Default::default(),
+            consent: models::ConsentAnswer {
+                privacy: true,
+                terms: true,
+                copyright: true,
+                other: Default::default(),
+            },
         };
         let req_ori = IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4));
 
@@ -544,7 +572,13 @@ mod tests {
             password: "".to_string(),
             email: "user@intermodal.pt".to_string(),
             captcha: None,
-            inquiry: Default::default(),
+            survey: Default::default(),
+            consent: models::ConsentAnswer {
+                privacy: true,
+                terms: true,
+                copyright: true,
+                other: Default::default(),
+            },
         };
         let req_ori = IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4));
 
@@ -564,7 +598,13 @@ mod tests {
             password: "password".to_string(),
             email: "user@intermodal.pt".to_string(),
             captcha: None,
-            inquiry: Default::default(),
+            survey: Default::default(),
+            consent: models::ConsentAnswer {
+                privacy: true,
+                terms: true,
+                copyright: true,
+                other: Default::default(),
+            },
         };
         let req_ori = IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4));
 
@@ -576,7 +616,13 @@ mod tests {
             password: "password2".to_string(),
             email: "user2@intermodal.pt".to_string(),
             captcha: None,
-            inquiry: Default::default(),
+            survey: Default::default(),
+            consent: models::ConsentAnswer {
+                privacy: true,
+                terms: true,
+                copyright: true,
+                other: Default::default(),
+            },
         };
         let req_ori = IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4));
 
@@ -596,7 +642,13 @@ mod tests {
             password: "password".to_string(),
             email: "user@intermodal.pt".to_string(),
             captcha: None,
-            inquiry: Default::default(),
+            survey: Default::default(),
+            consent: models::ConsentAnswer {
+                privacy: true,
+                terms: true,
+                copyright: true,
+                other: Default::default(),
+            },
         };
         let req_ori = IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4));
 
@@ -608,7 +660,13 @@ mod tests {
             password: "password2".to_string(),
             email: "user@intermodal.pt".to_string(),
             captcha: None,
-            inquiry: Default::default(),
+            survey: Default::default(),
+            consent: models::ConsentAnswer {
+                privacy: true,
+                terms: true,
+                copyright: true,
+                other: Default::default(),
+            },
         };
         let req_ori = IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4));
 
@@ -619,6 +677,28 @@ mod tests {
         );
     }
 
+    async fn login_request(
+        req: requests::Login,
+        req_ori: IpAddr,
+        pool: &PgPool,
+    ) -> (models::RefreshClaims, models::Claims) {
+        let (refresh_claims, token) =
+            super::login(req, req_ori, &pool).await.unwrap();
+        let decoded_refresh_claims =
+            super::decode_refresh_claims(&token.0).unwrap();
+        let (access_claims, token) =
+            super::renew_token(refresh_claims.clone(), req_ori, &pool)
+                .await
+                .unwrap();
+        let decoded_access_claims =
+            super::decode_access_claims(&token.0).unwrap();
+
+        assert_eq!(&access_claims, &decoded_access_claims);
+        assert_eq!(&refresh_claims, &decoded_refresh_claims);
+
+        return (refresh_claims, access_claims);
+    }
+
     #[sqlx::test(fixtures("users"))]
     async fn ok_login_admin(pool: PgPool) {
         let req = requests::Login {
@@ -627,12 +707,15 @@ mod tests {
         };
         let req_ori = IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4));
 
-        let jwt = super::login(req, req_ori, &pool).await.unwrap();
-        let claims = super::decode_claims(&jwt).unwrap();
+        let (refresh_claims, access_claims) =
+            login_request(req, req_ori, &pool).await;
 
-        assert_eq!(claims.uid, 1);
-        assert_eq!(&claims.uname, "admin");
-        assert_eq!(claims.permissions.is_admin, true);
+        assert_eq!(refresh_claims.uid, 1);
+        assert_eq!(&refresh_claims.uname, "admin");
+        assert!(access_claims
+            .permissions
+            .iter()
+            .any(|perm| perm == &Permission::Admin));
     }
 
     #[sqlx::test(fixtures("users"))]
@@ -643,12 +726,15 @@ mod tests {
         };
         let req_ori = IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4));
 
-        let jwt = super::login(req, req_ori, &pool).await.unwrap();
-        let claims = super::decode_claims(&jwt).unwrap();
+        let (refresh_claims, access_claims) =
+            login_request(req, req_ori, &pool).await;
 
-        assert_eq!(claims.uid, 2);
-        assert_eq!(&claims.uname, "user");
-        assert_eq!(claims.permissions.is_admin, false);
+        assert_eq!(refresh_claims.uid, 2);
+        assert_eq!(&refresh_claims.uname, "user");
+        assert!(!access_claims
+            .permissions
+            .iter()
+            .any(|perm| perm == &Permission::Admin));
     }
 
     #[sqlx::test(fixtures("users"))]
