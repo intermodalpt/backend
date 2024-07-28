@@ -1,3 +1,4 @@
+use axum::extract::{FromRef, State};
 use axum::{
     async_trait, extract::FromRequestParts, http::request::Parts,
     RequestPartsExt,
@@ -8,6 +9,23 @@ use axum_extra::TypedHeader;
 
 use super::{logic, models};
 use crate::errors::Error;
+use crate::state::AppState;
+
+#[async_trait]
+impl<S> FromRequestParts<S> for AppState
+where
+    Self: FromRef<S>,
+    S: Send + Sync,
+{
+    type Rejection = Error;
+
+    async fn from_request_parts(
+        _parts: &mut Parts,
+        state: &S,
+    ) -> Result<Self, Self::Rejection> {
+        Ok(Self::from_ref(state))
+    }
+}
 
 #[async_trait]
 impl<S> FromRequestParts<S> for models::Claims

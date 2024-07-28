@@ -18,6 +18,7 @@
 
 use std::collections::HashMap;
 use std::io::Cursor;
+use std::ops::Deref;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
 
@@ -34,7 +35,16 @@ const CAPTCHA_LIMIT: i64 = 5;
 const CAPTCHA_STORE_CLEANUP_TIME: i64 = 5;
 
 #[allow(clippy::module_name_repetitions)]
-pub type AppState = Arc<State>;
+#[derive(Clone)]
+pub struct AppState(pub Arc<State>);
+
+impl Deref for AppState {
+    type Target = State;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 pub struct State {
     pub bucket: s3::Bucket,

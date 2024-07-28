@@ -159,7 +159,7 @@ async fn main() {
 
     axum::serve(
         listener,
-        http::build_paths(state)
+        http::build_paths(AppState(state))
             .into_make_service_with_connect_info::<SocketAddr>(),
     )
     .await
