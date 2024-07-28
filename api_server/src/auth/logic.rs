@@ -30,8 +30,11 @@ use uuid::Uuid;
 
 use commons::models::auth;
 
-use super::{models, models::requests, perms, sql};
-use super::{ACCESS_SECRET_KEY, REFRESH_SECRET_KEY};
+use super::{
+    models, models::requests, perms, sql, ACCESS_MINUTES, ACCESS_SECRET_KEY,
+    MANAGEMENT_DAYS, MANAGEMENT_SECRET_KEY, REFRESH_DAYS, REFRESH_SECRET_KEY,
+};
+use crate::auth::models::responses;
 use crate::errors::Error;
 
 pub(crate) async fn login(
@@ -56,7 +59,8 @@ pub(crate) async fn login(
         .map_err(|_| Error::Forbidden)?;
 
     let issue_time = Utc::now();
-    let expiration_time = issue_time + chrono::Duration::try_days(90).unwrap();
+    let expiration_time = issue_time
+        + chrono::Duration::try_days(*REFRESH_DAYS.get().unwrap()).unwrap();
     let refresh_claims = models::RefreshClaims {
         iat: issue_time.timestamp(),
         exp: expiration_time.timestamp(),
@@ -149,8 +153,9 @@ pub(crate) async fn renew_token(
     };
 
     let issue_time = Utc::now();
-    let expiration_time =
-        issue_time + chrono::Duration::try_minutes(30).unwrap();
+    let expiration_time = issue_time
+        + chrono::Duration::try_minutes(*ACCESS_MINUTES.get().unwrap())
+            .unwrap();
     let claims = models::Claims {
         iat: issue_time.timestamp(),
         nbf: issue_time.timestamp(),
@@ -190,6 +195,79 @@ pub(crate) async fn renew_token(
     })?;
 
     Ok((claims, encoded_claims))
+}
+
+pub(crate) async fn create_management_token(
+    request: requests::NewManagementToken,
+    uid: i32,
+    requester_ip: IpAddr,
+    db_pool: &PgPool,
+) -> Result<responses::ManagementToken, Error> {
+    let mut transaction = db_pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
+
+    let user = sql::fetch_user_by_id(&mut *transaction, uid)
+        .await?
+        .ok_or(Error::Forbidden)?;
+
+    let permissions = sql::fetch_user_permissions(&mut *transaction, uid)
+        .await?
+        .ok_or(Error::IllegalState)?;
+
+    let session_id = Uuid::new_v4();
+    let issue_time = Utc::now();
+    let expiration_time = issue_time
+        + chrono::Duration::try_days(*MANAGEMENT_DAYS.get().unwrap()).unwrap();
+    let claims = models::ManagementClaims {
+        iat: issue_time.timestamp(),
+        exp: expiration_time.timestamp(),
+        uid: user.id,
+        jti: session_id,
+    };
+    let encoded_claims = encode_management_claims(&claims)?;
+
+    sql::insert_user_session(
+        &mut transaction,
+        models::NewUserSessionMeta {
+            id: session_id,
+            user_id: user.id,
+            ip: requester_ip.into(),
+            user_agent: "",
+            expiration: expiration_time,
+        },
+    )
+    .await?;
+
+    sql::insert_management_token(
+        &mut transaction,
+        session_id,
+        &request.name,
+        &encoded_claims,
+    )
+    .await?;
+
+    sql::insert_audit_log_entry(
+        &mut transaction,
+        user.id,
+        &requester_ip.into(),
+        auth::AuditLogAction::ManagementTokenIssued { session_id },
+    )
+    .await?;
+
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
+
+    Ok(responses::ManagementToken {
+        id: session_id,
+        name: request.name,
+        permissions: sqlx::types::Json(permissions),
+        revoked: false,
+        token: encoded_claims,
+    })
 }
 
 pub(crate) async fn is_user_password(
@@ -491,6 +569,45 @@ pub(crate) fn decode_refresh_claims(
     )
     .map_err(|err| {
         tracing::error!("Failed to decode Refresh JWT: {err}");
+        Error::Forbidden
+    })?;
+
+    Ok(decoded_token.claims)
+}
+
+pub(crate) fn encode_management_claims(
+    claims: &models::ManagementClaims,
+) -> Result<models::JwtManagement, Error> {
+    let header = jsonwebtoken::Header::new(jsonwebtoken::Algorithm::HS256);
+    jsonwebtoken::encode(
+        &header,
+        claims,
+        &jsonwebtoken::EncodingKey::from_secret(
+            MANAGEMENT_SECRET_KEY.get().unwrap().as_ref(),
+        ),
+    )
+    .map(|token| models::JwtManagement(format!("manag.{token}")))
+    .map_err(|err| {
+        tracing::error!("Failed to encode Management JWT: {err}");
+        Error::Processing
+    })
+}
+
+pub(crate) fn decode_management_claims(
+    jwt: &str,
+) -> Result<models::ManagementClaims, Error> {
+    let validation =
+        jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::HS256);
+    let decoding_key = jsonwebtoken::DecodingKey::from_secret(
+        MANAGEMENT_SECRET_KEY.get().unwrap().as_ref(),
+    );
+    let decoded_token = jsonwebtoken::decode::<models::ManagementClaims>(
+        &jwt[6..],
+        &decoding_key,
+        &validation,
+    )
+    .map_err(|err| {
+        tracing::error!("Failed to decode Management JWT: {err}");
         Error::Forbidden
     })?;
 

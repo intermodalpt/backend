@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO management_tokens(session_id, name, token)\nVALUES ($1, $2, $3)\n    ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "2bf1271e2ecdf94ab8da0fdbdc9345d9276e14bdea304dd625b76f5ba3f5f8e1"
+}

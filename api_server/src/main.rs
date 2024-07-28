@@ -84,6 +84,16 @@ async fn main() {
             .get_int("jwt_access_minutes")
             .expect("jwt_access_minutes not set"),
     );
+    let _ = auth::MANAGEMENT_SECRET_KEY.set(Box::leak(Box::new(
+        settings
+            .get_string("jwt_management_secret")
+            .expect("jwt_management_secret not set"),
+    )));
+    let _ = auth::MANAGEMENT_DAYS.set(
+        settings
+            .get_int("jwt_managements_days")
+            .expect("jwt_management_days not set"),
+    );
 
     let _ = pics::IMG_ROOT.set(Box::leak(Box::new(
         settings.get_string("img_root").expect("img_root not set"),

@@ -7,7 +7,7 @@ use axum_extra::extract::CookieJar;
 use axum_extra::headers::{authorization::Bearer, Authorization};
 use axum_extra::TypedHeader;
 
-use super::{logic, models};
+use super::{logic, models, sql};
 use crate::errors::Error;
 use crate::state::AppState;
 
@@ -41,6 +41,37 @@ where
         if let Ok(TypedHeader(Authorization(bearer))) =
             parts.extract::<TypedHeader<Authorization<Bearer>>>().await
         {
+            let token = bearer.token();
+            if token.starts_with("manag.") {
+                let claims = logic::decode_management_claims(&token[6..])?;
+
+                let state = parts
+                    .extensions
+                    .get::<State<AppState>>()
+                    .ok_or(Error::IllegalState)?
+                    .clone();
+
+                let permissions = sql::fetch_management_token_permissions(
+                    &state.pool,
+                    claims.jti,
+                )
+                .await?
+                .ok_or(Error::Unauthorized)?;
+
+                if permissions.revoked {
+                    return Err(Error::Unauthorized);
+                }
+
+                return Ok(models::Claims {
+                    exp: claims.exp,
+                    iat: claims.iat,
+                    nbf: 0,
+                    jti: claims.jti,
+                    origin: Default::default(),
+                    uid: claims.uid,
+                    permissions: permissions.permissions.0,
+                });
+            }
             return logic::decode_access_claims(bearer.token());
         }
 

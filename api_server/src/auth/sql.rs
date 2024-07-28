@@ -31,10 +31,13 @@ use crate::Error;
 
 type Result<T> = std::result::Result<T, Error>;
 
-pub(crate) async fn fetch_user_by_id(
-    pool: &PgPool,
+pub(crate) async fn fetch_user_by_id<'c, E>(
+    executor: E,
     uid: i32,
-) -> Result<Option<auth::User>> {
+) -> Result<Option<auth::User>>
+where
+    E: sqlx::Executor<'c, Database = sqlx::Postgres>,
+{
     sqlx::query_as!(
         auth::User,
         r#"
@@ -44,7 +47,7 @@ WHERE id=$1
     "#,
         uid
     )
-    .fetch_optional(pool)
+    .fetch_optional(executor)
     .await
     .map_err(|err| {
         tracing::error!(error = err.to_string(), uid);
@@ -108,6 +111,131 @@ pub(crate) async fn fetch_username_exists(
             Error::DatabaseExecution
         })
         .map(|r| r.is_some())
+}
+
+pub(crate) async fn fetch_user_management_tokens(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    user_id: i32,
+    show_revoked: bool,
+) -> Result<Vec<responses::ManagementToken>> {
+    sqlx::query_as!(
+        responses::ManagementToken,
+        r#"
+SELECT user_sessions.id, management_tokens.name, management_tokens.token,
+    user_sessions.revoked,
+    management_tokens.permissions
+        as "permissions!: sqlx::types::Json<Vec<super::Permission>>"
+FROM management_tokens
+JOIN user_sessions ON user_sessions.id = management_tokens.session_id
+WHERE user_sessions.user_id=$1 AND (NOT revoked OR $2)
+    "#,
+        user_id,
+        show_revoked
+    )
+    .fetch_all(&mut **transaction)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), user_id);
+        Error::DatabaseExecution
+    })
+}
+
+pub(crate) async fn insert_management_token(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    token_id: Uuid,
+    token_name: &str,
+    models::JwtManagement(token): &models::JwtManagement,
+) -> Result<()> {
+    sqlx::query_as!(
+        responses::ManagementToken,
+        r#"
+INSERT INTO management_tokens(session_id, name, token)
+VALUES ($1, $2, $3)
+    "#,
+        token_id,
+        token_name,
+        token
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), token_id=?token_id, token_name, token);
+        Error::DatabaseExecution
+    })?;
+    Ok(())
+}
+
+pub(crate) async fn update_set_session_revoked(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    token_id: Uuid,
+) -> Result<()> {
+    sqlx::query!(
+        "UPDATE user_sessions SET revoked=true WHERE id=$1",
+        token_id
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), token_id=?token_id);
+        Error::DatabaseExecution
+    })?;
+    Ok(())
+}
+
+pub(crate) async fn fetch_user_permissions<'c, E>(
+    executor: E,
+    user_id: i32,
+) -> Result<Option<Vec<super::Permission>>>
+where
+    E: sqlx::Executor<'c, Database = sqlx::Postgres>,
+{
+    sqlx::query!(
+        r#"
+SELECT permissions as "permissions!: sqlx::types::Json<Vec<super::Permission>>"
+FROM users
+WHERE id=$1"#,
+        user_id
+    )
+    .fetch_optional(executor)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), user_id);
+        Error::DatabaseExecution
+    })
+    .map(|res| res.map(|res| res.permissions.0))
+}
+
+// These do not necessarily need to be the same as above
+// A token should be able to have a more limited scope than its user
+pub(crate) async fn fetch_management_token_permissions(
+    pool: &PgPool,
+    token_id: Uuid,
+) -> Result<Option<responses::ManagementToken>> {
+    let res = sqlx::query!(
+        r#"
+SELECT user_sessions.id, user_sessions.revoked, user_sessions.expiration,
+    management_tokens.name, management_tokens.token,
+    management_tokens.permissions
+        as "permissions!: sqlx::types::Json<Vec<super::Permission>>"
+FROM management_tokens
+RIGHT JOIN user_sessions ON user_sessions.id = management_tokens.session_id
+WHERE user_sessions.id=$1"#,
+        token_id
+    )
+    .fetch_optional(pool)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), token_id=?token_id);
+        Error::DatabaseExecution
+    })?;
+
+    Ok(res.map(|res| responses::ManagementToken {
+        id: res.id,
+        name: res.name,
+        permissions: res.permissions,
+        revoked: res.revoked,
+        token: models::JwtManagement(res.token),
+    }))
 }
 
 pub(crate) async fn register_user(

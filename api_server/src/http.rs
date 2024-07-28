@@ -540,6 +540,15 @@ pub fn build_paths(state: AppState) -> Router {
             get(auth::handlers::get_renew_access_token),
         )
         .route("/v1/auth/register", post(auth::handlers::post_register))
+        .route(
+            "/v1/auth/mtokens",
+            get(auth::handlers::get_management_tokens)
+                .post(auth::handlers::post_create_management_token),
+        )
+        .route(
+            "/v1/auth/mtokens/:token_id",
+            delete(auth::handlers::delete_revoke_management_token),
+        )
         .route("/v1/auth/get_captcha", get(auth::handlers::get_captcha))
         .route(
             "/v1/auth/register/username_check",

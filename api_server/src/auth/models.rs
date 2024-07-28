@@ -21,11 +21,33 @@ use sqlx::types::ipnetwork::IpNetwork;
 use std::collections::HashMap;
 use uuid::Uuid;
 
+use crate::auth::Permission;
+
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub(crate) struct JwtAccess(pub(crate) String);
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub(crate) struct JwtRefresh(pub(crate) String);
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
+pub(crate) struct JwtManagement(pub(crate) String);
+
+impl From<String> for JwtAccess {
+    fn from(s: String) -> Self {
+        Self(s)
+    }
+}
+
+impl From<String> for JwtRefresh {
+    fn from(s: String) -> Self {
+        Self(s)
+    }
+}
+
+impl From<String> for JwtManagement {
+    fn from(s: String) -> Self {
+        Self(s)
+    }
+}
 
 #[derive(Debug)]
 pub struct HashedRegistration {
@@ -64,6 +86,18 @@ pub struct RefreshClaims {
     pub jti: Uuid,
     // Username
     pub uname: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+pub struct ManagementClaims {
+    // Issued at
+    pub iat: i64,
+    // Expiration
+    pub exp: i64,
+    // User id
+    pub uid: i32,
+    // JWT ID
+    pub jti: Uuid,
 }
 
 #[derive(Debug)]
@@ -175,6 +209,11 @@ pub(crate) mod requests {
     pub struct UsernameAvailability {
         pub username: String,
     }
+
+    #[derive(Debug, Deserialize)]
+    pub struct NewManagementToken {
+        pub name: String,
+    }
 }
 
 pub(crate) mod responses {
@@ -227,5 +266,14 @@ pub(crate) mod responses {
         pub(crate) creation: chrono::DateTime<Utc>,
         pub(crate) last_active: chrono::DateTime<Utc>,
         pub(crate) expiration: chrono::DateTime<Utc>,
+    }
+
+    #[derive(Debug, Serialize)]
+    pub struct ManagementToken {
+        pub id: Uuid,
+        pub name: String,
+        pub token: super::JwtManagement,
+        pub revoked: bool,
+        pub permissions: sqlx::types::Json<Vec<super::Permission>>,
     }
 }

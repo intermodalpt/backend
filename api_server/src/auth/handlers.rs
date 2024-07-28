@@ -127,6 +127,82 @@ pub(crate) async fn get_renew_access_token(
     json_response_with_cookie_set("access_token", access_token.0, access_claims)
 }
 
+pub(crate) async fn get_management_tokens(
+    State(state): State<AppState>,
+    super::ScopedClaim(claims, _): super::ScopedClaim<super::perms::Admin>,
+    client_ip: SecureClientIp,
+) -> Result<Json<Vec<responses::ManagementToken>>, Error> {
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
+
+    // TODO log this access
+    // TODO have this as a param
+    let show_revoked = false;
+    let tokens = sql::fetch_user_management_tokens(
+        &mut transaction,
+        claims.uid,
+        show_revoked,
+    )
+    .await?;
+
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Failed to commit transaction: {err}");
+        Error::DatabaseExecution
+    })?;
+
+    Ok(Json(tokens))
+}
+
+pub(crate) async fn post_create_management_token(
+    State(state): State<AppState>,
+    super::ScopedClaim(claims, _): super::ScopedClaim<super::perms::Admin>,
+    client_ip: SecureClientIp,
+    Json(request): Json<requests::NewManagementToken>,
+) -> Result<Json<responses::ManagementToken>, Error> {
+    Ok(Json(
+        logic::create_management_token(
+            request,
+            claims.uid,
+            client_ip.0,
+            &state.pool,
+        )
+        .await?,
+    ))
+}
+
+pub(crate) async fn delete_revoke_management_token(
+    State(state): State<AppState>,
+    Path(token_id): Path<Uuid>,
+    super::ScopedClaim(claims, _): super::ScopedClaim<super::perms::Admin>,
+    client_ip: SecureClientIp,
+) -> Result<(), Error> {
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
+
+    sql::insert_audit_log_entry(
+        &mut transaction,
+        claims.uid,
+        &client_ip.0.into(),
+        auth::AuditLogAction::SessionRevoked {
+            session_id: token_id,
+            was_logout: false,
+        },
+    )
+    .await?;
+
+    sql::update_set_session_revoked(&mut transaction, token_id).await?;
+
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Failed to commit transaction: {err}");
+        Error::DatabaseExecution
+    })?;
+    Ok(())
+}
+
 pub(crate) async fn post_admin_change_password(
     State(state): State<AppState>,
     super::ScopedClaim(claims, _): super::ScopedClaim<super::perms::Admin>,

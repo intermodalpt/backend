@@ -1,0 +1,47 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT user_sessions.id, management_tokens.name, management_tokens.token,\n    user_sessions.revoked,\n    management_tokens.permissions\n        as \"permissions!: sqlx::types::Json<Vec<super::Permission>>\"\nFROM management_tokens\nJOIN user_sessions ON user_sessions.id = management_tokens.session_id\nWHERE user_sessions.user_id=$1 AND (NOT revoked OR $2)\n    ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "token",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "revoked",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 4,
+        "name": "permissions!: sqlx::types::Json<Vec<super::Permission>>",
+        "type_info": "Jsonb"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Bool"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "49a751ac4af2a42259e3e2b311f37b141ae9df17e9233a994316f57d25dc621a"
+}
