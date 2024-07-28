@@ -4,10 +4,57 @@ CREATE TABLE users
     username            text                  NOT NULL UNIQUE,
     password            text                  NOT NULL,
     is_admin            boolean DEFAULT false NOT NULL,
-    is_trusted          boolean DEFAULT false NOT NULL,
-    works_for           integer,
+    is_trusted          boolean DEFAULT false NOT NULL, -- TODO drop
+    works_for           integer, -- TODO implement properly or drop; REFERENCES operators (id),
     email               text                  NOT NULL,
-    can_edit_departures boolean DEFAULT false NOT NULL
+    verification_level  int default 0         NOT NULL,
+    consent             jsonb DEFAULT '{}'::jsonb NOT NULL,
+    consent_date        timestamp with time zone,
+    registration_date   timestamp with time zone DEFAULT clock_timestamp() NOT NULL,
+    survey              JSONB DEFAULT '{}'::jsonb NOT NULL
+);
+
+CREATE TABLE user_verifications
+(
+    id            serial PRIMARY KEY,
+    user_id       integer REFERENCES users (id) NOT NULL,
+    email         text NOT NULL,
+    secret        text NOT NULL,
+    completed     boolean DEFAULT false NOT NULL,
+    expiration    timestamp with time zone NOT NULL,
+    ip            inet NOT NULL,
+    user_agent    text NOT NULL
+);
+
+CREATE TABLE user_permissions
+(
+    user_id       integer REFERENCES users (id) NOT NULL,
+    permissions   jsonb DEFAULT '[]'::jsonb NOT NULL,
+    issuer_id     integer REFERENCES users (id),
+    priority      integer DEFAULT 0 NOT NULL
+);
+
+CREATE TABLE user_sessions
+(
+    id          uuid PRIMARY KEY, -- Also the renewal token UUID
+    user_id     integer REFERENCES users (id) NOT NULL,
+    ip          inet NOT NULL,
+    user_agent  text NOT NULL,
+    creation    timestamp with time zone DEFAULT clock_timestamp() NOT NULL,
+    expiration  timestamp with time zone NOT NULL,
+    revoked     boolean DEFAULT false NOT NULL
+);
+
+-- Access authorization through a user session
+CREATE TABLE user_session_access
+(
+    id          uuid PRIMARY KEY, -- Also the access token UUID
+    session_id  uuid REFERENCES user_sessions (id) NOT NULL,
+    ip          inet NOT NULL,
+    user_agent  text NOT NULL,
+    creation    timestamp with time zone DEFAULT clock_timestamp() NOT NULL,
+    last_active timestamp with time zone DEFAULT clock_timestamp() NOT NULL,
+    expiration  timestamp with time zone NOT NULL
 );
 
 CREATE TABLE contributions

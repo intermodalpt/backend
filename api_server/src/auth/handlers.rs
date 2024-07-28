@@ -197,3 +197,49 @@ pub(crate) async fn get_audit_log(
         total: total?,
     }))
 }
+
+pub(crate) async fn get_user_sessions(
+    State(state): State<AppState>,
+    super::ScopedClaim(_, _): super::ScopedClaim<super::perms::Admin>,
+    Path(user_id): Path<i32>,
+    _: SecureClientIp,
+) -> Result<Json<Vec<responses::UserSession>>, Error> {
+    // TODO log this access
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
+
+    let sessions = sql::fetch_user_sessions(&mut *transaction, user_id).await?;
+
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Failed to commit transaction: {err}");
+        Error::DatabaseExecution
+    })?;
+
+    Ok(Json(sessions))
+}
+
+pub(crate) async fn get_session_accesses(
+    State(state): State<AppState>,
+    super::ScopedClaim(_, _): super::ScopedClaim<super::perms::Admin>,
+    Path(session_id): Path<Uuid>,
+    _: SecureClientIp,
+) -> Result<Json<Vec<responses::UserAccessSession>>, Error> {
+    // TODO log this access
+
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
+
+    let accesses =
+        sql::fetch_session_accesses(&mut *transaction, session_id).await?;
+
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Failed to commit transaction: {err}");
+        Error::DatabaseExecution
+    })?;
+
+    Ok(Json(accesses))
+}

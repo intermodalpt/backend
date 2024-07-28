@@ -66,6 +66,25 @@ pub struct RefreshClaims {
     pub uname: String,
 }
 
+#[derive(Debug)]
+pub(crate) struct NewUserSessionMeta<'a> {
+    pub(crate) id: Uuid,
+    pub(crate) user_id: i32,
+    pub(crate) ip: IpNetwork,
+    pub(crate) user_agent: &'a str,
+    pub(crate) expiration: chrono::DateTime<Utc>,
+}
+
+#[derive(Debug)]
+pub(crate) struct NewUserSessionAccessMeta<'a> {
+    pub(crate) access: Uuid,
+    // I hate the name of this field. "session" is the refresh token ID
+    pub(crate) session: Uuid,
+    pub(crate) ip: IpNetwork,
+    pub(crate) user_agent: &'a str,
+    pub(crate) expiration: chrono::DateTime<Utc>,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ConsentAnswer {
     pub copyright: bool,
@@ -159,30 +178,17 @@ pub(crate) mod requests {
 }
 
 pub(crate) mod responses {
+    use chrono::Utc;
     use serde::Serialize;
+    use sqlx::types::ipnetwork::IpNetwork;
     use uuid::Uuid;
 
-    use crate::auth::models::{JwtAccess, JwtRefresh};
     use commons::models::auth;
 
     #[derive(Serialize)]
     pub struct CaptchaChallenge {
         pub png: String,
         pub uuid: Uuid,
-    }
-
-    #[derive(Serialize)]
-    pub struct RefreshToken {
-        #[serde(skip_serializing_if = "Vec::is_empty")]
-        pub pending_tasks: Vec<String>,
-        pub token: JwtRefresh,
-    }
-
-    #[derive(Serialize)]
-    pub struct AccessToken {
-        #[serde(skip_serializing_if = "Vec::is_empty")]
-        pub pending_tasks: Vec<String>,
-        pub token: Option<JwtAccess>,
     }
 
     #[derive(Serialize)]
@@ -198,5 +204,28 @@ pub(crate) mod responses {
         Available,
         Invalid { reason: String },
         Taken,
+    }
+
+    // These are a 1:1 with the issued JWT refresh tokens
+    #[derive(Debug, Serialize)]
+    pub(crate) struct UserSession {
+        pub(crate) id: Uuid,
+        pub(crate) user_id: i32,
+        pub(crate) ip: IpNetwork,
+        pub(crate) user_agent: String,
+        pub(crate) expiration: chrono::DateTime<Utc>,
+        pub(crate) revoked: bool,
+    }
+
+    // These are a 1:1 with the issued JWT access tokens
+    #[derive(Debug, Serialize)]
+    pub(crate) struct UserAccessSession {
+        pub(crate) id: Uuid,
+        pub(crate) session_id: Uuid,
+        pub(crate) ip: IpNetwork,
+        pub(crate) user_agent: String,
+        pub(crate) creation: chrono::DateTime<Utc>,
+        pub(crate) last_active: chrono::DateTime<Utc>,
+        pub(crate) expiration: chrono::DateTime<Utc>,
     }
 }

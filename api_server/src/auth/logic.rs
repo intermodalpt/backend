@@ -1,6 +1,6 @@
 /*
     Intermodal, transportation information aggregator
-    Copyright (C) 2022 - 2023  Cláudio Pereira
+    Copyright (C) 2022 - 2024  Cláudio Pereira
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -16,9 +16,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use std::net::IpAddr;
-use std::ops::Add;
-
 use chrono::Utc;
 use pbkdf2::{
     password_hash::{
@@ -28,6 +25,7 @@ use pbkdf2::{
     Pbkdf2,
 };
 use sqlx::PgPool;
+use std::net::IpAddr;
 use uuid::Uuid;
 
 use commons::models::auth;
@@ -58,8 +56,7 @@ pub(crate) async fn login(
         .map_err(|_| Error::Forbidden)?;
 
     let issue_time = Utc::now();
-    let expiration_time =
-        issue_time.add(chrono::Duration::try_days(90).unwrap());
+    let expiration_time = issue_time + chrono::Duration::try_days(90).unwrap();
     let refresh_claims = models::RefreshClaims {
         iat: issue_time.timestamp(),
         exp: expiration_time.timestamp(),
@@ -73,6 +70,18 @@ pub(crate) async fn login(
         tracing::error!("Failed to open transaction: {err}");
         Error::DatabaseExecution
     })?;
+
+    sql::insert_user_session(
+        &mut transaction,
+        models::NewUserSessionMeta {
+            id: refresh_claims.jti,
+            user_id: user.id,
+            ip: requester_ip.into(),
+            user_agent: "",
+            expiration: expiration_time,
+        },
+    )
+    .await?;
 
     sql::insert_audit_log_entry(
         &mut transaction,
@@ -141,7 +150,7 @@ pub(crate) async fn renew_token(
 
     let issue_time = Utc::now();
     let expiration_time =
-        issue_time.add(chrono::Duration::try_minutes(30).unwrap());
+        issue_time + chrono::Duration::try_minutes(30).unwrap();
     let claims = models::Claims {
         iat: issue_time.timestamp(),
         nbf: issue_time.timestamp(),
@@ -153,6 +162,17 @@ pub(crate) async fn renew_token(
     };
     let encoded_claims = encode_access_claims(&claims)?;
 
+    sql::insert_user_session_renewal(
+        &mut transaction,
+        models::NewUserSessionAccessMeta {
+            access: claims.jti,
+            session: refresh_claims.jti,
+            ip: requester_ip.into(),
+            user_agent: "",
+            expiration: expiration_time,
+        },
+    )
+    .await?;
     sql::insert_audit_log_entry(
         &mut transaction,
         refresh_claims.uid,

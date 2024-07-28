@@ -535,9 +535,12 @@ pub fn build_paths(state: AppState) -> Router {
             post(routes::handlers::post_replace_stop_across_routes),
         )
         .route("/v1/auth/login", post(auth::handlers::post_login))
-        .route("/v1/auth/renew", get(auth::handlers::get_access_token))
+        .route(
+            "/v1/auth/renew",
+            get(auth::handlers::get_renew_access_token),
+        )
         .route("/v1/auth/register", post(auth::handlers::post_register))
-        .route("/v1/auth/get_captcha", post(auth::handlers::get_captcha))
+        .route("/v1/auth/get_captcha", get(auth::handlers::get_captcha))
         .route(
             "/v1/auth/register/username_check",
             post(auth::handlers::post_username_availability),
@@ -551,10 +554,18 @@ pub fn build_paths(state: AppState) -> Router {
             "/v1/admin/change_password",
             post(auth::handlers::post_admin_change_password),
         )
-        .route("/v1/admin/audit_log", post(auth::handlers::get_audit_log))
+        .route("/v1/admin/audit/log", post(auth::handlers::get_audit_log))
         .route(
-            "/v1/admin/audit_log/user/:user_id",
+            "/v1/admin/audit/log/user/:user_id",
             post(auth::handlers::get_user_audit_log),
+        )
+        .route(
+            "/v1/admin/audit/user/:user_id/sessions",
+            post(auth::handlers::get_user_sessions),
+        )
+        .route(
+            "/v1/admin/audit/sessions/:session_id/accesses",
+            post(auth::handlers::get_session_accesses),
         )
         .with_state(state)
         .layer(DefaultBodyLimit::disable())

@@ -141,6 +141,127 @@ RETURNING id"#,
     Ok(res.id)
 }
 
+pub(crate) async fn fetch_user_session<'c, E>(
+    executor: E,
+    token_id: Uuid,
+) -> Result<Option<responses::UserSession>>
+where
+    E: sqlx::Executor<'c, Database = sqlx::Postgres>,
+{
+    sqlx::query_as!(
+        responses::UserSession,
+        r#"
+SELECT id, user_id, ip, user_agent, expiration, revoked
+FROM user_sessions
+WHERE id=$1
+    "#,
+        token_id
+    )
+    .fetch_optional(executor)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), token_id = ?token_id);
+        Error::DatabaseExecution
+    })
+}
+
+pub(crate) async fn fetch_user_sessions<'c, E>(
+    executor: E,
+    uid: i32,
+) -> Result<Vec<responses::UserSession>>
+where
+    E: sqlx::Executor<'c, Database = sqlx::Postgres>,
+{
+    sqlx::query_as!(
+        responses::UserSession,
+        r#"
+SELECT id, user_id, ip, user_agent, expiration, revoked
+FROM user_sessions
+WHERE user_id=$1
+    "#,
+        uid
+    )
+    .fetch_all(executor)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), uid);
+        Error::DatabaseExecution
+    })
+}
+
+pub(crate) async fn insert_user_session(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    session_meta: models::NewUserSessionMeta<'_>,
+) -> Result<()> {
+    sqlx::query!(
+        r#"
+INSERT INTO user_sessions(id, user_id, ip, user_agent, expiration)
+VALUES ($1, $2, $3, $4, $5)
+    "#,
+        session_meta.id,
+        session_meta.user_id,
+        session_meta.ip,
+        session_meta.user_agent,
+        session_meta.expiration
+    )
+    .execute(&mut **transaction)
+    .await
+    .map(|_| ())
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), session_meta = ?session_meta);
+        Error::DatabaseExecution
+    })?;
+    Ok(())
+}
+
+pub(crate) async fn fetch_session_accesses<'c, E>(
+    executor: E,
+    session_id: Uuid,
+) -> Result<Vec<responses::UserAccessSession>>
+where
+    E: sqlx::Executor<'c, Database = sqlx::Postgres>,
+{
+    sqlx::query_as!(
+        responses::UserAccessSession,
+        r#"
+SELECT id, session_id, ip, user_agent, creation, last_active, expiration
+FROM user_session_access
+WHERE session_id=$1
+    "#,
+        session_id
+    )
+    .fetch_all(executor)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), session_id = ?session_id);
+        Error::DatabaseExecution
+    })
+}
+
+pub(crate) async fn insert_user_session_renewal(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    session_meta: models::NewUserSessionAccessMeta<'_>,
+) -> Result<()> {
+    sqlx::query!(
+        r#"
+INSERT INTO user_session_access(id, session_id, ip, user_agent, expiration)
+VALUES ($1, $2, $3, $4, $5)
+    "#,
+        session_meta.access,
+        session_meta.session,
+        session_meta.ip,
+        session_meta.user_agent,
+        session_meta.expiration
+    )
+    .execute(&mut **transaction)
+    .await
+    .map(|_| ())
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), session_meta = ?session_meta);
+        Error::DatabaseExecution
+    })
+}
+
 pub(crate) async fn change_user_password(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     username: &str,
