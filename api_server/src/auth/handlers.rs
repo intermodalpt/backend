@@ -65,7 +65,9 @@ pub(crate) async fn post_register(
                 .attempt_captcha(captcha.uuid, &captcha.answer)?;
 
             if !is_valid {
-                return Err(Error::Forbidden);
+                return Err(Error::ValidationFailure(
+                    "Captcha validation failed".to_string(),
+                ));
             }
 
             logic::register(registration, client_ip.0, &state.pool).await
