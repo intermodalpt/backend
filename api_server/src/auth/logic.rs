@@ -32,9 +32,8 @@ use uuid::Uuid;
 use commons::models::auth;
 
 use super::{
-    models, models::requests, sql, Permissions, ACCESS_MINUTES,
-    ACCESS_SECRET_KEY, MANAGEMENT_DAYS, MANAGEMENT_SECRET_KEY, REFRESH_DAYS,
-    REFRESH_SECRET_KEY,
+    models, models::requests, sql, ACCESS_MINUTES, ACCESS_SECRET_KEY,
+    MANAGEMENT_DAYS, MANAGEMENT_SECRET_KEY, REFRESH_DAYS, REFRESH_SECRET_KEY,
 };
 use crate::auth::models::responses;
 use crate::errors::Error;
@@ -142,7 +141,7 @@ pub(crate) async fn renew_token(
     }
 
     let permissions = if user.is_superuser {
-        Permissions::everything()
+        auth::Permissions::everything()
     } else {
         sql::fetch_user_permissions(&mut *transaction, user.id)
             .await?
@@ -398,7 +397,7 @@ pub(crate) async fn register(
         Error::DatabaseExecution
     })?;
 
-    let permissions = Permissions::new_user_default();
+    let permissions = auth::Permissions::new_user_default();
     let user_id = sql::register_user(
         &mut transaction,
         &registration,
@@ -646,8 +645,8 @@ async fn update_user_cached_permissions(
 
 fn compile_permission_assignments(
     assignments: Vec<models::UserPermAssignments>,
-) -> Permissions {
-    let mut permissions = Permissions::default();
+) -> auth::Permissions {
+    let mut permissions = auth::Permissions::default();
 
     assignments
         .into_iter()
@@ -660,10 +659,13 @@ fn compile_permission_assignments(
 
 #[cfg(test)]
 mod tests {
-    use crate::auth::{models, models::requests, Permissions};
-    use crate::errors::Error;
     use sqlx::PgPool;
     use std::net::{IpAddr, Ipv4Addr};
+
+    use commons::models::auth::Permissions;
+
+    use crate::auth::{models, models::requests};
+    use crate::errors::Error;
 
     #[test]
     fn encode_decode_access_claims() {

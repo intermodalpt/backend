@@ -21,7 +21,7 @@ use sqlx::types::ipnetwork::IpNetwork;
 use std::collections::HashMap;
 use uuid::Uuid;
 
-use crate::auth::Permissions;
+use commons::models::auth::Permissions;
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub(crate) struct JwtAccess(pub(crate) String);
@@ -71,7 +71,7 @@ pub struct Claims {
     // User id
     pub uid: i32,
     // Permissions this user has
-    pub permissions: super::Permissions,
+    pub permissions: Permissions,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]

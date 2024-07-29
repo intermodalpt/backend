@@ -124,7 +124,7 @@ pub(crate) async fn fetch_user_management_tokens(
 SELECT user_sessions.id, management_tokens.name, management_tokens.token,
     user_sessions.revoked,
     management_tokens.permissions
-        as "permissions!: sqlx::types::Json<super::Permissions>"
+        as "permissions!: sqlx::types::Json<auth::Permissions>"
 FROM management_tokens
 JOIN user_sessions ON user_sessions.id = management_tokens.session_id
 WHERE user_sessions.user_id=$1 AND (NOT revoked OR $2)
@@ -185,13 +185,13 @@ pub(crate) async fn update_set_session_revoked(
 pub(crate) async fn fetch_user_permissions<'c, E>(
     executor: E,
     user_id: i32,
-) -> Result<Option<super::Permissions>>
+) -> Result<Option<auth::Permissions>>
 where
     E: sqlx::Executor<'c, Database = sqlx::Postgres>,
 {
     sqlx::query!(
         r#"
-SELECT permissions as "permissions!: sqlx::types::Json<super::Permissions>"
+SELECT permissions as "permissions!: sqlx::types::Json<auth::Permissions>"
 FROM users
 WHERE id=$1"#,
         user_id
@@ -216,7 +216,7 @@ where
         models::UserPermAssignments,
         r#"
 SELECT id, issuer_id, priority,
-    permissions as "permissions!: sqlx::types::Json<super::Permissions>"
+    permissions as "permissions!: sqlx::types::Json<auth::Permissions>"
 FROM user_permissions
 WHERE user_id=$1"#,
         user_id
@@ -231,7 +231,7 @@ WHERE user_id=$1"#,
 
 pub(crate) async fn insert_user_permission_assignment(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-    permissions: &super::Permissions,
+    permissions: &auth::Permissions,
     user_id: i32,
     issuer_id: Option<i32>,
     priority: i32,
@@ -272,7 +272,7 @@ pub(crate) async fn fetch_management_token_permissions(
 SELECT user_sessions.id, user_sessions.revoked, user_sessions.expiration,
     management_tokens.name, management_tokens.token,
     management_tokens.permissions
-        as "permissions!: sqlx::types::Json<super::Permissions>"
+        as "permissions!: sqlx::types::Json<auth::Permissions>"
 FROM management_tokens
 RIGHT JOIN user_sessions ON user_sessions.id = management_tokens.session_id
 WHERE user_sessions.id=$1"#,
@@ -297,7 +297,7 @@ WHERE user_sessions.id=$1"#,
 pub(crate) async fn register_user(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     request: &models::HashedRegistration,
-    permissions: &super::Permissions,
+    permissions: &auth::Permissions,
     consent: models::ConsentAnswer,
     survey: serde_json::Value,
 ) -> Result<i32> {
@@ -334,7 +334,7 @@ RETURNING id"#,
 pub(crate) async fn update_user_cached_permissions(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     user_id: i32,
-    permissions: &super::Permissions,
+    permissions: &auth::Permissions,
 ) -> Result<()> {
     sqlx::query!(
         "UPDATE users SET permissions=$1 WHERE id=$2",
