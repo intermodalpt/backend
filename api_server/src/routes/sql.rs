@@ -578,7 +578,6 @@ RETURNING id
 
 pub(crate) async fn update_subroute(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-    route_id: i32,
     subroute_id: i32,
     changes: requests::ChangeSubroute,
 ) -> Result<()> {
@@ -586,7 +585,7 @@ pub(crate) async fn update_subroute(
         r#"
 UPDATE subroutes
 SET "group"=$1, flag=$2, origin=$3, destination=$4, headsign=$5, via=$6, circular=$7
-WHERE id=$8 AND route=$9
+WHERE id=$8
     "#,
         changes.group,
         changes.flag,
@@ -595,8 +594,7 @@ WHERE id=$8 AND route=$9
         changes.headsign,
         sqlx::types::Json(&changes.via) as _,
         changes.circular,
-        subroute_id,
-        route_id,
+        subroute_id
     )
     .execute(&mut **transaction)
     .await
@@ -604,8 +602,7 @@ WHERE id=$8 AND route=$9
         tracing::error!(
             error=err.to_string(),
             changes=?changes,
-            subroute_id,
-            route_id
+            subroute_id
         );
         Error::DatabaseExecution
     })?;
@@ -615,21 +612,19 @@ WHERE id=$8 AND route=$9
 
 pub(crate) async fn delete_subroute(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-    route_id: i32,
     subroute_id: i32,
 ) -> Result<()> {
     let deleted_rows = sqlx::query!(
         r#"
 DELETE FROM subroutes
-WHERE id=$1 AND route=$2
+WHERE id=$1
     "#,
-        subroute_id,
-        route_id
+        subroute_id
     )
     .execute(&mut **transaction)
     .await
     .map_err(|err| {
-        tracing::error!(error = err.to_string(), subroute_id, route_id);
+        tracing::error!(error = err.to_string(), subroute_id);
         Error::DatabaseExecution
     })?
     .rows_affected();

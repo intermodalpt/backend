@@ -183,13 +183,8 @@ pub fn build_paths(state: AppState) -> Router {
             get(routes::handlers::get_route_full),
         )
         .route(
-            "/v1/routes/:route_id/create_subroute",
+            "/v1/routes/:route_id/subroutes",
             post(routes::handlers::create_subroute),
-        )
-        .route(
-            "/v1/routes/:route_id/:subroute_id",
-            patch(routes::handlers::patch_subroute)
-                .delete(routes::handlers::delete_subroute),
         )
         .route(
             "/v1/routes/:route_id/schedule",
@@ -215,6 +210,11 @@ pub fn build_paths(state: AppState) -> Router {
         .route(
             "/v1/routes/:route_id/stops/full", // <- TODO simplify url, these are not full stops
             get(stops::handlers::get_route_stops),
+        )
+        .route(
+            "/v1/subroutes/:subroute_id",
+            patch(routes::handlers::patch_subroute)
+                .delete(routes::handlers::delete_subroute),
         )
         .route(
             "/v1/subroutes/:subroute_id/stops",

@@ -213,7 +213,7 @@ pub(crate) async fn create_subroute(
 pub(crate) async fn patch_subroute(
     State(state): State<AppState>,
     auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::Admin>,
-    Path((route_id, subroute_id)): Path<(i32, i32)>,
+    Path(subroute_id): Path<i32>,
     Json(changes): Json<requests::ChangeSubroute>,
 ) -> Result<Json<routes::Subroute>, Error> {
     let subroute = sql::fetch_simple_subroute(&state.pool, subroute_id)
@@ -242,8 +242,7 @@ pub(crate) async fn patch_subroute(
     )
     .await?;
 
-    sql::update_subroute(&mut transaction, route_id, subroute_id, changes)
-        .await?;
+    sql::update_subroute(&mut transaction, subroute_id, changes).await?;
 
     transaction.commit().await.map_err(|err| {
         tracing::error!("Transaction failed to commit: {err}");
@@ -256,7 +255,7 @@ pub(crate) async fn patch_subroute(
 pub(crate) async fn delete_subroute(
     State(state): State<AppState>,
     auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::Admin>,
-    Path((route_id, subroute_id)): Path<(i32, i32)>,
+    Path(subroute_id): Path<i32>,
 ) -> Result<(), Error> {
     let mut transaction = state.pool.begin().await.map_err(|err| {
         tracing::error!("Failed to open transaction: {err}");
@@ -286,7 +285,7 @@ pub(crate) async fn delete_subroute(
 
     sql::delete_subroute_stops(&mut transaction, subroute_id).await?;
     sql::delete_subroute_departures(&mut transaction, subroute_id).await?;
-    sql::delete_subroute(&mut transaction, route_id, subroute_id).await?;
+    sql::delete_subroute(&mut transaction, subroute_id).await?;
 
     transaction.commit().await.map_err(|err| {
         tracing::error!("Transaction failed to commit: {err}");

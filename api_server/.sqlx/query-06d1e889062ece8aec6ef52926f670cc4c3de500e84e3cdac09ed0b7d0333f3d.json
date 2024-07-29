@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nUPDATE subroutes\nSET \"group\"=$1, flag=$2, origin=$3, destination=$4, headsign=$5, via=$6, circular=$7\nWHERE id=$8 AND route=$9\n    ",
+  "query": "\nUPDATE subroutes\nSET \"group\"=$1, flag=$2, origin=$3, destination=$4, headsign=$5, via=$6, circular=$7\nWHERE id=$8\n    ",
   "describe": {
     "columns": [],
     "parameters": {
@@ -12,11 +12,10 @@
         "Text",
         "Jsonb",
         "Bool",
-        "Int4",
         "Int4"
       ]
     },
     "nullable": []
   },
-  "hash": "ef3ada60f345b95a9a9b308ffb9553f79d18f596b7a4dce8e598536e9052d988"
+  "hash": "06d1e889062ece8aec6ef52926f670cc4c3de500e84e3cdac09ed0b7d0333f3d"
 }

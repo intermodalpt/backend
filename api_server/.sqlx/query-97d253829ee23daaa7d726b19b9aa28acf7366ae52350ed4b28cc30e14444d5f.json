@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nDELETE FROM subroutes\nWHERE id=$1\n    ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "97d253829ee23daaa7d726b19b9aa28acf7366ae52350ed4b28cc30e14444d5f"
+}
