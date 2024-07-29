@@ -27,30 +27,14 @@ pub struct AuditLogEntry {
 #[serde(rename_all = "camelCase", tag = "action", content = "data")]
 pub enum AuditLogAction {
     Login,
-    RefreshToken {
-        refresh_jti: Uuid,
-        access_jti: Uuid,
-    },
-    ManagementTokenIssued {
-        session_id: Uuid,
-    },
-    SessionRevoked {
-        session_id: Uuid,
-        was_logout: bool,
-    },
-    Register {
-        username: String,
-        email: String,
-    },
+    RefreshToken,
+    ManagementTokenIssued { session_id: Uuid },
+    SessionRevoked { session_id: Uuid, was_logout: bool },
+    Register { username: String, email: String },
     ChangePassword,
     ChangeAccountDetails {/* ??? */},
     // Actions with an admin override
-    AdminChangeUsername {
-        for_user_id: i32,
-        new_username: String,
-    },
-    AdminChangePassword {
-        for_user_id: i32,
-    },
+    AdminChangeUsername { user_id: i32, new_username: String },
+    AdminChangePassword { user_id: i32 },
     QueryManagementTokens,
 }

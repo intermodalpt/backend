@@ -179,12 +179,9 @@ pub(crate) async fn renew_token(
     .await?;
     sql::insert_audit_log_entry(
         &mut transaction,
-        auth::AuditLogAction::RefreshToken {
-            refresh_jti: refresh_claims.jti,
-            access_jti: claims.jti,
-        },
+        auth::AuditLogAction::RefreshToken,
         refresh_claims.uid,
-        Some(refresh_claims.jti),
+        Some(claims.jti),
         &requester_ip.into(),
     )
     .await?;
@@ -495,7 +492,7 @@ pub(crate) async fn admin_change_password(
     sql::insert_audit_log_entry(
         &mut transaction,
         auth::AuditLogAction::AdminChangePassword {
-            for_user_id: changed_user.id,
+            user_id: changed_user.id,
         },
         claims.uid,
         Some(claims.jti),
