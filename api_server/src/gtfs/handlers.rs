@@ -38,7 +38,7 @@ use crate::{auth, AppState, Error};
 pub(crate) async fn post_update_operator_gtfs(
     State(state): State<AppState>,
     Path(operator_id): Path<i32>,
-    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::PatchGtfs>,
 ) -> Result<(), Error> {
     let operator = operators_sql::fetch_operator(&state.pool, operator_id)
         .await?
@@ -155,7 +155,7 @@ pub(crate) async fn get_operator_validation_data(
 }
 pub(crate) async fn patch_operator_validation_data(
     State(state): State<AppState>,
-    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::PatchGtfs>,
     Path(operator_id): Path<i32>,
     Json(validation): Json<gtfs::OperatorValidation>,
 ) -> Result<(), Error> {
@@ -192,7 +192,7 @@ pub(crate) async fn get_route_validation_data(
 /// and proceeds to replace the old data with the new one
 pub(crate) async fn patch_route_validation_data(
     State(state): State<AppState>,
-    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::PatchGtfs>,
     Path(route): Path<i32>,
     Json(request): Json<requests::RouteSubroutesValidation>,
 ) -> Result<(), Error> {
@@ -234,7 +234,7 @@ pub(crate) async fn patch_route_validation_data(
 /// This means that a previously unrecognized pattern is attached to the subroute
 pub(crate) async fn post_assign_subroute_validation(
     State(state): State<AppState>,
-    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::PatchGtfs>,
     Path(route): Path<i32>,
     Json(request): Json<requests::ValidateSubroute>,
 ) -> Result<(), Error> {
@@ -349,7 +349,7 @@ pub(crate) async fn post_assign_subroute_validation(
 /// Acknowledges the current stops as the last validated against the GTFS data
 pub(crate) async fn post_subroute_validation_current_ack(
     State(state): State<AppState>,
-    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::ValidateRouteGtfs>,
     Path(subroute_id): Path<i32>,
     Json(request): Json<requests::MatchedUpdateStopIds>,
 ) -> Result<(), Error> {
@@ -386,7 +386,7 @@ pub(crate) async fn post_subroute_validation_current_ack(
 /// Acknowledges the current GTFS correspondence data as the latest validated
 pub(crate) async fn post_subroute_validation_correspondence_ack(
     State(state): State<AppState>,
-    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::ValidateRouteGtfs>,
     Path(subroute_id): Path<i32>,
     Json(request): Json<requests::MatchedUpdateStopIds>,
 ) -> Result<(), Error> {

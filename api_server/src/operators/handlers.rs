@@ -46,7 +46,7 @@ pub(crate) async fn get_operator(
 
 pub(crate) async fn post_operator(
     State(state): State<AppState>,
-    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::CreateOperator>,
     Json(mut change): Json<requests::ChangeOperator>,
 ) -> Result<Json<responses::Operator>, Error> {
     let mut transaction = state.pool.begin().await.map_err(|err| {
@@ -67,7 +67,7 @@ pub(crate) async fn post_operator(
 
 pub(crate) async fn patch_operator(
     State(state): State<AppState>,
-    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::ModifyOperatorMeta>,
     Path(operator_id): Path<i32>,
     Json(mut change): Json<requests::ChangeOperator>,
 ) -> Result<(), Error> {
@@ -99,7 +99,9 @@ pub(crate) async fn get_operator_stop_rels(
 pub(crate) async fn put_operator_stop(
     State(state): State<AppState>,
     Path((operator_id, stop_id)): Path<(i32, i32)>,
-    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<
+        auth::perms::ModifyOperatorStops,
+    >,
     Json(change): Json<requests::ChangeOperatorStop>,
 ) -> Result<(), Error> {
     let mut transaction = state.pool.begin().await.map_err(|err| {
@@ -121,7 +123,9 @@ pub(crate) async fn put_operator_stop(
 pub(crate) async fn delete_operator_stop(
     State(state): State<AppState>,
     Path((operator_id, stop_id)): Path<(i32, i32)>,
-    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<
+        auth::perms::ModifyOperatorStops,
+    >,
 ) -> Result<(), Error> {
     let mut transaction = state.pool.begin().await.map_err(|err| {
         tracing::error!("Failed to open transaction: {err}");
@@ -164,7 +168,7 @@ pub(crate) async fn get_operator_route_types(
 pub(crate) async fn post_operator_route_type(
     State(state): State<AppState>,
     Path(operator_id): Path<i32>,
-    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::ModifyOperatorMeta>,
     Json(type_id): Json<requests::ChangeOperatorRouteType>,
 ) -> Result<Json<i32>, Error> {
     let mut transaction = state.pool.begin().await.map_err(|err| {
@@ -189,7 +193,7 @@ pub(crate) async fn post_operator_route_type(
 pub(crate) async fn patch_operator_route_type(
     State(state): State<AppState>,
     Path((operator_id, type_id)): Path<(i32, i32)>,
-    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::ModifyOperatorMeta>,
     Json(route_type): Json<requests::ChangeOperatorRouteType>,
 ) -> Result<(), Error> {
     let mut transaction = state.pool.begin().await.map_err(|err| {
@@ -218,7 +222,7 @@ pub(crate) async fn patch_operator_route_type(
 pub(crate) async fn delete_operator_route_type(
     State(state): State<AppState>,
     Path((operator_id, type_id)): Path<(i32, i32)>,
-    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::ModifyOperatorMeta>,
 ) -> Result<(), Error> {
     let mut transaction = state.pool.begin().await.map_err(|err| {
         tracing::error!("Failed to open transaction: {err}");
@@ -249,7 +253,7 @@ pub(crate) async fn get_operator_issues(
 
 pub(crate) async fn post_issue(
     State(state): State<AppState>,
-    auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::Admin>,
+    auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::ModifyIssues>,
     Json(issue): Json<requests::NewIssue>,
 ) -> Result<Json<IdReturn<i32>>, Error> {
     let mut transaction = state.pool.begin().await.map_err(|err| {
@@ -282,7 +286,7 @@ pub(crate) async fn post_issue(
 
 pub(crate) async fn patch_issue(
     State(state): State<AppState>,
-    auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::Admin>,
+    auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::ModifyIssues>,
     Path(issue_id): Path<i32>,
     Json(change): Json<requests::ChangeIssue>,
 ) -> Result<(), Error> {
@@ -337,7 +341,9 @@ pub(crate) async fn get_operator_calendars(
 pub(crate) async fn post_operator_calendar(
     State(state): State<AppState>,
     Path(operator_id): Path<i32>,
-    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<
+        auth::perms::ModifyOperatorCalendars,
+    >,
     Json(calendar): Json<requests::NewOperatorCalendar>,
 ) -> Result<Json<IdReturn<i32>>, Error> {
     let mut transaction = state.pool.begin().await.map_err(|err| {
@@ -360,7 +366,9 @@ pub(crate) async fn post_operator_calendar(
 pub(crate) async fn delete_operator_calendar(
     State(state): State<AppState>,
     Path((operator_id, calendar_id)): Path<(i32, i32)>,
-    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<
+        auth::perms::ModifyOperatorCalendars,
+    >,
 ) -> Result<(), Error> {
     // TODO forbid the deletion of calendars that are in use
 

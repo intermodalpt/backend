@@ -55,8 +55,10 @@ pub(crate) async fn get_region_full_stops(
 
 pub(crate) async fn get_all_detailed_stops(
     State(state): State<AppState>,
-    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::ExpensiveCalls>,
 ) -> Result<Json<Vec<responses::Stop>>, Error> {
+    // TODO this made sense back in the black and white days.
+    // Consider deprecating.
     Ok(Json(sql::fetch_all_detailed_stops(&state.pool).await?))
 }
 
@@ -78,7 +80,7 @@ pub(crate) async fn get_stop(
 
 pub(crate) async fn post_stop(
     State(state): State<AppState>,
-    auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::Admin>,
+    auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::CreateStop>,
     Json(stop): Json<requests::NewStop>,
 ) -> Result<Json<IdReturn<i32>>, Error> {
     let mut transaction = state.pool.begin().await.map_err(|err| {
@@ -107,7 +109,9 @@ pub(crate) async fn post_stop(
 
 pub(crate) async fn patch_stop(
     State(state): State<AppState>,
-    auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::Admin>,
+    auth::ScopedClaim(claims, _): auth::ScopedClaim<
+        auth::perms::ModifyStopAttrs,
+    >,
     Path(stop_id): Path<i32>,
     Json(changes): Json<requests::ChangeStop>,
 ) -> Result<Json<stops::Stop>, Error> {
@@ -155,7 +159,7 @@ pub(crate) async fn patch_stop(
 pub(crate) async fn put_stop_position(
     State(state): State<AppState>,
     Path(stop_id): Path<i32>,
-    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::ModifyStopPos>,
     Json(location): Json<requests::Position>,
 ) -> Result<(), Error> {
     let mut transaction = state.pool.begin().await.map_err(|err| {

@@ -133,7 +133,7 @@ pub(crate) async fn get_renew_access_token(
 
 pub(crate) async fn get_management_tokens(
     State(state): State<AppState>,
-    super::ScopedClaim(claims, _): super::ScopedClaim<super::perms::Admin>,
+    claims: models::Claims,
     client_ip: SecureClientIp,
 ) -> Result<Json<Vec<responses::ManagementToken>>, Error> {
     let mut transaction = state.pool.begin().await.map_err(|err| {
@@ -170,7 +170,7 @@ pub(crate) async fn get_management_tokens(
 
 pub(crate) async fn post_create_management_token(
     State(state): State<AppState>,
-    super::ScopedClaim(claims, _): super::ScopedClaim<super::perms::Admin>,
+    claims: models::Claims,
     client_ip: SecureClientIp,
     UserAgent(user_agent): UserAgent,
     Json(request): Json<requests::NewManagementToken>,
@@ -190,7 +190,9 @@ pub(crate) async fn post_create_management_token(
 pub(crate) async fn delete_revoke_management_token(
     State(state): State<AppState>,
     Path(token_id): Path<Uuid>,
-    super::ScopedClaim(claims, _): super::ScopedClaim<super::perms::Admin>,
+    super::ScopedClaim(claims, _): super::ScopedClaim<
+        super::perms::ManageUserSessions,
+    >,
     client_ip: SecureClientIp,
 ) -> Result<(), Error> {
     let mut transaction = state.pool.begin().await.map_err(|err| {
@@ -221,7 +223,9 @@ pub(crate) async fn delete_revoke_management_token(
 
 pub(crate) async fn post_admin_change_password(
     State(state): State<AppState>,
-    super::ScopedClaim(claims, _): super::ScopedClaim<super::perms::Admin>,
+    super::ScopedClaim(claims, _): super::ScopedClaim<
+        super::perms::ChangePasswords,
+    >,
     client_ip: SecureClientIp,
     Json(request): Json<requests::ChangeUnknownPassword>,
 ) -> Result<(), Error> {
@@ -247,7 +251,7 @@ pub(crate) async fn post_user_change_password(
 
 pub(crate) async fn get_user_audit_log(
     State(state): State<AppState>,
-    super::ScopedClaim(_, _): super::ScopedClaim<super::perms::Admin>,
+    super::ScopedClaim(_, _): super::ScopedClaim<super::perms::ReadAuditLog>,
     _: SecureClientIp,
     paginator: Query<Page>,
     Path(user_id): Path<i32>,
@@ -271,7 +275,7 @@ pub(crate) async fn get_user_audit_log(
 
 pub(crate) async fn get_audit_log(
     State(state): State<AppState>,
-    super::ScopedClaim(_, _): super::ScopedClaim<super::perms::Admin>,
+    super::ScopedClaim(_, _): super::ScopedClaim<super::perms::ReadAuditLog>,
     _: SecureClientIp,
     paginator: Query<Page>,
 ) -> Result<Json<Pagination<responses::AuditLogEntry>>, Error> {
@@ -294,7 +298,9 @@ pub(crate) async fn get_audit_log(
 
 pub(crate) async fn get_user_sessions(
     State(state): State<AppState>,
-    super::ScopedClaim(_, _): super::ScopedClaim<super::perms::Admin>,
+    super::ScopedClaim(_, _): super::ScopedClaim<
+        super::perms::ManageUserSessions,
+    >,
     Path(user_id): Path<i32>,
     _: SecureClientIp,
 ) -> Result<Json<Vec<responses::UserSession>>, Error> {
@@ -316,7 +322,9 @@ pub(crate) async fn get_user_sessions(
 
 pub(crate) async fn get_session_accesses(
     State(state): State<AppState>,
-    super::ScopedClaim(_, _): super::ScopedClaim<super::perms::Admin>,
+    super::ScopedClaim(_, _): super::ScopedClaim<
+        super::perms::ManageUserSessions,
+    >,
     Path(session_id): Path<Uuid>,
     _: SecureClientIp,
 ) -> Result<Json<Vec<responses::UserAccessSession>>, Error> {

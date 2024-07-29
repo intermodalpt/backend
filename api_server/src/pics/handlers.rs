@@ -35,13 +35,14 @@ pub(crate) async fn get_stop_pictures(
     Path(stop_id): Path<i32>,
     claims: Option<auth::Claims>,
 ) -> Result<Json<Vec<responses::PicWithStops>>, Error> {
-    let is_trusted = claims
-        .as_ref()
-        .is_some_and(|c| auth::perms::Trusted::is_valid(&c.permissions));
+    let view_sensitive = claims.as_ref().is_some_and(|c| {
+        auth::perms::ViewSensitiveStopPic::is_valid(&c.permissions)
+    });
     let uid = claims.map(|c| c.uid);
 
     Ok(Json(
-        sql::fetch_stop_pictures(&state.pool, stop_id, is_trusted, uid).await?,
+        sql::fetch_stop_pictures(&state.pool, stop_id, view_sensitive, uid)
+            .await?,
     ))
 }
 
@@ -69,7 +70,9 @@ pub(crate) async fn get_picture_stop_rels(
 
 pub(crate) async fn get_pictures(
     State(state): State<AppState>,
-    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<
+        auth::perms::ViewSensitiveStopPic,
+    >,
 ) -> Result<Json<Vec<responses::PicWithStops>>, Error> {
     Ok(Json(sql::fetch_pictures_with_stops(&state.pool).await?))
 }
@@ -78,14 +81,18 @@ pub(crate) async fn get_pictures_map(
     State(state): State<AppState>,
     claims: Option<auth::Claims>,
 ) -> Result<Json<Vec<responses::MinimalPicWithStops>>, Error> {
-    let is_trusted = claims
-        .as_ref()
-        .is_some_and(|c| auth::perms::Trusted::is_valid(&c.permissions));
+    let view_sensitive = claims.as_ref().is_some_and(|c| {
+        auth::perms::ViewSensitiveStopPic::is_valid(&c.permissions)
+    });
     let uid = claims.map(|c| c.uid);
 
     Ok(Json(
-        sql::fetch_minimal_pictures_with_stops(&state.pool, is_trusted, uid)
-            .await?,
+        sql::fetch_minimal_pictures_with_stops(
+            &state.pool,
+            view_sensitive,
+            uid,
+        )
+        .await?,
     ))
 }
 
@@ -114,9 +121,9 @@ pub(crate) async fn get_latest_stop_pictures(
     claims: Option<auth::Claims>,
     qs: Query<PicsPage>,
 ) -> Result<Json<Vec<responses::PicWithStops>>, Error> {
-    let is_trusted = claims
-        .as_ref()
-        .is_some_and(|c| auth::perms::Trusted::is_valid(&c.permissions));
+    let view_sensitive = claims.as_ref().is_some_and(|c| {
+        auth::perms::ViewSensitiveStopPic::is_valid(&c.permissions)
+    });
 
     let claims_matches_user = matches!(
         claims,
@@ -127,7 +134,7 @@ pub(crate) async fn get_latest_stop_pictures(
         if Some(uid) == qs.user
     );
 
-    if !claims_matches_user && (qs.user.is_some() && !is_trusted) {
+    if !claims_matches_user && (qs.user.is_some() && !view_sensitive) {
         return Err(Error::Forbidden);
     }
 
@@ -143,7 +150,7 @@ pub(crate) async fn get_latest_stop_pictures(
         return Ok(Json(
             sql::fetch_untagged_pictures(
                 &state.pool,
-                is_trusted,
+                view_sensitive,
                 uid,
                 offset,
                 take,
@@ -156,7 +163,7 @@ pub(crate) async fn get_latest_stop_pictures(
         return Ok(Json(
             sql::fetch_tagged_pictures(
                 &state.pool,
-                is_trusted,
+                view_sensitive,
                 uid,
                 offset,
                 take,
@@ -166,8 +173,14 @@ pub(crate) async fn get_latest_stop_pictures(
     }
 
     Ok(Json(
-        sql::fetch_latest_pictures(&state.pool, is_trusted, uid, offset, take)
-            .await?,
+        sql::fetch_latest_pictures(
+            &state.pool,
+            view_sensitive,
+            uid,
+            offset,
+            take,
+        )
+        .await?,
     ))
 }
 
@@ -177,9 +190,9 @@ pub(crate) async fn get_user_stop_pictures(
     page_qs: Query<PicsPage>,
     Path(user_id): Path<i32>,
 ) -> Result<Json<Vec<responses::PicWithStops>>, Error> {
-    let is_trusted = claims
-        .as_ref()
-        .is_some_and(|c| auth::perms::Trusted::is_valid(&c.permissions));
+    let view_sensitive = claims.as_ref().is_some_and(|c| {
+        auth::perms::ViewSensitiveStopPic::is_valid(&c.permissions)
+    });
 
     let requester_uid = claims.map(|c| c.uid);
 
@@ -192,7 +205,7 @@ pub(crate) async fn get_user_stop_pictures(
         sql::fetch_user_pictures(
             &state.pool,
             user_id,
-            is_trusted || is_self,
+            view_sensitive || is_self,
             offset,
             take,
         )
@@ -208,16 +221,16 @@ pub(crate) async fn get_unpositioned_stop_pictures(
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
-    let is_trusted = claims
-        .as_ref()
-        .is_some_and(|c| auth::perms::Trusted::is_valid(&c.permissions));
+    let view_untagged = claims.as_ref().is_some_and(|c| {
+        auth::perms::ViewUntaggedStopPic::is_valid(&c.permissions)
+    });
 
     let uid = claims.map(|c| c.uid);
 
     Ok(Json(
         sql::fetch_unpositioned_pictures(
             &state.pool,
-            is_trusted,
+            view_untagged,
             uid,
             offset,
             take,
@@ -334,9 +347,9 @@ pub(crate) async fn get_stop_picture_meta(
     claims: Option<auth::Claims>,
     Path(picture_id): Path<i32>,
 ) -> Result<Json<responses::PicWithStops>, Error> {
-    let is_trusted = claims
-        .as_ref()
-        .is_some_and(|c| auth::perms::Trusted::is_valid(&c.permissions));
+    let view_sensitive = claims.as_ref().is_some_and(|c| {
+        auth::perms::ViewSensitiveStopPic::is_valid(&c.permissions)
+    });
 
     let uid = claims.map(|c| c.uid);
 
@@ -344,7 +357,9 @@ pub(crate) async fn get_stop_picture_meta(
         .await?
         .ok_or(Error::NotFoundUpstream)?;
 
-    if (pic.tagged && !pic.sensitive) || Some(pic.uploader) == uid || is_trusted
+    if (pic.tagged && !pic.sensitive)
+        || Some(pic.uploader) == uid
+        || view_sensitive
     {
         Ok(Json(pic))
     } else {
@@ -463,13 +478,15 @@ pub(crate) async fn get_picture_count_by_stop(
 
 pub(crate) async fn get_panos(
     State(state): State<AppState>,
-    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<
+        auth::perms::ViewUntaggedStopPic,
+    >,
 ) -> Result<Json<Vec<responses::FullPanoPic>>, Error> {
     Ok(Json(sql::fetch_panos(&state.pool, true).await?))
 }
 pub(crate) async fn upload_pano_picture(
     State(state): State<AppState>,
-    auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::Admin>,
+    auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::UploadStopPic>,
     mut multipart: Multipart,
 ) -> Result<Json<pics::PanoPic>, Error> {
     let field = get_exactly_one_field(&mut multipart).await?;
@@ -502,26 +519,30 @@ pub(crate) async fn get_stop_pano(
     Path(stop_id): Path<i32>,
     claims: Option<auth::Claims>,
 ) -> Result<Json<Option<responses::PanoPic>>, Error> {
-    let is_trusted = claims
-        .as_ref()
-        .is_some_and(|c| auth::perms::Trusted::is_valid(&c.permissions));
+    let view_sensitive = claims.as_ref().is_some_and(|c| {
+        auth::perms::ViewSensitiveStopPic::is_valid(&c.permissions)
+    });
 
     Ok(Json(
-        sql::fetch_stop_pano(&state.pool, stop_id, is_trusted).await?,
+        sql::fetch_stop_pano(&state.pool, stop_id, view_sensitive).await?,
     ))
 }
 
 pub(crate) async fn get_onion_skin(
     State(state): State<AppState>,
     Path(pano_id): Path<i32>,
-    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Trusted>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<
+        auth::perms::ViewSensitiveStopPic,
+    >,
 ) -> Result<Json<responses::PanoOnion>, Error> {
     Ok(Json(sql::fetch_pano_onion(&state.pool, pano_id).await?))
 }
 
 pub(crate) async fn post_upload_operator_logo(
     State(state): State<AppState>,
-    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<
+        auth::perms::ViewSensitiveStopPic,
+    >,
     Path(operator_id): Path<i32>,
     mut multipart: Multipart,
 ) -> Result<(), Error> {
@@ -552,9 +573,15 @@ pub(crate) async fn post_upload_operator_logo(
 
 pub(crate) async fn post_news_image(
     State(state): State<AppState>,
-    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    claims: auth::Claims,
     mut multipart: Multipart,
 ) -> Result<Json<responses::FullNewsImg>, Error> {
+    if auth::perms::CreateNews::is_valid(&claims.permissions)
+        || auth::perms::ModifyNews::is_valid(&claims.permissions)
+    {
+        return Err(Error::Forbidden);
+    }
+
     let field = get_exactly_one_field(&mut multipart).await?;
 
     let filename = field
@@ -581,9 +608,18 @@ pub(crate) async fn post_news_image(
 
 pub(crate) async fn post_import_external_news_image(
     State(state): State<AppState>,
-    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    claims: auth::Claims,
     Path(external_image_id): Path<i32>,
 ) -> Result<Json<responses::FullNewsImg>, Error> {
+    if auth::perms::CreateNews::is_valid(&claims.permissions)
+        || auth::perms::ModifyNews::is_valid(&claims.permissions)
+    {
+        // FIXME There's a security issue here.
+        // We should check if the external image can be seen by this user
+        // Is not too bad. Let's pretend this is not a thing for now.
+        return Err(Error::Forbidden);
+    }
+
     let img =
         import_external_news_img(&state.bucket, &state.pool, external_image_id)
             .await?;
@@ -593,7 +629,9 @@ pub(crate) async fn post_import_external_news_image(
 
 pub(crate) async fn patch_news_image_meta(
     State(state): State<AppState>,
-    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<
+        auth::perms::ModifyOthersStopPic,
+    >,
     Path(img_id): Path<i32>,
     Json(mut news_img_meta): Json<requests::ChangeNewsPicMeta>,
 ) -> Result<(), Error> {
@@ -616,7 +654,7 @@ pub(crate) async fn patch_news_image_meta(
 
 pub(crate) async fn post_external_news_image(
     State(state): State<AppState>,
-    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::ModifyExternalNews>,
     Path(item_id): Path<i32>,
     mut multipart: Multipart,
 ) -> Result<Json<responses::ExternalNewsImg>, Error> {
@@ -647,7 +685,7 @@ pub(crate) async fn post_external_news_image(
 
 pub(crate) async fn put_external_news_screenshot(
     State(state): State<AppState>,
-    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::ModifyExternalNews>,
     Path(item_id): Path<i32>,
     mut multipart: Multipart,
 ) -> Result<(), Error> {

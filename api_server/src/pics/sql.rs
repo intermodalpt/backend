@@ -247,7 +247,7 @@ GROUP BY stop_pics.id
 /// Ids, URLs and stops for every picture
 pub(crate) async fn fetch_minimal_pictures_with_stops(
     pool: &PgPool,
-    trusted: bool,
+    view_sensitive: bool,
     uid: Option<i32>,
 ) -> Result<Vec<responses::MinimalPicWithStops>> {
     Ok(sqlx::query!(
@@ -263,12 +263,12 @@ WHERE stop_pics.uploader = $1
 GROUP BY stop_pics.id
 "#,
         uid,
-        trusted
+        view_sensitive
     )
     .fetch_all(pool)
     .await
     .map_err(|err| {
-        tracing::error!(error = err.to_string(), uid, trusted);
+        tracing::error!(error = err.to_string(), uid, view_sensitive);
         Error::DatabaseExecution
     })?
     .into_iter()
@@ -355,7 +355,7 @@ ORDER BY stop_pics.capture_date DESC
 pub(crate) async fn fetch_stop_pictures(
     pool: &PgPool,
     stop_id: i32,
-    trusted: bool,
+    view_sensitive: bool,
     uid: Option<i32>,
 ) -> Result<Vec<responses::PicWithStops>> {
     Ok(sqlx::query!(
@@ -381,12 +381,12 @@ ORDER BY quality DESC
     "#,
         stop_id,
         uid,
-        trusted
+        view_sensitive
     )
     .fetch_all(pool)
     .await
     .map_err(|err| {
-        tracing::error!(error=err.to_string(), stop_id, uid, trusted);
+        tracing::error!(error=err.to_string(), stop_id, uid, view_sensitive);
         Error::DatabaseExecution})?
     .into_iter()
     .map(|r| responses::PicWithStops {

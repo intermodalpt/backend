@@ -70,7 +70,7 @@ pub(crate) async fn get_operator_regions(
 pub(crate) async fn put_operator_into_region(
     State(state): State<AppState>,
     Path((region_id, operator_id)): Path<(i32, i32)>,
-    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::ModifyOperatorMeta>,
 ) -> Result<(), Error> {
     let mut transaction = state.pool.begin().await.map_err(|err| {
         tracing::error!("Failed to open transaction: {err}");
@@ -89,7 +89,7 @@ pub(crate) async fn put_operator_into_region(
 pub(crate) async fn delete_operator_from_region(
     State(state): State<AppState>,
     Path((region_id, operator_id)): Path<(i32, i32)>,
-    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::ModifyOperatorMeta>,
 ) -> Result<(), Error> {
     let mut transaction = state.pool.begin().await.map_err(|err| {
         tracing::error!("Failed to open transaction: {err}");
@@ -108,7 +108,6 @@ pub(crate) async fn delete_operator_from_region(
 pub(crate) async fn get_route_regions(
     State(state): State<AppState>,
     Path(route_id): Path<i32>,
-    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
 ) -> Result<Json<Vec<i32>>, Error> {
     Ok(Json(sql::fetch_route_regions(&state.pool, route_id).await?))
 }
@@ -116,7 +115,7 @@ pub(crate) async fn get_route_regions(
 pub(crate) async fn put_route_into_region(
     State(state): State<AppState>,
     Path((region_id, route_id)): Path<(i32, i32)>,
-    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::ModifyRouteBase>,
 ) -> Result<(), Error> {
     let mut transaction = state.pool.begin().await.map_err(|err| {
         tracing::error!("Failed to open transaction: {err}");
@@ -135,7 +134,7 @@ pub(crate) async fn put_route_into_region(
 pub(crate) async fn delete_route_from_region(
     State(state): State<AppState>,
     Path((region_id, route_id)): Path<(i32, i32)>,
-    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::DeleteRoute>,
 ) -> Result<(), Error> {
     let mut transaction = state.pool.begin().await.map_err(|err| {
         tracing::error!("Failed to open transaction: {err}");
@@ -161,7 +160,7 @@ pub(crate) async fn get_stop_regions(
 pub(crate) async fn put_stop_into_region(
     State(state): State<AppState>,
     Path((region_id, stop_id)): Path<(i32, i32)>,
-    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::ModifyStopAttrs>,
 ) -> Result<(), Error> {
     let mut transaction = state.pool.begin().await.map_err(|err| {
         tracing::error!("Failed to open transaction: {err}");
@@ -179,7 +178,7 @@ pub(crate) async fn put_stop_into_region(
 pub(crate) async fn delete_stop_from_region(
     State(state): State<AppState>,
     Path((region_id, stop_id)): Path<(i32, i32)>,
-    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::ModifyStopAttrs>,
 ) -> Result<(), Error> {
     let mut transaction = state.pool.begin().await.map_err(|err| {
         tracing::error!("Failed to open transaction: {err}");
@@ -207,7 +206,7 @@ pub(crate) async fn get_parishes(
 pub(crate) async fn put_stop_parish(
     State(state): State<AppState>,
     Path((stop_id, parish_id)): Path<(i32, i32)>,
-    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::ModifyStopAttrs>,
 ) -> Result<(), Error> {
     sql::update_stop_parish(&state.pool, stop_id, parish_id).await?;
     Ok(())

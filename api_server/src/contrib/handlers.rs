@@ -85,7 +85,7 @@ pub(crate) async fn get_undecided_own_contributions(
 
 pub(crate) async fn get_decided_user_contributions(
     State(state): State<AppState>,
-    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::HandleContrib>,
     Path(user_id): Path<i32>,
     paginator: Query<Page>,
 ) -> Result<Json<Vec<history::Contribution>>, Error> {
@@ -105,7 +105,7 @@ pub(crate) async fn get_decided_user_contributions(
 
 pub(crate) async fn get_undecided_user_contributions(
     State(state): State<AppState>,
-    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::HandleContrib>,
     Path(user_id): Path<i32>,
     paginator: Query<Page>,
 ) -> Result<Json<Vec<history::Contribution>>, Error> {
@@ -368,7 +368,7 @@ pub(crate) struct ContribAcceptanceParam {
 
 pub(crate) async fn post_accept_contrib_data(
     State(state): State<AppState>,
-    auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::Admin>,
+    auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::HandleContrib>,
     params: Query<ContribAcceptanceParam>,
     Path(contribution_id): Path<i64>,
 ) -> Result<(), Error> {
@@ -386,7 +386,7 @@ pub(crate) async fn post_accept_contrib_data(
 
 pub(crate) async fn post_decline_contrib_data(
     State(state): State<AppState>,
-    auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::Admin>,
+    auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::HandleContrib>,
     Path(contribution_id): Path<i64>,
 ) -> Result<(), Error> {
     let contribution = sql::fetch_contribution(&state.pool, contribution_id)

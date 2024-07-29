@@ -47,7 +47,7 @@ pub(crate) async fn get_osm_stop_history(
 #[allow(clippy::cast_sign_loss)]
 pub(crate) async fn patch_osm_stops(
     State(state): State<AppState>,
-    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::UpdateOsmStops>,
     Json(mut newer_stops): Json<Vec<requests::OsmStop>>,
 ) -> Result<(), Error> {
     let mut partial_updates = 0;
@@ -103,7 +103,7 @@ pub(crate) async fn patch_osm_stops(
 pub(crate) async fn delete_osm_stop(
     State(state): State<AppState>,
     Path(id): Path<i64>,
-    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::DeleteOsmStop>,
 ) -> Result<(), Error> {
     sql::delete_osm_stop(&state.pool, id).await
 }
@@ -141,7 +141,9 @@ pub(crate) async fn get_region_stops_map_features(
 pub(crate) async fn put_stop_map_features(
     State(state): State<AppState>,
     Path(stop_id): Path<i32>,
-    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<
+        auth::perms::ModifyStopMapFeatures,
+    >,
     Json(change): Json<requests::OsmFeaturesChange>,
 ) -> Result<(), Error> {
     let mut transaction = state.pool.begin().await.map_err(|err| {
