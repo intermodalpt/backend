@@ -187,7 +187,7 @@ pub(crate) mod responses {
     pub struct Route {
         pub(crate) id: i32,
         pub(crate) type_id: i32,
-        pub(crate) operator: i32,
+        pub(crate) operator_id: i32,
         pub(crate) code: Option<String>,
         pub(crate) name: String,
         pub(crate) circular: bool,
@@ -220,7 +220,7 @@ pub(crate) mod responses {
     pub struct FullRoute {
         pub(crate) id: i32,
         pub(crate) type_id: i32,
-        pub(crate) operator: i32,
+        pub(crate) operator_id: i32,
         pub(crate) code: Option<String>,
         pub(crate) name: String,
         pub(crate) circular: bool,

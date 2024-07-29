@@ -114,7 +114,7 @@ pub(crate) async fn fetch_route_with_subroutes(
     sqlx::query_as!(
         responses::Route,
         r#"
-SELECT routes.id, routes.code, routes.name, routes.operator, routes.type_id,
+SELECT routes.id, routes.code, routes.name, routes.operator as operator_id, routes.type_id,
     routes.circular, routes.main_subroute, routes.active, routes.parishes,
     routes.subroutes AS "subroutes!: Vec<responses::Subroute>",
     COALESCE(routes.badge_text_color, route_types.badge_text_color) as "badge_text!: String",
@@ -153,7 +153,7 @@ pub(crate) async fn fetch_full_route_with_subroutes(
     sqlx::query_as!(
         responses::FullRoute,
         r#"
-SELECT routes.id, routes.code, routes.name, routes.operator, routes.type_id,
+SELECT routes.id, routes.code, routes.name, routes.operator as operator_id, routes.type_id,
     routes.circular, routes.main_subroute, routes.active, routes.parishes,
     routes.subroutes AS "subroutes!: Vec<responses::FullSubroute>",
     routes.regions as "regions!: Vec<i32>", routes.validation,
@@ -209,7 +209,7 @@ pub(crate) async fn fetch_routes(
     sqlx::query_as!(
         responses::Route,
         r#"
-SELECT routes.id, routes.code, routes.name, routes.operator, routes.type_id,
+SELECT routes.id, routes.code, routes.name, routes.operator as operator_id, routes.type_id,
     routes.circular, routes.main_subroute, routes.active, routes.parishes,
     routes.subroutes AS "subroutes!: Vec<responses::Subroute>",
     COALESCE(routes.badge_text_color, route_types.badge_text_color) as "badge_text!: String",
@@ -250,7 +250,7 @@ pub(crate) async fn fetch_operator_routes(
     sqlx::query_as!(
         responses::Route,
         r#"
-SELECT routes.id, routes.code, routes.name, routes.operator, routes.type_id,
+SELECT routes.id, routes.code, routes.name, routes.operator as operator_id, routes.type_id,
     routes.circular, routes.main_subroute, routes.active, routes.parishes,
     routes.subroutes AS "subroutes!: Vec<responses::Subroute>",
     COALESCE(routes.badge_text_color, route_types.badge_text_color) as "badge_text!: String",
@@ -290,7 +290,7 @@ pub(crate) async fn fetch_full_routes(
     sqlx::query_as!(
         responses::FullRoute,
         r#"
-SELECT routes.id, routes.code, routes.name, routes.operator, routes.type_id,
+SELECT routes.id, routes.code, routes.name, routes.operator as operator_id, routes.type_id,
     routes.circular, routes.main_subroute, routes.active, routes.parishes,
     routes.subroutes AS "subroutes!: Vec<responses::FullSubroute>",
     routes.regions as "regions!: Vec<i32>", routes.validation,
@@ -347,7 +347,7 @@ pub(crate) async fn fetch_operator_full_routes(
     sqlx::query_as!(
         responses::FullRoute,
         r#"
-SELECT routes.id, routes.code, routes.name, routes.operator, routes.type_id,
+SELECT routes.id, routes.code, routes.name, routes.operator as operator_id, routes.type_id,
     routes.circular, routes.main_subroute, routes.active, routes.parishes,
     routes.subroutes AS "subroutes!: Vec<responses::FullSubroute>",
     routes.regions as "regions!: Vec<i32>", routes.validation,

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT routes.id, routes.code, routes.name, routes.operator, routes.type_id,\n    routes.circular, routes.main_subroute, routes.active, routes.parishes,\n    routes.subroutes AS \"subroutes!: Vec<responses::Subroute>\",\n    COALESCE(routes.badge_text_color, route_types.badge_text_color) as \"badge_text!: String\",\n    COALESCE(routes.badge_bg_color, route_types.badge_bg_color) as \"badge_bg!: String\"\nFROM (\n    SELECT routes.id, routes.code, routes.name, routes.operator, routes.type as type_id,\n        routes.circular, routes.main_subroute, routes.active, routes.parishes,\n        routes.badge_text_color, routes.badge_bg_color,\n        COALESCE(\n            array_agg((subroutes.id, subroutes.group, subroutes.flag, subroutes.headsign, subroutes.origin,\n                subroutes.destination, subroutes.via, subroutes.circular, subroutes.polyline))\n            FILTER (WHERE subroutes.id IS NOT NULL),\n            '{}'\n        ) AS subroutes\n    FROM routes\n    LEFT JOIN subroutes ON routes.id = subroutes.route\n    WHERE routes.operator = $1\n    GROUP BY routes.id\n    ORDER BY routes.id asc\n) as routes\nJOIN route_types on routes.type_id = route_types.id\n        ",
+  "query": "\nSELECT routes.id, routes.code, routes.name, routes.operator as operator_id, routes.type_id,\n    routes.circular, routes.main_subroute, routes.active, routes.parishes,\n    routes.subroutes AS \"subroutes!: Vec<responses::Subroute>\",\n    COALESCE(routes.badge_text_color, route_types.badge_text_color) as \"badge_text!: String\",\n    COALESCE(routes.badge_bg_color, route_types.badge_bg_color) as \"badge_bg!: String\"\nFROM (\n    SELECT routes.id, routes.code, routes.name, routes.operator, routes.type as type_id,\n        routes.circular, routes.main_subroute, routes.active, routes.parishes,\n        routes.badge_text_color, routes.badge_bg_color,\n        COALESCE(\n            array_agg((subroutes.id, subroutes.group, subroutes.flag, subroutes.headsign, subroutes.origin,\n                subroutes.destination, subroutes.via, subroutes.circular, subroutes.polyline))\n            FILTER (WHERE subroutes.id IS NOT NULL),\n            '{}'\n        ) AS subroutes\n    FROM routes\n    JOIN region_routes on routes.id = region_routes.route_id\n    LEFT JOIN subroutes ON routes.id = subroutes.route\n    WHERE region_routes.region_id = $1\n    GROUP BY routes.id\n    ORDER BY routes.id asc\n) as routes\nJOIN route_types on routes.type_id = route_types.id\n",
   "describe": {
     "columns": [
       {
@@ -20,7 +20,7 @@
       },
       {
         "ordinal": 3,
-        "name": "operator",
+        "name": "operator_id",
         "type_info": "Int4"
       },
       {
@@ -84,5 +84,5 @@
       null
     ]
   },
-  "hash": "c3d6b3f4b62d3cd265fcde1b60ba58c7bc065b7da318591adb8c0fbab3522e1d"
+  "hash": "b765bf0122ad9f14987a51ef0bb5d330ee55f57e4041b931535bdb1a6ffc11b9"
 }
