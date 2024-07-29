@@ -20,22 +20,11 @@ use axum::extract::{Path, Query, State};
 use axum::Json;
 use futures::future;
 use serde::Deserialize;
-use serde_with::serde_derive::Serialize;
 
 use super::models::{requests, responses};
 use super::sql;
-use crate::responses::Pagination;
+use crate::responses::{IdReturn, Pagination};
 use crate::{auth, auth::ClaimPermission, AppState, Error};
-
-#[derive(Serialize)]
-pub struct IdReturn {
-    pub id: i32,
-}
-
-#[derive(Serialize)]
-pub struct UrlReturn {
-    pub url: String,
-}
 
 #[derive(Deserialize, Default)]
 pub(crate) struct Page {
@@ -131,7 +120,7 @@ pub(crate) async fn post_news_item(
     State(state): State<AppState>,
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     Json(mut news_item): Json<requests::ChangeNewsItem>,
-) -> Result<Json<IdReturn>, Error> {
+) -> Result<Json<IdReturn<i32>>, Error> {
     news_item
         .validate()
         .map_err(|err| Error::ValidationFailure(err.to_string()))?;
@@ -308,7 +297,7 @@ pub(crate) async fn post_external_news_item(
     State(state): State<AppState>,
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     Json(mut news_item): Json<requests::NewExternalNewsItem>,
-) -> Result<Json<IdReturn>, Error> {
+) -> Result<Json<IdReturn<i32>>, Error> {
     news_item.tidy();
 
     let mut transaction = state.pool.begin().await.map_err(|err| {

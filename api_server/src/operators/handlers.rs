@@ -16,8 +16,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use std::collections::HashMap;
-
 use axum::extract::{Path, State};
 use axum::Json;
 use chrono::NaiveDate;
@@ -26,6 +24,7 @@ use commons::models::{history, operators};
 
 use super::models::{requests, responses};
 use super::sql;
+use crate::responses::IdReturn;
 use crate::{auth, contrib, AppState, Error};
 
 pub(crate) async fn get_operators(
@@ -252,7 +251,7 @@ pub(crate) async fn post_issue(
     State(state): State<AppState>,
     auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::Admin>,
     Json(issue): Json<requests::NewIssue>,
-) -> Result<Json<HashMap<String, i32>>, Error> {
+) -> Result<Json<IdReturn<i32>>, Error> {
     let mut transaction = state.pool.begin().await.map_err(|err| {
         tracing::error!("Failed to open transaction: {err}");
         Error::DatabaseExecution
@@ -278,11 +277,7 @@ pub(crate) async fn post_issue(
         Error::DatabaseExecution
     })?;
 
-    Ok(Json({
-        let mut map = HashMap::new();
-        map.insert("id".to_string(), id);
-        map
-    }))
+    return Ok(Json(IdReturn { id }));
 }
 
 pub(crate) async fn patch_issue(
@@ -344,7 +339,7 @@ pub(crate) async fn post_operator_calendar(
     Path(operator_id): Path<i32>,
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::Admin>,
     Json(calendar): Json<requests::NewOperatorCalendar>,
-) -> Result<Json<HashMap<String, i32>>, Error> {
+) -> Result<Json<IdReturn<i32>>, Error> {
     let mut transaction = state.pool.begin().await.map_err(|err| {
         tracing::error!("Failed to open transaction: {err}");
         Error::DatabaseExecution
@@ -359,11 +354,7 @@ pub(crate) async fn post_operator_calendar(
         Error::DatabaseExecution
     })?;
 
-    Ok(Json({
-        let mut map = HashMap::new();
-        map.insert("id".to_string(), id);
-        map
-    }))
+    return Ok(Json(IdReturn { id }));
 }
 
 pub(crate) async fn delete_operator_calendar(

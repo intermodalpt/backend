@@ -16,8 +16,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use std::collections::HashMap;
-
 use axum::extract::{Path, State};
 use axum::Json;
 
@@ -25,6 +23,7 @@ use commons::models::{history, routes, stops};
 
 use super::models::{requests, responses};
 use super::sql;
+use crate::responses::IdReturn;
 use crate::{auth, contrib, AppState, Error};
 
 pub(crate) async fn get_region_stops(
@@ -81,7 +80,7 @@ pub(crate) async fn post_stop(
     State(state): State<AppState>,
     auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::Admin>,
     Json(stop): Json<requests::NewStop>,
-) -> Result<Json<HashMap<String, i32>>, Error> {
+) -> Result<Json<IdReturn<i32>>, Error> {
     let mut transaction = state.pool.begin().await.map_err(|err| {
         tracing::error!("Failed to open transaction: {err}");
         Error::DatabaseExecution
@@ -103,11 +102,7 @@ pub(crate) async fn post_stop(
         Error::DatabaseExecution
     })?;
 
-    Ok(Json({
-        let mut map = HashMap::new();
-        map.insert("id".to_string(), id);
-        map
-    }))
+    return Ok(Json(IdReturn { id }));
 }
 
 pub(crate) async fn patch_stop(

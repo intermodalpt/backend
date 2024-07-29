@@ -16,8 +16,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use std::collections::HashMap;
-
 use axum::extract::{Multipart, Path, Query, State};
 use axum::Json;
 use chrono::Local;
@@ -28,7 +26,7 @@ use commons::models::{history, stops};
 
 use super::{logic, requests, responses, sql};
 use crate::errors::Error;
-use crate::responses::Pagination;
+use crate::responses::{IdReturn, Pagination};
 use crate::utils::get_exactly_one_field;
 use crate::{auth, pics, AppState};
 
@@ -228,7 +226,7 @@ pub(crate) async fn post_contrib_stop_data(
     claims: auth::Claims,
     Path(stop_id): Path<i32>,
     Json(contribution): Json<requests::NewStopMetaContribution>,
-) -> Result<Json<HashMap<String, i64>>, Error> {
+) -> Result<Json<IdReturn<i64>>, Error> {
     let stop: stops::Stop = crate::stops::sql::fetch_stop(&state.pool, stop_id)
         .await?
         .ok_or(Error::NotFoundUpstream)?
@@ -237,11 +235,7 @@ pub(crate) async fn post_contrib_stop_data(
     let patch = contribution.contribution.derive_patch(&stop);
 
     if patch.is_empty() {
-        return Ok(Json({
-            let mut map = HashMap::new();
-            map.insert("id".to_string(), -1);
-            map
-        }));
+        return Ok(Json(IdReturn { id: -1 }));
     }
 
     let contribution = history::Contribution {
@@ -258,20 +252,16 @@ pub(crate) async fn post_contrib_stop_data(
         comment: contribution.comment,
     };
 
-    let id = sql::insert_new_contribution(&state.pool, contribution).await?;
-
-    Ok(Json({
-        let mut map = HashMap::new();
-        map.insert("id".to_string(), id);
-        map
-    }))
+    return Ok(Json(IdReturn {
+        id: sql::insert_new_contribution(&state.pool, contribution).await?,
+    }));
 }
 
 pub(crate) async fn post_contrib_stop_picture(
     State(state): State<AppState>,
     claims: auth::Claims,
     mut multipart: Multipart,
-) -> Result<Json<HashMap<String, i64>>, Error> {
+) -> Result<Json<IdReturn<i64>>, Error> {
     let field = get_exactly_one_field(&mut multipart).await?;
 
     let filename = field
@@ -310,13 +300,9 @@ pub(crate) async fn post_contrib_stop_picture(
         comment: None,
     };
 
-    let id = sql::insert_new_contribution(&state.pool, contribution).await?;
-
-    Ok(Json({
-        let mut map = HashMap::new();
-        map.insert("id".to_string(), id);
-        map
-    }))
+    return Ok(Json(IdReturn {
+        id: sql::insert_new_contribution(&state.pool, contribution).await?,
+    }));
 }
 
 pub(crate) async fn patch_contrib_stop_picture_meta(

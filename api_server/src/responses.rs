@@ -25,6 +25,16 @@ use serde::Serialize;
 use crate::Error;
 
 #[derive(Serialize)]
+pub struct IdReturn<T> {
+    pub id: T,
+}
+
+#[derive(Serialize)]
+pub struct UrlReturn {
+    pub url: String,
+}
+
+#[derive(Serialize)]
 pub struct Pagination<T> {
     pub items: Vec<T>,
     pub total: i64,

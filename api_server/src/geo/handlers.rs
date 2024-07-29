@@ -20,11 +20,10 @@ use axum::extract::{Path, State};
 use axum::Json;
 use futures::future;
 
-use crate::auth;
 use commons::models::geo;
 
-use super::models::responses;
-use super::sql;
+use super::{models::responses, sql};
+use crate::auth;
 use crate::operators::sql as operators_sql;
 use crate::{AppState, Error};
 
