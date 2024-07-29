@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT user_sessions.id, user_sessions.revoked, user_sessions.expiration,\n    management_tokens.name, management_tokens.token,\n    management_tokens.permissions\n        as \"permissions!: sqlx::types::Json<Vec<super::Permission>>\"\nFROM management_tokens\nRIGHT JOIN user_sessions ON user_sessions.id = management_tokens.session_id\nWHERE user_sessions.id=$1",
+  "query": "\nSELECT user_sessions.id, user_sessions.revoked, user_sessions.expiration,\n    management_tokens.name, management_tokens.token,\n    management_tokens.permissions\n        as \"permissions!: sqlx::types::Json<super::Permissions>\"\nFROM management_tokens\nRIGHT JOIN user_sessions ON user_sessions.id = management_tokens.session_id\nWHERE user_sessions.id=$1",
   "describe": {
     "columns": [
       {
@@ -30,7 +30,7 @@
       },
       {
         "ordinal": 5,
-        "name": "permissions!: sqlx::types::Json<Vec<super::Permission>>",
+        "name": "permissions!: sqlx::types::Json<super::Permissions>",
         "type_info": "Jsonb"
       }
     ],
@@ -48,5 +48,5 @@
       false
     ]
   },
-  "hash": "68092ce3221590d602a8ca04f196a66f0caf546ca6d30307f8d8cd604c395756"
+  "hash": "f651e099eb691d21690c7cc48ac5dc507672a5c59b3fff3f1dcd206f3532be7f"
 }

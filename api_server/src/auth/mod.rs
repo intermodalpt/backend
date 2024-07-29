@@ -35,4 +35,4 @@ pub(crate) static MANAGEMENT_DAYS: OnceCell<i64> = OnceCell::new();
 
 pub(crate) use logic::{decode_access_claims, decode_refresh_claims};
 pub(crate) use models::Claims;
-pub(super) use perms::{ClaimPermission, Permission, ScopedClaim};
+pub(super) use perms::{ClaimPermission, Permissions, ScopedClaim};

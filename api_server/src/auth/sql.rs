@@ -41,7 +41,7 @@ where
     sqlx::query_as!(
         auth::User,
         r#"
-SELECT id, username, password, email, is_admin, is_trusted, works_for
+SELECT id, username, password, email, is_superuser, works_for
 FROM Users
 WHERE id=$1
     "#,
@@ -62,7 +62,7 @@ pub(crate) async fn fetch_user_by_username(
     sqlx::query_as!(
         auth::User,
         r#"
-SELECT id, username, password, email, is_admin, is_trusted, works_for
+SELECT id, username, password, email, is_superuser, works_for
 FROM Users
 WHERE username=$1
     "#,
@@ -84,7 +84,7 @@ pub(crate) async fn fetch_user_by_username_or_email(
     sqlx::query_as!(
         auth::User,
         r#"
-SELECT id, username, password, email, is_admin, is_trusted, works_for
+SELECT id, username, password, email, is_superuser, works_for
 FROM Users
 WHERE username=$1 or email = $2
     "#,
@@ -124,7 +124,7 @@ pub(crate) async fn fetch_user_management_tokens(
 SELECT user_sessions.id, management_tokens.name, management_tokens.token,
     user_sessions.revoked,
     management_tokens.permissions
-        as "permissions!: sqlx::types::Json<Vec<super::Permission>>"
+        as "permissions!: sqlx::types::Json<super::Permissions>"
 FROM management_tokens
 JOIN user_sessions ON user_sessions.id = management_tokens.session_id
 WHERE user_sessions.user_id=$1 AND (NOT revoked OR $2)
@@ -185,13 +185,13 @@ pub(crate) async fn update_set_session_revoked(
 pub(crate) async fn fetch_user_permissions<'c, E>(
     executor: E,
     user_id: i32,
-) -> Result<Option<Vec<super::Permission>>>
+) -> Result<Option<super::Permissions>>
 where
     E: sqlx::Executor<'c, Database = sqlx::Postgres>,
 {
     sqlx::query!(
         r#"
-SELECT permissions as "permissions!: sqlx::types::Json<Vec<super::Permission>>"
+SELECT permissions as "permissions!: sqlx::types::Json<super::Permissions>"
 FROM users
 WHERE id=$1"#,
         user_id
@@ -205,6 +205,62 @@ WHERE id=$1"#,
     .map(|res| res.map(|res| res.permissions.0))
 }
 
+pub(crate) async fn fetch_user_permission_assignments<'c, E>(
+    executor: E,
+    user_id: i32,
+) -> Result<Vec<models::UserPermAssignments>>
+where
+    E: sqlx::Executor<'c, Database = sqlx::Postgres>,
+{
+    sqlx::query_as!(
+        models::UserPermAssignments,
+        r#"
+SELECT id, issuer_id, priority,
+    permissions as "permissions!: sqlx::types::Json<super::Permissions>"
+FROM user_permissions
+WHERE user_id=$1"#,
+        user_id
+    )
+    .fetch_all(executor)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), user_id);
+        Error::DatabaseExecution
+    })
+}
+
+pub(crate) async fn insert_user_permission_assignment(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    permissions: &super::Permissions,
+    user_id: i32,
+    issuer_id: Option<i32>,
+    priority: i32,
+) -> Result<()> {
+    sqlx::query!(
+        r#"
+INSERT INTO user_permissions(user_id, issuer_id, priority, permissions)
+VALUES ($1, $2, $3, $4)
+    "#,
+        user_id,
+        issuer_id,
+        priority,
+        json!(permissions)
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| {
+        tracing::error!(
+            error = err.to_string(),
+            user_id,
+            issuer_id,
+            priority,
+            permissions = ?permissions
+        );
+        Error::DatabaseExecution
+    })?;
+    Ok(())
+}
+
 // These do not necessarily need to be the same as above
 // A token should be able to have a more limited scope than its user
 pub(crate) async fn fetch_management_token_permissions(
@@ -216,7 +272,7 @@ pub(crate) async fn fetch_management_token_permissions(
 SELECT user_sessions.id, user_sessions.revoked, user_sessions.expiration,
     management_tokens.name, management_tokens.token,
     management_tokens.permissions
-        as "permissions!: sqlx::types::Json<Vec<super::Permission>>"
+        as "permissions!: sqlx::types::Json<super::Permissions>"
 FROM management_tokens
 RIGHT JOIN user_sessions ON user_sessions.id = management_tokens.session_id
 WHERE user_sessions.id=$1"#,
@@ -241,17 +297,20 @@ WHERE user_sessions.id=$1"#,
 pub(crate) async fn register_user(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     request: &models::HashedRegistration,
+    permissions: &super::Permissions,
     consent: models::ConsentAnswer,
     survey: serde_json::Value,
 ) -> Result<i32> {
     let now = Utc::now();
     let res = sqlx::query!(
-        r#"INSERT INTO Users (username, password, email, consent, consent_date, survey)
-VALUES ($1, $2, $3, $4, $5, $6)
+        r#"
+INSERT INTO Users (username, password, email, permissions, consent, consent_date, survey)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 RETURNING id"#,
         request.username,
         request.password,
         request.email,
+        json!(permissions),
         json!(consent),
         now,
         survey
@@ -262,11 +321,30 @@ RETURNING id"#,
         tracing::error!(
             error = err.to_string(),
             username = request.username,
-            email = request.email
+            email = request.email,
+            permissions = ?permissions,
+            consent = ?consent,
+            survey = ?survey,
         );
         Error::DatabaseExecution
     })?;
     Ok(res.id)
+}
+
+pub(crate) async fn update_user_cached_permissions(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    user_id: i32,
+    permissions: &super::Permissions,
+) -> Result<()> {
+    sqlx::query!(
+        "UPDATE users SET permissions=$1 WHERE id=$2",
+        json!(permissions),
+        user_id
+        ).execute(&mut **transaction).await.map_err(|err| {
+        tracing::error!(error = err.to_string(), user_id, permissions = ?permissions);
+        Error::DatabaseExecution
+    })?;
+    Ok(())
 }
 
 pub(crate) async fn fetch_user_session<'c, E>(

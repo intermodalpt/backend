@@ -109,7 +109,9 @@ pub(crate) async fn get_route_full(
 
 pub(crate) async fn patch_route(
     State(state): State<AppState>,
-    auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::ModifyRouteBase>,
+    auth::ScopedClaim(claims, _): auth::ScopedClaim<
+        auth::perms::ModifyRouteBase,
+    >,
     Path(route_id): Path<i32>,
     Json(changes): Json<requests::ChangeRoute>,
 ) -> Result<Json<routes::Route>, Error> {
@@ -212,7 +214,9 @@ pub(crate) async fn create_subroute(
 
 pub(crate) async fn patch_subroute(
     State(state): State<AppState>,
-    auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::ModifyRouteSubroutes>,
+    auth::ScopedClaim(claims, _): auth::ScopedClaim<
+        auth::perms::ModifyRouteSubroutes,
+    >,
     Path(subroute_id): Path<i32>,
     Json(changes): Json<requests::ChangeSubroute>,
 ) -> Result<Json<routes::Subroute>, Error> {
@@ -254,7 +258,9 @@ pub(crate) async fn patch_subroute(
 
 pub(crate) async fn delete_subroute(
     State(state): State<AppState>,
-    auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::ModifyRouteSubroutes>,
+    auth::ScopedClaim(claims, _): auth::ScopedClaim<
+        auth::perms::ModifyRouteSubroutes,
+    >,
     Path(subroute_id): Path<i32>,
 ) -> Result<(), Error> {
     let mut transaction = state.pool.begin().await.map_err(|err| {
@@ -295,7 +301,9 @@ pub(crate) async fn delete_subroute(
 
 pub(crate) async fn create_subroute_departure(
     State(state): State<AppState>,
-    auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::ModifyRouteDepartures>,
+    auth::ScopedClaim(claims, _): auth::ScopedClaim<
+        auth::perms::ModifyRouteDepartures,
+    >,
     Path(subroute_id): Path<i32>,
     Json(departure): Json<requests::ChangeDeparture>,
 ) -> Result<Json<routes::Departure>, Error> {
@@ -327,7 +335,9 @@ pub(crate) async fn create_subroute_departure(
 
 pub(crate) async fn patch_subroute_departure(
     State(state): State<AppState>,
-    auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::ModifyRouteDepartures>,
+    auth::ScopedClaim(claims, _): auth::ScopedClaim<
+        auth::perms::ModifyRouteDepartures,
+    >,
     Path((subroute_id, departure_id)): Path<(i32, i32)>,
     Json(change): Json<requests::ChangeDeparture>,
 ) -> Result<Json<routes::Departure>, Error> {
@@ -369,7 +379,9 @@ pub(crate) async fn patch_subroute_departure(
 
 pub(crate) async fn delete_subroute_departure(
     State(state): State<AppState>,
-    auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::ModifyRouteDepartures>,
+    auth::ScopedClaim(claims, _): auth::ScopedClaim<
+        auth::perms::ModifyRouteDepartures,
+    >,
     Path((subroute_id, departure_id)): Path<(i32, i32)>,
 ) -> Result<(), Error> {
     let departure = sql::fetch_departure(&state.pool, departure_id)

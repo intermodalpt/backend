@@ -21,7 +21,7 @@ use sqlx::types::ipnetwork::IpNetwork;
 use std::collections::HashMap;
 use uuid::Uuid;
 
-use crate::auth::Permission;
+use crate::auth::Permissions;
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub(crate) struct JwtAccess(pub(crate) String);
@@ -71,7 +71,7 @@ pub struct Claims {
     // User id
     pub uid: i32,
     // Permissions this user has
-    pub permissions: Vec<super::Permission>,
+    pub permissions: super::Permissions,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
@@ -126,6 +126,14 @@ pub struct ConsentAnswer {
     pub terms: bool,
     #[serde(flatten)]
     pub(crate) other: HashMap<String, serde_json::Value>,
+}
+
+#[derive(Debug)]
+pub struct UserPermAssignments {
+    pub id: i32,
+    pub permissions: sqlx::types::Json<Permissions>,
+    pub issuer_id: Option<i32>,
+    pub priority: i32,
 }
 
 pub(crate) mod requests {
@@ -274,6 +282,6 @@ pub(crate) mod responses {
         pub name: String,
         pub token: super::JwtManagement,
         pub revoked: bool,
-        pub permissions: sqlx::types::Json<Vec<super::Permission>>,
+        pub permissions: sqlx::types::Json<super::Permissions>,
     }
 }

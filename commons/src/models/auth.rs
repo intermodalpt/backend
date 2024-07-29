@@ -9,8 +9,7 @@ pub struct User {
     pub username: String,
     pub password: String,
     pub email: String,
-    pub is_admin: bool,
-    pub is_trusted: bool,
+    pub is_superuser: bool,
     pub works_for: Option<i32>,
 }
 

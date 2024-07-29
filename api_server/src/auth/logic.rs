@@ -17,6 +17,7 @@
 */
 
 use chrono::Utc;
+use itertools::Itertools;
 use pbkdf2::{
     password_hash::{
         rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier,
@@ -31,8 +32,9 @@ use uuid::Uuid;
 use commons::models::auth;
 
 use super::{
-    models, models::requests, perms, sql, ACCESS_MINUTES, ACCESS_SECRET_KEY,
-    MANAGEMENT_DAYS, MANAGEMENT_SECRET_KEY, REFRESH_DAYS, REFRESH_SECRET_KEY,
+    models, models::requests, sql, Permissions, ACCESS_MINUTES,
+    ACCESS_SECRET_KEY, MANAGEMENT_DAYS, MANAGEMENT_SECRET_KEY, REFRESH_DAYS,
+    REFRESH_SECRET_KEY,
 };
 use crate::auth::models::responses;
 use crate::errors::Error;
@@ -140,7 +142,7 @@ pub(crate) async fn renew_token(
     }
 
     let permissions = if user.is_superuser {
-        perms::Permission::superuser_permissions()
+        Permissions::everything()
     } else {
         sql::fetch_user_permissions(&mut *transaction, user.id)
             .await?
@@ -396,13 +398,26 @@ pub(crate) async fn register(
         Error::DatabaseExecution
     })?;
 
+    let permissions = Permissions::new_user_default();
     let user_id = sql::register_user(
         &mut transaction,
         &registration,
+        &permissions,
         request.consent,
         request.survey,
     )
     .await?;
+    sql::insert_user_permission_assignment(
+        &mut transaction,
+        &permissions,
+        user_id,
+        None,
+        0,
+    )
+    .await?;
+
+    update_user_cached_permissions(&mut transaction, user_id).await?;
+
     sql::insert_audit_log_entry(
         &mut transaction,
         auth::AuditLogAction::Register {
@@ -613,9 +628,39 @@ pub(crate) fn decode_management_claims(
     Ok(decoded_token.claims)
 }
 
+async fn update_user_cached_permissions(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    user_id: i32,
+) -> Result<(), Error> {
+    let perm_assignments =
+        sql::fetch_user_permission_assignments(&mut **transaction, user_id)
+            .await?;
+
+    let permissions = compile_permission_assignments(perm_assignments);
+
+    sql::update_user_cached_permissions(transaction, user_id, &permissions)
+        .await?;
+
+    Ok(())
+}
+
+fn compile_permission_assignments(
+    assignments: Vec<models::UserPermAssignments>,
+) -> Permissions {
+    let mut permissions = Permissions::default();
+
+    assignments
+        .into_iter()
+        .sorted_by_key(|a| a.priority)
+        .rev()
+        .for_each(|assignment| permissions.merge(assignment.permissions.0));
+
+    return permissions;
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::auth::{models, models::requests, Permission};
+    use crate::auth::{models, models::requests, Permissions};
     use crate::errors::Error;
     use sqlx::PgPool;
     use std::net::{IpAddr, Ipv4Addr};
@@ -634,7 +679,7 @@ mod tests {
             jti: Default::default(),
             exp: 2000000000,
             uid: 0,
-            permissions: vec![],
+            permissions: Permissions::default(),
             origin: Default::default(),
         };
         let encoded = encode_access_claims(&claims).unwrap();
@@ -847,10 +892,8 @@ mod tests {
 
         assert_eq!(refresh_claims.uid, 1);
         assert_eq!(&refresh_claims.uname, "admin");
-        assert!(access_claims
-            .permissions
-            .iter()
-            .any(|perm| perm == &Permission::Admin));
+
+        assert_eq!(access_claims.permissions, Permissions::everything());
     }
 
     #[sqlx::test(fixtures("users"))]
@@ -866,10 +909,7 @@ mod tests {
 
         assert_eq!(refresh_claims.uid, 2);
         assert_eq!(&refresh_claims.uname, "user");
-        assert!(!access_claims
-            .permissions
-            .iter()
-            .any(|perm| perm == &Permission::Admin));
+        assert_eq!(access_claims.permissions, Permissions::new_user_default());
     }
 
     #[sqlx::test(fixtures("users"))]

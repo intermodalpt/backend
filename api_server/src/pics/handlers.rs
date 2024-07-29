@@ -369,7 +369,9 @@ pub(crate) async fn get_stop_picture_meta(
 
 pub(crate) async fn patch_stop_picture_meta(
     State(state): State<AppState>,
-    claims: auth::Claims,
+    auth::ScopedClaim(claims, _): auth::ScopedClaim<
+        auth::perms::ModifyOwnStopPic,
+    >,
     Path(stop_picture_id): Path<i32>,
     Json(stop_pic_meta): Json<requests::ChangeStopPic>,
 ) -> Result<(), Error> {
@@ -382,11 +384,8 @@ pub(crate) async fn patch_stop_picture_meta(
         .await?
         .ok_or(Error::NotFoundUpstream)?;
 
-    if !(claims
-        .permissions
-        .iter()
-        .any(|p| matches!(p, auth::perms::Permission::Admin { .. }))
-        || !pic.tagged && pic.uploader == claims.uid)
+    if !(auth::perms::ModifyOthersStopPic::is_valid(&claims.permissions)
+        || pic.uploader == claims.uid)
     {
         return Err(Error::Forbidden);
     }
@@ -451,17 +450,16 @@ pub(crate) async fn patch_stop_picture_meta(
 
 pub(crate) async fn delete_picture(
     State(state): State<AppState>,
-    claims: auth::Claims,
+    auth::ScopedClaim(claims, _): auth::ScopedClaim<
+        auth::perms::ModifyOwnStopPic,
+    >,
     Path(picture_id): Path<i32>,
 ) -> Result<(), Error> {
     let pic = sql::fetch_picture(&state.pool, picture_id)
         .await?
         .ok_or(Error::NotFoundUpstream)?;
 
-    if !(claims
-        .permissions
-        .iter()
-        .any(|p| matches!(p, auth::perms::Permission::Admin { .. }))
+    if !(auth::perms::DeleteStopPic::is_valid(&claims.permissions)
         || pic.uploader == claims.uid)
     {
         return Err(Error::Forbidden);

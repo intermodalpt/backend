@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT id, username, password, email, is_admin, is_trusted, works_for\nFROM Users\nWHERE username=$1 or email = $2\n    ",
+  "query": "\nSELECT id, username, password, email, is_superuser, works_for\nFROM Users\nWHERE username=$1\n    ",
   "describe": {
     "columns": [
       {
@@ -25,23 +25,17 @@
       },
       {
         "ordinal": 4,
-        "name": "is_admin",
+        "name": "is_superuser",
         "type_info": "Bool"
       },
       {
         "ordinal": 5,
-        "name": "is_trusted",
-        "type_info": "Bool"
-      },
-      {
-        "ordinal": 6,
         "name": "works_for",
         "type_info": "Int4"
       }
     ],
     "parameters": {
       "Left": [
-        "Text",
         "Text"
       ]
     },
@@ -51,9 +45,8 @@
       false,
       false,
       false,
-      false,
       true
     ]
   },
-  "hash": "d7f6a5ad58f175174586daa9da649d7b550431c521a6f535ae8da8fc4e4a0e98"
+  "hash": "612f6409e42d8e4c67537556fb933ed3adc280a6f72dea1a2c6baa3cab21130e"
 }

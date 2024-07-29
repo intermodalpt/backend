@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT permissions as \"permissions!: sqlx::types::Json<super::Permissions>\"\nFROM users\nWHERE id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "permissions!: sqlx::types::Json<super::Permissions>",
+        "type_info": "Jsonb"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "fe7612391a27b59531e7d11b89f411395032cb94209d16252b4ec8e4d9e7f069"
+}
