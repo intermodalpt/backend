@@ -332,7 +332,7 @@ pub(crate) mod subperm {
         #[serde(default, skip_serializing_if = "is_false")]
         pub modify_issues: bool,
         #[serde(default, skip_serializing_if = "is_false")]
-        pub handle_contrib: bool,
+        pub contrib_evaluator: bool,
         #[serde(default, skip_serializing_if = "is_false")]
         pub expensive_calls: bool,
         #[serde(default, skip_serializing_if = "is_false")]
@@ -342,7 +342,7 @@ pub(crate) mod subperm {
     impl Misc {
         pub(crate) fn merge(&mut self, perms: &Self) {
             self.modify_issues = self.modify_issues || perms.modify_issues;
-            self.handle_contrib = self.handle_contrib || perms.handle_contrib;
+            self.contrib_evaluator = self.contrib_evaluator || perms.contrib_evaluator;
             self.expensive_calls =
                 self.expensive_calls || perms.expensive_calls;
             self.patch_gtfs = self.patch_gtfs || perms.patch_gtfs;
@@ -351,7 +351,7 @@ pub(crate) mod subperm {
         pub(crate) fn everything() -> Self {
             Self {
                 modify_issues: true,
-                handle_contrib: true,
+                contrib_evaluator: true,
                 expensive_calls: true,
                 patch_gtfs: true,
             }
@@ -360,7 +360,7 @@ pub(crate) mod subperm {
 }
 
 #[derive(Debug, PartialEq, Clone, Default, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase", tag = "perm")]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct Permissions {
     // TODO find a way to implement these two
     // #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -911,7 +911,7 @@ pub struct HandleContrib;
 
 impl ClaimPermission for HandleContrib {
     fn is_valid(permissions: &Permissions) -> bool {
-        permissions.misc.as_ref().is_some_and(|p| p.handle_contrib)
+        permissions.misc.as_ref().is_some_and(|p| p.contrib_evaluator)
     }
 }
 
