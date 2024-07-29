@@ -72,7 +72,7 @@ where
         {
             let token = bearer.token();
             if token.starts_with("manag.") {
-                let claims = logic::decode_management_claims(&token[6..])?;
+                let claims = logic::decode_management_claims(token)?;
 
                 let state = parts
                     .extensions
