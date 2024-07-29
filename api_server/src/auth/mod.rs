@@ -18,6 +18,7 @@
 
 mod extractor;
 pub(crate) mod handlers;
+pub(crate) mod jwt;
 mod logic;
 mod models;
 pub(crate) mod perms;
@@ -33,6 +34,5 @@ pub(crate) static MANAGEMENT_SECRET_KEY: OnceCell<&'static str> =
     OnceCell::new();
 pub(crate) static MANAGEMENT_DAYS: OnceCell<i64> = OnceCell::new();
 
-pub(crate) use logic::{decode_access_claims, decode_refresh_claims};
 pub(crate) use models::Claims;
 pub(super) use perms::{ClaimPermission, ScopedClaim};

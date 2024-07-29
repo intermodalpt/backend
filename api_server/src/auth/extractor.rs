@@ -8,7 +8,7 @@ use axum_extra::extract::CookieJar;
 use axum_extra::headers::{authorization::Bearer, Authorization};
 use axum_extra::TypedHeader;
 
-use super::{logic, models, sql};
+use super::{jwt, models, sql};
 use crate::errors::Error;
 use crate::state::AppState;
 
@@ -29,6 +29,7 @@ where
 }
 
 pub(crate) struct UserAgent(pub(crate) String);
+
 #[async_trait]
 impl<S> FromRequestParts<S> for UserAgent
 where
@@ -72,7 +73,7 @@ where
         {
             let token = bearer.token();
             if token.starts_with("manag.") {
-                let claims = logic::decode_management_claims(token)?;
+                let claims = jwt::decode_management_claims(token)?;
 
                 let state = parts
                     .extensions
@@ -101,13 +102,13 @@ where
                     permissions: permissions.permissions.0,
                 });
             }
-            return logic::decode_access_claims(bearer.token());
+            return jwt::decode_access_claims(bearer.token());
         }
 
         if let Ok(jar) = parts.extract::<CookieJar>().await {
             if let Some(cookie) = jar.get("access_token") {
                 let value = cookie.value();
-                return logic::decode_access_claims(value);
+                return jwt::decode_access_claims(value);
             }
         }
 
@@ -129,13 +130,13 @@ where
         if let Ok(TypedHeader(Authorization(bearer))) =
             parts.extract::<TypedHeader<Authorization<Bearer>>>().await
         {
-            return logic::decode_refresh_claims(bearer.token());
+            return jwt::decode_refresh_claims(bearer.token());
         }
 
         if let Ok(jar) = parts.extract::<CookieJar>().await {
             if let Some(cookie) = jar.get("refresh_token") {
                 let value = cookie.value();
-                return logic::decode_refresh_claims(value);
+                return jwt::decode_refresh_claims(value);
             }
         }
 

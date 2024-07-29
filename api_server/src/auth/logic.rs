@@ -31,9 +31,10 @@ use uuid::Uuid;
 
 use commons::models::auth;
 
+use super::{jwt, logic, models, models::requests, sql};
 use super::{
-    models, models::requests, sql, ACCESS_MINUTES, ACCESS_SECRET_KEY,
-    MANAGEMENT_DAYS, MANAGEMENT_SECRET_KEY, REFRESH_DAYS, REFRESH_SECRET_KEY,
+    ACCESS_MINUTES, ACCESS_SECRET_KEY, MANAGEMENT_DAYS, MANAGEMENT_SECRET_KEY,
+    REFRESH_DAYS, REFRESH_SECRET_KEY,
 };
 use crate::auth::models::responses;
 use crate::errors::Error;
@@ -70,7 +71,7 @@ pub(crate) async fn login(
         jti: Uuid::new_v4(),
         uname: user.username,
     };
-    let encoded_claims = encode_refresh_claims(&refresh_claims)?;
+    let encoded_claims = jwt::encode_refresh_claims(&refresh_claims)?;
 
     let mut transaction = db_pool.begin().await.map_err(|err| {
         tracing::error!("Failed to open transaction: {err}");
@@ -143,7 +144,7 @@ pub(crate) async fn renew_token(
     let permissions = if user.is_superuser {
         auth::Permissions::everything()
     } else {
-        sql::fetch_user_permissions(&mut *transaction, user.id)
+        sql::fetch_user_permissions(&mut transaction, user.id)
             .await?
             .ok_or(Error::IllegalState)?
     };
@@ -161,7 +162,7 @@ pub(crate) async fn renew_token(
         uid: refresh_claims.uid,
         permissions,
     };
-    let encoded_claims = encode_access_claims(&claims)?;
+    let encoded_claims = jwt::encode_access_claims(&claims)?;
 
     sql::insert_user_session_renewal(
         &mut transaction,
@@ -222,7 +223,7 @@ pub(crate) async fn create_management_token(
         uid: user.id,
         jti: session_id,
     };
-    let encoded_claims = encode_management_claims(&management_claims)?;
+    let encoded_claims = jwt::encode_management_claims(&management_claims)?;
 
     sql::insert_user_session(
         &mut transaction,
@@ -516,117 +517,6 @@ pub(crate) async fn admin_change_password(
     })
 }
 
-pub(crate) fn encode_access_claims(
-    claims: &models::Claims,
-) -> Result<models::JwtAccess, Error> {
-    let header = jsonwebtoken::Header::new(jsonwebtoken::Algorithm::HS256);
-    let encoding_key = jsonwebtoken::EncodingKey::from_secret(
-        ACCESS_SECRET_KEY.get().unwrap().as_ref(),
-    );
-    jsonwebtoken::encode(&header, claims, &encoding_key)
-        .map(models::JwtAccess)
-        .map_err(|err| {
-            tracing::error!("Failed to encode Access JWT: {err}");
-            Error::Processing
-        })
-}
-
-pub(crate) fn decode_access_claims(jwt: &str) -> Result<models::Claims, Error> {
-    let mut validation =
-        jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::HS256);
-    validation.validate_nbf = true;
-    let decoding_key = jsonwebtoken::DecodingKey::from_secret(
-        ACCESS_SECRET_KEY.get().unwrap().as_ref(),
-    );
-    let decoded_token =
-        jsonwebtoken::decode::<models::Claims>(jwt, &decoding_key, &validation)
-            .map_err(|err| {
-                tracing::error!("Failed to decode Access JWT: {err}");
-                Error::Forbidden
-            })?;
-
-    Ok(decoded_token.claims)
-}
-
-pub(crate) fn encode_refresh_claims(
-    claims: &models::RefreshClaims,
-) -> Result<models::JwtRefresh, Error> {
-    let header = jsonwebtoken::Header::new(jsonwebtoken::Algorithm::HS256);
-    jsonwebtoken::encode(
-        &header,
-        claims,
-        &jsonwebtoken::EncodingKey::from_secret(
-            REFRESH_SECRET_KEY.get().unwrap().as_ref(),
-        ),
-    )
-    .map(models::JwtRefresh)
-    .map_err(|err| {
-        tracing::error!("Failed to encode Refresh JWT: {err}");
-        Error::Processing
-    })
-}
-
-pub(crate) fn decode_refresh_claims(
-    jwt: &str,
-) -> Result<models::RefreshClaims, Error> {
-    let mut validation =
-        jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::HS256);
-    validation.validate_nbf = true;
-    let decoding_key = jsonwebtoken::DecodingKey::from_secret(
-        REFRESH_SECRET_KEY.get().unwrap().as_ref(),
-    );
-    let decoded_token = jsonwebtoken::decode::<models::RefreshClaims>(
-        jwt,
-        &decoding_key,
-        &validation,
-    )
-    .map_err(|err| {
-        tracing::error!("Failed to decode Refresh JWT: {err}");
-        Error::Forbidden
-    })?;
-
-    Ok(decoded_token.claims)
-}
-
-pub(crate) fn encode_management_claims(
-    claims: &models::ManagementClaims,
-) -> Result<models::JwtManagement, Error> {
-    let header = jsonwebtoken::Header::new(jsonwebtoken::Algorithm::HS256);
-    jsonwebtoken::encode(
-        &header,
-        claims,
-        &jsonwebtoken::EncodingKey::from_secret(
-            MANAGEMENT_SECRET_KEY.get().unwrap().as_ref(),
-        ),
-    )
-    .map(|token| models::JwtManagement(format!("manag.{token}")))
-    .map_err(|err| {
-        tracing::error!("Failed to encode Management JWT: {err}");
-        Error::Processing
-    })
-}
-
-pub(crate) fn decode_management_claims(
-    jwt: &str,
-) -> Result<models::ManagementClaims, Error> {
-    let validation =
-        jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::HS256);
-    let decoding_key = jsonwebtoken::DecodingKey::from_secret(
-        MANAGEMENT_SECRET_KEY.get().unwrap().as_ref(),
-    );
-    let decoded_token = jsonwebtoken::decode::<models::ManagementClaims>(
-        &jwt[6..],
-        &decoding_key,
-        &validation,
-    )
-    .map_err(|err| {
-        tracing::error!("Failed to decode Management JWT: {err}");
-        Error::Forbidden
-    })?;
-
-    Ok(decoded_token.claims)
-}
-
 async fn update_user_cached_permissions(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     user_id: i32,
@@ -664,30 +554,8 @@ mod tests {
 
     use commons::models::auth::Permissions;
 
-    use crate::auth::{models, models::requests};
+    use crate::auth::{jwt, models, models::requests};
     use crate::errors::Error;
-
-    #[test]
-    fn encode_decode_access_claims() {
-        use super::*;
-
-        //The key must be set
-        let _ = ACCESS_SECRET_KEY
-            .set(Box::leak(Box::new("super_secret_key".to_string())));
-
-        let claims = models::Claims {
-            iat: 0,
-            nbf: 0,
-            jti: Default::default(),
-            exp: 2000000000,
-            uid: 0,
-            permissions: Permissions::default(),
-            origin: Default::default(),
-        };
-        let encoded = encode_access_claims(&claims).unwrap();
-        let decoded = decode_access_claims(&encoded.0).unwrap();
-        assert_eq!(claims, decoded);
-    }
 
     #[sqlx::test]
     async fn ok_register_login(pool: PgPool) {
@@ -867,13 +735,13 @@ mod tests {
         let (refresh_claims, token) =
             super::login(req, &pool, req_ori, "").await.unwrap();
         let decoded_refresh_claims =
-            super::decode_refresh_claims(&token.0).unwrap();
+            jwt::decode_refresh_claims(&token.0).unwrap();
         let (access_claims, token) =
             super::renew_token(refresh_claims.clone(), &pool, req_ori, "")
                 .await
                 .unwrap();
         let decoded_access_claims =
-            super::decode_access_claims(&token.0).unwrap();
+            jwt::decode_access_claims(&token.0).unwrap();
 
         assert_eq!(&access_claims, &decoded_access_claims);
         assert_eq!(&refresh_claims, &decoded_refresh_claims);
