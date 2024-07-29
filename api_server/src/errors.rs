@@ -15,7 +15,6 @@
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::Json;
@@ -38,7 +37,9 @@ pub enum Error {
     Unauthorized,
     #[error("Dependencies for this action were not met")]
     DependenciesNotMet,
-    #[error("The provided information failed validation:: `{0}`")]
+    #[error("The request was improperly made: `{0}`")]
+    MalformedRequest(&'static str),
+    #[error("The provided information failed validation: `{0}`")]
     ValidationFailure(String),
     #[error("Data could not be handled")]
     Processing,
@@ -84,6 +85,10 @@ impl IntoResponse for Error {
             Error::ValidationFailure(msg) => JsonErrorResponse::new_response(
                 StatusCode::BAD_REQUEST,
                 msg,
+            ),
+            Error::MalformedRequest(msg) => JsonErrorResponse::new_response(
+                StatusCode::BAD_REQUEST,
+                msg.to_string(),
             ),
             Error::DuplicatedResource(resource) => match *resource {
                 Resource::StopPic(pic) => {

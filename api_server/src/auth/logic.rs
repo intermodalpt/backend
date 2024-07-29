@@ -39,8 +39,9 @@ use crate::errors::Error;
 
 pub(crate) async fn login(
     request: requests::Login,
-    requester_ip: IpAddr,
     db_pool: &PgPool,
+    requester_ip: IpAddr,
+    user_agent: &str,
 ) -> Result<(models::RefreshClaims, models::JwtRefresh), Error> {
     let user = sql::fetch_user_by_username(db_pool, &request.username)
         .await?
@@ -81,7 +82,7 @@ pub(crate) async fn login(
             id: refresh_claims.jti,
             user_id: user.id,
             ip: requester_ip.into(),
-            user_agent: "",
+            user_agent,
             expiration: expiration_time,
         },
     )
@@ -109,8 +110,9 @@ pub(crate) async fn login(
 
 pub(crate) async fn renew_token(
     refresh_claims: models::RefreshClaims,
-    requester_ip: IpAddr,
     db_pool: &PgPool,
+    requester_ip: IpAddr,
+    user_agent: &str,
 ) -> Result<(models::Claims, models::JwtAccess), Error> {
     let user = sql::fetch_user_by_id(db_pool, refresh_claims.uid)
         .await?
@@ -173,7 +175,7 @@ pub(crate) async fn renew_token(
             access: claims.jti,
             session: refresh_claims.jti,
             ip: requester_ip.into(),
-            user_agent: "",
+            user_agent,
             expiration: expiration_time,
         },
     )
@@ -199,9 +201,10 @@ pub(crate) async fn renew_token(
 
 pub(crate) async fn create_management_token(
     request: requests::NewManagementToken,
+    db_pool: &PgPool,
     uid: i32,
     requester_ip: IpAddr,
-    db_pool: &PgPool,
+    user_agent: &str,
 ) -> Result<responses::ManagementToken, Error> {
     let mut transaction = db_pool.begin().await.map_err(|err| {
         tracing::error!("Failed to open transaction: {err}");
@@ -234,7 +237,7 @@ pub(crate) async fn create_management_token(
             id: session_id,
             user_id: user.id,
             ip: requester_ip.into(),
-            user_agent: "",
+            user_agent,
             expiration: expiration_time,
         },
     )
@@ -672,7 +675,7 @@ mod tests {
         };
         let req_ori = IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4));
 
-        let res = super::login(req, req_ori, &pool).await;
+        let res = super::login(req, &pool, req_ori, "").await;
         assert!(res.is_ok())
     }
 
@@ -820,11 +823,11 @@ mod tests {
         pool: &PgPool,
     ) -> (models::RefreshClaims, models::Claims) {
         let (refresh_claims, token) =
-            super::login(req, req_ori, &pool).await.unwrap();
+            super::login(req, &pool, req_ori, "").await.unwrap();
         let decoded_refresh_claims =
             super::decode_refresh_claims(&token.0).unwrap();
         let (access_claims, token) =
-            super::renew_token(refresh_claims.clone(), req_ori, &pool)
+            super::renew_token(refresh_claims.clone(), &pool, req_ori, "")
                 .await
                 .unwrap();
         let decoded_access_claims =
@@ -882,7 +885,7 @@ mod tests {
         };
         let req_ori = IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4));
 
-        let res = super::login(req, req_ori, &pool).await;
+        let res = super::login(req, &pool, req_ori, "").await;
         assert_eq!(res, Err(Error::Forbidden));
     }
 
@@ -906,7 +909,7 @@ mod tests {
             password: "new_password".to_string(),
         };
 
-        assert!(super::login(req, req_ori, &pool).await.is_ok());
+        assert!(super::login(req, &pool, req_ori, "").await.is_ok());
     }
 
     #[sqlx::test(fixtures("users"))]
@@ -943,6 +946,6 @@ mod tests {
             password: "new_password".to_string(),
         };
 
-        assert!(super::login(req, req_ori, &pool).await.is_ok());
+        assert!(super::login(req, &pool, req_ori, "").await.is_ok());
     }
 }

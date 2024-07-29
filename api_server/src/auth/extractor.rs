@@ -1,4 +1,5 @@
 use axum::extract::{FromRef, State};
+use axum::http::header::USER_AGENT;
 use axum::{
     async_trait, extract::FromRequestParts, http::request::Parts,
     RequestPartsExt,
@@ -24,6 +25,34 @@ where
         state: &S,
     ) -> Result<Self, Self::Rejection> {
         Ok(Self::from_ref(state))
+    }
+}
+
+pub(crate) struct UserAgent(pub(crate) String);
+#[async_trait]
+impl<S> FromRequestParts<S> for UserAgent
+where
+    S: Send + Sync,
+{
+    type Rejection = Error;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        _state: &S,
+    ) -> Result<Self, Self::Rejection> {
+        if let Some(user_agent) = parts.headers.get(USER_AGENT) {
+            Ok(UserAgent(
+                user_agent
+                    .to_str()
+                    .map_err(|err| {
+                        tracing::error!("Failed to parse user agent: {err}");
+                        Error::MalformedRequest("Unable to parse user agent")
+                    })?
+                    .to_string(),
+            ))
+        } else {
+            Err(Error::MalformedRequest("Missing user agent"))
+        }
     }
 }
 

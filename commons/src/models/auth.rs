@@ -34,8 +34,13 @@ pub enum AuditLogAction {
         refresh_jti: Uuid,
         access_jti: Uuid,
     },
-    // This will require sessions
-    // Logout,
+    ManagementTokenIssued {
+        session_id: Uuid,
+    },
+    SessionRevoked {
+        session_id: Uuid,
+        was_logout: bool,
+    },
     Register {
         username: String,
         email: String,
@@ -50,4 +55,5 @@ pub enum AuditLogAction {
     AdminChangePassword {
         for_user_id: i32,
     },
+    QueryManagementTokens,
 }

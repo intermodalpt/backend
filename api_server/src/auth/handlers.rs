@@ -31,6 +31,7 @@ use super::{
     models::{requests, responses},
     sql,
 };
+use crate::auth::extractor::UserAgent;
 use crate::errors::Error;
 use crate::responses::{json_response_with_cookie_set, Pagination};
 use crate::AppState;
@@ -104,10 +105,11 @@ pub(crate) async fn get_captcha(
 pub(crate) async fn post_login(
     State(state): State<AppState>,
     client_ip: SecureClientIp,
+    UserAgent(user_agent): UserAgent,
     Json(request): Json<requests::Login>,
 ) -> Result<impl IntoResponse, Error> {
     let (refresh_claims, refresh_token) =
-        logic::login(request, client_ip.0, &state.pool).await?;
+        logic::login(request, &state.pool, client_ip.0, &user_agent).await?;
 
     json_response_with_cookie_set(
         "refresh_token",
@@ -120,9 +122,11 @@ pub(crate) async fn get_renew_access_token(
     State(state): State<AppState>,
     claims: models::RefreshClaims,
     client_ip: SecureClientIp,
+    UserAgent(user_agent): UserAgent,
 ) -> Result<impl IntoResponse, Error> {
     let (access_claims, access_token) =
-        logic::renew_token(claims, client_ip.0, &state.pool).await?;
+        logic::renew_token(claims, &state.pool, client_ip.0, &user_agent)
+            .await?;
 
     json_response_with_cookie_set("access_token", access_token.0, access_claims)
 }
@@ -137,13 +141,21 @@ pub(crate) async fn get_management_tokens(
         Error::DatabaseExecution
     })?;
 
-    // TODO log this access
     // TODO have this as a param
     let show_revoked = false;
+
     let tokens = sql::fetch_user_management_tokens(
         &mut transaction,
         claims.uid,
         show_revoked,
+    )
+    .await?;
+
+    sql::insert_audit_log_entry(
+        &mut transaction,
+        claims.uid,
+        &client_ip.0.into(),
+        auth::AuditLogAction::QueryManagementTokens,
     )
     .await?;
 
@@ -159,14 +171,16 @@ pub(crate) async fn post_create_management_token(
     State(state): State<AppState>,
     super::ScopedClaim(claims, _): super::ScopedClaim<super::perms::Admin>,
     client_ip: SecureClientIp,
+    UserAgent(user_agent): UserAgent,
     Json(request): Json<requests::NewManagementToken>,
 ) -> Result<Json<responses::ManagementToken>, Error> {
     Ok(Json(
         logic::create_management_token(
             request,
+            &state.pool,
             claims.uid,
             client_ip.0,
-            &state.pool,
+            &user_agent,
         )
         .await?,
     ))
@@ -183,6 +197,8 @@ pub(crate) async fn delete_revoke_management_token(
         Error::DatabaseExecution
     })?;
 
+    sql::update_set_session_revoked(&mut transaction, token_id).await?;
+
     sql::insert_audit_log_entry(
         &mut transaction,
         claims.uid,
@@ -193,8 +209,6 @@ pub(crate) async fn delete_revoke_management_token(
         },
     )
     .await?;
-
-    sql::update_set_session_revoked(&mut transaction, token_id).await?;
 
     transaction.commit().await.map_err(|err| {
         tracing::error!("Failed to commit transaction: {err}");
