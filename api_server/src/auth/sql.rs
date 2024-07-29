@@ -461,13 +461,15 @@ pub(crate) async fn insert_audit_log_entry(
     session_id: Option<Uuid>,
     addr: &IpNetwork,
 ) -> Result<i64> {
+    let action_type = action.action_type_name();
     let res = sqlx::query!(
         r#"
-INSERT INTO audit_log(user_id, action, addr, session_id)
-VALUES ($1, $2, $3, $4)
+INSERT INTO audit_log(user_id, action_type, action, addr, session_id)
+VALUES ($1, $2, $3, $4, $5)
 RETURNING id
     "#,
         user_id,
+        action_type,
         Json(&action) as _,
         addr,
         session_id

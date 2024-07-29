@@ -38,3 +38,24 @@ pub enum AuditLogAction {
     AdminChangePassword { user_id: i32 },
     QueryManagementTokens,
 }
+
+impl AuditLogAction {
+    pub fn action_type_name(&self) -> &'static str {
+        match self {
+            AuditLogAction::Login => "login",
+            AuditLogAction::RefreshToken => "refreshToken",
+            AuditLogAction::ManagementTokenIssued { .. } => {
+                "managementTokenIssued"
+            }
+            AuditLogAction::SessionRevoked { .. } => "sessionRevoked",
+            AuditLogAction::Register { .. } => "register",
+            AuditLogAction::ChangePassword => "changePassword",
+            AuditLogAction::ChangeAccountDetails { .. } => {
+                "changeAccountDetails"
+            }
+            AuditLogAction::AdminChangeUsername { .. } => "adminChangeUsername",
+            AuditLogAction::AdminChangePassword { .. } => "adminChangePassword",
+            AuditLogAction::QueryManagementTokens => "queryManagementTokens",
+        }
+    }
+}
