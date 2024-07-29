@@ -319,6 +319,9 @@ pub enum StopTodo {
     AssertCopyright {
         reason: String,
     },
+    ReportIssue {
+        reason: String,
+    },
 }
 
 #[cfg(test)]
