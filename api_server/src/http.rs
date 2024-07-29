@@ -556,6 +556,15 @@ pub fn build_paths(state: AppState) -> Router {
         )
         .route("/v1/auth/check", get(auth::handlers::check_auth))
         .route(
+            "/v1/auth/permissions/user/:user_id",
+            get(auth::handlers::get_user_permissions)
+                .post(auth::handlers::post_assign_user_permissions),
+        )
+        .route(
+            "/v1/auth/permissions/assignment/:assignment_id",
+            delete(auth::handlers::delete_user_permissions),
+        )
+        .route(
             "/v1/user/change_password",
             post(auth::handlers::post_user_change_password),
         )
@@ -596,11 +605,11 @@ pub fn build_paths(state: AppState) -> Router {
                         .ok()
                         .and_then(|Authorization(bearer)| {
                             if let Ok(claims) =
-                                auth::decode_access_claims(bearer.token())
+                                auth::jwt::decode_access_claims(bearer.token())
                             {
                                 Some((claims.uid, claims.jti))
                             } else if let Ok(claims) =
-                                auth::decode_refresh_claims(bearer.token())
+                                auth::jwt::decode_refresh_claims(bearer.token())
                             {
                                 Some((claims.uid, claims.jti))
                             } else {

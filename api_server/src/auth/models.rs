@@ -129,9 +129,10 @@ pub struct ConsentAnswer {
 }
 
 #[derive(Debug)]
-pub struct UserPermAssignments {
+pub struct UserPermAssignment {
     pub id: i32,
     pub permissions: sqlx::types::Json<Permissions>,
+    pub user_id: i32,
     pub issuer_id: Option<i32>,
     pub priority: i32,
 }
@@ -222,6 +223,12 @@ pub(crate) mod requests {
     pub struct NewManagementToken {
         pub name: String,
     }
+
+    #[derive(Debug, Deserialize)]
+    pub struct UserPermAssignments {
+        pub permissions: super::Permissions,
+        pub priority: i32,
+    }
 }
 
 pub(crate) mod responses {
@@ -283,5 +290,26 @@ pub(crate) mod responses {
         pub token: super::JwtManagement,
         pub revoked: bool,
         pub permissions: sqlx::types::Json<super::Permissions>,
+    }
+
+    #[derive(Debug, Serialize)]
+    pub struct UserPermAssignment {
+        pub id: i32,
+        pub permissions: super::Permissions,
+        pub user_id: i32,
+        pub issuer_id: Option<i32>,
+        pub priority: i32,
+    }
+
+    impl From<super::UserPermAssignment> for UserPermAssignment {
+        fn from(assignment: super::UserPermAssignment) -> Self {
+            Self {
+                id: assignment.id,
+                permissions: assignment.permissions.0,
+                user_id: assignment.user_id,
+                issuer_id: assignment.issuer_id,
+                priority: assignment.priority,
+            }
+        }
     }
 }

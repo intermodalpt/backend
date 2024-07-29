@@ -182,13 +182,10 @@ pub(crate) async fn update_set_session_revoked(
     Ok(())
 }
 
-pub(crate) async fn fetch_user_permissions<'c, E>(
-    executor: E,
+pub(crate) async fn fetch_user_permissions(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     user_id: i32,
-) -> Result<Option<auth::Permissions>>
-where
-    E: sqlx::Executor<'c, Database = sqlx::Postgres>,
-{
+) -> Result<Option<auth::Permissions>> {
     sqlx::query!(
         r#"
 SELECT permissions as "permissions!: sqlx::types::Json<auth::Permissions>"
@@ -196,7 +193,7 @@ FROM users
 WHERE id=$1"#,
         user_id
     )
-    .fetch_optional(executor)
+    .fetch_optional(&mut **transaction)
     .await
     .map_err(|err| {
         tracing::error!(error = err.to_string(), user_id);
@@ -205,17 +202,39 @@ WHERE id=$1"#,
     .map(|res| res.map(|res| res.permissions.0))
 }
 
+pub(crate) async fn fetch_permission_assignment(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    assignment_id: i32,
+) -> Result<Option<responses::UserPermAssignment>> {
+    sqlx::query_as!(
+        models::UserPermAssignment,
+        r#"
+SELECT id, user_id, issuer_id, priority,
+    permissions as "permissions!: sqlx::types::Json<auth::Permissions>"
+FROM user_permissions
+WHERE id=$1"#,
+        assignment_id
+    )
+    .fetch_optional(&mut **transaction)
+    .await
+    .map(|res| res.map(|res| res.into()))
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), assignment_id);
+        Error::DatabaseExecution
+    })
+}
+
 pub(crate) async fn fetch_user_permission_assignments<'c, E>(
     executor: E,
     user_id: i32,
-) -> Result<Vec<models::UserPermAssignments>>
+) -> Result<Vec<responses::UserPermAssignment>>
 where
     E: sqlx::Executor<'c, Database = sqlx::Postgres>,
 {
     sqlx::query_as!(
-        models::UserPermAssignments,
+        models::UserPermAssignment,
         r#"
-SELECT id, issuer_id, priority,
+SELECT id, user_id, issuer_id, priority,
     permissions as "permissions!: sqlx::types::Json<auth::Permissions>"
 FROM user_permissions
 WHERE user_id=$1"#,
@@ -223,6 +242,7 @@ WHERE user_id=$1"#,
     )
     .fetch_all(executor)
     .await
+    .map(|res| res.into_iter().map(|res| res.into()).collect())
     .map_err(|err| {
         tracing::error!(error = err.to_string(), user_id);
         Error::DatabaseExecution
@@ -235,18 +255,19 @@ pub(crate) async fn insert_user_permission_assignment(
     user_id: i32,
     issuer_id: Option<i32>,
     priority: i32,
-) -> Result<()> {
-    sqlx::query!(
+) -> Result<i32> {
+    let res = sqlx::query!(
         r#"
 INSERT INTO user_permissions(user_id, issuer_id, priority, permissions)
 VALUES ($1, $2, $3, $4)
-    "#,
+RETURNING id
+        "#,
         user_id,
         issuer_id,
         priority,
         json!(permissions)
     )
-    .execute(&mut **transaction)
+    .fetch_one(&mut **transaction)
     .await
     .map_err(|err| {
         tracing::error!(
@@ -258,6 +279,28 @@ VALUES ($1, $2, $3, $4)
         );
         Error::DatabaseExecution
     })?;
+
+    Ok(res.id)
+}
+
+pub(crate) async fn delete_permission_assignment(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    assignment_id: i32,
+) -> Result<()> {
+    sqlx::query!(
+        r#"
+DELETE FROM user_permissions
+WHERE id=$1
+    "#,
+        assignment_id
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), assignment_id);
+        Error::DatabaseExecution
+    })?;
+
     Ok(())
 }
 

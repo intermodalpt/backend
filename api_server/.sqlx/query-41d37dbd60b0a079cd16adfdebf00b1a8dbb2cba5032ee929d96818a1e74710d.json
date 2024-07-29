@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT id, issuer_id, priority,\n    permissions as \"permissions!: sqlx::types::Json<auth::Permissions>\"\nFROM user_permissions\nWHERE user_id=$1",
+  "query": "\nSELECT id, user_id, issuer_id, priority,\n    permissions as \"permissions!: sqlx::types::Json<auth::Permissions>\"\nFROM user_permissions\nWHERE id=$1",
   "describe": {
     "columns": [
       {
@@ -10,16 +10,21 @@
       },
       {
         "ordinal": 1,
-        "name": "issuer_id",
+        "name": "user_id",
         "type_info": "Int4"
       },
       {
         "ordinal": 2,
-        "name": "priority",
+        "name": "issuer_id",
         "type_info": "Int4"
       },
       {
         "ordinal": 3,
+        "name": "priority",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
         "name": "permissions!: sqlx::types::Json<auth::Permissions>",
         "type_info": "Jsonb"
       }
@@ -31,10 +36,11 @@
     },
     "nullable": [
       false,
+      false,
       true,
       false,
       false
     ]
   },
-  "hash": "ce599d8326fdc299657f0bd724b9469b068ee6184faece96b2f95ed4eebd31e4"
+  "hash": "41d37dbd60b0a079cd16adfdebf00b1a8dbb2cba5032ee929d96818a1e74710d"
 }

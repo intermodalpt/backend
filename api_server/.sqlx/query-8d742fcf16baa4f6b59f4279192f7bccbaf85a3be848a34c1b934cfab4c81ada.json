@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nDELETE FROM user_permissions\nWHERE id=$1\n    ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8d742fcf16baa4f6b59f4279192f7bccbaf85a3be848a34c1b934cfab4c81ada"
+}

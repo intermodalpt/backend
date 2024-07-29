@@ -221,6 +221,57 @@ pub(crate) async fn delete_revoke_management_token(
     Ok(())
 }
 
+pub(crate) async fn get_user_permissions(
+    State(state): State<AppState>,
+    Path(user_id): Path<i32>,
+    super::ScopedClaim(claims, _): super::ScopedClaim<
+        super::perms::ChangePermissions,
+    >,
+    client_ip: SecureClientIp,
+) -> Result<Json<Vec<responses::UserPermAssignment>>, Error> {
+    Ok(Json(
+        sql::fetch_user_permission_assignments(&state.pool, user_id).await?,
+    ))
+}
+
+pub(crate) async fn post_assign_user_permissions(
+    State(state): State<AppState>,
+    Path(user_id): Path<i32>,
+    super::ScopedClaim(claims, _): super::ScopedClaim<
+        super::perms::ChangePermissions,
+    >,
+    client_ip: SecureClientIp,
+    Json(request): Json<requests::UserPermAssignments>,
+) -> Result<Json<responses::UserPermAssignment>, Error> {
+    Ok(Json(
+        logic::assign_user_permissions(
+            &state.pool,
+            request,
+            user_id,
+            &claims,
+            client_ip.0.into(),
+        )
+        .await?,
+    ))
+}
+
+pub(crate) async fn delete_user_permissions(
+    State(state): State<AppState>,
+    Path(assignment_id): Path<i32>,
+    super::ScopedClaim(claims, _): super::ScopedClaim<
+        super::perms::ChangePermissions,
+    >,
+    client_ip: SecureClientIp,
+) -> Result<(), Error> {
+    logic::revoke_user_permissions(
+        &state.pool,
+        assignment_id,
+        &claims,
+        client_ip.0,
+    )
+    .await
+}
+
 pub(crate) async fn post_admin_change_password(
     State(state): State<AppState>,
     super::ScopedClaim(claims, _): super::ScopedClaim<

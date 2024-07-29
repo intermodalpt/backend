@@ -31,11 +31,8 @@ use uuid::Uuid;
 
 use commons::models::auth;
 
-use super::{jwt, logic, models, models::requests, sql};
-use super::{
-    ACCESS_MINUTES, ACCESS_SECRET_KEY, MANAGEMENT_DAYS, MANAGEMENT_SECRET_KEY,
-    REFRESH_DAYS, REFRESH_SECRET_KEY,
-};
+use super::{jwt, models, models::requests, sql};
+use super::{ACCESS_MINUTES, MANAGEMENT_DAYS, REFRESH_DAYS};
 use crate::auth::models::responses;
 use crate::errors::Error;
 
@@ -208,10 +205,9 @@ pub(crate) async fn create_management_token(
         .await?
         .ok_or(Error::Forbidden)?;
 
-    let permissions =
-        sql::fetch_user_permissions(&mut *transaction, claims.uid)
-            .await?
-            .ok_or(Error::IllegalState)?;
+    let permissions = sql::fetch_user_permissions(&mut transaction, claims.uid)
+        .await?
+        .ok_or(Error::IllegalState)?;
 
     let session_id = Uuid::new_v4();
     let issue_time = Utc::now();
@@ -436,6 +432,94 @@ pub(crate) async fn register(
     })
 }
 
+pub(crate) async fn assign_user_permissions(
+    db_pool: &PgPool,
+    request: requests::UserPermAssignments,
+    user_id: i32,
+    claims: &super::Claims,
+    requester_ip: IpAddr,
+) -> Result<responses::UserPermAssignment, Error> {
+    let mut transaction = db_pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
+
+    let assignment_id = sql::insert_user_permission_assignment(
+        &mut transaction,
+        &request.permissions,
+        user_id,
+        Some(claims.uid),
+        request.priority,
+    )
+    .await?;
+
+    sql::insert_audit_log_entry(
+        &mut transaction,
+        auth::AuditLogAction::PermissionAssignment {
+            user_id,
+            assignment_id,
+            permissions: Box::new(request.permissions.clone()),
+        },
+        claims.uid,
+        Some(claims.jti),
+        &requester_ip.into(),
+    )
+    .await?;
+
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
+
+    Ok(responses::UserPermAssignment {
+        id: assignment_id,
+        permissions: request.permissions,
+        user_id,
+        issuer_id: Some(claims.uid),
+        priority: request.priority,
+    })
+}
+
+pub(crate) async fn revoke_user_permissions(
+    db_pool: &PgPool,
+    assignment_id: i32,
+    claims: &super::Claims,
+    requester_ip: IpAddr,
+) -> Result<(), Error> {
+    let mut transaction = db_pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
+
+    let assignment =
+        sql::fetch_permission_assignment(&mut transaction, assignment_id)
+            .await?
+            .ok_or(Error::NotFoundUpstream)?;
+
+    sql::delete_permission_assignment(&mut transaction, assignment_id).await?;
+
+    update_user_cached_permissions(&mut transaction, assignment.user_id)
+        .await?;
+
+    sql::insert_audit_log_entry(
+        &mut transaction,
+        auth::AuditLogAction::RevokePermissionAssignment {
+            user_id: assignment.user_id,
+            assignment_id,
+            permissions: Box::new(assignment.permissions),
+        },
+        claims.uid,
+        Some(claims.jti),
+        &requester_ip.into(),
+    )
+    .await?;
+
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })
+}
+
 #[allow(clippy::similar_names)]
 pub(crate) async fn change_password(
     db_pool: &PgPool,
@@ -534,7 +618,7 @@ async fn update_user_cached_permissions(
 }
 
 fn compile_permission_assignments(
-    assignments: Vec<models::UserPermAssignments>,
+    assignments: Vec<responses::UserPermAssignment>,
 ) -> auth::Permissions {
     let mut permissions = auth::Permissions::default();
 
@@ -542,7 +626,7 @@ fn compile_permission_assignments(
         .into_iter()
         .sorted_by_key(|a| a.priority)
         .rev()
-        .for_each(|assignment| permissions.merge(assignment.permissions.0));
+        .for_each(|assignment| permissions.merge(assignment.permissions));
 
     return permissions;
 }

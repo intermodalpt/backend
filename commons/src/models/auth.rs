@@ -29,19 +29,43 @@ pub struct AuditLogEntry {
 pub enum AuditLogAction {
     Login,
     RefreshToken,
-    ManagementTokenIssued { session_id: Uuid },
-    SessionRevoked { session_id: Uuid, was_logout: bool },
-    Register { username: String, email: String },
+    ManagementTokenIssued {
+        session_id: Uuid,
+    },
+    SessionRevoked {
+        session_id: Uuid,
+        was_logout: bool,
+    },
+    Register {
+        username: String,
+        email: String,
+    },
     ChangePassword,
     ChangeAccountDetails {/* ??? */},
     // Actions with an admin override
-    AdminChangeUsername { user_id: i32, new_username: String },
-    AdminChangePassword { user_id: i32 },
+    AdminChangeUsername {
+        user_id: i32,
+        new_username: String,
+    },
+    AdminChangePassword {
+        user_id: i32,
+    },
+    PermissionAssignment {
+        user_id: i32,
+        assignment_id: i32,
+        permissions: Box<Permissions>,
+    },
+    RevokePermissionAssignment {
+        user_id: i32,
+        assignment_id: i32,
+        permissions: Box<Permissions>,
+    },
     QueryManagementTokens,
 }
 
 impl AuditLogAction {
     pub fn action_type_name(&self) -> &'static str {
+        // TODO have a lib generate these
         match self {
             AuditLogAction::Login => "login",
             AuditLogAction::RefreshToken => "refreshToken",
@@ -57,6 +81,12 @@ impl AuditLogAction {
             AuditLogAction::AdminChangeUsername { .. } => "adminChangeUsername",
             AuditLogAction::AdminChangePassword { .. } => "adminChangePassword",
             AuditLogAction::QueryManagementTokens => "queryManagementTokens",
+            AuditLogAction::PermissionAssignment { .. } => {
+                "permissionAssignment"
+            }
+            AuditLogAction::RevokePermissionAssignment { .. } => {
+                "revokePermissionAssignment"
+            }
         }
     }
 }
