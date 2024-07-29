@@ -139,16 +139,12 @@ pub(crate) async fn renew_token(
         return Err(Error::Unauthorized);
     }
 
-    // TODO
-    // Better user permission management
-    let permissions = if user.is_admin {
-        perms::Permission::admin_default()
-    } else if user.is_trusted {
-        perms::Permission::trusted_default()
-    } else if let Some(operator_id) = user.works_for {
-        perms::Permission::operator_default(operator_id)
+    let permissions = if user.is_superuser {
+        perms::Permission::superuser_permissions()
     } else {
-        perms::Permission::user_default()
+        sql::fetch_user_permissions(&mut *transaction, user.id)
+            .await?
+            .ok_or(Error::IllegalState)?
     };
 
     let issue_time = Utc::now();

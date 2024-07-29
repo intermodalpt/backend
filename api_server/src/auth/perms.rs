@@ -233,7 +233,7 @@ impl Permission {
         }
     }
 
-    pub(crate) fn admin_default() -> Vec<Permission> {
+    pub(crate) fn superuser_permissions() -> Vec<Permission> {
         vec![
             Self::every_operators_perm(),
             Self::every_routes_perm(),
@@ -247,50 +247,7 @@ impl Permission {
         ]
     }
 
-    pub(crate) fn trusted_default() -> Vec<Permission> {
-        vec![
-            Self::every_routes_perm(),
-            Self::every_stops_perm(),
-            Self::every_stop_pics_perm(),
-        ]
-    }
-
-    pub(crate) fn operator_default(operator_id: i32) -> Vec<Permission> {
-        vec![Permission::Operator {
-            operator_id,
-            permissions: vec![
-                Permission::Routes {
-                    create: true,
-                    modify_base: true,
-                    modify_subroutes: true,
-                    modify_stops: true,
-                    modify_departures: true,
-                    validate_gtfs: true,
-                    delete: true,
-                },
-                Permission::Stops {
-                    create: true,
-                    modify_pos: true,
-                    modify_attrs: true,
-                    modify_map_features: true,
-                    delete: true,
-                    contrib_modify_attrs: false,
-                },
-                Permission::StopPics {
-                    upload: true,
-                    view_untagged: true,
-                    view_sensitive: true,
-                    modify_own: true,
-                    modify_others: true,
-                    delete: true,
-                    contrib_upload: false,
-                    contrib_modify: false,
-                },
-            ],
-        }]
-    }
-
-    pub(crate) fn user_default() -> Vec<Permission> {
+    pub(crate) fn new_user_default() -> Vec<Permission> {
         vec![
             Permission::Stops {
                 create: false,
