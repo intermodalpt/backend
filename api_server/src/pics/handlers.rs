@@ -367,7 +367,10 @@ pub(crate) async fn patch_stop_picture_meta(
         .await?
         .ok_or(Error::NotFoundUpstream)?;
 
-    if !(claims.permissions.contains(&auth::perms::Permission::Admin)
+    if !(claims
+        .permissions
+        .iter()
+        .any(|p| matches!(p, auth::perms::Permission::Admin { .. }))
         || !pic.tagged && pic.uploader == claims.uid)
     {
         return Err(Error::Forbidden);
@@ -440,7 +443,10 @@ pub(crate) async fn delete_picture(
         .await?
         .ok_or(Error::NotFoundUpstream)?;
 
-    if !(claims.permissions.contains(&auth::perms::Permission::Admin)
+    if !(claims
+        .permissions
+        .iter()
+        .any(|p| matches!(p, auth::perms::Permission::Admin { .. }))
         || pic.uploader == claims.uid)
     {
         return Err(Error::Forbidden);

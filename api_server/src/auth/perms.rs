@@ -62,7 +62,7 @@ pub enum Permission {
     },
     StopPics {
         #[serde(default, skip_serializing_if = "is_false")]
-        create: bool,
+        upload: bool,
         #[serde(default, skip_serializing_if = "is_false")]
         view_untagged: bool,
         #[serde(default, skip_serializing_if = "is_false")]
@@ -74,42 +74,106 @@ pub enum Permission {
         #[serde(default, skip_serializing_if = "is_false")]
         delete: bool,
         #[serde(default, skip_serializing_if = "is_false")]
-        contrib_create: bool,
+        contrib_upload: bool,
         #[serde(default, skip_serializing_if = "is_false")]
         contrib_modify: bool,
     },
-    Admin,
+    News {
+        #[serde(default, skip_serializing_if = "is_false")]
+        create: bool,
+        #[serde(default, skip_serializing_if = "is_false")]
+        modify: bool,
+        #[serde(default, skip_serializing_if = "is_false")]
+        delete: bool,
+    },
+    Admin {
+        #[serde(default, skip_serializing_if = "is_false")]
+        read_audit_log: bool,
+        #[serde(default, skip_serializing_if = "is_false")]
+        manage_user_sessions: bool,
+        #[serde(default, skip_serializing_if = "is_false")]
+        change_passwords: bool,
+        #[serde(default, skip_serializing_if = "is_false")]
+        change_permissions: bool,
+        #[serde(default, skip_serializing_if = "is_false")]
+        suspend_users: bool,
+    },
 }
 
 impl Permission {
+    fn every_operators_perm() -> Permission {
+        Permission::Operators {
+            create: true,
+            modify: true,
+            delete: true,
+        }
+    }
+
+    fn every_routes_perm() -> Permission {
+        Permission::Routes {
+            create: true,
+            modify: true,
+            delete: true,
+        }
+    }
+
+    fn every_stops_perm() -> Permission {
+        Permission::Stops {
+            create: true,
+            modify_pos: true,
+            modify_attrs: true,
+            delete: true,
+            contrib_modify_attrs: false,
+        }
+    }
+
+    fn every_stop_pics_perm() -> Permission {
+        Permission::StopPics {
+            upload: true,
+            view_untagged: true,
+            view_sensitive: true,
+            modify_own: true,
+            modify_others: true,
+            delete: true,
+            contrib_upload: false,
+            contrib_modify: false,
+        }
+    }
+
+    fn every_news_perm() -> Permission {
+        Permission::News {
+            create: true,
+            modify: true,
+            delete: true,
+        }
+    }
+
+    fn every_admin_perm() -> Permission {
+        Permission::Admin {
+            read_audit_log: true,
+            manage_user_sessions: true,
+            change_passwords: true,
+            change_permissions: true,
+            suspend_users: true,
+        }
+    }
+
     pub(crate) fn admin_default() -> Vec<Permission> {
-        vec![Permission::Admin]
+        vec![
+            Self::every_operators_perm(),
+            Self::every_routes_perm(),
+            Self::every_stops_perm(),
+            Self::every_stop_pics_perm(),
+            Self::every_news_perm(),
+            Self::every_admin_perm(),
+        ]
     }
 
     pub(crate) fn trusted_default() -> Vec<Permission> {
         vec![
-            Permission::Routes {
-                create: true,
-                modify: true,
-                delete: true,
-            },
-            Permission::Stops {
-                create: true,
-                modify_pos: true,
-                modify_attrs: true,
-                delete: true,
-                contrib_modify_attrs: false,
-            },
-            Permission::StopPics {
-                create: true,
-                view_untagged: true,
-                view_sensitive: true,
-                modify_own: true,
-                modify_others: true,
-                delete: true,
-                contrib_create: false,
-                contrib_modify: false,
-            },
+            Self::every_routes_perm(),
+            Self::every_stops_perm(),
+            Self::every_stop_pics_perm(),
         ]
     }
 
@@ -130,13 +194,13 @@ impl Permission {
                     contrib_modify_attrs: false,
                 },
                 Permission::StopPics {
-                    create: true,
+                    upload: true,
                     view_untagged: true,
                     view_sensitive: true,
                     modify_own: true,
                     modify_others: true,
                     delete: true,
-                    contrib_create: false,
+                    contrib_upload: false,
                     contrib_modify: false,
                 },
             ],
@@ -153,13 +217,13 @@ impl Permission {
                 contrib_modify_attrs: true,
             },
             Permission::StopPics {
-                create: false,
+                upload: false,
                 view_untagged: false,
                 view_sensitive: false,
                 modify_own: false,
                 modify_others: false,
                 delete: false,
-                contrib_create: true,
+                contrib_upload: true,
                 contrib_modify: true,
             },
         ]
@@ -170,7 +234,10 @@ pub struct Admin;
 
 impl ClaimPermission for Admin {
     fn is_valid(permissions: &[Permission]) -> bool {
-        permissions.iter().any(|p| p == &Permission::Admin)
+        // TODO this is wrong
+        permissions
+            .iter()
+            .any(|p| matches!(p, Permission::Admin { .. }))
     }
 }
 
@@ -179,6 +246,8 @@ pub struct Trusted;
 impl ClaimPermission for Trusted {
     fn is_valid(permissions: &[Permission]) -> bool {
         // TODO get rid of me
-        permissions.iter().any(|p| p == &Permission::Admin)
+        permissions
+            .iter()
+            .any(|p| matches!(p, Permission::Admin { .. }))
     }
 }
