@@ -26,10 +26,7 @@ pub struct AuditLogEntry {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", tag = "action", content = "data")]
 pub enum AuditLogAction {
-    Login {
-        refresh_jti: Uuid,
-        access_jti: Option<Uuid>,
-    },
+    Login,
     RefreshToken {
         refresh_jti: Uuid,
         access_jti: Uuid,

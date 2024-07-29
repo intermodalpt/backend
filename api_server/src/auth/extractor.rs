@@ -96,7 +96,7 @@ where
                     iat: claims.iat,
                     nbf: 0,
                     jti: claims.jti,
-                    origin: Default::default(),
+                    origin: claims.jti,
                     uid: claims.uid,
                     permissions: permissions.permissions.0,
                 });

@@ -71,7 +71,7 @@ pub(crate) async fn post_register(
                 ));
             }
 
-            logic::register(registration, client_ip.0, &state.pool).await
+            logic::register(&state.pool, registration, client_ip.0).await
         } else {
             // Are we going to ever have a registration without a captcha?
             // Maybe if nobody has registered in the past hour
@@ -153,9 +153,10 @@ pub(crate) async fn get_management_tokens(
 
     sql::insert_audit_log_entry(
         &mut transaction,
-        claims.uid,
-        &client_ip.0.into(),
         auth::AuditLogAction::QueryManagementTokens,
+        claims.uid,
+        Some(claims.jti),
+        &client_ip.0.into(),
     )
     .await?;
 
@@ -178,7 +179,7 @@ pub(crate) async fn post_create_management_token(
         logic::create_management_token(
             request,
             &state.pool,
-            claims.uid,
+            &claims,
             client_ip.0,
             &user_agent,
         )
@@ -201,12 +202,13 @@ pub(crate) async fn delete_revoke_management_token(
 
     sql::insert_audit_log_entry(
         &mut transaction,
-        claims.uid,
-        &client_ip.0.into(),
         auth::AuditLogAction::SessionRevoked {
             session_id: token_id,
             was_logout: false,
         },
+        claims.uid,
+        Some(claims.jti),
+        &client_ip.0.into(),
     )
     .await?;
 
@@ -223,7 +225,7 @@ pub(crate) async fn post_admin_change_password(
     client_ip: SecureClientIp,
     Json(request): Json<requests::ChangeUnknownPassword>,
 ) -> Result<(), Error> {
-    logic::admin_change_password(request, claims.uid, client_ip.0, &state.pool)
+    logic::admin_change_password(&state.pool, request, &claims, client_ip.0)
         .await
 }
 pub(crate) async fn post_user_change_password(
@@ -240,7 +242,7 @@ pub(crate) async fn post_user_change_password(
         return Err(Error::Forbidden);
     }
 
-    logic::change_password(request, claims.uid, client_ip.0, &state.pool).await
+    logic::change_password(&state.pool, request, &claims, client_ip.0).await
 }
 
 pub(crate) async fn get_user_audit_log(

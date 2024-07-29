@@ -56,7 +56,7 @@ pub struct HashedRegistration {
     pub email: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Default)]
 pub struct Claims {
     // Expiration
     pub exp: i64,

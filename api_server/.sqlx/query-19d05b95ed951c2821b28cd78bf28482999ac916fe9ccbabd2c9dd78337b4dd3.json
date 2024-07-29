@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nINSERT INTO audit_log(user_id, action, addr)\nVALUES ($1, $2, $3)\nRETURNING id\n    ",
+  "query": "\nINSERT INTO audit_log(user_id, action, addr, session_id)\nVALUES ($1, $2, $3, $4)\nRETURNING id\n    ",
   "describe": {
     "columns": [
       {
@@ -13,12 +13,13 @@
       "Left": [
         "Int4",
         "Jsonb",
-        "Cidr"
+        "Cidr",
+        "Uuid"
       ]
     },
     "nullable": [
       false
     ]
   },
-  "hash": "2cd81e1375e46e572d843946e07c69c0dd58c7ea7c59959b0e609efdf6088e64"
+  "hash": "19d05b95ed951c2821b28cd78bf28482999ac916fe9ccbabd2c9dd78337b4dd3"
 }

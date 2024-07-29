@@ -82,6 +82,7 @@ CREATE TABLE audit_log
 (
     id       bigserial PRIMARY KEY,
     user_id  integer                                            NOT NULL REFERENCES users (id),
+    session_id  uuid,
     datetime timestamp with time zone DEFAULT clock_timestamp() NOT NULL,
     action   jsonb                                              NOT NULL,
     addr     cidr                                               NOT NULL

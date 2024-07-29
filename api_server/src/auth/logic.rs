@@ -90,13 +90,10 @@ pub(crate) async fn login(
 
     sql::insert_audit_log_entry(
         &mut transaction,
-        user.id,
+        auth::AuditLogAction::Login,
+        refresh_claims.uid,
+        Some(refresh_claims.jti),
         &requester_ip.into(),
-        auth::AuditLogAction::Login {
-            refresh_jti: refresh_claims.jti,
-            // TODO add me once we also generate access tokens
-            access_jti: None,
-        },
     )
     .await?;
 
@@ -120,7 +117,7 @@ pub(crate) async fn renew_token(
         .inspect_err(|_| {
             tracing::error!(
                 msg = "Valid JWT for unknown user".to_string(),
-                jti = refresh_claims.jti.to_string(),
+                jti = ?refresh_claims.jti,
                 uid = refresh_claims.uid
             )
         })?;
@@ -182,12 +179,13 @@ pub(crate) async fn renew_token(
     .await?;
     sql::insert_audit_log_entry(
         &mut transaction,
-        refresh_claims.uid,
-        &requester_ip.into(),
         auth::AuditLogAction::RefreshToken {
             refresh_jti: refresh_claims.jti,
             access_jti: claims.jti,
         },
+        refresh_claims.uid,
+        Some(refresh_claims.jti),
+        &requester_ip.into(),
     )
     .await?;
 
@@ -202,7 +200,7 @@ pub(crate) async fn renew_token(
 pub(crate) async fn create_management_token(
     request: requests::NewManagementToken,
     db_pool: &PgPool,
-    uid: i32,
+    claims: &super::Claims,
     requester_ip: IpAddr,
     user_agent: &str,
 ) -> Result<responses::ManagementToken, Error> {
@@ -211,25 +209,26 @@ pub(crate) async fn create_management_token(
         Error::DatabaseExecution
     })?;
 
-    let user = sql::fetch_user_by_id(&mut *transaction, uid)
+    let user = sql::fetch_user_by_id(&mut *transaction, claims.uid)
         .await?
         .ok_or(Error::Forbidden)?;
 
-    let permissions = sql::fetch_user_permissions(&mut *transaction, uid)
-        .await?
-        .ok_or(Error::IllegalState)?;
+    let permissions =
+        sql::fetch_user_permissions(&mut *transaction, claims.uid)
+            .await?
+            .ok_or(Error::IllegalState)?;
 
     let session_id = Uuid::new_v4();
     let issue_time = Utc::now();
     let expiration_time = issue_time
         + chrono::Duration::try_days(*MANAGEMENT_DAYS.get().unwrap()).unwrap();
-    let claims = models::ManagementClaims {
+    let management_claims = models::ManagementClaims {
         iat: issue_time.timestamp(),
         exp: expiration_time.timestamp(),
         uid: user.id,
         jti: session_id,
     };
-    let encoded_claims = encode_management_claims(&claims)?;
+    let encoded_claims = encode_management_claims(&management_claims)?;
 
     sql::insert_user_session(
         &mut transaction,
@@ -253,9 +252,10 @@ pub(crate) async fn create_management_token(
 
     sql::insert_audit_log_entry(
         &mut transaction,
-        user.id,
-        &requester_ip.into(),
         auth::AuditLogAction::ManagementTokenIssued { session_id },
+        claims.uid,
+        Some(claims.jti),
+        &requester_ip.into(),
     )
     .await?;
 
@@ -385,9 +385,9 @@ pub(crate) async fn is_valid_registration(
 }
 
 pub(crate) async fn register(
+    db_pool: &PgPool,
     request: requests::Register,
     requester_ip: IpAddr,
-    db_pool: &PgPool,
 ) -> Result<(), Error> {
     is_valid_registration(&request, db_pool).await?;
 
@@ -412,12 +412,13 @@ pub(crate) async fn register(
     .await?;
     sql::insert_audit_log_entry(
         &mut transaction,
-        user_id,
-        &requester_ip.into(),
         auth::AuditLogAction::Register {
             username: registration.username,
             email: registration.email,
         },
+        user_id,
+        None,
+        &requester_ip.into(),
     )
     .await?;
 
@@ -429,10 +430,10 @@ pub(crate) async fn register(
 
 #[allow(clippy::similar_names)]
 pub(crate) async fn change_password(
-    request: requests::ChangeKnownPassword,
-    requester_id: i32,
-    requester_ip: IpAddr,
     db_pool: &PgPool,
+    request: requests::ChangeKnownPassword,
+    claims: &super::Claims,
+    requester_ip: IpAddr,
 ) -> Result<(), Error> {
     if !is_user_password(&request.username, &request.old_password, db_pool)
         .await?
@@ -454,9 +455,10 @@ pub(crate) async fn change_password(
     .await?;
     sql::insert_audit_log_entry(
         &mut transaction,
-        requester_id,
-        &requester_ip.into(),
         auth::AuditLogAction::ChangePassword,
+        claims.uid,
+        Some(claims.jti),
+        &requester_ip.into(),
     )
     .await?;
 
@@ -468,10 +470,10 @@ pub(crate) async fn change_password(
 
 #[allow(clippy::similar_names)]
 pub(crate) async fn admin_change_password(
-    request: requests::ChangeUnknownPassword,
-    requester_id: i32,
-    requester_ip: IpAddr,
     db_pool: &PgPool,
+    request: requests::ChangeUnknownPassword,
+    claims: &super::Claims,
+    requester_ip: IpAddr,
 ) -> Result<(), Error> {
     let password_kdf = gen_kdf_password_string(&request.new_password)?;
 
@@ -492,11 +494,12 @@ pub(crate) async fn admin_change_password(
     .await?;
     sql::insert_audit_log_entry(
         &mut transaction,
-        requester_id,
-        &requester_ip.into(),
         auth::AuditLogAction::AdminChangePassword {
             for_user_id: changed_user.id,
         },
+        claims.uid,
+        Some(claims.jti),
+        &requester_ip.into(),
     )
     .await?;
 
@@ -619,11 +622,10 @@ pub(crate) fn decode_management_claims(
 
 #[cfg(test)]
 mod tests {
-    use sqlx::PgPool;
-    use std::net::{IpAddr, Ipv4Addr};
-
     use crate::auth::{models, models::requests, Permission};
     use crate::errors::Error;
+    use sqlx::PgPool;
+    use std::net::{IpAddr, Ipv4Addr};
 
     #[test]
     fn encode_decode_access_claims() {
@@ -665,7 +667,7 @@ mod tests {
         };
         let req_ori = IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4));
 
-        let res = super::register(req, req_ori, &pool).await;
+        let res = super::register(&pool, req, req_ori).await;
         assert_eq!(res, Ok(()));
 
         // LOGIN
@@ -696,7 +698,7 @@ mod tests {
         };
         let req_ori = IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4));
 
-        let res = super::register(req, req_ori, &pool).await;
+        let res = super::register(&pool, req, req_ori).await;
         assert_eq!(
             res,
             Err(Error::ValidationFailure(
@@ -722,7 +724,7 @@ mod tests {
         };
         let req_ori = IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4));
 
-        let res = super::register(req, req_ori, &pool).await;
+        let res = super::register(&pool, req, req_ori).await;
         assert_eq!(
             res,
             Err(Error::ValidationFailure(
@@ -748,7 +750,7 @@ mod tests {
         };
         let req_ori = IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4));
 
-        let res = super::register(req, req_ori, &pool).await;
+        let res = super::register(&pool, req, req_ori).await;
         assert_eq!(res, Ok(()));
 
         let req = requests::Register {
@@ -766,7 +768,7 @@ mod tests {
         };
         let req_ori = IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4));
 
-        let res = super::register(req, req_ori, &pool).await;
+        let res = super::register(&pool, req, req_ori).await;
         assert_eq!(
             res,
             Err(Error::ValidationFailure(
@@ -792,7 +794,7 @@ mod tests {
         };
         let req_ori = IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4));
 
-        let res = super::register(req, req_ori, &pool).await;
+        let res = super::register(&pool, req, req_ori).await;
         assert_eq!(res, Ok(()));
 
         let req = requests::Register {
@@ -810,7 +812,7 @@ mod tests {
         };
         let req_ori = IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4));
 
-        let res = super::register(req, req_ori, &pool).await;
+        let res = super::register(&pool, req, req_ori).await;
         assert_eq!(
             res,
             Err(Error::ValidationFailure("Email already in use".to_string()))
@@ -899,7 +901,7 @@ mod tests {
         };
         let req_ori = IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4));
 
-        super::change_password(req, 1, req_ori, &pool)
+        super::change_password(&pool, req, &Default::default(), req_ori)
             .await
             .unwrap();
 
@@ -922,7 +924,8 @@ mod tests {
         let req_ori = IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4));
 
         assert_eq!(
-            super::change_password(req, 1, req_ori, &pool).await,
+            super::change_password(&pool, req, &Default::default(), req_ori)
+                .await,
             Err(Error::Forbidden)
         );
     }
@@ -936,7 +939,7 @@ mod tests {
         };
         let req_ori = IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4));
 
-        super::admin_change_password(req, 1, req_ori, &pool)
+        super::admin_change_password(&pool, req, &Default::default(), req_ori)
             .await
             .unwrap();
 

@@ -456,19 +456,21 @@ LIMIT $1 OFFSET $2
 
 pub(crate) async fn insert_audit_log_entry(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-    user_id: i32,
-    addr: &IpNetwork,
     action: auth::AuditLogAction,
+    user_id: i32,
+    session_id: Option<Uuid>,
+    addr: &IpNetwork,
 ) -> Result<i64> {
     let res = sqlx::query!(
         r#"
-INSERT INTO audit_log(user_id, action, addr)
-VALUES ($1, $2, $3)
+INSERT INTO audit_log(user_id, action, addr, session_id)
+VALUES ($1, $2, $3, $4)
 RETURNING id
     "#,
         user_id,
         Json(&action) as _,
-        addr
+        addr,
+        session_id
     )
     .fetch_one(&mut **transaction)
     .await
@@ -477,7 +479,8 @@ RETURNING id
             error = err.to_string(),
             user_id,
             action = ?action,
-            addr = ?addr
+            addr = ?addr,
+            session_id = ?session_id
         );
         Error::DatabaseExecution
     })?;
