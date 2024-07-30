@@ -37,6 +37,7 @@ mod osm;
 mod pics;
 mod responses;
 mod routes;
+pub(crate) mod settings;
 pub(crate) mod state;
 mod stops;
 mod utils;
@@ -47,8 +48,8 @@ use std::sync::Arc;
 use sqlx::postgres::PgPool;
 use tokio::net::TcpListener;
 
-use config::Config;
 use errors::Error;
+pub(crate) use settings::SETTINGS;
 use state::{AppState, State};
 
 #[tokio::main]
@@ -58,73 +59,23 @@ async fn main() {
         .with_line_number(true)
         .init();
 
-    let settings = Config::builder()
-        .add_source(config::File::with_name("./settings.toml"))
-        .add_source(config::Environment::with_prefix("SETTINGS"))
-        .build()
-        .unwrap();
+    settings::load();
 
-    let _ = auth::REFRESH_SECRET_KEY.set(Box::leak(Box::new(
-        settings
-            .get_string("jwt_refresh_secret")
-            .expect("jwt_refresh_secret not set"),
-    )));
-    let _ = auth::REFRESH_DAYS.set(
-        settings
-            .get_int("jwt_refresh_days")
-            .expect("jwt_refresh_days not set"),
-    );
-    let _ = auth::ACCESS_SECRET_KEY.set(Box::leak(Box::new(
-        settings
-            .get_string("jwt_access_secret")
-            .expect("jwt_access_secret not set"),
-    )));
-    let _ = auth::ACCESS_MINUTES.set(
-        settings
-            .get_int("jwt_access_minutes")
-            .expect("jwt_access_minutes not set"),
-    );
-    let _ = auth::MANAGEMENT_SECRET_KEY.set(Box::leak(Box::new(
-        settings
-            .get_string("jwt_management_secret")
-            .expect("jwt_management_secret not set"),
-    )));
-    let _ = auth::MANAGEMENT_DAYS.set(
-        settings
-            .get_int("jwt_managements_days")
-            .expect("jwt_management_days not set"),
-    );
-
-    let _ = pics::IMG_ROOT.set(Box::leak(Box::new(
-        settings.get_string("img_root").expect("img_root not set"),
-    )));
-
+    let settings = SETTINGS.get().unwrap();
     let credentials = s3::creds::Credentials::new(
-        Some(
-            &settings
-                .get_string("s3_access_key")
-                .expect("s3_access_key not set"),
-        ),
-        Some(
-            &settings
-                .get_string("s3_secret_key")
-                .expect("s3_secret_key not set"),
-        ),
+        Some(settings.s3.access_key.as_str()),
+        Some(settings.s3.secret_key.as_str()),
         None,
         None,
         None,
     )
     .unwrap();
 
-    let bucket_name = settings
-        .get_string("s3_bucket_name")
-        .expect("s3_bucket_name not set");
+    let bucket_name = settings.s3.bucket_name.as_str();
     let bucket = s3::Bucket::new(
-        &bucket_name,
+        bucket_name,
         s3::Region::R2 {
-            account_id: settings
-                .get_string("s3_account_id")
-                .expect("s3_account_id not set"),
+            account_id: settings.s3.account_id.clone(),
         },
         credentials,
     )
@@ -135,9 +86,7 @@ async fn main() {
         tracing::warn!("Using a production bucket");
     }
 
-    let db_url = settings
-        .get_string("db")
-        .expect("The 'db' field is not set in the config");
+    let db_url = settings.db.url.as_str();
     let (_, db_selection) =
         db_url.rsplit_once('@').expect("Invalid database URL");
     let pool = PgPool::connect(&db_url)
@@ -150,11 +99,7 @@ async fn main() {
 
     let state = Arc::new(State::new(bucket, pool));
 
-    let addr = SocketAddr::from((
-        [0, 0, 0, 0],
-        u16::try_from(settings.get_int("port").expect("port not set"))
-            .expect("Illegal port"),
-    ));
+    let addr = SocketAddr::from(([0, 0, 0, 0], settings.http.port));
 
     let listener = match TcpListener::bind(&addr).await {
         Ok(listener) => {

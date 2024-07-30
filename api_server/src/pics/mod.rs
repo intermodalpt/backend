@@ -23,6 +23,8 @@ pub(crate) mod sql;
 
 use once_cell::sync::OnceCell;
 
+use crate::settings::SETTINGS;
+
 pub(crate) static IMG_ROOT: OnceCell<&'static str> = OnceCell::new();
 
 pub(crate) fn get_stop_pic_ori_named_path(sha: &str, filename: &str) -> String {
@@ -44,7 +46,7 @@ pub(crate) fn get_stop_pic_thumb_path(sha: &str) -> String {
 pub(crate) fn get_logo_path(operator_id: i32, sha: &str) -> String {
     format!(
         "{}/operators/{operator_id}/{sha}/logo",
-        IMG_ROOT.get().unwrap()
+        SETTINGS.get().unwrap().images.root,
     )
 }
 

@@ -34,6 +34,7 @@ use super::{
 use crate::auth::extractor::UserAgent;
 use crate::errors::Error;
 use crate::responses::{json_response_with_cookie_set, Pagination};
+use crate::settings::SETTINGS;
 use crate::AppState;
 
 #[derive(Deserialize, Default)]
@@ -128,7 +129,12 @@ pub(crate) async fn get_renew_access_token(
         logic::renew_token(claims, &state.pool, client_ip.0, &user_agent)
             .await?;
 
-    json_response_with_cookie_set("access_token", access_token.0, access_claims)
+    json_response_with_cookie_set(
+        "access_token",
+        access_token.0,
+        time::Duration::minutes(SETTINGS.get().unwrap().jwt.access_minutes),
+        access_claims,
+    )
 }
 
 pub(crate) async fn get_management_tokens(

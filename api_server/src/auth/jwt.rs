@@ -1,6 +1,5 @@
-use crate::auth::{
-    models, ACCESS_SECRET_KEY, MANAGEMENT_SECRET_KEY, REFRESH_SECRET_KEY,
-};
+use super::models;
+use crate::settings::SETTINGS;
 use crate::Error;
 
 pub(crate) fn encode_access_claims(
@@ -8,7 +7,7 @@ pub(crate) fn encode_access_claims(
 ) -> Result<models::JwtAccess, Error> {
     let header = jsonwebtoken::Header::new(jsonwebtoken::Algorithm::HS256);
     let encoding_key = jsonwebtoken::EncodingKey::from_secret(
-        ACCESS_SECRET_KEY.get().unwrap().as_ref(),
+        SETTINGS.get().unwrap().jwt.access_secret.as_ref(),
     );
     jsonwebtoken::encode(&header, claims, &encoding_key)
         .map(models::JwtAccess)
@@ -23,7 +22,7 @@ pub(crate) fn decode_access_claims(jwt: &str) -> Result<models::Claims, Error> {
         jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::HS256);
     validation.validate_nbf = true;
     let decoding_key = jsonwebtoken::DecodingKey::from_secret(
-        ACCESS_SECRET_KEY.get().unwrap().as_ref(),
+        SETTINGS.get().unwrap().jwt.access_secret.as_ref(),
     );
     let decoded_token =
         jsonwebtoken::decode::<models::Claims>(jwt, &decoding_key, &validation)
@@ -43,7 +42,7 @@ pub(crate) fn encode_refresh_claims(
         &header,
         claims,
         &jsonwebtoken::EncodingKey::from_secret(
-            REFRESH_SECRET_KEY.get().unwrap().as_ref(),
+            SETTINGS.get().unwrap().jwt.refresh_secret.as_ref(),
         ),
     )
     .map(models::JwtRefresh)
@@ -60,7 +59,7 @@ pub(crate) fn decode_refresh_claims(
         jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::HS256);
     validation.validate_nbf = true;
     let decoding_key = jsonwebtoken::DecodingKey::from_secret(
-        REFRESH_SECRET_KEY.get().unwrap().as_ref(),
+        SETTINGS.get().unwrap().jwt.refresh_secret.as_ref(),
     );
     let decoded_token = jsonwebtoken::decode::<models::RefreshClaims>(
         jwt,
@@ -83,7 +82,7 @@ pub(crate) fn encode_management_claims(
         &header,
         claims,
         &jsonwebtoken::EncodingKey::from_secret(
-            MANAGEMENT_SECRET_KEY.get().unwrap().as_ref(),
+            SETTINGS.get().unwrap().jwt.management_secret.as_ref(),
         ),
     )
     .map(|token| models::JwtManagement(format!("manag.{token}")))
@@ -99,7 +98,7 @@ pub(crate) fn decode_management_claims(
     let validation =
         jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::HS256);
     let decoding_key = jsonwebtoken::DecodingKey::from_secret(
-        MANAGEMENT_SECRET_KEY.get().unwrap().as_ref(),
+        SETTINGS.get().unwrap().jwt.management_secret.as_ref(),
     );
     let decoded_token = jsonwebtoken::decode::<models::ManagementClaims>(
         &jwt[6..],
@@ -120,14 +119,13 @@ mod tests {
 
     use crate::auth::{models, models::requests};
     use crate::errors::Error;
+    use crate::settings;
 
     #[test]
     fn encode_decode_refresh_claims() {
         use super::*;
 
-        //The key must be set
-        let _ = REFRESH_SECRET_KEY
-            .set(Box::leak(Box::new("super_secret_key".to_string())));
+        settings::load();
 
         let claims = models::RefreshClaims {
             iat: 0,
@@ -145,9 +143,7 @@ mod tests {
     fn encode_decode_access_claims() {
         use super::*;
 
-        //The key must be set
-        let _ = ACCESS_SECRET_KEY
-            .set(Box::leak(Box::new("super_secret_key".to_string())));
+        settings::load();
 
         let claims = models::Claims {
             iat: 0,
@@ -167,9 +163,8 @@ mod tests {
     fn encode_decode_management_claims() {
         use super::*;
 
-        //The key must be set
-        let _ = MANAGEMENT_SECRET_KEY
-            .set(Box::leak(Box::new("super_secret_key".to_string())));
+        settings::load();
+
         let claims = models::ManagementClaims {
             iat: 0,
             exp: 99999999999,

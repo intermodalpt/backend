@@ -24,15 +24,5 @@ mod models;
 pub(crate) mod perms;
 mod sql;
 
-use once_cell::sync::OnceCell;
-
-pub(crate) static REFRESH_SECRET_KEY: OnceCell<&'static str> = OnceCell::new();
-pub(crate) static REFRESH_DAYS: OnceCell<i64> = OnceCell::new();
-pub(crate) static ACCESS_SECRET_KEY: OnceCell<&'static str> = OnceCell::new();
-pub(crate) static ACCESS_MINUTES: OnceCell<i64> = OnceCell::new();
-pub(crate) static MANAGEMENT_SECRET_KEY: OnceCell<&'static str> =
-    OnceCell::new();
-pub(crate) static MANAGEMENT_DAYS: OnceCell<i64> = OnceCell::new();
-
 pub(crate) use models::Claims;
 pub(super) use perms::{ClaimPermission, ScopedClaim};

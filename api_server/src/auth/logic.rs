@@ -32,9 +32,9 @@ use uuid::Uuid;
 use commons::models::auth;
 
 use super::{jwt, models, models::requests, sql};
-use super::{ACCESS_MINUTES, MANAGEMENT_DAYS, REFRESH_DAYS};
 use crate::auth::models::responses;
 use crate::errors::Error;
+use crate::settings::SETTINGS;
 
 pub(crate) async fn login(
     request: requests::Login,
@@ -60,7 +60,8 @@ pub(crate) async fn login(
 
     let issue_time = Utc::now();
     let expiration_time = issue_time
-        + chrono::Duration::try_days(*REFRESH_DAYS.get().unwrap()).unwrap();
+        + chrono::Duration::try_days(SETTINGS.get().unwrap().jwt.refresh_days)
+            .unwrap();
     let refresh_claims = models::RefreshClaims {
         iat: issue_time.timestamp(),
         exp: expiration_time.timestamp(),
@@ -148,8 +149,10 @@ pub(crate) async fn renew_token(
 
     let issue_time = Utc::now();
     let expiration_time = issue_time
-        + chrono::Duration::try_minutes(*ACCESS_MINUTES.get().unwrap())
-            .unwrap();
+        + chrono::Duration::try_minutes(
+            SETTINGS.get().unwrap().jwt.access_minutes,
+        )
+        .unwrap();
     let claims = models::Claims {
         iat: issue_time.timestamp(),
         nbf: issue_time.timestamp(),
@@ -212,7 +215,10 @@ pub(crate) async fn create_management_token(
     let session_id = Uuid::new_v4();
     let issue_time = Utc::now();
     let expiration_time = issue_time
-        + chrono::Duration::try_days(*MANAGEMENT_DAYS.get().unwrap()).unwrap();
+        + chrono::Duration::try_days(
+            SETTINGS.get().unwrap().jwt.management_days,
+        )
+        .unwrap();
     let management_claims = models::ManagementClaims {
         iat: issue_time.timestamp(),
         exp: expiration_time.timestamp(),

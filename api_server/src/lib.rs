@@ -29,6 +29,7 @@ pub mod osm;
 pub mod pics;
 mod responses;
 pub mod routes;
+pub mod settings;
 pub mod state;
 pub mod stops;
 pub mod utils;
