@@ -349,7 +349,7 @@ pub(crate) async fn post_assign_subroute_validation(
 /// Acknowledges the current stops as the last validated against the GTFS data
 pub(crate) async fn post_subroute_validation_current_ack(
     State(state): State<AppState>,
-    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::ValidateRouteGtfs>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::AuthenticateRoute>,
     Path(subroute_id): Path<i32>,
     Json(request): Json<requests::MatchedUpdateStopIds>,
 ) -> Result<(), Error> {
@@ -386,7 +386,7 @@ pub(crate) async fn post_subroute_validation_current_ack(
 /// Acknowledges the current GTFS correspondence data as the latest validated
 pub(crate) async fn post_subroute_validation_correspondence_ack(
     State(state): State<AppState>,
-    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::ValidateRouteGtfs>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::AuthenticateRoute>,
     Path(subroute_id): Path<i32>,
     Json(request): Json<requests::MatchedUpdateStopIds>,
 ) -> Result<(), Error> {

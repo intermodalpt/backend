@@ -235,6 +235,7 @@ mod perms {
                     modify_pos: false,
                     modify_attrs: false,
                     modify_map_features: false,
+                    authenticate: false,
                     delete: false,
                     contrib_modify_attrs: true,
                 }),
@@ -334,7 +335,7 @@ mod perms {
             #[serde(default, skip_serializing_if = "is_false")]
             pub modify_departures: bool,
             #[serde(default, skip_serializing_if = "is_false")]
-            pub validate_gtfs: bool,
+            pub authenticate: bool,
             // Delete as a separate perm makes sense because it
             // allows the modification of everything else
             #[serde(default, skip_serializing_if = "is_false")]
@@ -350,7 +351,7 @@ mod perms {
                 self.modify_stops = self.modify_stops || perms.modify_stops;
                 self.modify_departures =
                     self.modify_departures || perms.modify_departures;
-                self.validate_gtfs = self.validate_gtfs || perms.validate_gtfs;
+                self.authenticate = self.authenticate || perms.authenticate;
                 self.delete = self.delete || perms.delete;
             }
 
@@ -361,7 +362,7 @@ mod perms {
                     modify_subroutes: true,
                     modify_stops: true,
                     modify_departures: true,
-                    validate_gtfs: true,
+                    authenticate: true,
                     delete: true,
                 }
             }
@@ -377,6 +378,8 @@ mod perms {
             pub modify_attrs: bool,
             #[serde(default, skip_serializing_if = "is_false")]
             pub modify_map_features: bool,
+            #[serde(default, skip_serializing_if = "is_false")]
+            pub authenticate: bool,
             #[serde(default, skip_serializing_if = "is_false")]
             pub delete: bool,
             #[serde(default, skip_serializing_if = "is_false")]
@@ -401,6 +404,7 @@ mod perms {
                     modify_pos: true,
                     modify_attrs: true,
                     modify_map_features: true,
+                    authenticate: true,
                     delete: true,
                     contrib_modify_attrs: true,
                 }
@@ -577,7 +581,7 @@ mod perms {
             #[serde(default, skip_serializing_if = "is_false")]
             pub expensive_calls: bool,
             #[serde(default, skip_serializing_if = "is_false")]
-            pub patch_gtfs: bool,
+            pub patch_gtfs: bool
         }
 
         impl Misc {

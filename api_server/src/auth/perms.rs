@@ -129,11 +129,11 @@ impl ClaimPermission for ModifyRouteDepartures {
     }
 }
 
-pub struct ValidateRouteGtfs;
+pub struct AuthenticateRoute;
 
-impl ClaimPermission for ValidateRouteGtfs {
+impl ClaimPermission for AuthenticateRoute {
     fn is_valid(permissions: &Permissions) -> bool {
-        permissions.routes.as_ref().is_some_and(|p| p.validate_gtfs)
+        permissions.routes.as_ref().is_some_and(|p| p.authenticate)
     }
 }
 
@@ -179,6 +179,15 @@ impl ClaimPermission for ModifyStopMapFeatures {
             .is_some_and(|p| p.modify_map_features)
     }
 }
+
+pub struct AuthenticateStop;
+
+impl ClaimPermission for AuthenticateStop {
+    fn is_valid(permissions: &Permissions) -> bool {
+        permissions.stops.as_ref().is_some_and(|p| p.authenticate)
+    }
+}
+
 pub struct DeleteStop;
 
 impl ClaimPermission for DeleteStop {
