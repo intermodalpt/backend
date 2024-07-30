@@ -112,10 +112,49 @@ pub(crate) async fn post_login(
     let (refresh_claims, refresh_token) =
         logic::login(request, &state.pool, client_ip.0, &user_agent).await?;
 
+    // Unset the token
     json_response_with_cookie_set(
         "refresh_token",
         refresh_token.0,
+        time::Duration::days(SETTINGS.get().unwrap().jwt.refresh_days),
         refresh_claims,
+    )
+}
+
+pub(crate) async fn post_logout(
+    State(state): State<AppState>,
+    client_ip: SecureClientIp,
+    claims: models::RefreshClaims,
+) -> Result<impl IntoResponse, Error> {
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
+
+    sql::update_set_session_revoked(&mut transaction, claims.jti).await?;
+
+    sql::insert_audit_log_entry(
+        &mut transaction,
+        auth::AuditLogAction::SessionRevoked {
+            session_id: claims.jti,
+            was_logout: true,
+        },
+        claims.uid,
+        Some(claims.jti),
+        &client_ip.0.into(),
+    )
+    .await?;
+
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Failed to commit transaction: {err}");
+        Error::DatabaseExecution
+    })?;
+
+    json_response_with_cookie_set(
+        "refresh_token",
+        "".to_string(),
+        time::Duration::ZERO,
+        (),
     )
 }
 

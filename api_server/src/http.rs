@@ -535,6 +535,7 @@ pub fn build_paths(state: AppState) -> Router {
             post(routes::handlers::post_replace_stop_across_routes),
         )
         .route("/v1/auth/login", post(auth::handlers::post_login))
+        .route("/v1/auth/logout", post(auth::handlers::post_logout))
         .route(
             "/v1/auth/renew",
             get(auth::handlers::get_renew_access_token),

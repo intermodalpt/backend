@@ -22,6 +22,7 @@ use axum::Json;
 use axum_extra::extract::cookie::{Cookie, SameSite};
 use serde::Serialize;
 
+use crate::settings::SETTINGS;
 use crate::Error;
 
 #[derive(Serialize)]
@@ -43,14 +44,18 @@ pub struct Pagination<T> {
 pub(crate) fn json_response_with_cookie_set<T>(
     cookie_key: &str,
     cookie_value: String,
+    max_age: time::Duration,
     payload: T,
 ) -> Result<impl IntoResponse, Error>
 where
     T: Serialize,
 {
     let cookie = Cookie::build((cookie_key, cookie_value))
-        .max_age(time::Duration::days(365))
+        .max_age(max_age)
         .same_site(SameSite::Lax)
+        .domain(SETTINGS.get().unwrap().cookies.domain.as_str())
+        .path("/")
+        .secure(SETTINGS.get().unwrap().cookies.secure)
         .http_only(true);
 
     let mut response = Response::builder()
