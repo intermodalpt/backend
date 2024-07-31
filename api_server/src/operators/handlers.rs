@@ -1,6 +1,6 @@
 /*
     Intermodal, transportation information aggregator
-    Copyright (C) 2022 - 2023  Cláudio Pereira
+    Copyright (C) 2022 - 2024  Cláudio Pereira
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -15,17 +15,18 @@
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-
 use axum::extract::{Path, State};
 use axum::Json;
 use chrono::NaiveDate;
+use futures::future;
+use std::collections::HashMap;
 
 use commons::models::{history, operators};
 
 use super::models::{requests, responses};
 use super::sql;
 use crate::responses::IdReturn;
-use crate::{auth, contrib, AppState, Error};
+use crate::{auth, contrib, routes, stops, AppState, Error};
 
 pub(crate) async fn get_operators(
     State(state): State<AppState>,
@@ -143,17 +144,36 @@ pub(crate) async fn delete_operator_stop(
     Ok(())
 }
 
-pub(crate) async fn get_issues(
-    State(state): State<AppState>,
-) -> Result<Json<Vec<operators::Issue>>, Error> {
-    Ok(Json(sql::fetch_issues(&state.pool).await?))
-}
-
 pub(crate) async fn get_issue(
     State(state): State<AppState>,
     Path(issue_id): Path<i32>,
-) -> Result<Json<operators::Issue>, Error> {
-    Ok(Json(sql::fetch_issue(&state.pool, issue_id).await?))
+) -> Result<Json<responses::FullIssue>, Error> {
+    let (issue, operators, stops, routes) = future::join4(
+        sql::fetch_issue(&state.pool, issue_id),
+        sql::fetch_issue_operators(&state.pool, issue_id),
+        stops::sql::fetch_issue_stops(&state.pool, issue_id),
+        routes::sql::fetch_issue_routes(&state.pool, issue_id),
+    )
+    .await;
+
+    let issue = issue?;
+
+    Ok(Json(responses::FullIssue {
+        id: issue.id,
+        title: issue.title,
+        message: issue.message,
+        category: issue.category,
+        impact: issue.impact,
+        creation: issue.creation,
+        geojson: issue.geojson,
+        lat: issue.lat,
+        lon: issue.lon,
+        state: issue.state,
+        state_justification: issue.state_justification,
+        operators: operators?,
+        routes: routes?,
+        stops: stops?,
+    }))
 }
 
 pub(crate) async fn get_operator_route_types(
@@ -245,10 +265,72 @@ pub(crate) async fn delete_operator_route_type(
 pub(crate) async fn get_operator_issues(
     State(state): State<AppState>,
     Path(operator_id): Path<i32>,
-) -> Result<Json<Vec<responses::Issue>>, Error> {
-    Ok(Json(
-        sql::fetch_issue_operators(&state.pool, operator_id).await?,
-    ))
+) -> Result<Json<Vec<responses::FullIssue>>, Error> {
+    let (issues, issue_operators, issue_routes, issue_stops) = future::join4(
+        sql::fetch_operator_issues(&state.pool, operator_id),
+        sql::fetch_operator_issue_operators(&state.pool, operator_id),
+        routes::sql::fetch_operator_issue_routes(&state.pool, operator_id),
+        stops::sql::fetch_operator_issue_stops(&state.pool, operator_id),
+    )
+    .await;
+
+    let operator_index = issue_operators?
+        .into_iter()
+        .map(|operator| (operator.id, operator))
+        .collect::<HashMap<_, _>>();
+
+    let route_index = issue_routes?
+        .into_iter()
+        .map(|route| (route.id, route))
+        .collect::<HashMap<_, _>>();
+
+    let stop_index = issue_stops?
+        .into_iter()
+        .map(|stop| (stop.id, stop))
+        .collect::<HashMap<_, _>>();
+
+    let issues = issues?
+        .into_iter()
+        .map(|issue| {
+            let issue_operators = issue
+                .operator_ids
+                .iter()
+                .filter_map(|id| operator_index.get(id))
+                .cloned()
+                .collect();
+            let issue_routes = issue
+                .route_ids
+                .iter()
+                .filter_map(|id| route_index.get(id))
+                .cloned()
+                .collect();
+            let issue_stops = issue
+                .stop_ids
+                .iter()
+                .filter_map(|id| stop_index.get(id))
+                .cloned()
+                .collect();
+
+            responses::FullIssue {
+                id: issue.id,
+                title: issue.title,
+                message: issue.message,
+                category: issue.category,
+                impact: issue.impact,
+                creation: issue.creation,
+                geojson: issue.geojson,
+                lat: issue.lat,
+                lon: issue.lon,
+                state: issue.state,
+                state_justification: issue.state_justification,
+                operators: issue_operators,
+                routes: issue_routes,
+                stops: issue_stops,
+            }
+        })
+        .collect::<Vec<_>>();
+
+    Ok(Json(issues))
 }
 
 pub(crate) async fn post_issue(

@@ -628,6 +628,49 @@ WHERE id = $2
     }
 }
 
+pub(crate) async fn fetch_issue_stops(
+    pool: &PgPool,
+    issue_id: i32,
+) -> Result<Vec<responses::SimpleStop>> {
+    sqlx::query_as!(
+        responses::SimpleStop,
+        r#"
+SELECT id, name, short_name, lat, lon
+FROM stops
+JOIN issue_stops ON stops.id = issue_stops.stop_id
+WHERE issue_stops.issue_id=$1"#,
+        issue_id
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), issue_id);
+        Error::DatabaseExecution
+    })
+}
+
+pub(crate) async fn fetch_operator_issue_stops(
+    pool: &PgPool,
+    operator_id: i32,
+) -> Result<Vec<responses::SimpleStop>> {
+    sqlx::query_as!(
+        responses::SimpleStop,
+        r#"
+SELECT id, name, short_name, lat, lon
+FROM stops
+JOIN issue_stops ON stops.id = issue_stops.stop_id
+JOIN issue_operators ON stops.id = issue_operators.operator_id
+WHERE operator_id=$1"#,
+        operator_id
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), operator_id);
+        Error::DatabaseExecution
+    })
+}
+
 impl FromRow<'_, sqlx::postgres::PgRow> for responses::Stop {
     fn from_row(row: &sqlx::postgres::PgRow) -> sqlx::Result<Self> {
         Ok(Self {

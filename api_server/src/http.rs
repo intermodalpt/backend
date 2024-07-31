@@ -277,11 +277,7 @@ pub fn build_paths(state: AppState) -> Router {
             "/v1/stop_pics/by_stop",
             get(pics::handlers::get_picture_count_by_stop),
         )
-        .route(
-            "/v1/issues",
-            get(operators::handlers::get_issues)
-                .post(operators::handlers::post_issue),
-        )
+        .route("/v1/issues", post(operators::handlers::post_issue))
         .route(
             "/v1/issues/:issue_id",
             get(operators::handlers::get_issue)

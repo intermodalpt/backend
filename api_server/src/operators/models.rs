@@ -28,13 +28,23 @@ pub struct Operator {
 
 pub(crate) mod responses {
     use chrono::{DateTime, Local};
-    use serde::{Deserialize, Serialize};
+    use serde::Serialize;
     use sqlx::types::JsonValue;
 
     use commons::models::calendar::Calendar;
     use commons::models::operators;
 
-    #[derive(Serialize, Deserialize)]
+    use crate::routes::models::responses::SimpleRoute;
+    use crate::stops::models::responses::SimpleStop;
+
+    #[derive(Debug, Clone, Serialize)]
+    pub struct SimpleOperator {
+        pub id: i32,
+        pub name: String,
+        pub tag: String,
+    }
+
+    #[derive(Serialize)]
     pub struct Operator {
         pub id: i32,
         pub name: String,
@@ -48,7 +58,7 @@ pub(crate) mod responses {
         pub contact_uris: Vec<String>,
     }
 
-    #[derive(Serialize, Deserialize)]
+    #[derive(Serialize)]
     pub struct OperatorWithRegions {
         pub id: i32,
         pub name: String,
@@ -118,6 +128,24 @@ pub(crate) mod responses {
         pub operator_ids: Vec<i32>,
         pub route_ids: Vec<i32>,
         pub stop_ids: Vec<i32>,
+    }
+
+    #[derive(Debug, Serialize)]
+    pub struct FullIssue {
+        pub id: i32,
+        pub title: String,
+        pub message: String,
+        pub category: operators::IssueCategory,
+        pub impact: i32,
+        pub creation: DateTime<Local>,
+        pub geojson: Option<JsonValue>,
+        pub lat: Option<f64>,
+        pub lon: Option<f64>,
+        pub state: operators::IssueState,
+        pub state_justification: Option<String>,
+        pub operators: Vec<SimpleOperator>,
+        pub routes: Vec<SimpleRoute>,
+        pub stops: Vec<SimpleStop>,
     }
 
     #[derive(Debug, Serialize)]

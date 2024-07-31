@@ -182,6 +182,17 @@ pub(crate) mod responses {
 
     use commons::models::routes;
 
+    #[derive(Debug, Clone, Serialize)]
+    pub struct SimpleRoute {
+        pub(crate) id: i32,
+        pub(crate) operator_id: i32,
+        pub(crate) code: Option<String>,
+        pub(crate) name: String,
+        pub(crate) circular: bool,
+        pub(crate) badge_text: String,
+        pub(crate) badge_bg: String,
+    }
+
     /// This is an extension of `commons::Route` that includes parishes
     #[derive(Serialize)]
     pub struct Route {

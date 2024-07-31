@@ -492,7 +492,7 @@ WHERE operator = $1 AND id = $2
     .map_err(|err| {
         tracing::error!(
             error = err.to_string(),
-            operator_id = operator_id,
+            operator_id,
             type_id = type_id
         );
         Error::DatabaseExecution
@@ -501,8 +501,9 @@ WHERE operator = $1 AND id = $2
     Ok(())
 }
 
-pub(crate) async fn fetch_issues(
+pub(crate) async fn fetch_operator_issues(
     pool: &PgPool,
+    operator_id: i32,
 ) -> Result<Vec<operators::Issue>> {
     sqlx::query!(
         r#"
@@ -517,8 +518,10 @@ JOIN issue_operators on issue_operators.issue_id = issues.id
 JOIN issue_routes on issue_routes.issue_id = issues.id
 JOIN issue_stops on issue_stops.issue_id = issues.id
 JOIN issue_pics on issue_pics.issue_id = issues.id
+WHERE issue_operators.operator_id = $1
 GROUP BY issues.id
 "#,
+        operator_id
     )
     .fetch_all(pool)
     .await
@@ -557,69 +560,52 @@ GROUP BY issues.id
     .collect()
 }
 
-pub(crate) async fn fetch_issue_operators(
+pub(crate) async fn fetch_operator_issue_operators(
     pool: &PgPool,
     operator_id: i32,
-) -> Result<Vec<responses::Issue>> {
-    sqlx::query!(
+) -> Result<Vec<responses::SimpleOperator>> {
+    sqlx::query_as!(
+        responses::SimpleOperator,
         r#"
-SELECT issues.id, issues.title, issues.message, issues.geojson, issues.category, issues.lat,
-    issues.creation, issues.lon, issues.impact, issues.state, issues.state_justification,
-    array_agg(issue_operators.operator_id) as "operators!: Vec<i32>",
-    array_agg(issue_routes.route_id) as "routes!: Vec<i32>",
-    array_agg(issue_stops.stop_id) as "stops!: Vec<i32>",
-    array_agg(issue_pics.pic_id) as "pics!: Vec<i32>"
-FROM issues
-JOIN issue_operators on issue_operators.issue_id = issues.id
-JOIN issue_routes on issue_routes.issue_id = issues.id
-JOIN issue_stops on issue_stops.issue_id = issues.id
-JOIN issue_pics on issue_pics.issue_id = issues.id
-WHERE issues.id IN (
+SELECT operators.id, operators.name, operators.tag
+FROM operators
+JOIN issue_operators on issue_operators.operator_id = operators.id
+WHERE issue_operators.issue_id IN (
     SELECT issue_id
     FROM issue_operators
-    WHERE issue_operators.operator_id = $1
+    WHERE operator_id = $1
 )
-GROUP BY issues.id
 "#,
         operator_id
     )
     .fetch_all(pool)
     .await
     .map_err(|err| {
-        tracing::error!(
-            error=err.to_string(),
-            operator_id=operator_id
-        );
+        tracing::error!(error = err.to_string(), operator_id);
         Error::DatabaseExecution
-    })?
-    .into_iter()
-    .map(|row| {
-        Ok(responses::Issue {
-            id: row.id,
-            title: row.title,
-            message: row.message,
-            geojson: row.geojson,
-            category: serde_json::from_str(&row.category)
-                .map_err(|e| {
-                    tracing::error!("Error deserializing {e}");
-                    Error::DatabaseDeserialization
-                })?,
-            creation: row.creation.into(),
-            lat: row.lat,
-            lon: row.lon,
-            impact: row.impact,
-            state: serde_json::from_str(&row.state)
-                .map_err(|e| {
-                    tracing::error!("Error deserializing {e}");
-                    Error::DatabaseDeserialization
-                })?,
-            state_justification: row.state_justification,
-            operator_ids: row.operators,
-            route_ids: row.routes,
-            stop_ids: row.stops,
-        })
     })
-    .collect()
+}
+
+pub(crate) async fn fetch_issue_operators(
+    pool: &PgPool,
+    issue_id: i32,
+) -> Result<Vec<responses::SimpleOperator>> {
+    sqlx::query_as!(
+        responses::SimpleOperator,
+        r#"
+SELECT operators.id, operators.name, operators.tag
+FROM issue_operators
+JOIN operators on issue_operators.operator_id = operators.id
+WHERE issue_operators.issue_id = $1
+"#,
+        issue_id
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), issue_id);
+        Error::DatabaseExecution
+    })
 }
 
 pub(crate) async fn fetch_issue(
@@ -725,11 +711,7 @@ RETURNING id
         .execute(&mut **transaction)
         .await
         .map_err(|err| {
-            tracing::error!(
-                error = err.to_string(),
-                operator_id = operator_id,
-                id = id
-            );
+            tracing::error!(error = err.to_string(), operator_id, id);
             Error::DatabaseExecution
         })?;
     }
@@ -864,11 +846,7 @@ async fn insert_issue_related(
         .execute(&mut **transaction)
         .await
         .map_err(|err| {
-            tracing::error!(
-                error = err.to_string(),
-                operator_id = operator_id,
-                issue_id = issue_id
-            );
+            tracing::error!(error = err.to_string(), operator_id, issue_id);
             Error::DatabaseExecution
         })?;
     }
@@ -1033,7 +1011,7 @@ WHERE operator_id=$1
     .fetch_all(pool)
     .await
     .map_err(|err| {
-        tracing::error!(error = err.to_string(), operator_id = operator_id);
+        tracing::error!(error = err.to_string(), operator_id);
         Error::DatabaseExecution
     })?
     .into_iter()
@@ -1069,7 +1047,7 @@ RETURNING id
     .fetch_one(&mut **transaction)
     .await
     .map_err(|err| {
-        tracing::error!(error = err.to_string(), operator_id = operator_id);
+        tracing::error!(error = err.to_string(), operator_id);
         Error::DatabaseExecution
     })?;
     Ok(row.id)
@@ -1091,11 +1069,7 @@ WHERE operator_id=$1 AND id=$2
     .execute(&mut **transaction)
     .await
     .map_err(|err| {
-        tracing::error!(
-            error = err.to_string(),
-            operator_id = operator_id,
-            calendar_id = calendar_id
-        );
+        tracing::error!(error = err.to_string(), operator_id, calendar_id);
         Error::DatabaseExecution
     })?;
     Ok(())
@@ -1117,7 +1091,7 @@ WHERE operator_id=$1
     .fetch_all(pool)
     .await
     .map_err(|err| {
-        tracing::error!(error = err.to_string(), operator_id = operator_id);
+        tracing::error!(error = err.to_string(), operator_id);
         Error::DatabaseExecution
     })?
     .into_iter()
