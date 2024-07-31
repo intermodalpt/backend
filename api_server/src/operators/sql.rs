@@ -1053,6 +1053,38 @@ RETURNING id
     Ok(row.id)
 }
 
+pub(crate) async fn update_calendar(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    operator_id: i32,
+    calendar_id: i32,
+    request: requests::NewOperatorCalendar,
+) -> Result<()> {
+    sqlx::query!(
+        r#"
+UPDATE operator_calendars
+SET name = $1,
+    calendar = $2
+WHERE operator_id=$3 AND id=$4
+"#,
+        &request.name,
+        Json(&request.calendar) as _,
+        operator_id,
+        calendar_id
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| {
+        tracing::error!(
+            error = err.to_string(),
+            name = request.name,
+            calendar = ?request.calendar
+        );
+        Error::DatabaseExecution
+    })?;
+
+    Ok(())
+}
+
 pub(crate) async fn delete_calendar(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     operator_id: i32,

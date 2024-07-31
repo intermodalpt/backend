@@ -445,6 +445,34 @@ pub(crate) async fn post_operator_calendar(
     return Ok(Json(IdReturn { id }));
 }
 
+pub(crate) async fn patch_operator_calendar(
+    State(state): State<AppState>,
+    Path((operator_id, calendar_id)): Path<(i32, i32)>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<
+        auth::perms::ModifyOperatorCalendars,
+    >,
+    Json(request): Json<requests::NewOperatorCalendar>,
+) -> Result<(), Error> {
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
+
+    // TODO check if noop
+
+    sql::update_calendar(&mut transaction, operator_id, calendar_id, request)
+        .await?;
+
+    // TODO log
+
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
+
+    Ok(())
+}
+
 pub(crate) async fn delete_operator_calendar(
     State(state): State<AppState>,
     Path((operator_id, calendar_id)): Path<(i32, i32)>,
@@ -460,6 +488,8 @@ pub(crate) async fn delete_operator_calendar(
     })?;
 
     sql::delete_calendar(&mut transaction, operator_id, calendar_id).await?;
+
+    // TODO log
 
     transaction.commit().await.map_err(|err| {
         tracing::error!("Transaction failed to commit: {err}");
