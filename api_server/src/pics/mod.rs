@@ -21,26 +21,31 @@ pub(crate) mod logic;
 pub(crate) mod models;
 pub(crate) mod sql;
 
-use once_cell::sync::OnceCell;
-
 use crate::settings::SETTINGS;
 
-pub(crate) static IMG_ROOT: OnceCell<&'static str> = OnceCell::new();
-
 pub(crate) fn get_stop_pic_ori_named_path(sha: &str, filename: &str) -> String {
-    format!("{}/ori/{sha}/{filename}", IMG_ROOT.get().unwrap())
+    format!(
+        "{}/ori/{sha}/{filename}",
+        SETTINGS.get().unwrap().images.root
+    )
 }
 
 pub(crate) fn get_stop_pic_ori_path(sha: &str) -> String {
-    format!("{}/ori/{sha}/stop", IMG_ROOT.get().unwrap())
+    format!("{}/ori/{sha}/stop", SETTINGS.get().unwrap().images.root)
 }
 
 pub(crate) fn get_stop_pic_medium_path(sha: &str) -> String {
-    format!("{}/medium/{sha}/preview", IMG_ROOT.get().unwrap())
+    format!(
+        "{}/medium/{sha}/preview",
+        SETTINGS.get().unwrap().images.root
+    )
 }
 
 pub(crate) fn get_stop_pic_thumb_path(sha: &str) -> String {
-    format!("{}/thumb/{sha}/preview", IMG_ROOT.get().unwrap())
+    format!(
+        "{}/thumb/{sha}/preview",
+        SETTINGS.get().unwrap().images.root
+    )
 }
 
 pub(crate) fn get_logo_path(operator_id: i32, sha: &str) -> String {
@@ -51,21 +56,30 @@ pub(crate) fn get_logo_path(operator_id: i32, sha: &str) -> String {
 }
 
 pub(crate) fn get_news_pic_full_path(sha: &str) -> String {
-    format!("{}/news/ori/{sha}/stop", IMG_ROOT.get().unwrap())
+    format!(
+        "{}/news/ori/{sha}/stop",
+        SETTINGS.get().unwrap().images.root
+    )
 }
 
 pub(crate) fn get_news_pic_medium_path(sha: &str) -> String {
-    format!("{}/news/medium/{sha}/preview", IMG_ROOT.get().unwrap())
+    format!(
+        "{}/news/medium/{sha}/preview",
+        SETTINGS.get().unwrap().images.root
+    )
 }
 
 pub(crate) fn get_news_pic_thumb_path(sha: &str) -> String {
-    format!("{}/news/thumb/{sha}/preview", IMG_ROOT.get().unwrap())
+    format!(
+        "{}/news/thumb/{sha}/preview",
+        SETTINGS.get().unwrap().images.root
+    )
 }
 
 pub(crate) fn get_external_news_pic_path(sha: &str) -> String {
-    format!("{}/enews/{sha}/img", IMG_ROOT.get().unwrap())
+    format!("{}/enews/{sha}/img", SETTINGS.get().unwrap().images.root)
 }
 
 pub(crate) fn get_external_news_ss_path(sha: &str) -> String {
-    format!("{}/enews_ss/{sha}/img", IMG_ROOT.get().unwrap())
+    format!("{}/enews_ss/{sha}/img", SETTINGS.get().unwrap().images.root)
 }
