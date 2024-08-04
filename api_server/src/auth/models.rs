@@ -226,6 +226,14 @@ pub(crate) mod requests {
         pub permissions: super::Permissions,
         pub priority: i32,
     }
+
+    #[derive(Debug, Deserialize)]
+    pub(crate) struct SurveyFill {
+        pub(crate) user_id: Option<i32>,
+        pub(crate) username: Option<String>,
+        pub(crate) email: Option<String>,
+        pub(crate) survey: Value,
+    }
 }
 
 pub(crate) mod responses {

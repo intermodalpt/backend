@@ -269,10 +269,9 @@ pub(crate) async fn delete_revoke_management_token(
 pub(crate) async fn get_user_permissions(
     State(state): State<AppState>,
     Path(user_id): Path<i32>,
-    super::ScopedClaim(claims, _): super::ScopedClaim<
+    super::ScopedClaim(_, _): super::ScopedClaim<
         super::perms::ChangePermissions,
     >,
-    client_ip: SecureClientIp,
 ) -> Result<Json<Vec<responses::UserPermAssignment>>, Error> {
     Ok(Json(
         sql::fetch_user_permission_assignments(&state.pool, user_id).await?,
@@ -433,4 +432,43 @@ pub(crate) async fn get_session_accesses(
     })?;
 
     Ok(Json(accesses))
+}
+
+pub(crate) async fn get_user_survey(
+    State(state): State<AppState>,
+    claims: models::Claims,
+    client_ip: SecureClientIp,
+) -> Result<Json<Option<serde_json::Value>>, Error> {
+    Ok(Json(sql::get_user_survey(&state.pool, claims.uid).await?))
+}
+
+pub(crate) async fn post_survey(
+    State(state): State<AppState>,
+    claims: Option<models::Claims>,
+    client_ip: SecureClientIp,
+    UserAgent(user_agent): UserAgent,
+    Json(request): Json<requests::SurveyFill>,
+) -> Result<(), Error> {
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
+
+    sql::insert_survey_fill(
+        &mut transaction,
+        &request,
+        &client_ip.0.into(),
+        &user_agent,
+    )
+    .await?;
+    if let Some(claims) = claims {
+        sql::update_user_survey(&mut transaction, claims.uid, &request.survey)
+            .await?;
+    }
+
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Failed to commit transaction: {err}");
+        Error::DatabaseExecution
+    })?;
+    Ok(())
 }

@@ -583,6 +583,11 @@ pub fn build_paths(state: AppState) -> Router {
             "/v1/admin/audit/sessions/:session_id/accesses",
             post(auth::handlers::get_session_accesses),
         )
+        .route(
+            "/v1/survey",
+            get(auth::handlers::get_user_survey)
+                .post(auth::handlers::post_survey),
+        )
         .with_state(state)
         .layer(DefaultBodyLimit::disable())
         .layer(RequestBodyLimitLayer::new(30 * 1024 * 1024 /* 30mb */))

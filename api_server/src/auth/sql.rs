@@ -1,6 +1,6 @@
 /*
     Intermodal, transportation information aggregator
-    Copyright (C) 2022 - 2023  Cláudio Pereira
+    Copyright (C) 2022 - 2024  Cláudio Pereira
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -25,7 +25,7 @@ use uuid::Uuid;
 
 use commons::models::auth;
 
-use super::models::responses;
+use super::models::{requests, responses};
 use crate::auth::models;
 use crate::Error;
 
@@ -684,4 +684,60 @@ WHERE user_id=$1
     })?
     .cnt
     .unwrap_or(0))
+}
+
+pub(crate) async fn get_user_survey(
+    pool: &PgPool,
+    user_id: i32,
+) -> Result<Option<serde_json::Value>> {
+    sqlx::query!(r#"SELECT survey FROM users WHERE id=$1"#, user_id)
+        .fetch_optional(pool)
+        .await
+        .map(|r| r.map(|r| r.survey))
+        .map_err(|err| {
+            tracing::error!(error = err.to_string(), user_id);
+            Error::DatabaseExecution
+        })
+}
+
+pub(crate) async fn update_user_survey(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    user_id: i32,
+    survey: &serde_json::Value,
+) -> Result<()> {
+    sqlx::query!(r#"UPDATE users SET survey=$1 WHERE id=$2"#, survey, user_id)
+        .execute(&mut **transaction)
+        .await
+        .map(|_| ())
+        .map_err(|err| {
+            tracing::error!(error = err.to_string(), user_id, survey = ?survey);
+            Error::DatabaseExecution
+        })
+}
+
+pub(crate) async fn insert_survey_fill(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    survey_fill: &requests::SurveyFill,
+    addr: &IpNetwork,
+    user_agent: &str,
+) -> Result<()> {
+    sqlx::query!(
+        r#"
+INSERT INTO attempted_surveys(user_id, username, email, survey, ip, user_agent)
+VALUES ($1, $2, $3, $4, $5, $6)
+    "#,
+        survey_fill.user_id,
+        survey_fill.username,
+        survey_fill.email,
+        json!(survey_fill.survey),
+        addr,
+        user_agent
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), survey_fill = ?survey_fill);
+        Error::DatabaseExecution
+    })?;
+    Ok(())
 }

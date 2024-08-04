@@ -878,7 +878,6 @@ mod tests {
     async fn ok_change_password(pool: PgPool) {
         // PASSWORD CHANGE
         let req = requests::ChangeKnownPassword {
-            username: "user".to_string(),
             old_password: "password".to_string(),
             new_password: "new_password".to_string(),
         };
@@ -900,7 +899,6 @@ mod tests {
     #[sqlx::test(fixtures("users"))]
     async fn err_change_password_bad_old_password(pool: PgPool) {
         let req = requests::ChangeKnownPassword {
-            username: "user".to_string(),
             old_password: "wrong_password".to_string(),
             new_password: "new_password".to_string(),
         };
