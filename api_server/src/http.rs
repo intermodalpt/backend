@@ -364,7 +364,8 @@ pub fn build_paths(state: AppState) -> Router {
         )
         .route(
             "/v1/operators/:operator_id/calendars/:calendar_id",
-            delete(operators::handlers::delete_operator_calendar),
+            patch(operators::handlers::patch_operator_calendar)
+                .delete(operators::handlers::delete_operator_calendar),
         )
         .route(
             "/v1/operators/:operator_id/stop_rels",
@@ -562,7 +563,7 @@ pub fn build_paths(state: AppState) -> Router {
             delete(auth::handlers::delete_user_permissions),
         )
         .route(
-            "/v1/user/change_password",
+            "/v1/auth/change_password",
             post(auth::handlers::post_user_change_password),
         )
         .route(
