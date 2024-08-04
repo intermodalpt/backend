@@ -243,7 +243,7 @@ mod perms {
                     upload: false,
                     view_untagged: false,
                     view_sensitive: false,
-                    modify_own: false,
+                    modify_own: true,
                     modify_others: false,
                     delete: false,
                     contrib_upload: true,
@@ -260,6 +260,7 @@ mod perms {
         use super::is_false;
 
         #[derive(Debug, PartialEq, Clone, Default, Serialize, Deserialize)]
+        #[serde(rename_all = "camelCase")]
         pub struct Regions {
             #[serde(default, skip_serializing_if = "is_false")]
             pub create: bool,
@@ -286,6 +287,7 @@ mod perms {
         }
 
         #[derive(Debug, PartialEq, Clone, Default, Serialize, Deserialize)]
+        #[serde(rename_all = "camelCase")]
         pub struct Operators {
             #[serde(default, skip_serializing_if = "is_false")]
             pub create: bool,
@@ -321,6 +323,7 @@ mod perms {
         }
 
         #[derive(Debug, PartialEq, Clone, Default, Serialize, Deserialize)]
+        #[serde(rename_all = "camelCase")]
         pub struct Routes {
             #[serde(default, skip_serializing_if = "is_false")]
             pub create: bool,
@@ -369,6 +372,7 @@ mod perms {
         }
 
         #[derive(Debug, PartialEq, Clone, Default, Serialize, Deserialize)]
+        #[serde(rename_all = "camelCase")]
         pub struct Stops {
             #[serde(default, skip_serializing_if = "is_false")]
             pub create: bool,
@@ -412,6 +416,7 @@ mod perms {
         }
 
         #[derive(Debug, PartialEq, Clone, Default, Serialize, Deserialize)]
+        #[serde(rename_all = "camelCase")]
         pub struct OsmStops {
             #[serde(default, skip_serializing_if = "is_false")]
             pub update: bool,
@@ -434,6 +439,7 @@ mod perms {
         }
 
         #[derive(Debug, PartialEq, Clone, Default, Serialize, Deserialize)]
+        #[serde(rename_all = "camelCase")]
         pub struct StopPics {
             #[serde(default, skip_serializing_if = "is_false")]
             pub upload: bool,
@@ -483,6 +489,7 @@ mod perms {
         }
 
         #[derive(Debug, PartialEq, Clone, Default, Serialize, Deserialize)]
+        #[serde(rename_all = "camelCase")]
         pub struct News {
             #[serde(default, skip_serializing_if = "is_false")]
             pub create: bool,
@@ -535,6 +542,7 @@ mod perms {
         }
 
         #[derive(Debug, PartialEq, Clone, Default, Serialize, Deserialize)]
+        #[serde(rename_all = "camelCase")]
         pub struct Admin {
             #[serde(default, skip_serializing_if = "is_false")]
             pub read_audit_log: bool,
@@ -573,6 +581,7 @@ mod perms {
         }
 
         #[derive(Debug, PartialEq, Clone, Default, Serialize, Deserialize)]
+        #[serde(rename_all = "camelCase")]
         pub struct Misc {
             #[serde(default, skip_serializing_if = "is_false")]
             pub modify_issues: bool,
@@ -581,7 +590,7 @@ mod perms {
             #[serde(default, skip_serializing_if = "is_false")]
             pub expensive_calls: bool,
             #[serde(default, skip_serializing_if = "is_false")]
-            pub patch_gtfs: bool
+            pub patch_gtfs: bool,
         }
 
         impl Misc {
