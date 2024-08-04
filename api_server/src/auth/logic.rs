@@ -271,16 +271,16 @@ pub(crate) async fn create_management_token(
 }
 
 pub(crate) async fn is_user_password(
-    username: &str,
+    uid: i32,
     password: &str,
     db_pool: &PgPool,
 ) -> Result<bool, Error> {
-    let user = sql::fetch_user_by_username(db_pool, username)
+    let user = sql::fetch_user_by_id(db_pool, uid)
         .await?
         .ok_or(Error::NotFoundUpstream)?;
 
     let parsed_hash = PasswordHash::new(&user.password).map_err(|err| {
-        tracing::error!(msg="Unable to parse existing hash", err=?err, username);
+        tracing::error!(msg="Unable to parse existing hash", err=?err, uid);
         Error::Processing
     })?;
 
@@ -533,9 +533,7 @@ pub(crate) async fn change_password(
     claims: &super::Claims,
     requester_ip: IpAddr,
 ) -> Result<(), Error> {
-    if !is_user_password(&request.username, &request.old_password, db_pool)
-        .await?
-    {
+    if !is_user_password(claims.uid, &request.old_password, db_pool).await? {
         return Err(Error::Forbidden);
     }
     let password_kdf = gen_kdf_password_string(&request.new_password)?;
@@ -545,12 +543,8 @@ pub(crate) async fn change_password(
         Error::DatabaseExecution
     })?;
 
-    sql::change_user_password(
-        &mut transaction,
-        &request.username,
-        &password_kdf,
-    )
-    .await?;
+    sql::change_user_password(&mut transaction, claims.uid, &password_kdf)
+        .await?;
     sql::insert_audit_log_entry(
         &mut transaction,
         auth::AuditLogAction::ChangePassword,
@@ -584,12 +578,8 @@ pub(crate) async fn admin_change_password(
         Error::DatabaseExecution
     })?;
 
-    sql::change_user_password(
-        &mut transaction,
-        &request.username,
-        &password_kdf,
-    )
-    .await?;
+    sql::change_user_password(&mut transaction, changed_user.id, &password_kdf)
+        .await?;
     sql::insert_audit_log_entry(
         &mut transaction,
         auth::AuditLogAction::AdminChangePassword {

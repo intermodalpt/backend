@@ -187,16 +187,13 @@ pub(crate) mod requests {
 
     #[derive(Deserialize)]
     pub struct ChangeKnownPassword {
-        pub username: String,
         pub old_password: String,
         pub new_password: String,
     }
 
     impl Debug for ChangeKnownPassword {
         fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-            f.debug_struct("ChangeKnownPassword")
-                .field("username", &self.username)
-                .finish()
+            f.debug_struct("ChangeKnownPassword").finish()
         }
     }
 

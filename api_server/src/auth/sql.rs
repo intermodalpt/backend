@@ -513,20 +513,16 @@ VALUES ($1, $2, $3, $4, $5)
 
 pub(crate) async fn change_user_password(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-    username: &str,
+    uid: i32,
     password: &str,
 ) -> Result<()> {
-    sqlx::query!(
-        r#"UPDATE users SET password=$1 WHERE username=$2"#,
-        password,
-        username
-    )
-    .execute(&mut **transaction)
-    .await
-    .map_err(|err| {
-        tracing::error!(error = err.to_string(), username);
-        Error::DatabaseExecution
-    })?;
+    sqlx::query!(r#"UPDATE users SET password=$1 WHERE id=$2"#, password, uid)
+        .execute(&mut **transaction)
+        .await
+        .map_err(|err| {
+            tracing::error!(error = err.to_string(), uid);
+            Error::DatabaseExecution
+        })?;
     Ok(())
 }
 

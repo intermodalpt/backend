@@ -328,20 +328,13 @@ pub(crate) async fn post_admin_change_password(
     logic::admin_change_password(&state.pool, request, &claims, client_ip.0)
         .await
 }
+
 pub(crate) async fn post_user_change_password(
     State(state): State<AppState>,
     claims: models::Claims,
     client_ip: SecureClientIp,
     Json(request): Json<requests::ChangeKnownPassword>,
 ) -> Result<(), Error> {
-    let requester = sql::fetch_user_by_id(&state.pool, claims.uid)
-        .await?
-        .ok_or(Error::Forbidden)?;
-
-    if requester.username != request.username {
-        return Err(Error::Forbidden);
-    }
-
     logic::change_password(&state.pool, request, &claims, client_ip.0).await
 }
 
