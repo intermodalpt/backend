@@ -1,15 +1,16 @@
 {
   "db_name": "PostgreSQL",
-  "query": "UPDATE users SET survey=$1 WHERE id=$2",
+  "query": "UPDATE users SET survey=$1, survey_version=$2 WHERE id=$3",
   "describe": {
     "columns": [],
     "parameters": {
       "Left": [
         "Jsonb",
+        "Int4",
         "Int4"
       ]
     },
     "nullable": []
   },
-  "hash": "69f5a0bef232e21923090eb75ed2557384de8d54b154b0cb1fa8a8fd35d33644"
+  "hash": "faeb2ae70614a57bfd3dbe76474f4d6c8def18d4cf5833cf1248d9a8110dde19"
 }

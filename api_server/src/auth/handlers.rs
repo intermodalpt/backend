@@ -459,8 +459,12 @@ pub(crate) async fn get_user_stats(
 pub(crate) async fn get_user_survey(
     State(state): State<AppState>,
     claims: models::Claims,
-) -> Result<Json<Option<serde_json::Value>>, Error> {
-    Ok(Json(sql::get_user_survey(&state.pool, claims.uid).await?))
+) -> Result<Json<responses::Survey>, Error> {
+    Ok(Json(
+        sql::get_user_survey(&state.pool, claims.uid)
+            .await?
+            .ok_or(Error::NotFoundUpstream)?,
+    ))
 }
 
 pub(crate) async fn post_survey(
@@ -483,8 +487,13 @@ pub(crate) async fn post_survey(
     )
     .await?;
     if let Some(claims) = claims {
-        sql::update_user_survey(&mut transaction, claims.uid, &request.survey)
-            .await?;
+        sql::update_user_survey(
+            &mut transaction,
+            claims.uid,
+            &request.survey,
+            request.survey_version,
+        )
+        .await?;
     }
 
     transaction.commit().await.map_err(|err| {

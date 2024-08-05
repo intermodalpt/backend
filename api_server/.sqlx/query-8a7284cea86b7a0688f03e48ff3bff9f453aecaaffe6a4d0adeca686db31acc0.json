@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT email, registration_date, is_superuser, is_suspended, verification_level,\n    consent, consent_date\nFROM users\nWHERE users.id = $1",
+  "query": "\nSELECT email, registration_date, is_superuser, is_suspended, verification_level,\n    consent, consent_date, survey_version\nFROM users\nWHERE users.id = $1",
   "describe": {
     "columns": [
       {
@@ -37,6 +37,11 @@
         "ordinal": 6,
         "name": "consent_date",
         "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 7,
+        "name": "survey_version",
+        "type_info": "Int4"
       }
     ],
     "parameters": {
@@ -51,8 +56,9 @@
       false,
       false,
       false,
-      true
+      true,
+      false
     ]
   },
-  "hash": "deef4393c0516e3347f890a7abb193393b74db23f07383866a06435f8730a57e"
+  "hash": "8a7284cea86b7a0688f03e48ff3bff9f453aecaaffe6a4d0adeca686db31acc0"
 }

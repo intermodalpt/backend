@@ -233,6 +233,7 @@ pub(crate) mod requests {
         pub(crate) username: Option<String>,
         pub(crate) email: Option<String>,
         pub(crate) survey: Value,
+        pub(crate) survey_version: i32,
     }
 }
 
@@ -327,6 +328,7 @@ pub(crate) mod responses {
         pub(crate) verification_level: i64,
         pub(crate) consent: sqlx::types::JsonValue,
         pub(crate) consent_date: Option<chrono::DateTime<Utc>>,
+        pub(crate) survey_version: i32,
     }
 
     #[derive(Debug, Serialize)]
@@ -334,5 +336,11 @@ pub(crate) mod responses {
         pub(crate) changelog_cnt: i64,
         pub(crate) contributions_cnt: i64,
         pub(crate) pics_cnt: i64,
+    }
+
+    #[derive(Debug, Serialize)]
+    pub(crate) struct Survey {
+        pub(crate) data: serde_json::Value,
+        pub(crate) version: i64,
     }
 }

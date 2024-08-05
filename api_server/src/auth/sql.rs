@@ -694,7 +694,7 @@ pub(crate) async fn get_user_info(
         responses::UserInfo,
         r#"
 SELECT email, registration_date, is_superuser, is_suspended, verification_level,
-    consent, consent_date
+    consent, consent_date, survey_version
 FROM users
 WHERE users.id = $1"#,
         user_id
@@ -750,30 +750,41 @@ WHERE users.id = $1"#,
 pub(crate) async fn get_user_survey(
     pool: &PgPool,
     user_id: i32,
-) -> Result<Option<serde_json::Value>> {
-    sqlx::query!(r#"SELECT survey FROM users WHERE id=$1"#, user_id)
-        .fetch_optional(pool)
-        .await
-        .map(|r| r.map(|r| r.survey))
-        .map_err(|err| {
-            tracing::error!(error = err.to_string(), user_id);
-            Error::DatabaseExecution
-        })
+) -> Result<Option<responses::Survey>> {
+    sqlx::query_as!(
+        responses::Survey,
+        r#"
+SELECT survey as data, survey_version as version
+FROM users WHERE id=$1"#,
+        user_id
+    )
+    .fetch_optional(pool)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), user_id);
+        Error::DatabaseExecution
+    })
 }
 
 pub(crate) async fn update_user_survey(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     user_id: i32,
     survey: &serde_json::Value,
+    survey_version: i32,
 ) -> Result<()> {
-    sqlx::query!(r#"UPDATE users SET survey=$1 WHERE id=$2"#, survey, user_id)
-        .execute(&mut **transaction)
-        .await
-        .map(|_| ())
-        .map_err(|err| {
-            tracing::error!(error = err.to_string(), user_id, survey = ?survey);
-            Error::DatabaseExecution
-        })
+    sqlx::query!(
+        r#"UPDATE users SET survey=$1, survey_version=$2 WHERE id=$3"#,
+        survey,
+        survey_version,
+        user_id
+    )
+    .execute(&mut **transaction)
+    .await
+    .map(|_| ())
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), user_id, survey = ?survey);
+        Error::DatabaseExecution
+    })
 }
 
 pub(crate) async fn insert_survey_fill(

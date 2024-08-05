@@ -603,3 +603,19 @@ CREATE TABLE news_items_external_news_items
     external_item_id integer NOT NULL REFERENCES external_news_items (id),
     PRIMARY KEY (item_id, external_item_id)
 );
+
+-- This is intended to be a temporary table with potentially half filled data
+-- The objective is being aware of registration failures and being able
+-- to contact the person who had trouble if needed
+-- This table should go away once things are more stabler
+CREATE TABLE attempted_surveys
+(
+    id            serial PRIMARY KEY,
+    user_id       integer REFERENCES users (id),
+    username      text,
+    email         text,
+    date          timestamp with time zone DEFAULT clock_timestamp() NOT NULL,
+    ip            inet NOT NULL,
+    user_agent    text NOT NULL,
+    survey        JSONB DEFAULT '{}'::jsonb   NOT NULL
+);
