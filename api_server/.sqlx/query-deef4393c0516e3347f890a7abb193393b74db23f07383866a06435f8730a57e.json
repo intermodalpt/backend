@@ -1,0 +1,58 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT email, registration_date, is_superuser, is_suspended, verification_level,\n    consent, consent_date\nFROM users\nWHERE users.id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "email",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "registration_date",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 2,
+        "name": "is_superuser",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 3,
+        "name": "is_suspended",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 4,
+        "name": "verification_level",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 5,
+        "name": "consent",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 6,
+        "name": "consent_date",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "deef4393c0516e3347f890a7abb193393b74db23f07383866a06435f8730a57e"
+}

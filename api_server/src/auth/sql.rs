@@ -686,6 +686,27 @@ WHERE user_id=$1
     .unwrap_or(0))
 }
 
+pub(crate) async fn get_user_info(
+    pool: &PgPool,
+    user_id: i32,
+) -> Result<Option<responses::UserInfo>> {
+    sqlx::query_as!(
+        responses::UserInfo,
+        r#"
+SELECT email, registration_date, is_superuser, is_suspended, verification_level,
+    consent, consent_date
+FROM users
+WHERE users.id = $1"#,
+        user_id
+    )
+    .fetch_optional(pool)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), user_id);
+        Error::DatabaseExecution
+    })
+}
+
 pub(crate) async fn get_user_stats(
     pool: &PgPool,
     user_id: i32,
@@ -693,8 +714,7 @@ pub(crate) async fn get_user_stats(
     sqlx::query_as!(
         responses::UserStats,
         r#"
-SELECT registration_date, users.is_superuser,
-    COALESCE(changelog.cnt, 0) AS "changelog_cnt!: i64",
+SELECT COALESCE(changelog.cnt, 0) AS "changelog_cnt!: i64",
     COALESCE(contributions.cnt, 0) AS "contributions_cnt!: i64",
     COALESCE(stop_pics.cnt, 0) AS "pics_cnt!: i64"
 FROM users

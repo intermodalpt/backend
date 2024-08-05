@@ -319,9 +319,18 @@ pub(crate) mod responses {
     }
 
     #[derive(Debug, Serialize)]
-    pub(crate) struct UserStats {
+    pub(crate) struct UserInfo {
+        pub(crate) email: String,
         pub(crate) registration_date: chrono::DateTime<Utc>,
         pub(crate) is_superuser: bool,
+        pub(crate) is_suspended: bool,
+        pub(crate) verification_level: i64,
+        pub(crate) consent: sqlx::types::JsonValue,
+        pub(crate) consent_date: Option<chrono::DateTime<Utc>>,
+    }
+
+    #[derive(Debug, Serialize)]
+    pub(crate) struct UserStats {
         pub(crate) changelog_cnt: i64,
         pub(crate) contributions_cnt: i64,
         pub(crate) pics_cnt: i64,

@@ -434,6 +434,17 @@ pub(crate) async fn get_session_accesses(
     Ok(Json(accesses))
 }
 
+pub(crate) async fn get_user_info(
+    State(state): State<AppState>,
+    claims: models::Claims,
+) -> Result<Json<responses::UserInfo>, Error> {
+    Ok(Json(
+        sql::get_user_info(&state.pool, claims.uid)
+            .await?
+            .ok_or(Error::NotFoundUpstream)?,
+    ))
+}
+
 pub(crate) async fn get_user_stats(
     State(state): State<AppState>,
     claims: models::Claims,
