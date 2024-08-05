@@ -434,10 +434,20 @@ pub(crate) async fn get_session_accesses(
     Ok(Json(accesses))
 }
 
+pub(crate) async fn get_user_stats(
+    State(state): State<AppState>,
+    claims: models::Claims,
+) -> Result<Json<responses::UserStats>, Error> {
+    Ok(Json(
+        sql::get_user_stats(&state.pool, claims.uid)
+            .await?
+            .ok_or(Error::NotFoundUpstream)?,
+    ))
+}
+
 pub(crate) async fn get_user_survey(
     State(state): State<AppState>,
     claims: models::Claims,
-    client_ip: SecureClientIp,
 ) -> Result<Json<Option<serde_json::Value>>, Error> {
     Ok(Json(sql::get_user_survey(&state.pool, claims.uid).await?))
 }

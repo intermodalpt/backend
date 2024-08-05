@@ -317,4 +317,13 @@ pub(crate) mod responses {
             }
         }
     }
+
+    #[derive(Debug, Serialize)]
+    pub(crate) struct UserStats {
+        pub(crate) registration_date: chrono::DateTime<Utc>,
+        pub(crate) is_superuser: bool,
+        pub(crate) changelog_cnt: i64,
+        pub(crate) contributions_cnt: i64,
+        pub(crate) pics_cnt: i64,
+    }
 }

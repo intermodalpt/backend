@@ -686,6 +686,47 @@ WHERE user_id=$1
     .unwrap_or(0))
 }
 
+pub(crate) async fn get_user_stats(
+    pool: &PgPool,
+    user_id: i32,
+) -> Result<Option<responses::UserStats>> {
+    sqlx::query_as!(
+        responses::UserStats,
+        r#"
+SELECT registration_date, users.is_superuser,
+    COALESCE(changelog.cnt, 0) AS "changelog_cnt!: i64",
+    COALESCE(contributions.cnt, 0) AS "contributions_cnt!: i64",
+    COALESCE(stop_pics.cnt, 0) AS "pics_cnt!: i64"
+FROM users
+LEFT JOIN (
+    SELECT author_id, count(*) AS cnt
+    FROM changelog
+    WHERE author_id=$1
+    GROUP BY author_id
+    ) AS changelog ON users.id = changelog.author_id
+LEFT JOIN (
+    SELECT author_id, count(*) AS cnt
+    FROM contributions
+    WHERE author_id=$1
+    GROUP BY author_id
+    ) AS contributions ON users.id = contributions.author_id
+LEFT JOIN (
+    SELECT uploader, count(*) AS cnt
+    FROM stop_pics
+    WHERE uploader=$1
+    GROUP BY uploader
+) AS stop_pics ON users.id = stop_pics.uploader
+WHERE users.id = $1"#,
+        user_id
+    )
+    .fetch_optional(pool)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), user_id);
+        Error::DatabaseExecution
+    })
+}
+
 pub(crate) async fn get_user_survey(
     pool: &PgPool,
     user_id: i32,

@@ -583,6 +583,7 @@ pub fn build_paths(state: AppState) -> Router {
             "/v1/admin/audit/sessions/:session_id/accesses",
             post(auth::handlers::get_session_accesses),
         )
+        .route("/v1/user/stats", get(auth::handlers::get_user_stats))
         .route(
             "/v1/survey",
             get(auth::handlers::get_user_survey)
