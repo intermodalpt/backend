@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,\n    stop_pics.public, stop_pics.sensitive, stop_pics.uploader,\n    stop_pics.upload_date, stop_pics.capture_date, stop_pics.quality,\n    stop_pics.width, stop_pics.height, stop_pics.lon, stop_pics.lat,\n    stop_pics.camera_ref, stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,\n    CASE\n        WHEN count(stop_pic_stops.stop) > 0\n        THEN array_agg(ROW(stop_pic_stops.stop, stop_pic_stops.attrs))\n        ELSE array[]::record[]\n    END as \"rels!: Vec<(i32, Vec<String>)>\"\nFROM stop_pics\nLEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id\nWHERE stop_pics.uploader = $1\n    OR (stop_pics.public AND NOT stop_pics.sensitive)\n    OR $2\nGROUP BY stop_pics.id\nORDER BY capture_date DESC, upload_date DESC\nLIMIT $3 OFFSET $4\n    ",
+  "query": "\nSELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,\n    stop_pics.public, stop_pics.sensitive, stop_pics.uploader,\n    stop_pics.upload_date, stop_pics.capture_date, stop_pics.quality,\n    stop_pics.width, stop_pics.height, stop_pics.lon, stop_pics.lat,\n    stop_pics.camera_ref, stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,\n    CASE\n        WHEN count(stop_pic_stops.stop) > 0\n        THEN array_agg(ROW(stop_pic_stops.stop, stop_pic_stops.attrs))\n        ELSE array[]::record[]\n    END as \"rels!: Vec<(i32, Vec<String>)>\"\nFROM stop_pics\nLEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id\nWHERE (stop_pics.uploader = $1\n        OR (stop_pics.public AND NOT stop_pics.sensitive)\n        OR $2)\n    AND (stop_pics.uploader=$3 OR NOT $4)\n    AND (tagged=$5 OR NOT $6)\nGROUP BY stop_pics.id\nORDER BY capture_date DESC, upload_date DESC\nLIMIT $7 OFFSET $8\n    ",
   "describe": {
     "columns": [
       {
@@ -103,6 +103,10 @@
       "Left": [
         "Int4",
         "Bool",
+        "Int4",
+        "Bool",
+        "Bool",
+        "Bool",
         "Int8",
         "Int8"
       ]
@@ -129,5 +133,5 @@
       null
     ]
   },
-  "hash": "9e2caf842b46ea1aca2477b425e8b45977464e589c7f3c4578c8f41b9053f621"
+  "hash": "d15b59e1a4cbc379959af5273bf611ff0b78f6e6c8959957da35fd652b292672"
 }

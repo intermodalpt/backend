@@ -1,0 +1,27 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT count(*) as \"cnt!: i64\"\nFROM stop_pics\nWHERE (stop_pics.uploader = $1\n        OR (stop_pics.public AND NOT stop_pics.sensitive)\n        OR $2)\n    AND (stop_pics.uploader=$3 OR NOT $4)\n    AND (tagged=$5 OR NOT $6)\n    ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "cnt!: i64",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Bool",
+        "Int4",
+        "Bool",
+        "Bool",
+        "Bool"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "0d52f75a56dfbf539071ef4ec0fedebed1ed3284095af02953568488a02ee50d"
+}

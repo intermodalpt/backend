@@ -416,14 +416,21 @@ ORDER BY quality DESC
     .collect())
 }
 
-/// A range of pictures that have been uploaded by a user
-pub(crate) async fn fetch_user_pictures(
+/// A range of pictures that are visible to the user
+pub(crate) async fn fetch_latest_pictures(
     pool: &PgPool,
-    user_id: i32,
-    include_private: bool,
+    can_view_sensitive: bool,
+    requester_id: Option<i32>,
+    user_id: Option<i32>,
+    tagged: Option<bool>,
     skip: i64,
     take: i64,
 ) -> Result<Vec<responses::PicWithStops>> {
+    let user_filter_active = user_id.is_some();
+    let user_id = user_id.unwrap_or(0);
+    let tagged_filter_active = tagged.is_some();
+    let tagged = tagged.unwrap_or(false);
+
     Ok(sqlx::query!(
         r#"
 SELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,
@@ -438,257 +445,106 @@ SELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,
     END as "rels!: Vec<(i32, Vec<String>)>"
 FROM stop_pics
 LEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id
-WHERE uploader=$1
-    AND ((stop_pics.public AND NOT stop_pics.sensitive) OR $4)
+WHERE (stop_pics.uploader = $1
+        OR (stop_pics.public AND NOT stop_pics.sensitive)
+        OR $2)
+    AND (stop_pics.uploader=$3 OR NOT $4)
+    AND (tagged=$5 OR NOT $6)
 GROUP BY stop_pics.id
 ORDER BY capture_date DESC, upload_date DESC
-LIMIT $2 OFFSET $3
+LIMIT $7 OFFSET $8
     "#,
+        requester_id,
+        can_view_sensitive,
         user_id,
+        user_filter_active,
+        tagged,
+        tagged_filter_active,
         take,
         skip,
-        include_private
     )
     .fetch_all(pool)
     .await
     .map_err(|err| {
         tracing::error!(
             error=err.to_string(),
+            requester_id,
             user_id,
+            tagged,
+            can_view_sensitive,
             take,
-            skip,
-            include_private
+            skip);
+        Error::DatabaseExecution})?
+    .into_iter()
+    .map(|r| responses::PicWithStops {
+        id: r.id,
+        url_full: get_stop_pic_ori_path(&r.sha1),
+        url_medium: get_stop_pic_medium_path(&r.sha1),
+        url_thumb: get_stop_pic_thumb_path(&r.sha1),
+        original_filename: r.original_filename,
+        sha1: r.sha1,
+        tagged: r.tagged,
+        uploader: r.uploader,
+        upload_date: r.upload_date,
+        capture_date: r.capture_date,
+        width: r.width,
+        height: r.height,
+        camera_ref: r.camera_ref,
+        public: r.public,
+        sensitive: r.sensitive,
+        lon: r.lon,
+        lat: r.lat,
+        quality: r.quality,
+        tags: r.tags,
+        attrs: r.attrs,
+        notes: r.notes,
+        stops: r.rels.into_iter().map(Into::into).collect()
+    })
+    .collect())
+}
+
+pub(crate) async fn fetch_latest_pictures_cnt(
+    pool: &PgPool,
+    can_view_sensitive: bool,
+    requester_id: Option<i32>,
+    user_id: Option<i32>,
+    tagged: Option<bool>,
+) -> Result<i64> {
+    let user_filter_active = user_id.is_some();
+    let user_id = user_id.unwrap_or(0);
+    let tagged_filter_active = tagged.is_some();
+    let tagged = tagged.unwrap_or(false);
+
+    Ok(sqlx::query!(
+        r#"
+SELECT count(*) as "cnt!: i64"
+FROM stop_pics
+WHERE (stop_pics.uploader = $1
+        OR (stop_pics.public AND NOT stop_pics.sensitive)
+        OR $2)
+    AND (stop_pics.uploader=$3 OR NOT $4)
+    AND (tagged=$5 OR NOT $6)
+    "#,
+        requester_id,
+        can_view_sensitive,
+        user_id,
+        user_filter_active,
+        tagged,
+        tagged_filter_active
+    )
+    .fetch_one(pool)
+    .await
+    .map(|r| r.cnt)
+    .map_err(|err| {
+        tracing::error!(
+            error = err.to_string(),
+            requester_id,
+            user_id,
+            tagged,
+            can_view_sensitive
         );
-        Error::DatabaseExecution})?
-    .into_iter()
-    .map(|r| responses::PicWithStops {
-        id: r.id,
-        url_full: get_stop_pic_ori_path(&r.sha1),
-        url_medium: get_stop_pic_medium_path(&r.sha1),
-        url_thumb: get_stop_pic_thumb_path(&r.sha1),
-        original_filename: r.original_filename,
-        sha1: r.sha1,
-        tagged: r.tagged,
-        uploader: r.uploader,
-        upload_date: r.upload_date,
-        capture_date: r.capture_date,
-        width: r.width,
-        height: r.height,
-        camera_ref: r.camera_ref,
-        public: r.public,
-        sensitive: r.sensitive,
-        lon: r.lon,
-        lat: r.lat,
-        quality: r.quality,
-        tags: r.tags,
-        attrs: r.attrs,
-        notes: r.notes,
-        stops: r.rels.into_iter().map(Into::into).collect()
-    })
-    .collect())
-}
-
-/// A range of pictures that are visible to the user
-pub(crate) async fn fetch_latest_pictures(
-    pool: &PgPool,
-    trusted: bool,
-    uid: Option<i32>,
-    skip: i64,
-    take: i64,
-) -> Result<Vec<responses::PicWithStops>> {
-    Ok(sqlx::query!(
-        r#"
-SELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,
-    stop_pics.public, stop_pics.sensitive, stop_pics.uploader,
-    stop_pics.upload_date, stop_pics.capture_date, stop_pics.quality,
-    stop_pics.width, stop_pics.height, stop_pics.lon, stop_pics.lat,
-    stop_pics.camera_ref, stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,
-    CASE
-        WHEN count(stop_pic_stops.stop) > 0
-        THEN array_agg(ROW(stop_pic_stops.stop, stop_pic_stops.attrs))
-        ELSE array[]::record[]
-    END as "rels!: Vec<(i32, Vec<String>)>"
-FROM stop_pics
-LEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id
-WHERE stop_pics.uploader = $1
-    OR (stop_pics.public AND NOT stop_pics.sensitive)
-    OR $2
-GROUP BY stop_pics.id
-ORDER BY capture_date DESC, upload_date DESC
-LIMIT $3 OFFSET $4
-    "#,
-        uid,
-        trusted,
-        take,
-        skip
-    )
-    .fetch_all(pool)
-    .await
-    .map_err(|err| {
-        tracing::error!(error=err.to_string(), uid, trusted, take, skip);
-        Error::DatabaseExecution})?
-    .into_iter()
-    .map(|r| responses::PicWithStops {
-        id: r.id,
-        url_full: get_stop_pic_ori_path(&r.sha1),
-        url_medium: get_stop_pic_medium_path(&r.sha1),
-        url_thumb: get_stop_pic_thumb_path(&r.sha1),
-        original_filename: r.original_filename,
-        sha1: r.sha1,
-        tagged: r.tagged,
-        uploader: r.uploader,
-        upload_date: r.upload_date,
-        capture_date: r.capture_date,
-        width: r.width,
-        height: r.height,
-        camera_ref: r.camera_ref,
-        public: r.public,
-        sensitive: r.sensitive,
-        lon: r.lon,
-        lat: r.lat,
-        quality: r.quality,
-        tags: r.tags,
-        attrs: r.attrs,
-        notes: r.notes,
-        stops: r.rels.into_iter().map(Into::into).collect()
-    })
-    .collect())
-}
-
-/// A range of pictures that are tagged and are visible to the user
-pub(crate) async fn fetch_tagged_pictures(
-    pool: &PgPool,
-    trusted: bool,
-    uid: Option<i32>,
-    skip: i64,
-    take: i64,
-) -> Result<Vec<responses::PicWithStops>> {
-    Ok(sqlx::query!(
-        r#"
-SELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,
-    stop_pics.public, stop_pics.sensitive, stop_pics.uploader,
-    stop_pics.upload_date, stop_pics.capture_date, stop_pics.quality,
-    stop_pics.width, stop_pics.height, stop_pics.lon, stop_pics.lat,
-    stop_pics.camera_ref, stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,
-    CASE
-        WHEN count(stop_pic_stops.stop) > 0
-        THEN array_agg(ROW(stop_pic_stops.stop, stop_pic_stops.attrs))
-        ELSE array[]::record[]
-    END as "rels!: Vec<(i32, Vec<String>)>"
-FROM stop_pics
-LEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id
-WHERE tagged
-    AND (stop_pics.uploader = $1
-        OR (stop_pics.public AND NOT stop_pics.sensitive)
-        OR $2)
-GROUP BY stop_pics.id
-ORDER BY capture_date DESC, upload_date DESC
-LIMIT $3 OFFSET $4
-    "#,
-        uid,
-        trusted,
-        take,
-        skip
-    )
-    .fetch_all(pool)
-    .await
-    .map_err(|err| {
-        tracing::error!(error=err.to_string(), uid, trusted, take, skip);
-        Error::DatabaseExecution})?
-    .into_iter()
-    .map(|r| responses::PicWithStops {
-        id: r.id,
-        url_full: get_stop_pic_ori_path(&r.sha1),
-        url_medium: get_stop_pic_medium_path(&r.sha1),
-        url_thumb: get_stop_pic_thumb_path(&r.sha1),
-        original_filename: r.original_filename,
-        sha1: r.sha1,
-        tagged: r.tagged,
-        uploader: r.uploader,
-        upload_date: r.upload_date,
-        capture_date: r.capture_date,
-        width: r.width,
-        height: r.height,
-        camera_ref: r.camera_ref,
-        public: r.public,
-        sensitive: r.sensitive,
-        lon: r.lon,
-        lat: r.lat,
-        quality: r.quality,
-        tags: r.tags,
-        attrs: r.attrs,
-        notes: r.notes,
-        stops: r.rels.into_iter().map(Into::into).collect()
-    })
-    .collect())
-}
-
-/// A range of pictures that are not tagged and are visible to the user
-pub(crate) async fn fetch_untagged_pictures(
-    pool: &PgPool,
-    trusted: bool,
-    uid: Option<i32>,
-    skip: i64,
-    take: i64,
-) -> Result<Vec<responses::PicWithStops>> {
-    Ok(sqlx::query!(
-        r#"
-SELECT stop_pics.id, stop_pics.original_filename, stop_pics.sha1,
-    stop_pics.public, stop_pics.sensitive, stop_pics.uploader,
-    stop_pics.upload_date, stop_pics.capture_date, stop_pics.quality,
-    stop_pics.width, stop_pics.height, stop_pics.lon, stop_pics.lat,
-    stop_pics.camera_ref, stop_pics.tags, stop_pics.attrs, stop_pics.notes, stop_pics.tagged,
-    CASE
-        WHEN count(stop_pic_stops.stop) > 0
-        THEN array_agg(ROW(stop_pic_stops.stop, stop_pic_stops.attrs))
-        ELSE array[]::record[]
-    END as "rels!: Vec<(i32, Vec<String>)>"
-FROM stop_pics
-LEFT JOIN stop_pic_stops ON stop_pic_stops.pic = stop_pics.id
-WHERE NOT tagged
-    AND (stop_pics.uploader = $1
-        OR (stop_pics.public AND NOT stop_pics.sensitive)
-        OR $2)
-GROUP BY stop_pics.id
-ORDER BY capture_date ASC, upload_date ASC
-LIMIT $3 OFFSET $4
-    "#,
-        uid,
-        trusted,
-        take,
-        skip
-    )
-    .fetch_all(pool)
-    .await
-    .map_err(|err| {
-        tracing::error!(error=err.to_string(), uid, trusted, take, skip);
-        Error::DatabaseExecution})?
-    .into_iter()
-    .map(|r| responses::PicWithStops {
-        id: r.id,
-        url_full: get_stop_pic_ori_path(&r.sha1),
-        url_medium: get_stop_pic_medium_path(&r.sha1),
-        url_thumb: get_stop_pic_thumb_path(&r.sha1),
-        original_filename: r.original_filename,
-        sha1: r.sha1,
-        tagged: r.tagged,
-        uploader: r.uploader,
-        upload_date: r.upload_date,
-        capture_date: r.capture_date,
-        width: r.width,
-        height: r.height,
-        camera_ref: r.camera_ref,
-        public: r.public,
-        sensitive: r.sensitive,
-        lon: r.lon,
-        lat: r.lat,
-        quality: r.quality,
-        tags: r.tags,
-        attrs: r.attrs,
-        notes: r.notes,
-        stops: r.rels.into_iter().map(Into::into).collect()
-    })
-    .collect())
+        Error::DatabaseExecution
+    })?)
 }
 
 pub(crate) async fn fetch_picture_stop_rels(
@@ -758,6 +614,32 @@ LIMIT $3 OFFSET $4
         url_thumb: get_stop_pic_thumb_path(&r.sha1),
     })
     .collect())
+}
+
+pub(crate) async fn fetch_unpositioned_pictures_cnt(
+    pool: &PgPool,
+    trusted: bool,
+    uid: Option<i32>,
+) -> Result<i64> {
+    sqlx::query!(
+        r#"
+SELECT count(*) as "cnt!: i64"
+FROM stop_pics
+WHERE (stop_pics.lat IS NULL OR stop_pics.lon IS NULL)
+    AND (stop_pics.uploader = $1
+        OR (stop_pics.public AND NOT stop_pics.sensitive)
+        OR $2)
+    "#,
+        uid,
+        trusted
+    )
+    .fetch_one(pool)
+    .await
+    .map(|r| r.cnt)
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), uid, trusted);
+        Error::DatabaseExecution
+    })
 }
 
 pub(crate) async fn fetch_public_picture_stop_rels(

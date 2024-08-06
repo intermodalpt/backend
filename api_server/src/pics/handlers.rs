@@ -26,6 +26,7 @@ use commons::models::{history, pics};
 
 use super::{logic, models::requests, models::responses, sql};
 use crate::pics::logic::import_external_news_img;
+use crate::responses::Pagination;
 use crate::utils::get_exactly_one_field;
 use crate::Error;
 use crate::{auth, auth::ClaimPermission, contrib, AppState};
@@ -120,104 +121,57 @@ pub(crate) async fn get_latest_stop_pictures(
     State(state): State<AppState>,
     claims: Option<auth::Claims>,
     qs: Query<PicsPage>,
-) -> Result<Json<Vec<responses::PicWithStops>>, Error> {
-    let view_sensitive = claims.as_ref().is_some_and(|c| {
+) -> Result<Json<Pagination<responses::PicWithStops>>, Error> {
+    let can_view_sensitive = claims.as_ref().is_some_and(|c| {
         auth::perms::ViewSensitiveStopPic::is_valid(&c.permissions)
     });
 
-    let claims_matches_user = matches!(
-        claims,
-        Some(auth::Claims {
-            uid,
-            ..
-        })
-        if Some(uid) == qs.user
-    );
-
-    if !claims_matches_user && (qs.user.is_some() && !view_sensitive) {
-        return Err(Error::Forbidden);
-    }
-
-    let uid = qs.user.or(claims.map(|c| c.uid));
+    let requester_id = claims.map(|c| c.uid);
     let offset = i64::from(qs.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
     if qs.tagged_only && qs.untagged_only {
-        return Ok(Json(vec![]));
+        return Ok(Json(Pagination {
+            items: vec![],
+            total: 0,
+        }));
     }
 
-    if qs.untagged_only {
-        return Ok(Json(
-            sql::fetch_untagged_pictures(
-                &state.pool,
-                view_sensitive,
-                uid,
-                offset,
-                take,
-            )
-            .await?,
-        ));
-    }
+    let tagged_filter = if qs.tagged_only {
+        Some(true)
+    } else if qs.untagged_only {
+        Some(false)
+    } else {
+        None
+    };
 
-    if qs.tagged_only {
-        return Ok(Json(
-            sql::fetch_tagged_pictures(
-                &state.pool,
-                view_sensitive,
-                uid,
-                offset,
-                take,
-            )
-            .await?,
-        ));
-    }
-
-    Ok(Json(
-        sql::fetch_latest_pictures(
+    Ok(Json(Pagination {
+        items: sql::fetch_latest_pictures(
             &state.pool,
-            view_sensitive,
-            uid,
+            can_view_sensitive,
+            requester_id,
+            qs.user,
+            tagged_filter,
             offset,
             take,
         )
         .await?,
-    ))
-}
-
-pub(crate) async fn get_user_stop_pictures(
-    State(state): State<AppState>,
-    claims: Option<auth::Claims>,
-    page_qs: Query<PicsPage>,
-    Path(user_id): Path<i32>,
-) -> Result<Json<Vec<responses::PicWithStops>>, Error> {
-    let view_sensitive = claims.as_ref().is_some_and(|c| {
-        auth::perms::ViewSensitiveStopPic::is_valid(&c.permissions)
-    });
-
-    let requester_uid = claims.map(|c| c.uid);
-
-    let is_self = requester_uid == Some(user_id);
-
-    let offset = i64::from(page_qs.p * PAGE_SIZE);
-    let take = i64::from(PAGE_SIZE);
-
-    Ok(Json(
-        sql::fetch_user_pictures(
+        total: sql::fetch_latest_pictures_cnt(
             &state.pool,
-            user_id,
-            view_sensitive || is_self,
-            offset,
-            take,
+            can_view_sensitive,
+            requester_id,
+            qs.user,
+            tagged_filter,
         )
         .await?,
-    ))
+    }))
 }
 
 pub(crate) async fn get_unpositioned_stop_pictures(
     State(state): State<AppState>,
     claims: Option<auth::Claims>,
     paginator: Query<Page>,
-) -> Result<Json<Vec<responses::MinimalPic>>, Error> {
+) -> Result<Json<Pagination<responses::MinimalPic>>, Error> {
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
@@ -227,8 +181,8 @@ pub(crate) async fn get_unpositioned_stop_pictures(
 
     let uid = claims.map(|c| c.uid);
 
-    Ok(Json(
-        sql::fetch_unpositioned_pictures(
+    Ok(Json(Pagination {
+        items: sql::fetch_unpositioned_pictures(
             &state.pool,
             view_untagged,
             uid,
@@ -236,7 +190,13 @@ pub(crate) async fn get_unpositioned_stop_pictures(
             take,
         )
         .await?,
-    ))
+        total: sql::fetch_unpositioned_pictures_cnt(
+            &state.pool,
+            view_untagged,
+            uid,
+        )
+        .await?,
+    }))
 }
 
 pub(crate) async fn upload_dangling_stop_picture(
