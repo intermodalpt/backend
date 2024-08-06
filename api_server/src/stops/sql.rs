@@ -52,6 +52,28 @@ WHERE id = $1"#,
     })
 }
 
+pub(crate) async fn fetch_stop_list(
+    pool: &PgPool,
+    stop_ids: &[i32],
+) -> Result<Vec<responses::SimpleStop>> {
+    sqlx::query_as!(
+        responses::SimpleStop,
+        r#"
+SELECT id, name, short_name, lat, lon
+FROM Stops
+WHERE id IN (
+    SELECT * FROM UNNEST($1::int[])
+)"#,
+        &stop_ids[..]
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| {
+        tracing::error!(error=err.to_string(), stop_ids=?stop_ids);
+        Error::DatabaseExecution
+    })
+}
+
 pub(crate) async fn fetch_paired_stop(
     pool: &PgPool,
     osm_id: i64,

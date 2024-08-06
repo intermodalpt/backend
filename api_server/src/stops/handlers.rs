@@ -78,6 +78,22 @@ pub(crate) async fn get_stop(
     ))
 }
 
+pub(crate) async fn get_stop_list(
+    State(state): State<AppState>,
+    Path(stops_ids): Path<String>,
+) -> Result<Json<Vec<responses::SimpleStop>>, Error> {
+    // parse stop_ids into a comma separated list of integers
+    let stops: Vec<i32> = stops_ids
+        .split(',')
+        .map(|id| {
+            id.parse::<i32>()
+                .or(Err(Error::MalformedRequest("Invalid list format")))
+        })
+        .collect::<Result<_, _>>()?;
+
+    Ok(Json(sql::fetch_stop_list(&state.pool, &stops).await?))
+}
+
 pub(crate) async fn post_stop(
     State(state): State<AppState>,
     auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::CreateStop>,

@@ -118,6 +118,7 @@ pub fn build_paths(state: AppState) -> Router {
             "/v1/stops/:stop_id",
             get(stops::handlers::get_stop).patch(stops::handlers::patch_stop),
         )
+        .route("/v1/stops/list/:stops", get(stops::handlers::get_stop_list))
         .route(
             "/v1/stops/within_boundary/:x0/:y0/:x1/:y1",
             get(stops::handlers::get_bounded_stops),
