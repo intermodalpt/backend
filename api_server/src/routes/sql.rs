@@ -243,6 +243,27 @@ JOIN route_types on routes.type_id = route_types.id
         })
 }
 
+pub(crate) async fn fetch_all_routes(
+    pool: &PgPool,
+) -> Result<Vec<responses::SimpleRoute>> {
+    sqlx::query_as!(
+        responses::SimpleRoute,
+        r#"
+SELECT routes.id, routes.code, routes.name, routes.operator as operator_id, routes.circular,
+    COALESCE(routes.badge_text_color, route_types.badge_text_color) as "badge_text!: String",
+    COALESCE(routes.badge_bg_color, route_types.badge_bg_color) as "badge_bg!: String"
+FROM routes
+JOIN route_types on routes.type = route_types.id
+"#,
+        )
+        .fetch_all(pool)
+        .await
+        .map_err(|err| {
+            tracing::error!(error=err.to_string());
+            Error::DatabaseExecution
+        })
+}
+
 pub(crate) async fn fetch_operator_routes(
     pool: &PgPool,
     operator_id: i32,

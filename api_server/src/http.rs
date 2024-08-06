@@ -172,7 +172,11 @@ pub fn build_paths(state: AppState) -> Router {
             "/v1/pictures/rels",
             get(pics::handlers::get_picture_stop_rels),
         )
-        .route("/v1/routes", post(routes::handlers::post_route))
+        .route(
+            "/v1/routes",
+            get(routes::handlers::get_all_routes)
+                .post(routes::handlers::post_route),
+        )
         .route(
             "/v1/routes/:route_id",
             get(routes::handlers::get_route)

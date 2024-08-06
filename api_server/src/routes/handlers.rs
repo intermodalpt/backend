@@ -39,6 +39,12 @@ pub(crate) async fn get_full_routes(
     Ok(Json(sql::fetch_full_routes(&state.pool, region_id).await?))
 }
 
+pub(crate) async fn get_all_routes(
+    State(state): State<AppState>,
+) -> Result<Json<Vec<responses::SimpleRoute>>, Error> {
+    Ok(Json(sql::fetch_all_routes(&state.pool).await?))
+}
+
 pub(crate) async fn get_operator_routes(
     State(state): State<AppState>,
     Path(operator_id): Path<i32>,
