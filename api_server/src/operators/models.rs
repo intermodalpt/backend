@@ -32,6 +32,7 @@ pub(crate) mod responses {
     use sqlx::types::JsonValue;
 
     use commons::models::calendar::Calendar;
+    use commons::models::content::ContentBlock;
     use commons::models::operators;
 
     use crate::routes::models::responses::SimpleRoute;
@@ -134,11 +135,10 @@ pub(crate) mod responses {
     pub struct FullIssue {
         pub id: i32,
         pub title: String,
-        pub message: String,
         pub category: operators::IssueCategory,
         pub impact: i32,
         pub creation: DateTime<Local>,
-        pub geojson: Option<JsonValue>,
+        pub content: Vec<ContentBlock>,
         pub lat: Option<f64>,
         pub lon: Option<f64>,
         pub state: operators::IssueState,
@@ -169,6 +169,7 @@ pub(crate) mod requests {
     use sqlx::types::JsonValue;
 
     use commons::models::calendar::Calendar;
+    use commons::models::content::ContentBlock;
     use commons::models::history;
     use commons::models::operators;
 
@@ -228,12 +229,11 @@ pub(crate) mod requests {
     #[derive(Debug, Deserialize)]
     pub struct NewIssue {
         pub title: String,
-        pub message: String,
         pub category: operators::IssueCategory,
         pub impact: i32,
         pub lat: Option<f64>,
         pub lon: Option<f64>,
-        pub geojson: Option<JsonValue>,
+        pub content: Vec<ContentBlock>,
         pub operator_ids: Vec<i32>,
         pub route_ids: Vec<i32>,
         pub stop_ids: Vec<i32>,
@@ -245,7 +245,6 @@ pub(crate) mod requests {
             operators::Issue {
                 id: -1,
                 title: value.title,
-                message: value.message,
                 impact: value.impact,
                 category: value.category,
                 creation: Local::now(),
@@ -253,7 +252,7 @@ pub(crate) mod requests {
                 state_justification: None,
                 lat: value.lat,
                 lon: value.lon,
-                geojson: value.geojson,
+                content: value.content,
                 operator_ids: value.operator_ids,
                 route_ids: value.route_ids,
                 stop_ids: value.stop_ids,
@@ -272,7 +271,7 @@ pub(crate) mod requests {
         pub state_justification: Option<String>,
         pub lat: Option<f64>,
         pub lon: Option<f64>,
-        pub geojson: Option<JsonValue>,
+        pub content: Vec<ContentBlock>,
         pub operator_ids: Vec<i32>,
         pub route_ids: Vec<i32>,
         pub stop_ids: Vec<i32>,
@@ -288,9 +287,6 @@ pub(crate) mod requests {
 
             if self.title != issue.title {
                 patch.title = Some(self.title.clone());
-            }
-            if self.message != issue.message {
-                patch.message = Some(self.message.clone());
             }
             if self.category != issue.category {
                 patch.category = Some(self.category.into());
@@ -311,8 +307,8 @@ pub(crate) mod requests {
             if self.lon != issue.lon {
                 patch.lon = Some(self.lon);
             }
-            if self.geojson != issue.geojson {
-                patch.geojson = Some(self.geojson.clone());
+            if self.content != issue.content {
+                patch.content = Some(self.content.clone());
             }
             if self.operator_ids != issue.operator_ids {
                 patch.operator_ids = Some(self.operator_ids.clone());
@@ -354,16 +350,5 @@ pub(crate) mod requests {
         pub operator_ids: Vec<i32>,
         pub route_ids: Vec<i32>,
         pub stop_ids: Vec<i32>,
-    }
-
-    #[derive(Debug, Deserialize)]
-    pub struct NewExternalNewsItem {
-        pub operator_id: Option<i32>,
-        pub prepro_content_md: String,
-        pub prepro_content_text: String,
-        pub datetime: Option<DateTime<Local>>,
-        pub source: String,
-        pub url: Option<String>,
-        pub raw: JsonValue,
     }
 }

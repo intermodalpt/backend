@@ -18,11 +18,11 @@
 
 use std::fmt;
 
+use super::calendar::Calendar;
+use crate::models::content::ContentBlock;
 use chrono::{DateTime, Local};
 use serde::{Deserialize, Serialize};
 use serde_repr::Serialize_repr;
-
-use super::calendar::Calendar;
 
 #[derive(Debug, Serialize)]
 pub struct Operator {
@@ -110,15 +110,14 @@ pub struct AbnormallyStop {
 pub struct Issue {
     pub id: i32,
     pub title: String,
-    pub message: String,
     pub creation: DateTime<Local>,
     pub category: IssueCategory,
     // TODO Drop default
     #[serde(default)]
     pub impact: i32,
-    pub geojson: Option<serde_json::Value>,
     pub lat: Option<f64>,
     pub lon: Option<f64>,
+    pub content: Vec<ContentBlock>,
     pub state: IssueState,
     pub state_justification: Option<String>,
     pub operator_ids: Vec<i32>,

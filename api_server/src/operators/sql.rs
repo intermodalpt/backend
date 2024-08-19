@@ -21,6 +21,7 @@ use sqlx::types::Json;
 use sqlx::PgPool;
 
 use commons::models::calendar::Calendar;
+use commons::models::content::ContentBlock;
 use commons::models::operators;
 
 use super::models::{self, requests, responses};
@@ -507,8 +508,10 @@ pub(crate) async fn fetch_operator_issues(
 ) -> Result<Vec<operators::Issue>> {
     sqlx::query!(
         r#"
-SELECT issues.id, issues.title, issues.message, issues.geojson, issues.category, issues.lat,
-    issues.creation, issues.lon, issues.impact, issues.state, issues.state_justification,
+SELECT issues.id, issues.title,
+    issues.content as "content!: sqlx::types::Json<Vec<ContentBlock>>",
+    issues.category, issues.lat, issues.creation, issues.lon, issues.impact,
+    issues.state, issues.state_justification,
     array_agg(issue_operators.operator_id) as "operators!: Vec<i32>",
     array_agg(issue_routes.route_id) as "routes!: Vec<i32>",
     array_agg(issue_stops.stop_id) as "stops!: Vec<i32>",
@@ -526,7 +529,7 @@ GROUP BY issues.id
     .fetch_all(pool)
     .await
     .map_err(|err| {
-        tracing::error!(error=err.to_string());
+        tracing::error!(error = err.to_string());
         Error::DatabaseExecution
     })?
     .into_iter()
@@ -534,19 +537,16 @@ GROUP BY issues.id
         Ok(operators::Issue {
             id: row.id,
             title: row.title,
-            message: row.message,
-            geojson: row.geojson,
-            category: serde_json::from_str(&row.category)
-                .map_err(|e| {
-                    tracing::error!("Error deserializing {e}");
-                    Error::DatabaseDeserialization
-                })?,
+            content: row.content.0,
+            category: serde_json::from_str(&row.category).map_err(|e| {
+                tracing::error!("Error deserializing {e}");
+                Error::DatabaseDeserialization
+            })?,
             creation: row.creation.into(),
-            state: serde_json::from_str(&row.state)
-                .map_err(|e| {
-                    tracing::error!("Error deserializing {e}");
-                    Error::DatabaseDeserialization
-                })?,
+            state: serde_json::from_str(&row.state).map_err(|e| {
+                tracing::error!("Error deserializing {e}");
+                Error::DatabaseDeserialization
+            })?,
             state_justification: row.state_justification,
             lat: row.lat,
             lon: row.lon,
@@ -613,8 +613,9 @@ pub(crate) async fn fetch_issue(
     issue_id: i32,
 ) -> Result<operators::Issue> {
     sqlx::query!(
-        r#"SELECT issues.id, issues.title, issues.message, issues.category, issues.impact,
-        issues.creation, issues.lat, issues.lon, issues.geojson,
+        r#"SELECT issues.id, issues.title, issues.category, issues.impact,
+        issues.creation, issues.lat, issues.lon,
+        issues.content as "content!: sqlx::types::Json<Vec<ContentBlock>>",
         issues.state, issues.state_justification,
     array_agg(issue_operators.operator_id) as "operators!: Vec<i32>",
     array_agg(issue_routes.route_id) as "routes!: Vec<i32>",
@@ -632,30 +633,27 @@ GROUP BY issues.id"#,
     .fetch_one(pool)
     .await
     .map_err(|err| {
-        tracing::error!(error=err.to_string(), issue_id=issue_id);
+        tracing::error!(error = err.to_string(), issue_id = issue_id);
         Error::DatabaseExecution
     })
     .and_then(|row| {
         Ok(operators::Issue {
             id: row.id,
             title: row.title,
-            message: row.message,
             creation: row.creation.into(),
-            category: serde_json::from_str(&row.category)
-                .map_err(|e| {
-                    tracing::error!("Error deserializing {e}");
-                    Error::DatabaseDeserialization
-                })?,
+            category: serde_json::from_str(&row.category).map_err(|e| {
+                tracing::error!("Error deserializing {e}");
+                Error::DatabaseDeserialization
+            })?,
             impact: row.impact,
-            state: serde_json::from_str(&row.state)
-                .map_err(|e| {
-                    tracing::error!("Error deserializing {e}");
-                    Error::DatabaseDeserialization
-                })?,
+            state: serde_json::from_str(&row.state).map_err(|e| {
+                tracing::error!("Error deserializing {e}");
+                Error::DatabaseDeserialization
+            })?,
             state_justification: row.state_justification,
             lat: row.lat,
             lon: row.lon,
-            geojson: row.geojson,
+            content: row.content.0,
             operator_ids: row.operators,
             route_ids: row.routes,
             stop_ids: row.stops,
@@ -672,30 +670,29 @@ pub(crate) async fn insert_issue(
 
     let row = sqlx::query!(
         r#"
-INSERT INTO issues (title, message, category, impact, creation, lat, lon, geojson, state)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+INSERT INTO issues (title, category, impact, creation, lat, lon, content, state)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 RETURNING id
 "#,
         issue.title,
-        issue.message,
         Json(&issue.category) as _,
         issue.impact,
         creation,
         issue.lat,
         issue.lon,
-        issue.geojson,
+        Json(&issue.content) as _,
         Json(&operators::IssueState::Unanswered) as _
     )
-        .fetch_one(&mut **transaction)
-        .await
-        .map_err(|err| {
-            tracing::error!(
-                error=err.to_string(),
-                issue=?issue,
-                creation=?creation
-            );
-            Error::DatabaseExecution
-        })?;
+    .fetch_one(&mut **transaction)
+    .await
+    .map_err(|err| {
+        tracing::error!(
+            error=err.to_string(),
+            issue=?issue,
+            creation=?creation
+        );
+        Error::DatabaseExecution
+    })?;
 
     let id = row.id;
 
@@ -783,18 +780,16 @@ pub(crate) async fn update_issue(
         r#"
         UPDATE issues
         SET title = $1,
-            message = $2,
-            geojson = $3,
-            category = $4,
-            lat = $5,
-            lon = $6,
-            state = $7,
-            state_justification = $8
-        WHERE id = $9
+            content = $2,
+            category = $3,
+            lat = $4,
+            lon = $5,
+            state = $6,
+            state_justification = $7
+        WHERE id = $8
         "#,
         issue.title,
-        issue.message,
-        issue.geojson,
+        Json(&issue.content) as _,
         Json(&issue.category) as _,
         issue.lat,
         issue.lon,

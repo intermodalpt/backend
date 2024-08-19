@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE issues\n        SET title = $1,\n            content = $2,\n            category = $3,\n            lat = $4,\n            lon = $5,\n            state = $6,\n            state_justification = $7\n        WHERE id = $8\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Jsonb",
+        "Text",
+        "Float8",
+        "Float8",
+        "Text",
+        "Text",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "09b481cb096ab7f08e50c7e20fcf7216d9a4b4321a4a7067e994f0ac9b6d7dfd"
+}

@@ -22,6 +22,7 @@ use serde_repr::Serialize_repr;
 
 use super::calendar::Calendar;
 use crate::errors::Error;
+use crate::models::content::ContentBlock;
 use crate::models::operators as current;
 
 #[derive(Debug, Serialize)]
@@ -133,15 +134,14 @@ pub struct AbnormallyStop {
 pub struct Issue {
     pub id: i32,
     pub title: String,
-    pub message: String,
     pub creation: DateTime<Local>,
     pub category: IssueCategory,
     // TODO Drop default
     #[serde(default)]
     pub impact: i32,
-    pub geojson: Option<serde_json::Value>,
     pub lat: Option<f64>,
     pub lon: Option<f64>,
+    pub content: Vec<ContentBlock>,
     pub state: IssueState,
     pub state_justification: Option<String>,
     pub operator_ids: Vec<i32>,
@@ -155,13 +155,12 @@ impl From<current::Issue> for Issue {
         Self {
             id: issue.id,
             title: issue.title,
-            message: issue.message,
             creation: issue.creation,
             category: issue.category.into(),
             impact: issue.impact,
-            geojson: issue.geojson,
             lat: issue.lat,
             lon: issue.lon,
+            content: issue.content,
             state: issue.state.into(),
             state_justification: issue.state_justification,
             operator_ids: issue.operator_ids,
@@ -179,13 +178,12 @@ impl TryFrom<Issue> for current::Issue {
         Ok(Self {
             id: issue.id,
             title: issue.title,
-            message: issue.message,
             creation: issue.creation,
             category: issue.category.try_into()?,
             impact: issue.impact,
-            geojson: issue.geojson,
             lat: issue.lat,
             lon: issue.lon,
+            content: issue.content,
             state: issue.state.try_into()?,
             state_justification: issue.state_justification,
             operator_ids: issue.operator_ids,
@@ -464,12 +462,7 @@ pub struct IssuePatch {
         with = "::serde_with::rust::double_option"
     )]
     pub lon: Option<Option<f64>>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        with = "::serde_with::rust::double_option"
-    )]
-    pub geojson: Option<Option<serde_json::Value>>,
+    pub content: Option<Vec<ContentBlock>>,
     pub operator_ids: Option<Vec<i32>>,
     pub route_ids: Option<Vec<i32>>,
     pub stop_ids: Option<Vec<i32>>,
@@ -480,7 +473,6 @@ impl IssuePatch {
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.title.is_none()
-            && self.message.is_none()
             && self.creation.is_none()
             && self.impact.is_none()
             && self.category.is_none()
@@ -488,7 +480,7 @@ impl IssuePatch {
             && self.state_justification.is_none()
             && self.lat.is_none()
             && self.lon.is_none()
-            && self.geojson.is_none()
+            && self.content.is_none()
             && self.operator_ids.is_none()
             && self.route_ids.is_none()
             && self.stop_ids.is_none()
@@ -499,9 +491,6 @@ impl IssuePatch {
     pub fn apply(self, issue: &mut current::Issue) -> Result<(), Error> {
         if let Some(title) = self.title {
             issue.title = title;
-        }
-        if let Some(message) = self.message {
-            issue.message = message;
         }
         if let Some(creation) = self.creation {
             issue.creation = creation;
@@ -524,8 +513,8 @@ impl IssuePatch {
         if let Some(lon) = self.lon {
             issue.lon = lon;
         }
-        if let Some(geojson) = self.geojson {
-            issue.geojson = geojson;
+        if let Some(content) = self.content {
+            issue.content = content;
         }
         if let Some(operator_ids) = self.operator_ids {
             issue.operator_ids = operator_ids;

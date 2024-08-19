@@ -18,7 +18,7 @@
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct MapContent {
     pub layers: Vec<MapLayer>,
     #[serde(default)]
@@ -69,7 +69,7 @@ impl std::fmt::Debug for MapContent {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct CameraSettings {
     pub center: [f64; 2],
     #[serde(default)]
@@ -109,7 +109,7 @@ impl CameraSettings {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct MapLayer {
     pub name: String,
     pub features: Vec<Feature>,
@@ -133,7 +133,7 @@ impl MapLayer {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum Feature {
     #[serde(rename = "point")]
@@ -219,7 +219,7 @@ impl Feature {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum RouteEdge {
     #[serde(rename = "string")]
@@ -285,7 +285,7 @@ impl RouteEdge {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct LayerSpec {
     pub points: PointRendering,
     pub lines: LineRendering,
@@ -309,20 +309,20 @@ impl LayerSpec {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct RenderingEffects {
     #[serde(default)]
     pub blink: Option<BlinkSettings>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct BlinkSettings {
     pub points: bool,
     pub lines: bool,
     pub polys: bool,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct PointRendering {
     pub size: f32,
     pub color: String,
@@ -362,7 +362,7 @@ impl PointRendering {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct LineRendering {
     pub size: f32,
     pub color: String,
@@ -403,7 +403,7 @@ impl LineRendering {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct PolyRendering {
     pub color: String,
     pub opacity: f32,
@@ -439,7 +439,7 @@ impl PolyRendering {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct OutlineRendering {
     pub color: String,
     pub opacity: f32,
@@ -472,13 +472,13 @@ impl OutlineRendering {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct PulseSettings {
     pub expansion: f64,
     pub speed: f64,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ImgRef {
     pub id: i32,
     pub url: String,
@@ -490,7 +490,7 @@ pub struct ImgRef {
     pub attribution: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct ContentRef {
     #[serde(default)]
     pub name: Option<String>,
@@ -498,7 +498,7 @@ pub struct ContentRef {
     pub url: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ContentBlock {
     Md(String),

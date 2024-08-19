@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nINSERT INTO issues (title, message, category, impact, creation, lat, lon, geojson, state)\nVALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)\nRETURNING id\n",
+  "query": "\nINSERT INTO issues (title, category, impact, creation, lat, lon, content, state)\nVALUES ($1, $2, $3, $4, $5, $6, $7, $8)\nRETURNING id\n",
   "describe": {
     "columns": [
       {
@@ -11,7 +11,6 @@
     ],
     "parameters": {
       "Left": [
-        "Text",
         "Text",
         "Text",
         "Int4",
@@ -26,5 +25,5 @@
       false
     ]
   },
-  "hash": "0956d4c365eb52620a31d9bfb2e02f51e0cfed20d6f78534ee6b359c6a12dfe3"
+  "hash": "6a474f8eb1daf0cbd0d446ed281861034ac5f21cd6933fdbcbe8ee260c9bca4a"
 }
