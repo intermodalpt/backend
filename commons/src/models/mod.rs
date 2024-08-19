@@ -18,10 +18,10 @@
 
 pub mod auth;
 pub mod calendar;
+pub mod content;
 pub mod geo;
 pub mod gtfs;
 pub mod history;
-pub mod info;
 pub mod operators;
 pub mod osm;
 pub mod pics;

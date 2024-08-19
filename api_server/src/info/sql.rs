@@ -22,7 +22,7 @@ use serde_json::json;
 use sqlx::PgPool;
 use std::collections::HashSet;
 
-use commons::models::info;
+use commons::models::content::ContentBlock;
 
 use super::models::{self, requests, responses};
 use crate::pics::models as pic_models;
@@ -42,7 +42,7 @@ pub(crate) async fn fetch_news(
     sqlx::query!(
         r#"
 SELECT id, title, summary,
-    content as "content!: sqlx::types::Json<Vec<info::ContentBlock>>",
+    content as "content!: sqlx::types::Json<Vec<ContentBlock>>",
     publish_datetime, edit_datetime, is_visible, thumb_url,
     array_remove(array_agg(distinct operator_id), NULL) as "operator_ids!: Vec<i32>",
     array_remove(array_agg(distinct region_id), NULL) as "region_ids!: Vec<i32>"
@@ -106,7 +106,7 @@ pub(crate) async fn fetch_operator_news(
     sqlx::query!(
         r#"
 SELECT id, title, summary,
-    content as "content!: sqlx::types::Json<Vec<info::ContentBlock>>",
+    content as "content!: sqlx::types::Json<Vec<ContentBlock>>",
     publish_datetime, edit_datetime, is_visible, thumb_url,
     array_agg(distinct news_items_operators.operator_id) as "operator_ids!: Vec<i32>",
     array_remove(array_agg(distinct region_id), NULL) as "region_ids!: Vec<i32>"
@@ -179,7 +179,7 @@ pub(crate) async fn fetch_region_news(
     sqlx::query!(
         r#"
 SELECT id, title, summary,
-    content as "content!: sqlx::types::Json<Vec<info::ContentBlock>>",
+    content as "content!: sqlx::types::Json<Vec<ContentBlock>>",
     publish_datetime, edit_datetime, is_visible, thumb_url,
     array_remove(array_agg(distinct operator_id), NULL) as "operator_ids!: Vec<i32>",
     array_agg(distinct news_items_regions.region_id) as "region_ids!: Vec<i32>"
@@ -250,7 +250,7 @@ pub(crate) async fn fetch_news_item(
     Ok(sqlx::query!(
         r#"
 SELECT news_items.id, news_items.title, news_items.summary,
-    content as "content!: sqlx::types::Json<Vec<info::ContentBlock>>",
+    content as "content!: sqlx::types::Json<Vec<ContentBlock>>",
     news_items.publish_datetime, news_items.edit_datetime, is_visible, thumb_url,
     array_remove(array_agg(distinct operator_id), NULL) as "operator_ids!: Vec<i32>",
     array_remove(array_agg(distinct region_id), NULL) as "region_ids!: Vec<i32>",
@@ -321,7 +321,7 @@ where
     Ok(sqlx::query!(
         r#"
 SELECT news_items.id, news_items.title, news_items.summary,
-    content as "content!: sqlx::types::Json<Vec<info::ContentBlock>>",
+    content as "content!: sqlx::types::Json<Vec<ContentBlock>>",
     news_items.publish_datetime, news_items.edit_datetime, is_visible, thumb_id,
     array_remove(array_agg(distinct operator_id), NULL) as "operator_ids!: Vec<i32>",
     array_remove(array_agg(distinct region_id), NULL) as "region_ids!: Vec<i32>",

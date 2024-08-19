@@ -33,11 +33,11 @@ pub(crate) mod responses {
     use serde::Serialize;
     use sqlx::types::JsonValue;
 
-    use commons::models::info::ContentBlock;
+    use commons::models::content::ContentBlock;
 
     use crate::pics::models::responses as pic_responses;
 
-    #[derive(Debug, Serialize)]
+    #[derive(Serialize)]
     pub struct NewsItemListing {
         pub id: i32,
         pub title: String,
@@ -53,7 +53,7 @@ pub(crate) mod responses {
         pub region_ids: Vec<i32>,
     }
 
-    #[derive(Debug, Serialize)]
+    #[derive(Serialize)]
     pub struct NewsItem {
         pub id: i32,
         pub title: String,
@@ -71,7 +71,7 @@ pub(crate) mod responses {
         pub region_ids: Vec<i32>,
     }
 
-    #[derive(Debug, Serialize)]
+    #[derive(Serialize)]
     pub struct FullNewsItem {
         pub id: i32,
         pub title: String,
@@ -178,7 +178,7 @@ pub(crate) mod requests {
     use sqlx::types::JsonValue;
     use std::collections::HashSet;
 
-    use commons::models::info::ContentBlock;
+    use commons::models::content::ContentBlock;
 
     use crate::utils::canonicalize_optional_string;
 
