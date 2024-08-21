@@ -167,7 +167,7 @@ pub fn build_paths(state: AppState) -> Router {
             "/v1/stops/:stop_id/spider",
             get(stops::handlers::get_stop_spider),
         )
-        .route("/v1/pictures", get(pics::handlers::get_pictures))
+        .route("/v1/pictures", get(pics::handlers::get_all_stop_pictures))
         .route(
             "/v1/pictures/rels",
             get(pics::handlers::get_picture_stop_rels),

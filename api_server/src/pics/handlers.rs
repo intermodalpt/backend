@@ -62,14 +62,14 @@ pub(crate) async fn get_picture_stop_rels(
 ) -> Result<Json<HashMap<i32, Vec<i32>>>, Error> {
     if claims.is_none() {
         Ok(Json(
-            sql::fetch_public_picture_stop_rels(&state.pool).await?,
+            sql::fetch_public_stop_picture_stop_rels(&state.pool).await?,
         ))
     } else {
-        Ok(Json(sql::fetch_picture_stop_rels(&state.pool).await?))
+        Ok(Json(sql::fetch_stop_picture_stop_rels(&state.pool).await?))
     }
 }
 
-pub(crate) async fn get_pictures(
+pub(crate) async fn get_all_stop_pictures(
     State(state): State<AppState>,
     auth::ScopedClaim(_, _): auth::ScopedClaim<
         auth::perms::ViewSensitiveStopPic,
@@ -156,7 +156,7 @@ pub(crate) async fn get_latest_stop_pictures(
             take,
         )
         .await?,
-        total: sql::fetch_latest_pictures_cnt(
+        total: sql::fetch_latest_stop_pictures_cnt(
             &state.pool,
             can_view_sensitive,
             requester_id,
@@ -171,7 +171,7 @@ pub(crate) async fn get_unpositioned_stop_pictures(
     State(state): State<AppState>,
     claims: Option<auth::Claims>,
     paginator: Query<Page>,
-) -> Result<Json<Pagination<responses::MinimalPic>>, Error> {
+) -> Result<Json<Pagination<responses::MinimalStopPic>>, Error> {
     let offset = i64::from(paginator.p * PAGE_SIZE);
     let take = i64::from(PAGE_SIZE);
 
@@ -182,7 +182,7 @@ pub(crate) async fn get_unpositioned_stop_pictures(
     let uid = claims.map(|c| c.uid);
 
     Ok(Json(Pagination {
-        items: sql::fetch_unpositioned_pictures(
+        items: sql::fetch_unpositioned_stop_pictures(
             &state.pool,
             view_untagged,
             uid,
@@ -190,7 +190,7 @@ pub(crate) async fn get_unpositioned_stop_pictures(
             take,
         )
         .await?,
-        total: sql::fetch_unpositioned_pictures_cnt(
+        total: sql::fetch_unpositioned_stop_pictures_cnt(
             &state.pool,
             view_untagged,
             uid,
@@ -238,7 +238,7 @@ pub(crate) async fn upload_stop_picture(
     Path(stop_id): Path<i32>,
     mut multipart: Multipart,
 ) -> Result<Json<responses::PicWithStops>, Error> {
-    // TODO replace this with some rate limited for untrusted users
+    // TODO replace this with some rate limit for untrusted users
     // if !(claims.permissions.is_admin) {
     //     return Err(Error::Forbidden);
     // }
@@ -340,7 +340,7 @@ pub(crate) async fn patch_stop_picture_meta(
         Error::DatabaseExecution
     })?;
 
-    let pic = sql::fetch_picture(&mut *transaction, stop_picture_id)
+    let pic = sql::fetch_stop_pic(&mut *transaction, stop_picture_id)
         .await?
         .ok_or(Error::NotFoundUpstream)?;
 
@@ -391,7 +391,7 @@ pub(crate) async fn patch_stop_picture_meta(
         )
         .await?;
 
-        sql::update_picture_meta(
+        sql::update_stop_pic_meta(
             &mut transaction,
             stop_picture_id,
             stop_pic_meta,
@@ -415,7 +415,7 @@ pub(crate) async fn delete_picture(
     >,
     Path(picture_id): Path<i32>,
 ) -> Result<(), Error> {
-    let pic = sql::fetch_picture(&state.pool, picture_id)
+    let pic = sql::fetch_stop_pic(&state.pool, picture_id)
         .await?
         .ok_or(Error::NotFoundUpstream)?;
 
@@ -442,6 +442,7 @@ pub(crate) async fn get_panos(
 ) -> Result<Json<Vec<responses::FullPanoPic>>, Error> {
     Ok(Json(sql::fetch_panos(&state.pool, true).await?))
 }
+
 pub(crate) async fn upload_pano_picture(
     State(state): State<AppState>,
     auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::UploadStopPic>,

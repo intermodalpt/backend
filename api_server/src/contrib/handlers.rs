@@ -337,7 +337,7 @@ pub(crate) async fn patch_contrib_stop_picture_meta(
 
     pic.dyn_meta = contribution_meta.contribution;
 
-    let db_pic = pics::sql::fetch_picture(&state.pool, pic.id)
+    let db_pic = pics::sql::fetch_stop_pic(&state.pool, pic.id)
         .await?
         .ok_or(Error::NotFoundUpstream)?;
 

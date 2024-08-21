@@ -21,6 +21,7 @@ use std::collections::HashMap;
 use chrono::Local;
 use itertools::Itertools;
 use sqlx::PgPool;
+use uuid::Uuid;
 
 use commons::models::pics;
 
@@ -33,7 +34,7 @@ use crate::Error;
 type Result<T> = std::result::Result<T, Error>;
 
 /// Fetches a picture by its id.
-pub(crate) async fn fetch_picture<'c, E>(
+pub(crate) async fn fetch_stop_pic<'c, E>(
     executor: E,
     pic_id: i32,
 ) -> Result<Option<pics::StopPic>>
@@ -85,7 +86,7 @@ WHERE id = $1
 }
 
 /// Fetches a picture by its hash.
-pub(crate) async fn fetch_picture_by_hash(
+pub(crate) async fn fetch_stop_pic_by_hash(
     pool: &PgPool,
     pic_hash: &str,
 ) -> Result<Option<pics::StopPic>> {
@@ -332,8 +333,9 @@ ORDER BY stop_pics.capture_date DESC
         .fetch_all(pool)
         .await
         .map_err(|err| {
-        tracing::error!(error=err.to_string(), stop_id);
-        Error::DatabaseExecution})?
+            tracing::error!(error=err.to_string(), stop_id);
+            Error::DatabaseExecution
+        })?
         .into_iter()
         .map(|r| responses::PublicStopPic {
             id: r.id,
@@ -387,7 +389,8 @@ ORDER BY quality DESC
     .await
     .map_err(|err| {
         tracing::error!(error=err.to_string(), stop_id, uid, view_sensitive);
-        Error::DatabaseExecution})?
+        Error::DatabaseExecution
+    })?
     .into_iter()
     .map(|r| responses::PicWithStops {
         id: r.id,
@@ -411,7 +414,7 @@ ORDER BY quality DESC
         tags: r.tags,
         attrs: r.attrs,
         notes: r.notes,
-        stops: r.rels.into_iter().map(Into::into).collect()
+        stops: r.rels.into_iter().map(Into::into).collect(),
     })
     .collect())
 }
@@ -474,7 +477,8 @@ LIMIT $7 OFFSET $8
             can_view_sensitive,
             take,
             skip);
-        Error::DatabaseExecution})?
+            Error::DatabaseExecution
+    })?
     .into_iter()
     .map(|r| responses::PicWithStops {
         id: r.id,
@@ -498,12 +502,12 @@ LIMIT $7 OFFSET $8
         tags: r.tags,
         attrs: r.attrs,
         notes: r.notes,
-        stops: r.rels.into_iter().map(Into::into).collect()
+        stops: r.rels.into_iter().map(Into::into).collect(),
     })
     .collect())
 }
 
-pub(crate) async fn fetch_latest_pictures_cnt(
+pub(crate) async fn fetch_latest_stop_pictures_cnt(
     pool: &PgPool,
     can_view_sensitive: bool,
     requester_id: Option<i32>,
@@ -547,7 +551,7 @@ WHERE (stop_pics.uploader = $1
     })?)
 }
 
-pub(crate) async fn fetch_picture_stop_rels(
+pub(crate) async fn fetch_stop_picture_stop_rels(
     pool: &PgPool,
 ) -> Result<HashMap<i32, Vec<i32>>> {
     let res = sqlx::query!(
@@ -577,13 +581,13 @@ ORDER BY stop ASC
 }
 
 /// A range of pictures that are not positioned and are visible to the user
-pub(crate) async fn fetch_unpositioned_pictures(
+pub(crate) async fn fetch_unpositioned_stop_pictures(
     pool: &PgPool,
     trusted: bool,
     uid: Option<i32>,
     skip: i64,
     take: i64,
-) -> Result<Vec<responses::MinimalPic>> {
+) -> Result<Vec<responses::MinimalStopPic>> {
     Ok(sqlx::query!(
         r#"
 SELECT stop_pics.id, stop_pics.sha1
@@ -607,7 +611,7 @@ LIMIT $3 OFFSET $4
         Error::DatabaseExecution
     })?
     .into_iter()
-    .map(|r| responses::MinimalPic {
+    .map(|r| responses::MinimalStopPic {
         id: r.id,
         url_full: get_stop_pic_ori_path(&r.sha1),
         url_medium: get_stop_pic_medium_path(&r.sha1),
@@ -616,7 +620,7 @@ LIMIT $3 OFFSET $4
     .collect())
 }
 
-pub(crate) async fn fetch_unpositioned_pictures_cnt(
+pub(crate) async fn fetch_unpositioned_stop_pictures_cnt(
     pool: &PgPool,
     trusted: bool,
     uid: Option<i32>,
@@ -642,7 +646,7 @@ WHERE (stop_pics.lat IS NULL OR stop_pics.lon IS NULL)
     })
 }
 
-pub(crate) async fn fetch_public_picture_stop_rels(
+pub(crate) async fn fetch_public_stop_picture_stop_rels(
     pool: &PgPool,
 ) -> Result<HashMap<i32, Vec<i32>>> {
     let res = sqlx::query!(
@@ -734,7 +738,7 @@ ON CONFLICT DO NOTHING
     Ok(pic)
 }
 
-pub(crate) async fn update_picture_meta(
+pub(crate) async fn update_stop_pic_meta(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     stop_pic_id: i32,
     stop_pic_meta: requests::ChangeStopPic,
@@ -820,7 +824,7 @@ DO UPDATE SET attrs = EXCLUDED.attrs
     Ok(())
 }
 
-pub(crate) async fn delete_picture(
+pub(crate) async fn delete_stop_pic(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     pic_id: i32,
 ) -> Result<()> {
@@ -994,7 +998,8 @@ RETURNING id
     .await
     .map_err(|err| {
         tracing::error!(error=err.to_string(), pic=?pic);
-        Error::DatabaseExecution})?;
+        Error::DatabaseExecution
+    })?;
 
     pic.id = res.id;
 
@@ -1130,15 +1135,44 @@ WHERE operators.id=$2
     Ok(())
 }
 
-pub(crate) async fn fetch_news_img_by_hash(
+pub(crate) async fn insert_rich_img(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     sha1: &str,
-) -> Result<Option<pics::NewsImg>> {
-    sqlx::query_as!(
-        pics::NewsImg,
+    filename: Option<&str>,
+    lon: Option<f64>,
+    lat: Option<f64>,
+) -> Result<Uuid> {
+    let id = Uuid::new_v4();
+    let _ = sqlx::query!(
         r#"
-SELECT id, sha1, filename, transcript
-FROM news_imgs
+INSERT INTO rich_imgs(id, sha1, filename, lon, lat)
+VALUES ($1, $2, $3, $4, $5)
+        "#,
+        id,
+        sha1,
+        filename,
+        lon,
+        lat
+    )
+    .fetch_one(&mut **transaction)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), id=?id, sha1, filename, lon, lat);
+        Error::DatabaseExecution
+    })?;
+
+    Ok(id)
+}
+
+pub(crate) async fn fetch_rich_img_by_hash(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    sha1: &str,
+) -> Result<Option<pics::RichImg>> {
+    sqlx::query_as!(
+        pics::RichImg,
+        r#"
+SELECT id, sha1, filename, transcript, lat, lon, license
+FROM rich_imgs
 WHERE sha1=$1
 "#,
         sha1
@@ -1151,47 +1185,126 @@ WHERE sha1=$1
     })
 }
 
-pub(crate) async fn insert_news_img(
+pub(crate) async fn link_rich_image_to_news(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-    sha1: &str,
-    filename: Option<&str>,
-) -> Result<i32> {
-    let res = sqlx::query!(
+    img_id: Uuid,
+    item_id: i32,
+) -> Result<()> {
+    let _res = sqlx::query!(
         r#"
-INSERT INTO news_imgs(sha1, filename)
+INSERT INTO news_items_imgs(item_id, img_id)
 VALUES ($1, $2)
-RETURNING id
+ON CONFLICT DO NOTHING
         "#,
-        sha1,
-        filename,
+        item_id,
+        img_id
     )
-    .fetch_one(&mut **transaction)
+    .execute(&mut **transaction)
     .await
     .map_err(|err| {
-        tracing::error!(error = err.to_string(), sha1, filename);
+        tracing::error!(error = err.to_string(), img_id = ?img_id, item_id);
         Error::DatabaseExecution
     })?;
 
-    Ok(res.id)
+    Ok(())
 }
 
-pub(crate) async fn update_news_img_meta(
+pub(crate) async fn unlink_rich_images_from_news(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     item_id: i32,
-    meta: &requests::ChangeNewsPicMeta,
 ) -> Result<()> {
-    sqlx::query!(
+    let _res = sqlx::query!(
         r#"
-UPDATE news_imgs
-SET transcript=$1
-WHERE id=$2"#,
-        meta.transcript,
+DELETE FROM news_items_imgs
+WHERE item_id=$1
+        "#,
         item_id
     )
     .execute(&mut **transaction)
     .await
     .map_err(|err| {
-        tracing::error!(error = err.to_string(), item_id, meta.transcript);
+        tracing::error!(error = err.to_string(), item_id);
+        Error::DatabaseExecution
+    })?;
+
+    Ok(())
+}
+
+pub(crate) async fn link_rich_image_to_issue(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    img_id: Uuid,
+    issue_id: i32,
+) -> Result<()> {
+    let _res = sqlx::query!(
+        r#"
+INSERT INTO issue_imgs(issue_id, img_id)
+VALUES ($1, $2)
+ON CONFLICT DO NOTHING
+        "#,
+        issue_id,
+        img_id
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), img_id = ?img_id, issue_id);
+        Error::DatabaseExecution
+    })?;
+
+    Ok(())
+}
+
+pub(crate) async fn unlink_rich_images_from_issue(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    issue_id: i32,
+) -> Result<()> {
+    let _res = sqlx::query!(
+        r#"
+DELETE FROM issue_imgs
+WHERE issue_id=$1
+        "#,
+        issue_id
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), issue_id = ?issue_id);
+        Error::DatabaseExecution
+    })?;
+
+    Ok(())
+}
+
+pub(crate) async fn update_rich_img_meta(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    item_id: Uuid,
+    meta: &requests::ChangeRichImgMeta,
+) -> Result<()> {
+    sqlx::query!(
+        r#"
+UPDATE rich_imgs
+SET transcript=$1,
+    license=$2,
+    lat=$3,
+    lon=$4
+WHERE id=$5"#,
+        meta.transcript,
+        meta.license,
+        meta.lat,
+        meta.lon,
+        item_id
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| {
+        tracing::error!(
+            error = err.to_string(),
+            item_id = ?item_id,
+            meta.transcript,
+            meta.license,
+            meta.lat,
+            meta.lon
+        );
         Error::DatabaseExecution
     })?;
 

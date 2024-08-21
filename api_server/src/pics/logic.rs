@@ -55,7 +55,7 @@ pub(crate) async fn upload_stop_picture(
     let hash = hasher.finalize();
     let hex_hash = base16ct::lower::encode_string(&hash);
 
-    let res = sql::fetch_picture_by_hash(db_pool, &hex_hash).await?;
+    let res = sql::fetch_stop_pic_by_hash(db_pool, &hex_hash).await?;
 
     if let Some(pic) = res {
         tracing::warn!("Duplicated stop pic uploaded ({})", pic.id);
@@ -159,7 +159,7 @@ pub(crate) async fn delete_picture(
     let stop_rels =
         sql::fetch_picture_stops_rel_attrs(&mut transaction, pic.id).await?;
 
-    let stop_pic = sql::fetch_picture(db_pool, pic.id).await?;
+    let stop_pic = sql::fetch_stop_pic(db_pool, pic.id).await?;
 
     if let Some(stop_pic) = stop_pic {
         let hex_hash = stop_pic.sha1;
@@ -168,7 +168,7 @@ pub(crate) async fn delete_picture(
         return Err(Error::NotFoundUpstream);
     }
 
-    sql::delete_picture(&mut transaction, pic.id).await?;
+    sql::delete_stop_pic(&mut transaction, pic.id).await?;
 
     contrib::sql::insert_changeset_log(
         &mut transaction,
