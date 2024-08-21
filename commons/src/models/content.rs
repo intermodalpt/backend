@@ -527,3 +527,26 @@ impl ContentBlock {
         }
     }
 }
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RichContent(pub Vec<ContentBlock>);
+
+impl RichContent {
+    pub fn validate(&self) -> Result<(), &'static str> {
+        for block in &self.0 {
+            block.validate()?;
+        }
+
+        Ok(())
+    }
+
+    pub fn get_linked_images(&self) -> Vec<i32> {
+        self.0
+            .iter()
+            .filter_map(|block| match block {
+                ContentBlock::Img(img) => Some(img.id),
+                _ => None,
+            })
+            .collect()
+    }
+}

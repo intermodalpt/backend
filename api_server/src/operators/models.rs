@@ -1,6 +1,6 @@
 /*
     Intermodal, transportation information aggregator
-    Copyright (C) 2022 - 2023  Cláudio Pereira
+    Copyright (C) 2022 - 2024  Cláudio Pereira
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -32,7 +32,7 @@ pub(crate) mod responses {
     use sqlx::types::JsonValue;
 
     use commons::models::calendar::Calendar;
-    use commons::models::content::ContentBlock;
+    use commons::models::content::RichContent;
     use commons::models::operators;
 
     use crate::routes::models::responses::SimpleRoute;
@@ -138,7 +138,7 @@ pub(crate) mod responses {
         pub category: operators::IssueCategory,
         pub impact: i32,
         pub creation: DateTime<Local>,
-        pub content: Vec<ContentBlock>,
+        pub content: RichContent,
         pub lat: Option<f64>,
         pub lon: Option<f64>,
         pub state: operators::IssueState,
@@ -169,11 +169,12 @@ pub(crate) mod requests {
     use sqlx::types::JsonValue;
 
     use commons::models::calendar::Calendar;
-    use commons::models::content::ContentBlock;
+    use commons::models::content::RichContent;
     use commons::models::history;
     use commons::models::operators;
 
     use crate::utils::canonicalize_optional_string;
+    use crate::Error;
 
     #[derive(Debug, Deserialize)]
     pub struct ChangeOperator {
@@ -233,11 +234,50 @@ pub(crate) mod requests {
         pub impact: i32,
         pub lat: Option<f64>,
         pub lon: Option<f64>,
-        pub content: Vec<ContentBlock>,
+        pub content: RichContent,
         pub operator_ids: Vec<i32>,
         pub route_ids: Vec<i32>,
         pub stop_ids: Vec<i32>,
-        pub pic_ids: Vec<i32>,
+    }
+
+    impl NewIssue {
+        pub(crate) fn validate(&self) -> Result<(), Error> {
+            if self.title.trim().is_empty() {
+                return Err(Error::ValidationFailure(
+                    "Empty title".to_string(),
+                ));
+            }
+
+            if self.lat.is_some() && self.lon.is_none() {
+                return Err(Error::ValidationFailure(
+                    "Latitude without longitude".to_string(),
+                ));
+            }
+
+            if self.lat.is_none() && self.lon.is_some() {
+                return Err(Error::ValidationFailure(
+                    "Longitude without latitude".to_string(),
+                ));
+            }
+
+            if let Some(lon) = self.lon {
+                if (-180.0..=180.0).contains(&lon) {
+                    return Err(Error::ValidationFailure(
+                        "Longitude out of bounds".to_string(),
+                    ));
+                }
+            }
+
+            if let Some(lat) = self.lat {
+                if (-90.0..=90.0).contains(&lat) {
+                    return Err(Error::ValidationFailure(
+                        "Latitude out of bounds".to_string(),
+                    ));
+                }
+            }
+
+            Ok(())
+        }
     }
 
     impl From<NewIssue> for operators::Issue {
@@ -256,7 +296,6 @@ pub(crate) mod requests {
                 operator_ids: value.operator_ids,
                 route_ids: value.route_ids,
                 stop_ids: value.stop_ids,
-                pic_ids: value.pic_ids,
             }
         }
     }
@@ -264,21 +303,56 @@ pub(crate) mod requests {
     #[derive(Debug, Deserialize)]
     pub struct ChangeIssue {
         pub title: String,
-        pub message: String,
         pub category: operators::IssueCategory,
         pub impact: i32,
         pub state: operators::IssueState,
         pub state_justification: Option<String>,
         pub lat: Option<f64>,
         pub lon: Option<f64>,
-        pub content: Vec<ContentBlock>,
+        pub content: RichContent,
         pub operator_ids: Vec<i32>,
         pub route_ids: Vec<i32>,
         pub stop_ids: Vec<i32>,
-        pub pic_ids: Vec<i32>,
     }
 
     impl ChangeIssue {
+        pub(crate) fn validate(&self) -> Result<(), Error> {
+            if self.title.trim().is_empty() {
+                return Err(Error::ValidationFailure(
+                    "Empty title".to_string(),
+                ));
+            }
+
+            if self.lat.is_some() && self.lon.is_none() {
+                return Err(Error::ValidationFailure(
+                    "Latitude without longitude".to_string(),
+                ));
+            }
+
+            if self.lat.is_none() && self.lon.is_some() {
+                return Err(Error::ValidationFailure(
+                    "Longitude without latitude".to_string(),
+                ));
+            }
+
+            if let Some(lon) = self.lon {
+                if (-180.0..=180.0).contains(&lon) {
+                    return Err(Error::ValidationFailure(
+                        "Longitude out of bounds".to_string(),
+                    ));
+                }
+            }
+
+            if let Some(lat) = self.lat {
+                if (-90.0..=90.0).contains(&lat) {
+                    return Err(Error::ValidationFailure(
+                        "Latitude out of bounds".to_string(),
+                    ));
+                }
+            }
+
+            Ok(())
+        }
         pub fn derive_patch(
             &self,
             issue: &operators::Issue,
@@ -318,9 +392,6 @@ pub(crate) mod requests {
             }
             if self.stop_ids != issue.stop_ids {
                 patch.stop_ids = Some(self.stop_ids.clone());
-            }
-            if self.pic_ids != issue.pic_ids {
-                patch.pic_ids = Some(self.pic_ids.clone());
             }
 
             patch

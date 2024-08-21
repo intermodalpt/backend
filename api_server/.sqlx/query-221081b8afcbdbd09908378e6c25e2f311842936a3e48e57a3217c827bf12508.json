@@ -1,0 +1,88 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT news_items.id, news_items.title, news_items.summary,\n    content as \"content!: sqlx::types::Json<RichContent>\",\n    news_items.publish_datetime, news_items.edit_datetime, is_visible, thumb_id,\n    array_remove(array_agg(distinct operator_id), NULL) as \"operator_ids!: Vec<i32>\",\n    array_remove(array_agg(distinct region_id), NULL) as \"region_ids!: Vec<i32>\",\n    CASE\n        WHEN count(news_imgs.id) > 0\n        THEN array_agg(ROW(news_imgs.id, sha1, transcript))\n        ELSE array[]::record[]\n    END as \"imgs!: Vec<pic_models::NewsImg>\",\n    CASE\n        WHEN count(news_items_external_news_items.item_id) > 0\n        THEN array_agg(ROW(\n            external_news_items.id,\n            external_news_items.title,\n            external_news_items.summary,\n            external_news_items.source,\n            external_news_items.publish_datetime\n            ))\n        ELSE array[]::record[]\n    END as \"external_rels!: Vec<models::ExternalRel>\"\nFROM news_items\nLEFT JOIN news_items_operators ON news_items.id=news_items_operators.item_id\nLEFT JOIN news_items_regions ON news_items.id=news_items_regions.item_id\nLEFT JOIN news_items_imgs\n    ON news_items.id=news_items_imgs.item_id\nLEFT JOIN news_imgs\n    ON news_items_imgs.img_id=news_imgs.id\nLEFT JOIN news_items_external_news_items\n    ON news_items.id=news_items_external_news_items.item_id\nLEFT JOIN external_news_items\n    ON news_items_external_news_items.external_item_id=external_news_items.id\nWHERE news_items.id=$1\nGROUP BY news_items.id\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "title",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "summary",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "content!: sqlx::types::Json<RichContent>",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 4,
+        "name": "publish_datetime",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
+        "name": "edit_datetime",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 6,
+        "name": "is_visible",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 7,
+        "name": "thumb_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 8,
+        "name": "operator_ids!: Vec<i32>",
+        "type_info": "Int4Array"
+      },
+      {
+        "ordinal": 9,
+        "name": "region_ids!: Vec<i32>",
+        "type_info": "Int4Array"
+      },
+      {
+        "ordinal": 10,
+        "name": "imgs!: Vec<pic_models::NewsImg>",
+        "type_info": "RecordArray"
+      },
+      {
+        "ordinal": 11,
+        "name": "external_rels!: Vec<models::ExternalRel>",
+        "type_info": "RecordArray"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "221081b8afcbdbd09908378e6c25e2f311842936a3e48e57a3217c827bf12508"
+}

@@ -21,7 +21,7 @@ use sqlx::types::Json;
 use sqlx::PgPool;
 
 use commons::models::calendar::Calendar;
-use commons::models::content::ContentBlock;
+use commons::models::content::RichContent;
 use commons::models::operators;
 
 use super::models::{self, requests, responses};
@@ -509,7 +509,7 @@ pub(crate) async fn fetch_operator_issues(
     sqlx::query!(
         r#"
 SELECT issues.id, issues.title,
-    issues.content as "content!: sqlx::types::Json<Vec<ContentBlock>>",
+    issues.content as "content!: sqlx::types::Json<RichContent>",
     issues.category, issues.lat, issues.creation, issues.lon, issues.impact,
     issues.state, issues.state_justification,
     array_agg(issue_operators.operator_id) as "operators!: Vec<i32>",
@@ -554,7 +554,6 @@ GROUP BY issues.id
             operator_ids: row.operators,
             route_ids: row.routes,
             stop_ids: row.stops,
-            pic_ids: row.pics,
         })
     })
     .collect()
@@ -615,7 +614,7 @@ pub(crate) async fn fetch_issue(
     sqlx::query!(
         r#"SELECT issues.id, issues.title, issues.category, issues.impact,
         issues.creation, issues.lat, issues.lon,
-        issues.content as "content!: sqlx::types::Json<Vec<ContentBlock>>",
+        issues.content as "content!: sqlx::types::Json<RichContent>",
         issues.state, issues.state_justification,
     array_agg(issue_operators.operator_id) as "operators!: Vec<i32>",
     array_agg(issue_routes.route_id) as "routes!: Vec<i32>",
@@ -657,7 +656,6 @@ GROUP BY issues.id"#,
             operator_ids: row.operators,
             route_ids: row.routes,
             stop_ids: row.stops,
-            pic_ids: row.pics,
         })
     })
 }
@@ -751,7 +749,7 @@ RETURNING id
         })?;
     }
 
-    for pic_id in &issue.pic_ids {
+    for pic_id in issue.content.get_linked_images() {
         sqlx::query!(
             r#"
             INSERT INTO issue_pics (pic_id, issue_id)
@@ -888,7 +886,7 @@ async fn insert_issue_related(
         })?;
     }
 
-    for pic_id in &issue.pic_ids {
+    for pic_id in issue.content.get_linked_images() {
         sqlx::query!(
             r#"
             INSERT INTO issue_pics (pic_id, issue_id)

@@ -33,7 +33,7 @@ pub(crate) mod responses {
     use serde::Serialize;
     use sqlx::types::JsonValue;
 
-    use commons::models::content::ContentBlock;
+    use commons::models::content::RichContent;
 
     use crate::pics::models::responses as pic_responses;
 
@@ -42,7 +42,7 @@ pub(crate) mod responses {
         pub id: i32,
         pub title: String,
         pub summary: String,
-        pub content: Vec<ContentBlock>,
+        pub content: RichContent,
         pub thumb_url: Option<String>,
 
         pub publish_datetime: DateTime<Local>,
@@ -58,7 +58,7 @@ pub(crate) mod responses {
         pub id: i32,
         pub title: String,
         pub summary: String,
-        pub content: Vec<ContentBlock>,
+        pub content: RichContent,
         pub publish_datetime: DateTime<Local>,
         pub edit_datetime: Option<DateTime<Local>>,
         pub is_visible: bool,
@@ -76,7 +76,7 @@ pub(crate) mod responses {
         pub id: i32,
         pub title: String,
         pub summary: String,
-        pub content: Vec<ContentBlock>,
+        pub content: RichContent,
         pub publish_datetime: DateTime<Local>,
         pub edit_datetime: Option<DateTime<Local>>,
         pub is_visible: bool,
@@ -178,7 +178,7 @@ pub(crate) mod requests {
     use sqlx::types::JsonValue;
     use std::collections::HashSet;
 
-    use commons::models::content::ContentBlock;
+    use commons::models::content::RichContent;
 
     use crate::utils::canonicalize_optional_string;
 
@@ -189,7 +189,7 @@ pub(crate) mod requests {
         pub author_id: Option<i32>,
         pub author_override: Option<String>,
 
-        pub content: Vec<ContentBlock>,
+        pub content: RichContent,
         pub thumb_id: Option<i32>,
 
         pub publish_datetime: Option<DateTime<Local>>,
@@ -212,21 +212,13 @@ pub(crate) mod requests {
             if self.summary.trim().is_empty() {
                 return Err("Empty summary");
             }
-            for block in &self.content {
-                block.validate()?;
-            }
+            self.content.validate()?;
             Ok(())
         }
 
         pub(crate) fn get_linked_images(&self) -> HashSet<i32> {
-            let mut ids: HashSet<i32> = self
-                .content
-                .iter()
-                .filter_map(|block| match block {
-                    ContentBlock::Img(img) => Some(img.id),
-                    _ => None,
-                })
-                .collect();
+            let mut ids: HashSet<i32> =
+                self.content.get_linked_images().into_iter().collect();
             if let Some(thumb_id) = self.thumb_id {
                 ids.insert(thumb_id);
             }

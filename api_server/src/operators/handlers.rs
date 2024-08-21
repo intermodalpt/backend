@@ -336,6 +336,8 @@ pub(crate) async fn post_issue(
     auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::ModifyIssues>,
     Json(issue): Json<requests::NewIssue>,
 ) -> Result<Json<IdReturn<i32>>, Error> {
+    issue.validate()?;
+
     let mut transaction = state.pool.begin().await.map_err(|err| {
         tracing::error!("Failed to open transaction: {err}");
         Error::DatabaseExecution
@@ -370,6 +372,8 @@ pub(crate) async fn patch_issue(
     Path(issue_id): Path<i32>,
     Json(change): Json<requests::ChangeIssue>,
 ) -> Result<(), Error> {
+    change.validate()?;
+
     let issue = sql::fetch_issue(&state.pool, issue_id).await?;
 
     let patch = change.derive_patch(&issue);

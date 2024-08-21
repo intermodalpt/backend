@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT id, title, summary,\n    content as \"content!: sqlx::types::Json<Vec<ContentBlock>>\",\n    publish_datetime, edit_datetime, is_visible, thumb_url,\n    array_remove(array_agg(distinct operator_id), NULL) as \"operator_ids!: Vec<i32>\",\n    array_remove(array_agg(distinct region_id), NULL) as \"region_ids!: Vec<i32>\"\nFROM news_items\nLEFT JOIN news_items_operators ON news_items.id=news_items_operators.item_id\nLEFT JOIN news_items_regions ON news_items.id=news_items_regions.item_id\nGROUP BY news_items.id\nLIMIT $1 OFFSET $2\n",
+  "query": "\nSELECT id, title, summary,\n    content as \"content!: sqlx::types::Json<RichContent>\",\n    publish_datetime, edit_datetime, is_visible, thumb_url,\n    array_remove(array_agg(distinct operator_id), NULL) as \"operator_ids!: Vec<i32>\",\n    array_remove(array_agg(distinct region_id), NULL) as \"region_ids!: Vec<i32>\"\nFROM news_items\nLEFT JOIN news_items_operators ON news_items.id=news_items_operators.item_id\nLEFT JOIN news_items_regions ON news_items.id=news_items_regions.item_id\nGROUP BY news_items.id\nLIMIT $1 OFFSET $2\n",
   "describe": {
     "columns": [
       {
@@ -20,7 +20,7 @@
       },
       {
         "ordinal": 3,
-        "name": "content!: sqlx::types::Json<Vec<ContentBlock>>",
+        "name": "content!: sqlx::types::Json<RichContent>",
         "type_info": "Jsonb"
       },
       {
@@ -73,5 +73,5 @@
       null
     ]
   },
-  "hash": "963c5fbf8b050dc4fe9fa22d0b3b4e926d01fffad3bad7a69847be183394ae46"
+  "hash": "484947c655d2a19f10bed77edd16d3810663f7aa14bceb40278dc770f4b8dbda"
 }

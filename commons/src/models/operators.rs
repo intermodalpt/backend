@@ -19,7 +19,7 @@
 use std::fmt;
 
 use super::calendar::Calendar;
-use crate::models::content::ContentBlock;
+use crate::models::content::RichContent;
 use chrono::{DateTime, Local};
 use serde::{Deserialize, Serialize};
 use serde_repr::Serialize_repr;
@@ -63,19 +63,6 @@ pub struct OperatorVehicle {
     // TODO complete
 }
 
-#[derive(Debug, Serialize)]
-pub struct Reseller {
-    pub id: i32,
-    pub name: String,
-    pub service_year: u16,
-    pub quantity: u16,
-    pub bench_seats: u16,
-    pub foot_seats: u16,
-    pub has_ac: bool,
-    pub has_wifi: bool,
-    // TODO complete
-}
-
 // Abnormalities are temporary changes to the network
 // such as temporary detours
 pub struct Abnormally {
@@ -85,7 +72,7 @@ pub struct Abnormally {
     pub creation: DateTime<Local>,
     pub from_datetime: Option<DateTime<Local>>,
     pub to_datetime: Option<DateTime<Local>>,
-    pub geojson: Option<serde_json::Value>,
+    pub content: RichContent,
     pub mark_resolved: bool,
 }
 
@@ -117,13 +104,12 @@ pub struct Issue {
     pub impact: i32,
     pub lat: Option<f64>,
     pub lon: Option<f64>,
-    pub content: Vec<ContentBlock>,
+    pub content: RichContent,
     pub state: IssueState,
     pub state_justification: Option<String>,
     pub operator_ids: Vec<i32>,
     pub route_ids: Vec<i32>,
     pub stop_ids: Vec<i32>,
-    pub pic_ids: Vec<i32>,
 }
 
 #[derive(Debug, PartialEq, Copy, Clone, Serialize, Deserialize)]

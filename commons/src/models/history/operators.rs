@@ -22,7 +22,7 @@ use serde_repr::Serialize_repr;
 
 use super::calendar::Calendar;
 use crate::errors::Error;
-use crate::models::content::ContentBlock;
+use crate::models::content::RichContent;
 use crate::models::operators as current;
 
 #[derive(Debug, Serialize)]
@@ -79,7 +79,7 @@ pub struct Abnormally {
     pub creation: DateTime<Local>,
     pub from_datetime: Option<DateTime<Local>>,
     pub to_datetime: Option<DateTime<Local>>,
-    pub geojson: Option<serde_json::Value>,
+    pub content: RichContent,
     pub mark_resolved: bool,
 }
 
@@ -92,7 +92,7 @@ impl From<current::Abnormally> for Abnormally {
             creation: abnormally.creation,
             from_datetime: abnormally.from_datetime,
             to_datetime: abnormally.to_datetime,
-            geojson: abnormally.geojson,
+            content: abnormally.content,
             mark_resolved: abnormally.mark_resolved,
         }
     }
@@ -109,7 +109,7 @@ impl TryFrom<Abnormally> for current::Abnormally {
             creation: abnormally.creation,
             from_datetime: abnormally.from_datetime,
             to_datetime: abnormally.to_datetime,
-            geojson: abnormally.geojson,
+            content: abnormally.content,
             mark_resolved: abnormally.mark_resolved,
         })
     }
@@ -141,13 +141,12 @@ pub struct Issue {
     pub impact: i32,
     pub lat: Option<f64>,
     pub lon: Option<f64>,
-    pub content: Vec<ContentBlock>,
+    pub content: RichContent,
     pub state: IssueState,
     pub state_justification: Option<String>,
     pub operator_ids: Vec<i32>,
     pub route_ids: Vec<i32>,
     pub stop_ids: Vec<i32>,
-    pub pic_ids: Vec<i32>,
 }
 
 impl From<current::Issue> for Issue {
@@ -166,7 +165,6 @@ impl From<current::Issue> for Issue {
             operator_ids: issue.operator_ids,
             route_ids: issue.route_ids,
             stop_ids: issue.stop_ids,
-            pic_ids: issue.pic_ids,
         }
     }
 }
@@ -189,7 +187,6 @@ impl TryFrom<Issue> for current::Issue {
             operator_ids: issue.operator_ids,
             route_ids: issue.route_ids,
             stop_ids: issue.stop_ids,
-            pic_ids: issue.pic_ids,
         })
     }
 }
@@ -462,7 +459,7 @@ pub struct IssuePatch {
         with = "::serde_with::rust::double_option"
     )]
     pub lon: Option<Option<f64>>,
-    pub content: Option<Vec<ContentBlock>>,
+    pub content: Option<RichContent>,
     pub operator_ids: Option<Vec<i32>>,
     pub route_ids: Option<Vec<i32>>,
     pub stop_ids: Option<Vec<i32>>,
@@ -524,9 +521,6 @@ impl IssuePatch {
         }
         if let Some(stop_ids) = self.stop_ids {
             issue.stop_ids = stop_ids;
-        }
-        if let Some(pic_ids) = self.pic_ids {
-            issue.pic_ids = pic_ids;
         }
         Ok(())
     }
