@@ -261,7 +261,7 @@ pub(crate) mod requests {
             }
 
             if let Some(lon) = self.lon {
-                if (-180.0..=180.0).contains(&lon) {
+                if !(-180.0..=180.0).contains(&lon) {
                     return Err(Error::ValidationFailure(
                         "Longitude out of bounds".to_string(),
                     ));
@@ -269,7 +269,7 @@ pub(crate) mod requests {
             }
 
             if let Some(lat) = self.lat {
-                if (-90.0..=90.0).contains(&lat) {
+                if !(-90.0..=90.0).contains(&lat) {
                     return Err(Error::ValidationFailure(
                         "Latitude out of bounds".to_string(),
                     ));
@@ -336,7 +336,7 @@ pub(crate) mod requests {
             }
 
             if let Some(lon) = self.lon {
-                if (-180.0..=180.0).contains(&lon) {
+                if !(-180.0..=180.0).contains(&lon) {
                     return Err(Error::ValidationFailure(
                         "Longitude out of bounds".to_string(),
                     ));
@@ -344,7 +344,7 @@ pub(crate) mod requests {
             }
 
             if let Some(lat) = self.lat {
-                if (-90.0..=90.0).contains(&lat) {
+                if !(-90.0..=90.0).contains(&lat) {
                     return Err(Error::ValidationFailure(
                         "Latitude out of bounds".to_string(),
                     ));
