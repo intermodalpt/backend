@@ -474,7 +474,7 @@ pub(crate) async fn update_stop_position(
     lat: f64,
 ) -> Result<bool> {
     let res = sqlx::query!(
-        "UPDATE stops SET lon=$1, lat=$2 WHERE id = $3",
+        "UPDATE stops SET lon=$1, lat=$2 WHERE id=$3",
         lon,
         lat,
         stop_id
@@ -482,7 +482,34 @@ pub(crate) async fn update_stop_position(
     .execute(&mut **transaction)
     .await
     .map_err(|err| {
-        tracing::error!(error = err.to_string(), stop_id);
+        tracing::error!(error = err.to_string(), stop_id, lon, lat);
+        Error::DatabaseExecution
+    })?;
+
+    Ok(res.rows_affected() != 0)
+}
+
+pub(crate) async fn update_stop_vehicle_position(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    stop_id: i32,
+    vehicle_lon: f64,
+    vehicle_lat: f64,
+) -> Result<bool> {
+    let res = sqlx::query!(
+        "UPDATE stops SET vehicle_lon=$1, vehicle_lat=$2 WHERE id=$3",
+        vehicle_lon,
+        vehicle_lat,
+        stop_id
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| {
+        tracing::error!(
+            error = err.to_string(),
+            stop_id,
+            vehicle_lon,
+            vehicle_lat
+        );
         Error::DatabaseExecution
     })?;
 

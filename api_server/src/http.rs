@@ -128,6 +128,10 @@ pub fn build_paths(state: AppState) -> Router {
             put(stops::handlers::put_stop_position),
         )
         .route(
+            "/v1/stops/:stop_id/vehicle_position",
+            put(stops::handlers::put_stop_vehicle_position),
+        )
+        .route(
             "/v1/stops/:stop_id/osm",
             get(osm::handlers::get_paired_osm_stop),
         )

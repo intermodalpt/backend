@@ -205,6 +205,39 @@ pub(crate) async fn put_stop_position(
     Ok(())
 }
 
+pub(crate) async fn put_stop_vehicle_position(
+    State(state): State<AppState>,
+    Path(stop_id): Path<i32>,
+    auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::ModifyStopPos>,
+    Json(location): Json<requests::Position>,
+) -> Result<(), Error> {
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
+
+    // TODO log
+
+    let updated = sql::update_stop_vehicle_position(
+        &mut transaction,
+        stop_id,
+        location.lon,
+        location.lat,
+    )
+    .await?;
+
+    if !updated {
+        return Err(Error::NotFoundUpstream);
+    }
+
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
+
+    Ok(())
+}
+
 pub(crate) async fn get_bounded_stops(
     State(state): State<AppState>,
     Path(boundary): Path<(f64, f64, f64, f64)>,

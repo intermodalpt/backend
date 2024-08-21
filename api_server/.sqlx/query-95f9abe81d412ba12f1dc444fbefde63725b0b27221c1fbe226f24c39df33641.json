@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "UPDATE stops SET lon=$1, lat=$2 WHERE id = $3",
+  "query": "UPDATE stops SET vehicle_lon=$1, vehicle_lat=$2 WHERE id=$3",
   "describe": {
     "columns": [],
     "parameters": {
@@ -12,5 +12,5 @@
     },
     "nullable": []
   },
-  "hash": "4d9c24da767a3901e1de728d5e94511af16639019f938020b13d33f6ce6ca193"
+  "hash": "95f9abe81d412ba12f1dc444fbefde63725b0b27221c1fbe226f24c39df33641"
 }
