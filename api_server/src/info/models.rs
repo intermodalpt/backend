@@ -32,6 +32,7 @@ pub(crate) mod responses {
     use chrono::{DateTime, Local, Utc};
     use serde::Serialize;
     use sqlx::types::JsonValue;
+    use uuid::Uuid;
 
     use commons::models::content::RichContent;
 
@@ -64,7 +65,7 @@ pub(crate) mod responses {
         pub is_visible: bool,
 
         pub thumb_url: Option<String>,
-        pub images: Vec<pic_responses::NewsImg>,
+        pub images: Vec<pic_responses::SimpleRichImg>,
         pub external_rels: Vec<super::ExternalRel>,
 
         pub operator_ids: Vec<i32>,
@@ -81,8 +82,8 @@ pub(crate) mod responses {
         pub edit_datetime: Option<DateTime<Local>>,
         pub is_visible: bool,
 
-        pub thumb_id: Option<i32>,
-        pub images: Vec<pic_responses::FullNewsImg>,
+        pub thumb_id: Option<Uuid>,
+        pub images: Vec<pic_responses::SimpleRichImg>,
         pub external_rels: Vec<super::ExternalRel>,
 
         pub operator_ids: Vec<i32>,
@@ -177,6 +178,7 @@ pub(crate) mod requests {
     use serde::Deserialize;
     use sqlx::types::JsonValue;
     use std::collections::HashSet;
+    use uuid::Uuid;
 
     use commons::models::content::RichContent;
 
@@ -190,7 +192,7 @@ pub(crate) mod requests {
         pub author_override: Option<String>,
 
         pub content: RichContent,
-        pub thumb_id: Option<i32>,
+        pub thumb_id: Option<Uuid>,
 
         pub publish_datetime: Option<DateTime<Local>>,
         pub edit_datetime: Option<DateTime<Local>>,
@@ -216,8 +218,8 @@ pub(crate) mod requests {
             Ok(())
         }
 
-        pub(crate) fn get_linked_images(&self) -> HashSet<i32> {
-            let mut ids: HashSet<i32> =
+        pub(crate) fn get_linked_images(&self) -> HashSet<Uuid> {
+            let mut ids: HashSet<Uuid> =
                 self.content.get_linked_images().into_iter().collect();
             if let Some(thumb_id) = self.thumb_id {
                 ids.insert(thumb_id);

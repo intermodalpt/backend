@@ -20,9 +20,9 @@ use std::collections::HashMap;
 
 use axum::extract::{Multipart, Path, Query, State};
 use axum::Json;
-use serde::Deserialize;
-
 use commons::models::{history, pics};
+use serde::Deserialize;
+use uuid::Uuid;
 
 use super::{logic, models::requests, models::responses, sql};
 use crate::pics::logic::import_external_news_img;
@@ -529,11 +529,11 @@ pub(crate) async fn post_upload_operator_logo(
     Ok(())
 }
 
-pub(crate) async fn post_news_image(
+pub(crate) async fn post_rich_image(
     State(state): State<AppState>,
     claims: auth::Claims,
     mut multipart: Multipart,
-) -> Result<Json<responses::FullNewsImg>, Error> {
+) -> Result<Json<responses::FullRichImg>, Error> {
     if auth::perms::CreateNews::is_valid(&claims.permissions)
         || auth::perms::ModifyNews::is_valid(&claims.permissions)
     {
@@ -553,22 +553,49 @@ pub(crate) async fn post_news_image(
         .await
         .map_err(|err| Error::ValidationFailure(err.to_string()))?;
 
-    let img = logic::upload_standalone_news_img(
-        &state.bucket,
-        &state.pool,
-        filename,
-        &content,
-    )
-    .await?;
+    let img =
+        logic::upload_rich_img(&state.bucket, &state.pool, filename, &content)
+            .await?;
 
     Ok(Json(img.into()))
+}
+
+pub(crate) async fn patch_rich_img_meta(
+    State(state): State<AppState>,
+    claims: auth::Claims,
+    Path(img_id): Path<Uuid>,
+    Json(mut img_meta): Json<requests::ChangeRichImgMeta>,
+) -> Result<(), Error> {
+    if auth::perms::CreateNews::is_valid(&claims.permissions)
+        || auth::perms::ModifyNews::is_valid(&claims.permissions)
+        || auth::perms::ModifyIssues::is_valid(&claims.permissions)
+    {
+        return Err(Error::Forbidden);
+    }
+    // FIXME These permissions don't figure the correct permissions for this specific image
+
+    img_meta.tidy();
+
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
+
+    sql::update_rich_img_meta(&mut transaction, img_id, &img_meta).await?;
+
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
+
+    Ok(())
 }
 
 pub(crate) async fn post_import_external_news_image(
     State(state): State<AppState>,
     claims: auth::Claims,
     Path(external_image_id): Path<i32>,
-) -> Result<Json<responses::FullNewsImg>, Error> {
+) -> Result<Json<responses::FullRichImg>, Error> {
     if auth::perms::CreateNews::is_valid(&claims.permissions)
         || auth::perms::ModifyNews::is_valid(&claims.permissions)
     {
@@ -583,31 +610,6 @@ pub(crate) async fn post_import_external_news_image(
             .await?;
 
     Ok(Json(img.into()))
-}
-
-pub(crate) async fn patch_news_image_meta(
-    State(state): State<AppState>,
-    auth::ScopedClaim(_, _): auth::ScopedClaim<
-        auth::perms::ModifyOthersStopPic,
-    >,
-    Path(img_id): Path<i32>,
-    Json(mut news_img_meta): Json<requests::ChangeNewsPicMeta>,
-) -> Result<(), Error> {
-    news_img_meta.tidy();
-
-    let mut transaction = state.pool.begin().await.map_err(|err| {
-        tracing::error!("Failed to open transaction: {err}");
-        Error::DatabaseExecution
-    })?;
-
-    sql::update_news_img_meta(&mut transaction, img_id, &news_img_meta).await?;
-
-    transaction.commit().await.map_err(|err| {
-        tracing::error!("Transaction failed to commit: {err}");
-        Error::DatabaseExecution
-    })?;
-
-    Ok(())
 }
 
 pub(crate) async fn post_external_news_image(
@@ -629,7 +631,7 @@ pub(crate) async fn post_external_news_image(
         .await
         .map_err(|err| Error::ValidationFailure(err.to_string()))?;
 
-    let pic = logic::upload_external_news_item_img(
+    let img = logic::upload_external_news_item_img(
         item_id,
         &state.bucket,
         &state.pool,
@@ -638,7 +640,7 @@ pub(crate) async fn post_external_news_image(
     )
     .await?;
 
-    Ok(Json(pic.into()))
+    Ok(Json(img.into()))
 }
 
 pub(crate) async fn put_external_news_screenshot(
@@ -660,7 +662,7 @@ pub(crate) async fn put_external_news_screenshot(
         .await
         .map_err(|err| Error::ValidationFailure(err.to_string()))?;
 
-    logic::upload_news_item_screenshot(
+    logic::upload_external_news_item_screenshot(
         item_id,
         &state.bucket,
         &state.pool,

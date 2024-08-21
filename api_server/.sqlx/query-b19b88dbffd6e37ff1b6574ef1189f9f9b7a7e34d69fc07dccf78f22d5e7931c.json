@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE rich_imgs\nSET transcript=$1,\n    license=$2,\n    lat=$3,\n    lon=$4\nWHERE id=$5",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Float8",
+        "Float8",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b19b88dbffd6e37ff1b6574ef1189f9f9b7a7e34d69fc07dccf78f22d5e7931c"
+}

@@ -19,7 +19,7 @@
         "Timestamptz",
         "Timestamptz",
         "Bool",
-        "Int4",
+        "Uuid",
         "Text"
       ]
     },

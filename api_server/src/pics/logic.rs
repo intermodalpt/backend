@@ -512,12 +512,12 @@ async fn delete_operator_pic_from_storage(
     Ok(())
 }
 
-pub(crate) async fn upload_standalone_news_img(
+pub(crate) async fn upload_rich_img(
     bucket: &s3::Bucket,
     db_pool: &PgPool,
     filename: String,
     content: &Bytes,
-) -> Result<pics::NewsImg, Error> {
+) -> Result<pics::RichImg, Error> {
     let mut hasher = Sha1::new();
     hasher.update(content);
     let hash = hasher.finalize();
@@ -529,7 +529,7 @@ pub(crate) async fn upload_standalone_news_img(
     })?;
 
     let same_img =
-        sql::fetch_news_img_by_hash(&mut transaction, &hex_hash).await?;
+        sql::fetch_rich_img_by_hash(&mut transaction, &hex_hash).await?;
     if let Some(img) = same_img {
         tracing::warn!("Duplicated news pic uploaded ({})", img.id);
         return Ok(img);
@@ -537,10 +537,10 @@ pub(crate) async fn upload_standalone_news_img(
 
     // TODO attach this filename to the known filenames
 
-    let (original_img, original_img_mime, _) =
+    let (original_img, original_img_mime, exif) =
         validate_image(content, &filename)?;
 
-    upload_news_img_to_storage(
+    upload_rich_img_to_storage(
         bucket,
         content,
         &original_img,
@@ -549,12 +549,19 @@ pub(crate) async fn upload_standalone_news_img(
     )
     .await?;
 
-    let db_res =
-        sql::insert_news_img(&mut transaction, &hex_hash, Some(&filename))
-            .await;
+    let (lon, lat) = exif.map(|e| (e.lon, e.lat)).unwrap_or((None, None));
+
+    let db_res = sql::insert_rich_img(
+        &mut transaction,
+        &hex_hash,
+        Some(&filename),
+        lon,
+        lat,
+    )
+    .await;
 
     if let Err(db_err) = db_res {
-        let storage_res = delete_news_img_from_storage(bucket, &hex_hash).await;
+        let storage_res = delete_rich_img_from_storage(bucket, &hex_hash).await;
         if let Err(storage_err) = storage_res {
             tracing::error!(
                 "Reversion failure.\
@@ -572,15 +579,18 @@ pub(crate) async fn upload_standalone_news_img(
         Error::DatabaseExecution
     })?;
 
-    Ok(pics::NewsImg {
+    Ok(pics::RichImg {
         id: img_id,
         sha1: hex_hash,
         filename: Some(filename),
         transcript: None,
+        license: None,
+        lat: None,
+        lon: None,
     })
 }
 
-async fn upload_news_img_to_storage(
+async fn upload_rich_img_to_storage(
     bucket: &s3::Bucket,
     content: &Bytes,
     original_img: &image::DynamicImage,
@@ -592,7 +602,7 @@ async fn upload_news_img_to_storage(
     // TODO handle status codes
     let _status_code = bucket
         .put_object_with_content_type(
-            format!("/news/medium/{hex_hash}"),
+            format!("/content/medium/{hex_hash}"),
             &medium_webp,
             "image/webp",
         )
@@ -604,7 +614,7 @@ async fn upload_news_img_to_storage(
 
     let _status_code = bucket
         .put_object_with_content_type(
-            format!("/news/thumb/{hex_hash}"),
+            format!("/content/thumb/{hex_hash}"),
             &thumb_webp,
             "image/webp",
         )
@@ -617,7 +627,7 @@ async fn upload_news_img_to_storage(
     let _status_code = if let Some(mime) = original_img_mime {
         bucket
             .put_object_with_content_type(
-                format!("/news/ori/{hex_hash}"),
+                format!("/content/ori/{hex_hash}"),
                 content.as_ref(),
                 mime.as_ref(),
             )
@@ -628,7 +638,7 @@ async fn upload_news_img_to_storage(
             })?
     } else {
         bucket
-            .put_object(format!("/news/ori/{hex_hash}"), content.as_ref())
+            .put_object(format!("/content/ori/{hex_hash}"), content.as_ref())
             .await
             .map_err(|err| {
                 tracing::error!("Object storage failure: {err}");
@@ -639,26 +649,26 @@ async fn upload_news_img_to_storage(
     Ok(())
 }
 
-async fn delete_news_img_from_storage(
+async fn delete_rich_img_from_storage(
     bucket: &s3::Bucket,
     hex_hash: &str,
 ) -> Result<(), Error> {
     bucket
-        .delete_object(format!("/news/ori/{hex_hash}"))
+        .delete_object(format!("/content/ori/{hex_hash}"))
         .await
         .map_err(|err| {
             tracing::error!("Object storage failure: {err}");
             Error::ObjectStorageFailure
         })?;
     bucket
-        .delete_object(format!("/news/medium/{hex_hash}"))
+        .delete_object(format!("/content/medium/{hex_hash}"))
         .await
         .map_err(|err| {
             tracing::error!("Object storage failure: {err}");
             Error::ObjectStorageFailure
         })?;
     bucket
-        .delete_object(format!("/news/thumb/{hex_hash}"))
+        .delete_object(format!("/content/thumb/{hex_hash}"))
         .await
         .map_err(|err| {
             tracing::error!("Object storage failure: {err}");
@@ -672,7 +682,7 @@ pub(crate) async fn import_external_news_img(
     bucket: &s3::Bucket,
     db_pool: &PgPool,
     external_img_id: i32,
-) -> Result<pics::NewsImg, Error> {
+) -> Result<pics::RichImg, Error> {
     let mut transaction = db_pool.begin().await.map_err(|err| {
         tracing::error!("Failed to open transaction: {err}");
         Error::DatabaseExecution
@@ -685,7 +695,7 @@ pub(crate) async fn import_external_news_img(
     let hex_hash = external_img.sha1;
 
     if let Some(img) =
-        sql::fetch_news_img_by_hash(&mut transaction, &hex_hash).await?
+        sql::fetch_rich_img_by_hash(&mut transaction, &hex_hash).await?
     {
         return Ok(img);
     }
@@ -720,13 +730,15 @@ pub(crate) async fn import_external_news_img(
         Error::ValidationFailure("Unsupported image".to_string())
     })?;
 
-    upload_news_img_to_storage(bucket, img_obj.bytes(), &img, mime, &hex_hash)
+    upload_rich_img_to_storage(bucket, img_obj.bytes(), &img, mime, &hex_hash)
         .await?;
 
-    let db_res = sql::insert_news_img(&mut transaction, &hex_hash, None).await;
+    let db_res =
+        sql::insert_rich_img(&mut transaction, &hex_hash, None, None, None)
+            .await;
 
     if let Err(db_err) = db_res {
-        let storage_res = delete_news_img_from_storage(bucket, &hex_hash).await;
+        let storage_res = delete_rich_img_from_storage(bucket, &hex_hash).await;
         if let Err(storage_err) = storage_res {
             tracing::error!(
                 "Reversion failure. {hex_hash} was stored into news_imgs.\
@@ -743,11 +755,14 @@ pub(crate) async fn import_external_news_img(
         Error::DatabaseExecution
     })?;
 
-    Ok(pics::NewsImg {
+    Ok(pics::RichImg {
         id: img_id,
         sha1: hex_hash,
         filename: None,
         transcript: None,
+        license: None,
+        lat: None,
+        lon: None,
     })
 }
 
@@ -871,7 +886,7 @@ async fn delete_external_news_img_from_storage(
     Ok(())
 }
 
-pub(crate) async fn upload_news_item_screenshot(
+pub(crate) async fn upload_external_news_item_screenshot(
     item_id: i32,
     bucket: &s3::Bucket,
     db_pool: &PgPool,

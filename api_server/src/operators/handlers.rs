@@ -25,6 +25,7 @@ use commons::models::{history, operators};
 
 use super::models::{requests, responses};
 use super::sql;
+use crate::pics::sql as pics_sql;
 use crate::responses::IdReturn;
 use crate::{auth, contrib, routes, stops, AppState, Error};
 
@@ -386,7 +387,20 @@ pub(crate) async fn patch_issue(
         Error::DatabaseExecution
     })?;
 
-    sql::update_issue(&mut transaction, issue_id, change).await?;
+    sql::update_issue(&mut transaction, issue_id, &change).await?;
+    // This code is very suboptimal but it'll do for now
+    // TODO: optimize
+    pics_sql::unlink_rich_images_from_issue(&mut transaction, issue_id).await?;
+    if patch.content.is_some() {
+        for img_id in change.content.get_linked_images() {
+            pics_sql::link_rich_image_to_issue(
+                &mut transaction,
+                img_id,
+                issue_id,
+            )
+            .await?;
+        }
+    }
 
     contrib::sql::insert_changeset_log(
         &mut transaction,

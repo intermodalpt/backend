@@ -17,6 +17,7 @@
 */
 
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct MapContent {
@@ -480,7 +481,7 @@ pub struct PulseSettings {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ImgRef {
-    pub id: i32,
+    pub id: Uuid,
     pub url: String,
     #[serde(default)]
     pub description: Option<String>,
@@ -540,7 +541,7 @@ impl RichContent {
         Ok(())
     }
 
-    pub fn get_linked_images(&self) -> Vec<i32> {
+    pub fn get_linked_images(&self) -> Vec<Uuid> {
         self.0
             .iter()
             .filter_map(|block| match block {

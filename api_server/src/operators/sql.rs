@@ -514,13 +514,11 @@ SELECT issues.id, issues.title,
     issues.state, issues.state_justification,
     array_remove(array_agg(distinct issue_operators.operator_id), NULL) as "operators!: Vec<i32>",
     array_remove(array_agg(distinct issue_routes.route_id), NULL) as "routes!: Vec<i32>",
-    array_remove(array_agg(distinct issue_stops.stop_id), NULL) as "stops!: Vec<i32>",
-    array_remove(array_agg(distinct issue_pics.pic_id), NULL) as "pics!: Vec<i32>"
+    array_remove(array_agg(distinct issue_stops.stop_id), NULL) as "stops!: Vec<i32>"
 FROM issues
 JOIN issue_operators on issue_operators.issue_id = issues.id
 LEFT JOIN issue_routes on issue_routes.issue_id = issues.id
 LEFT JOIN issue_stops on issue_stops.issue_id = issues.id
-LEFT JOIN issue_pics on issue_pics.issue_id = issues.id
 WHERE issue_operators.operator_id = $1
 GROUP BY issues.id
 "#,
@@ -618,13 +616,11 @@ pub(crate) async fn fetch_issue(
         issues.state, issues.state_justification,
     array_remove(array_agg(distinct issue_operators.operator_id), NULL) as "operators!: Vec<i32>",
     array_remove(array_agg(distinct issue_routes.route_id), NULL) as "routes!: Vec<i32>",
-    array_remove(array_agg(distinct issue_stops.stop_id), NULL) as "stops!: Vec<i32>",
-    array_remove(array_agg(distinct issue_pics.pic_id), NULL) as "pics!: Vec<i32>"
+    array_remove(array_agg(distinct issue_stops.stop_id), NULL) as "stops!: Vec<i32>"
 FROM issues
 LEFT JOIN issue_operators on issue_operators.issue_id = issues.id
 LEFT JOIN issue_routes on issue_routes.issue_id = issues.id
 LEFT JOIN issue_stops on issue_stops.issue_id = issues.id
-LEFT JOIN issue_pics on issue_pics.issue_id = issues.id
 WHERE issues.id = $1
 GROUP BY issues.id"#,
         issue_id
@@ -749,19 +745,19 @@ RETURNING id
         })?;
     }
 
-    for pic_id in issue.content.get_linked_images() {
+    for img_id in issue.content.get_linked_images() {
         sqlx::query!(
             r#"
-            INSERT INTO issue_pics (pic_id, issue_id)
+            INSERT INTO issue_imgs (img_id, issue_id)
             VALUES ($1, $2)
             "#,
-            pic_id,
+            img_id,
             id
         )
         .execute(&mut **transaction)
         .await
         .map_err(|err| {
-            tracing::error!(error = err.to_string(), pic_id = pic_id, id = id);
+            tracing::error!(error = err.to_string(), id, img_id = ?img_id);
             Error::DatabaseExecution
         })?;
     }
@@ -772,7 +768,7 @@ RETURNING id
 pub(crate) async fn update_issue(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     issue_id: i32,
-    issue: requests::ChangeIssue,
+    issue: &requests::ChangeIssue,
 ) -> Result<()> {
     sqlx::query!(
         r#"
@@ -825,7 +821,7 @@ pub(crate) async fn update_issue(
 async fn insert_issue_related(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     issue_id: i32,
-    issue: requests::ChangeIssue,
+    issue: &requests::ChangeIssue,
 ) -> Result<()> {
     for operator_id in &issue.operator_ids {
         sqlx::query!(
@@ -886,13 +882,13 @@ async fn insert_issue_related(
         })?;
     }
 
-    for pic_id in issue.content.get_linked_images() {
+    for img_id in issue.content.get_linked_images() {
         sqlx::query!(
             r#"
-            INSERT INTO issue_pics (pic_id, issue_id)
+            INSERT INTO issue_imgs (img_id, issue_id)
             VALUES ($1, $2)
             "#,
-            pic_id,
+            img_id,
             issue_id
         )
         .execute(&mut **transaction)
@@ -900,7 +896,7 @@ async fn insert_issue_related(
         .map_err(|err| {
             tracing::error!(
                 error = err.to_string(),
-                pic_id = pic_id,
+                img_id = ?img_id,
                 issue_id = issue_id
             );
             Error::DatabaseExecution
@@ -944,7 +940,7 @@ async fn delete_issue_related(
 
     sqlx::query!(
         r#"
-        DELETE FROM issue_pics
+        DELETE FROM issue_imgs
         WHERE issue_id = $1
         "#,
         issue_id

@@ -21,14 +21,14 @@ use itertools::Itertools;
 use serde_json::json;
 use sqlx::PgPool;
 use std::collections::HashSet;
+use uuid::Uuid;
 
 use commons::models::content::RichContent;
 
 use super::models::{self, requests, responses};
-use crate::pics::models as pic_models;
 use crate::pics::{
     get_external_news_pic_path, get_external_news_ss_path,
-    get_news_pic_thumb_path,
+    get_rich_img_thumb_path, models as pic_models,
 };
 use crate::Error;
 
@@ -255,10 +255,10 @@ SELECT news_items.id, news_items.title, news_items.summary,
     array_remove(array_agg(distinct operator_id), NULL) as "operator_ids!: Vec<i32>",
     array_remove(array_agg(distinct region_id), NULL) as "region_ids!: Vec<i32>",
     CASE
-        WHEN count(news_imgs.id) > 0
-        THEN array_agg(ROW(news_imgs.id, sha1, transcript))
+        WHEN count(rich_imgs.id) > 0
+        THEN array_agg(ROW(rich_imgs.id, sha1, transcript))
         ELSE array[]::record[]
-    END as "imgs!: Vec<pic_models::NewsImg>",
+    END as "imgs!: Vec<pic_models::SimpleRichImg>",
     CASE
         WHEN count(news_items_external_news_items.item_id) > 0
         THEN array_agg(ROW(
@@ -273,10 +273,8 @@ SELECT news_items.id, news_items.title, news_items.summary,
 FROM news_items
 LEFT JOIN news_items_operators ON news_items.id=news_items_operators.item_id
 LEFT JOIN news_items_regions ON news_items.id=news_items_regions.item_id
-LEFT JOIN news_items_imgs
-    ON news_items.id=news_items_imgs.item_id
-LEFT JOIN news_imgs
-    ON news_items_imgs.img_id=news_imgs.id
+LEFT JOIN news_items_imgs ON news_items.id=news_items_imgs.item_id
+LEFT JOIN rich_imgs ON news_items_imgs.img_id=rich_imgs.id
 LEFT JOIN news_items_external_news_items
     ON news_items.id=news_items_external_news_items.item_id
 LEFT JOIN external_news_items
@@ -325,10 +323,10 @@ SELECT news_items.id, news_items.title, news_items.summary,
     array_remove(array_agg(distinct operator_id), NULL) as "operator_ids!: Vec<i32>",
     array_remove(array_agg(distinct region_id), NULL) as "region_ids!: Vec<i32>",
     CASE
-        WHEN count(news_imgs.id) > 0
-        THEN array_agg(ROW(news_imgs.id, sha1, transcript))
+        WHEN count(rich_imgs.id) > 0
+        THEN array_agg(ROW(rich_imgs.id, sha1, transcript))
         ELSE array[]::record[]
-    END as "imgs!: Vec<pic_models::NewsImg>",
+    END as "imgs!: Vec<pic_models::SimpleRichImg>",
     CASE
         WHEN count(news_items_external_news_items.item_id) > 0
         THEN array_agg(ROW(
@@ -343,10 +341,8 @@ SELECT news_items.id, news_items.title, news_items.summary,
 FROM news_items
 LEFT JOIN news_items_operators ON news_items.id=news_items_operators.item_id
 LEFT JOIN news_items_regions ON news_items.id=news_items_regions.item_id
-LEFT JOIN news_items_imgs
-    ON news_items.id=news_items_imgs.item_id
-LEFT JOIN news_imgs
-    ON news_items_imgs.img_id=news_imgs.id
+LEFT JOIN news_items_imgs ON news_items.id=news_items_imgs.item_id
+LEFT JOIN rich_imgs ON news_items_imgs.img_id=rich_imgs.id
 LEFT JOIN news_items_external_news_items
     ON news_items.id=news_items_external_news_items.item_id
 LEFT JOIN external_news_items
@@ -387,13 +383,13 @@ pub(crate) async fn insert_news(
     let publish_datetime = change.publish_datetime.unwrap_or(Local::now());
 
     let thumb_url: Option<String> = if let Some(thumb_id) = change.thumb_id {
-        let thumb_sha1 = select_news_img_sha1(transaction, thumb_id)
+        let thumb_sha1 = fetch_rich_img_sha1(transaction, thumb_id)
             .await?
             .ok_or(Error::ValidationFailure(
                 "The referenced thumb_id does not exist".to_string(),
             ))?;
 
-        Some(get_news_pic_thumb_path(&thumb_sha1))
+        Some(get_rich_img_thumb_path(&thumb_sha1))
     } else {
         None
     };
@@ -448,7 +444,7 @@ RETURNING id"#,
 pub(crate) async fn update_news_item(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     item_id: i32,
-    change: requests::ChangeNewsItem,
+    change: &requests::ChangeNewsItem,
 ) -> Result<()> {
     // This function has quite some slack for optimization
     let current = fetch_full_news_item(&mut **transaction, item_id)
@@ -456,13 +452,13 @@ pub(crate) async fn update_news_item(
         .ok_or(Error::NotFoundUpstream)?;
 
     let thumb_url: Option<String> = if let Some(thumb_id) = change.thumb_id {
-        let thumb_sha1 = select_news_img_sha1(transaction, thumb_id)
+        let thumb_sha1 = fetch_rich_img_sha1(transaction, thumb_id)
             .await?
             .ok_or(Error::ValidationFailure(
                 "The referenced thumb_id does not exist".to_string(),
             ))?;
 
-        Some(get_news_pic_thumb_path(&thumb_sha1))
+        Some(get_rich_img_thumb_path(&thumb_sha1))
     } else {
         None
     };
@@ -627,15 +623,16 @@ WHERE item_id=$1 AND img_id = ANY($2)"#,
     Ok(())
 }
 
-async fn select_news_img_sha1(
+async fn fetch_rich_img_sha1(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-    img_id: i32,
+    img_id: Uuid,
 ) -> Result<Option<String>> {
-    sqlx::query!(r#"SELECT sha1 FROM news_imgs WHERE id=$1"#, img_id)
+    // TODO move to pics/sql.rs
+    sqlx::query!(r#"SELECT sha1 FROM rich_imgs WHERE id=$1"#, img_id)
         .fetch_optional(&mut **transaction)
         .await
         .map_err(|err| {
-            tracing::error!(error = err.to_string(), img_id);
+            tracing::error!(error = err.to_string(), img_id = ?img_id);
             Error::DatabaseExecution
         })
         .map(|row| row.map(|row| row.sha1))
@@ -707,7 +704,7 @@ VALUES ($1, $2)"#,
 async fn insert_news_item_img(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     item_id: i32,
-    img_id: i32,
+    img_id: Uuid,
 ) -> Result<()> {
     sqlx::query!(
         r#"
@@ -719,7 +716,7 @@ VALUES ($1, $2)"#,
     .execute(&mut **transaction)
     .await
     .map_err(|err| {
-        tracing::error!(error = err.to_string(), item_id, img_id);
+        tracing::error!(error = err.to_string(), item_id, img_id = ?img_id);
         Error::DatabaseExecution
     })?;
     Ok(())

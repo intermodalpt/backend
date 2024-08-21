@@ -23,6 +23,7 @@ use serde::Deserialize;
 
 use super::models::{requests, responses};
 use super::sql;
+use crate::pics::sql as pics_sql;
 use crate::responses::{IdReturn, Pagination};
 use crate::{auth, auth::ClaimPermission, AppState, Error};
 
@@ -154,7 +155,12 @@ pub(crate) async fn patch_news_item(
         Error::DatabaseExecution
     })?;
 
-    sql::update_news_item(&mut transaction, item_id, change).await?;
+    sql::update_news_item(&mut transaction, item_id, &change).await?;
+    pics_sql::unlink_rich_images_from_news(&mut transaction, item_id).await?;
+    for img_id in change.content.get_linked_images() {
+        pics_sql::link_rich_image_to_news(&mut transaction, img_id, item_id)
+            .await?;
+    }
 
     transaction.commit().await.map_err(|err| {
         tracing::error!("Transaction failed to commit: {err}");

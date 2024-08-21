@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT sha1 FROM news_imgs WHERE id=$1",
+  "query": "SELECT sha1 FROM rich_imgs WHERE id=$1",
   "describe": {
     "columns": [
       {
@@ -11,12 +11,12 @@
     ],
     "parameters": {
       "Left": [
-        "Int4"
+        "Uuid"
       ]
     },
     "nullable": [
       false
     ]
   },
-  "hash": "575672a20b13df040683f471871548bd5d110790f3f605bb87d4d5e41ae9fede"
+  "hash": "8e0ab53404c44b3bcbdeb2a7c828b7a5ff74a59fbba9364783c0bb360e9aeaba"
 }

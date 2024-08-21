@@ -18,6 +18,7 @@
 
 use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 #[derive(Debug, PartialEq)]
 pub enum Resource {
@@ -106,11 +107,14 @@ pub struct PanoPic {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct NewsImg {
-    pub id: i32,
+pub struct RichImg {
+    pub id: Uuid,
     pub sha1: String,
     pub filename: Option<String>,
     pub transcript: Option<String>,
+    pub license: Option<String>,
+    pub lat: Option<f64>,
+    pub lon: Option<f64>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

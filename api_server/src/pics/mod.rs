@@ -1,6 +1,6 @@
 /*
     Intermodal, transportation information aggregator
-    Copyright (C) 2022 - 2023  Cláudio Pereira
+    Copyright (C) 2022 - 2024  Cláudio Pereira
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -55,26 +55,30 @@ pub(crate) fn get_logo_path(operator_id: i32, sha: &str) -> String {
     )
 }
 
-pub(crate) fn get_news_pic_full_path(sha: &str) -> String {
+// ----- Images in rich content blocks -----
+
+pub(crate) fn get_rich_img_full_path(sha: &str) -> String {
     format!(
-        "{}/news/ori/{sha}/stop",
+        "{}/content/ori/{sha}/original",
         SETTINGS.get().unwrap().images.root
     )
 }
 
-pub(crate) fn get_news_pic_medium_path(sha: &str) -> String {
+pub(crate) fn get_rich_img_medium_path(sha: &str) -> String {
     format!(
-        "{}/news/medium/{sha}/preview",
+        "{}/content/medium/{sha}/preview",
         SETTINGS.get().unwrap().images.root
     )
 }
 
-pub(crate) fn get_news_pic_thumb_path(sha: &str) -> String {
+pub(crate) fn get_rich_img_thumb_path(sha: &str) -> String {
     format!(
-        "{}/news/thumb/{sha}/preview",
+        "{}/content/thumb/{sha}/preview",
         SETTINGS.get().unwrap().images.root
     )
 }
+
+// ----- External news images -----
 
 pub(crate) fn get_external_news_pic_path(sha: &str) -> String {
     format!("{}/enews/{sha}/img", SETTINGS.get().unwrap().images.root)

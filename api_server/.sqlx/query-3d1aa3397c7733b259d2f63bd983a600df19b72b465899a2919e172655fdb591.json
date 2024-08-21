@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT issues.id, issues.title,\n    issues.content as \"content!: sqlx::types::Json<RichContent>\",\n    issues.category, issues.lat, issues.creation, issues.lon, issues.impact,\n    issues.state, issues.state_justification,\n    array_remove(array_agg(distinct issue_operators.operator_id), NULL) as \"operators!: Vec<i32>\",\n    array_remove(array_agg(distinct issue_routes.route_id), NULL) as \"routes!: Vec<i32>\",\n    array_remove(array_agg(distinct issue_stops.stop_id), NULL) as \"stops!: Vec<i32>\",\n    array_remove(array_agg(distinct issue_pics.pic_id), NULL) as \"pics!: Vec<i32>\"\nFROM issues\nJOIN issue_operators on issue_operators.issue_id = issues.id\nLEFT JOIN issue_routes on issue_routes.issue_id = issues.id\nLEFT JOIN issue_stops on issue_stops.issue_id = issues.id\nLEFT JOIN issue_pics on issue_pics.issue_id = issues.id\nWHERE issue_operators.operator_id = $1\nGROUP BY issues.id\n",
+  "query": "\nSELECT issues.id, issues.title,\n    issues.content as \"content!: sqlx::types::Json<RichContent>\",\n    issues.category, issues.lat, issues.creation, issues.lon, issues.impact,\n    issues.state, issues.state_justification,\n    array_remove(array_agg(distinct issue_operators.operator_id), NULL) as \"operators!: Vec<i32>\",\n    array_remove(array_agg(distinct issue_routes.route_id), NULL) as \"routes!: Vec<i32>\",\n    array_remove(array_agg(distinct issue_stops.stop_id), NULL) as \"stops!: Vec<i32>\"\n    -- array_remove(array_agg(distinct issue_imgs.img_id), NULL) as \"imgs!: Vec<Uuid>\"\nFROM issues\nJOIN issue_operators on issue_operators.issue_id = issues.id\nLEFT JOIN issue_routes on issue_routes.issue_id = issues.id\nLEFT JOIN issue_stops on issue_stops.issue_id = issues.id\n-- LEFT JOIN issue_imgs on issue_imgs.issue_id = issues.id\nWHERE issue_operators.operator_id = $1\nGROUP BY issues.id\n",
   "describe": {
     "columns": [
       {
@@ -67,11 +67,6 @@
         "ordinal": 12,
         "name": "stops!: Vec<i32>",
         "type_info": "Int4Array"
-      },
-      {
-        "ordinal": 13,
-        "name": "pics!: Vec<i32>",
-        "type_info": "Int4Array"
       }
     ],
     "parameters": {
@@ -92,9 +87,8 @@
       true,
       null,
       null,
-      null,
       null
     ]
   },
-  "hash": "5940a0e4962ebca3cdc38454b26cb3a58c210f3c5cf295c558f4d896857d9f0d"
+  "hash": "3d1aa3397c7733b259d2f63bd983a600df19b72b465899a2919e172655fdb591"
 }

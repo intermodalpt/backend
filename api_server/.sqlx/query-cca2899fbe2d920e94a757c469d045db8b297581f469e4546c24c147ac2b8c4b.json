@@ -1,12 +1,12 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT id, sha1, filename, transcript\nFROM news_imgs\nWHERE sha1=$1\n",
+  "query": "\nSELECT id, sha1, filename, transcript, lat, lon, license\nFROM rich_imgs\nWHERE sha1=$1\n",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
         "name": "id",
-        "type_info": "Int4"
+        "type_info": "Uuid"
       },
       {
         "ordinal": 1,
@@ -22,6 +22,21 @@
         "ordinal": 3,
         "name": "transcript",
         "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "lat",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 5,
+        "name": "lon",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 6,
+        "name": "license",
+        "type_info": "Text"
       }
     ],
     "parameters": {
@@ -33,8 +48,11 @@
       false,
       false,
       true,
+      true,
+      true,
+      true,
       true
     ]
   },
-  "hash": "7f5f37066a144b7cd9aa9ad2689d1dee5c1893f168be2d1c485800d2b68c2fa8"
+  "hash": "cca2899fbe2d920e94a757c469d045db8b297581f469e4546c24c147ac2b8c4b"
 }

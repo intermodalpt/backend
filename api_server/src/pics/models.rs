@@ -17,10 +17,11 @@
 */
 
 use serde::Deserialize;
+use uuid::Uuid;
 
 #[derive(Deserialize, Debug)]
-pub struct NewsImg {
-    pub id: i32,
+pub struct SimpleRichImg {
+    pub id: Uuid,
     pub sha1: String,
     pub transcript: Option<String>,
 }
@@ -88,34 +89,115 @@ pub(crate) mod requests {
     }
 
     #[derive(Debug, Deserialize)]
-    pub struct ChangeNewsPicMeta {
+    pub struct ChangeRichImgMeta {
         pub transcript: Option<String>,
-        //pub attribution: Option<String>,
-        //pub license: Option<String>,
+        pub attribution: Option<String>,
+        pub license: Option<String>,
+        pub lon: Option<f64>,
+        pub lat: Option<f64>,
     }
 
-    impl ChangeNewsPicMeta {
+    impl ChangeRichImgMeta {
         pub(crate) fn tidy(&mut self) {
             canonicalize_optional_string(&mut self.transcript);
+            canonicalize_optional_string(&mut self.attribution);
+            canonicalize_optional_string(&mut self.license);
         }
     }
 }
 
 pub(crate) mod responses {
     use chrono::{DateTime, NaiveDateTime, Utc};
-    use serde::Serialize;
-
     use commons::models::pics;
+    use serde::Serialize;
+    use uuid::Uuid;
 
     use crate::pics::{
-        get_external_news_pic_path, get_news_pic_full_path,
-        get_news_pic_medium_path, get_news_pic_thumb_path,
+        get_external_news_pic_path, get_rich_img_full_path,
+        get_rich_img_medium_path, get_rich_img_thumb_path,
         get_stop_pic_medium_path, get_stop_pic_ori_named_path,
         get_stop_pic_ori_path, get_stop_pic_thumb_path,
     };
 
+    #[derive(Serialize, Debug)]
+    pub struct SimpleRichImg {
+        pub id: Uuid,
+        pub transcript: Option<String>,
+        pub url_full: String,
+        pub url_medium: String,
+        pub url_thumb: String,
+    }
+
+    impl From<super::SimpleRichImg> for SimpleRichImg {
+        fn from(value: super::SimpleRichImg) -> Self {
+            Self {
+                id: value.id,
+                transcript: value.transcript,
+                url_full: get_rich_img_full_path(&value.sha1),
+                url_medium: get_rich_img_medium_path(&value.sha1),
+                url_thumb: get_rich_img_thumb_path(&value.sha1),
+            }
+        }
+    }
+
+    #[derive(Serialize, Debug)]
+    pub struct RichImg {
+        pub id: Uuid,
+        pub transcript: Option<String>,
+        pub license: Option<String>,
+        pub lat: Option<f64>,
+        pub lon: Option<f64>,
+        pub url_full: String,
+        pub url_medium: String,
+        pub url_thumb: String,
+    }
+
+    impl From<pics::RichImg> for RichImg {
+        fn from(value: pics::RichImg) -> Self {
+            Self {
+                id: value.id,
+                transcript: value.transcript,
+                license: value.license,
+                lat: value.lat,
+                lon: value.lon,
+                url_full: get_rich_img_full_path(&value.sha1),
+                url_medium: get_rich_img_medium_path(&value.sha1),
+                url_thumb: get_rich_img_thumb_path(&value.sha1),
+            }
+        }
+    }
+
+    #[derive(Serialize, Debug)]
+    pub struct FullRichImg {
+        pub id: Uuid,
+        pub transcript: Option<String>,
+        pub license: Option<String>,
+        pub lat: Option<f64>,
+        pub lon: Option<f64>,
+        pub filename: Option<String>,
+        pub url_full: String,
+        pub url_medium: String,
+        pub url_thumb: String,
+    }
+
+    impl From<pics::RichImg> for FullRichImg {
+        fn from(img: pics::RichImg) -> Self {
+            Self {
+                id: img.id,
+                transcript: img.transcript,
+                license: img.license,
+                lat: img.lat,
+                lon: img.lon,
+                filename: img.filename,
+                url_full: get_rich_img_full_path(&img.sha1),
+                url_medium: get_rich_img_medium_path(&img.sha1),
+                url_thumb: get_rich_img_thumb_path(&img.sha1),
+            }
+        }
+    }
+
     #[derive(Debug, Serialize)]
-    pub struct MinimalPic {
+    pub struct MinimalStopPic {
         pub id: i32,
         pub url_full: String,
         pub url_medium: String,
@@ -284,69 +366,6 @@ pub(crate) mod responses {
     }
 
     #[derive(Serialize, Debug)]
-    pub struct NewsImg {
-        pub transcript: Option<String>,
-        pub url_full: String,
-        pub url_medium: String,
-        pub url_thumb: String,
-    }
-
-    impl From<pics::NewsImg> for NewsImg {
-        fn from(value: pics::NewsImg) -> Self {
-            NewsImg {
-                transcript: value.transcript,
-                url_full: get_news_pic_full_path(&value.sha1),
-                url_medium: get_news_pic_medium_path(&value.sha1),
-                url_thumb: get_news_pic_thumb_path(&value.sha1),
-            }
-        }
-    }
-
-    impl From<super::NewsImg> for NewsImg {
-        fn from(image: super::NewsImg) -> Self {
-            NewsImg {
-                transcript: image.transcript,
-                url_full: get_news_pic_full_path(&image.sha1),
-                url_medium: get_news_pic_medium_path(&image.sha1),
-                url_thumb: get_news_pic_thumb_path(&image.sha1),
-            }
-        }
-    }
-
-    #[derive(Serialize, Debug)]
-    pub struct FullNewsImg {
-        pub id: i32,
-        pub transcript: Option<String>,
-        pub url_full: String,
-        pub url_medium: String,
-        pub url_thumb: String,
-    }
-
-    impl From<pics::NewsImg> for FullNewsImg {
-        fn from(value: pics::NewsImg) -> Self {
-            FullNewsImg {
-                id: value.id,
-                transcript: value.transcript,
-                url_full: get_news_pic_full_path(&value.sha1),
-                url_medium: get_news_pic_medium_path(&value.sha1),
-                url_thumb: get_news_pic_thumb_path(&value.sha1),
-            }
-        }
-    }
-
-    impl From<crate::pics::models::NewsImg> for FullNewsImg {
-        fn from(pic: crate::pics::models::NewsImg) -> Self {
-            FullNewsImg {
-                id: pic.id,
-                transcript: pic.transcript,
-                url_full: get_news_pic_full_path(&pic.sha1),
-                url_medium: get_news_pic_medium_path(&pic.sha1),
-                url_thumb: get_news_pic_thumb_path(&pic.sha1),
-            }
-        }
-    }
-
-    #[derive(Serialize, Debug)]
     pub struct ExternalNewsImg {
         pub transcript: Option<String>,
         pub url: Option<String>,
@@ -402,21 +421,21 @@ pub(crate) mod responses {
 
 // Manual implementations of sqlx::Type due to
 // https://github.com/rust-lang/rust/issues/82219
-impl sqlx::Type<sqlx::Postgres> for NewsImg {
+impl sqlx::Type<sqlx::Postgres> for SimpleRichImg {
     fn type_info() -> sqlx::postgres::PgTypeInfo {
-        sqlx::postgres::PgTypeInfo::with_name("NewsPic")
+        sqlx::postgres::PgTypeInfo::with_name("RichImg")
     }
 }
-impl<'r> sqlx::decode::Decode<'r, sqlx::Postgres> for NewsImg {
+impl<'r> sqlx::decode::Decode<'r, sqlx::Postgres> for SimpleRichImg {
     fn decode(
         value: sqlx::postgres::PgValueRef<'r>,
     ) -> Result<Self, Box<dyn ::std::error::Error + 'static + Send + Sync>>
     {
         let mut decoder = sqlx::postgres::types::PgRecordDecoder::new(value)?;
-        let id = decoder.try_decode::<i32>()?;
+        let id = decoder.try_decode::<Uuid>()?;
         let sha1 = decoder.try_decode::<String>()?;
         let transcript = decoder.try_decode::<Option<String>>()?;
-        Ok(NewsImg {
+        Ok(SimpleRichImg {
             id,
             sha1,
             transcript,
