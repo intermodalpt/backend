@@ -144,6 +144,7 @@ pub(crate) mod responses {
     pub struct RichImg {
         pub id: Uuid,
         pub transcript: Option<String>,
+        pub attribution: Option<String>,
         pub license: Option<String>,
         pub lat: Option<f64>,
         pub lon: Option<f64>,
@@ -157,6 +158,7 @@ pub(crate) mod responses {
             Self {
                 id: value.id,
                 transcript: value.transcript,
+                attribution: value.attribution,
                 license: value.license,
                 lat: value.lat,
                 lon: value.lon,
@@ -171,6 +173,7 @@ pub(crate) mod responses {
     pub struct FullRichImg {
         pub id: Uuid,
         pub transcript: Option<String>,
+        pub attribution: Option<String>,
         pub license: Option<String>,
         pub lat: Option<f64>,
         pub lon: Option<f64>,
@@ -185,6 +188,7 @@ pub(crate) mod responses {
             Self {
                 id: img.id,
                 transcript: img.transcript,
+                attribution: img.attribution,
                 license: img.license,
                 lat: img.lat,
                 lon: img.lon,

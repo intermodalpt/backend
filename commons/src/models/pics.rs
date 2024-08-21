@@ -112,6 +112,7 @@ pub struct RichImg {
     pub sha1: String,
     pub filename: Option<String>,
     pub transcript: Option<String>,
+    pub attribution: Option<String>,
     pub license: Option<String>,
     pub lat: Option<f64>,
     pub lon: Option<f64>,

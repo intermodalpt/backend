@@ -486,9 +486,20 @@ pub struct ImgRef {
     #[serde(default)]
     pub description: Option<String>,
     #[serde(default)]
+    // This is a cached field (this is but a copy)
     pub transcript: Option<String>,
     #[serde(default)]
+    // This is a cached field (this is but a copy)
     pub attribution: Option<String>,
+    #[serde(default)]
+    // This is a cached field (this is but a copy)
+    pub license: Option<String>,
+    #[serde(default)]
+    // This is a cached field (this is but a copy)
+    pub lon: Option<f64>,
+    #[serde(default)]
+    // This is a cached field (this is but a copy)
+    pub lat: Option<f64>,
 }
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]

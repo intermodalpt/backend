@@ -1154,7 +1154,7 @@ VALUES ($1, $2, $3, $4, $5)
         lon,
         lat
     )
-    .fetch_one(&mut **transaction)
+    .execute(&mut **transaction)
     .await
     .map_err(|err| {
         tracing::error!(error = err.to_string(), id=?id, sha1, filename, lon, lat);
@@ -1171,7 +1171,7 @@ pub(crate) async fn fetch_rich_img_by_hash(
     sqlx::query_as!(
         pics::RichImg,
         r#"
-SELECT id, sha1, filename, transcript, lat, lon, license
+SELECT id, sha1, filename, transcript, attribution, lat, lon, license
 FROM rich_imgs
 WHERE sha1=$1
 "#,
@@ -1284,11 +1284,13 @@ pub(crate) async fn update_rich_img_meta(
         r#"
 UPDATE rich_imgs
 SET transcript=$1,
-    license=$2,
-    lat=$3,
-    lon=$4
-WHERE id=$5"#,
+    attribution=$2,
+    license=$3,
+    lat=$4,
+    lon=$5
+WHERE id=$6"#,
         meta.transcript,
+        meta.attribution,
         meta.license,
         meta.lat,
         meta.lon,

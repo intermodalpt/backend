@@ -65,7 +65,6 @@ pub(crate) mod responses {
         pub is_visible: bool,
 
         pub thumb_url: Option<String>,
-        pub images: Vec<pic_responses::SimpleRichImg>,
         pub external_rels: Vec<super::ExternalRel>,
 
         pub operator_ids: Vec<i32>,

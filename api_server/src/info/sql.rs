@@ -255,11 +255,6 @@ SELECT news_items.id, news_items.title, news_items.summary,
     array_remove(array_agg(distinct operator_id), NULL) as "operator_ids!: Vec<i32>",
     array_remove(array_agg(distinct region_id), NULL) as "region_ids!: Vec<i32>",
     CASE
-        WHEN count(rich_imgs.id) > 0
-        THEN array_agg(ROW(rich_imgs.id, sha1, transcript))
-        ELSE array[]::record[]
-    END as "imgs!: Vec<pic_models::SimpleRichImg>",
-    CASE
         WHEN count(news_items_external_news_items.item_id) > 0
         THEN array_agg(ROW(
             external_news_items.id,
@@ -273,8 +268,6 @@ SELECT news_items.id, news_items.title, news_items.summary,
 FROM news_items
 LEFT JOIN news_items_operators ON news_items.id=news_items_operators.item_id
 LEFT JOIN news_items_regions ON news_items.id=news_items_regions.item_id
-LEFT JOIN news_items_imgs ON news_items.id=news_items_imgs.item_id
-LEFT JOIN rich_imgs ON news_items_imgs.img_id=rich_imgs.id
 LEFT JOIN news_items_external_news_items
     ON news_items.id=news_items_external_news_items.item_id
 LEFT JOIN external_news_items
@@ -300,7 +293,6 @@ GROUP BY news_items.id
                 edit_datetime: row.edit_datetime.map(|datetime| datetime.with_timezone(&Local)),
                 is_visible: row.is_visible,
                 thumb_url: row.thumb_url,
-                images: row.imgs.into_iter().map(Into::into).collect(),
                 external_rels: row.external_rels,
                 operator_ids: row.operator_ids,
                 region_ids: row.region_ids,
