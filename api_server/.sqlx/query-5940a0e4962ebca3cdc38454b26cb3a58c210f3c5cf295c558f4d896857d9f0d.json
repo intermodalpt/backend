@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT issues.id, issues.title,\n    issues.content as \"content!: sqlx::types::Json<RichContent>\",\n    issues.category, issues.lat, issues.creation, issues.lon, issues.impact,\n    issues.state, issues.state_justification,\n    array_agg(issue_operators.operator_id) as \"operators!: Vec<i32>\",\n    array_agg(issue_routes.route_id) as \"routes!: Vec<i32>\",\n    array_agg(issue_stops.stop_id) as \"stops!: Vec<i32>\",\n    array_agg(issue_pics.pic_id) as \"pics!: Vec<i32>\"\nFROM issues\nJOIN issue_operators on issue_operators.issue_id = issues.id\nJOIN issue_routes on issue_routes.issue_id = issues.id\nJOIN issue_stops on issue_stops.issue_id = issues.id\nJOIN issue_pics on issue_pics.issue_id = issues.id\nWHERE issue_operators.operator_id = $1\nGROUP BY issues.id\n",
+  "query": "\nSELECT issues.id, issues.title,\n    issues.content as \"content!: sqlx::types::Json<RichContent>\",\n    issues.category, issues.lat, issues.creation, issues.lon, issues.impact,\n    issues.state, issues.state_justification,\n    array_remove(array_agg(distinct issue_operators.operator_id), NULL) as \"operators!: Vec<i32>\",\n    array_remove(array_agg(distinct issue_routes.route_id), NULL) as \"routes!: Vec<i32>\",\n    array_remove(array_agg(distinct issue_stops.stop_id), NULL) as \"stops!: Vec<i32>\",\n    array_remove(array_agg(distinct issue_pics.pic_id), NULL) as \"pics!: Vec<i32>\"\nFROM issues\nJOIN issue_operators on issue_operators.issue_id = issues.id\nLEFT JOIN issue_routes on issue_routes.issue_id = issues.id\nLEFT JOIN issue_stops on issue_stops.issue_id = issues.id\nLEFT JOIN issue_pics on issue_pics.issue_id = issues.id\nWHERE issue_operators.operator_id = $1\nGROUP BY issues.id\n",
   "describe": {
     "columns": [
       {
@@ -96,5 +96,5 @@
       null
     ]
   },
-  "hash": "30836ff9aa10926acd7425c1526463d869ce4522da63d148b751d5a5c9a577a9"
+  "hash": "5940a0e4962ebca3cdc38454b26cb3a58c210f3c5cf295c558f4d896857d9f0d"
 }

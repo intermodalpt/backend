@@ -512,15 +512,15 @@ SELECT issues.id, issues.title,
     issues.content as "content!: sqlx::types::Json<RichContent>",
     issues.category, issues.lat, issues.creation, issues.lon, issues.impact,
     issues.state, issues.state_justification,
-    array_agg(issue_operators.operator_id) as "operators!: Vec<i32>",
-    array_agg(issue_routes.route_id) as "routes!: Vec<i32>",
-    array_agg(issue_stops.stop_id) as "stops!: Vec<i32>",
-    array_agg(issue_pics.pic_id) as "pics!: Vec<i32>"
+    array_remove(array_agg(distinct issue_operators.operator_id), NULL) as "operators!: Vec<i32>",
+    array_remove(array_agg(distinct issue_routes.route_id), NULL) as "routes!: Vec<i32>",
+    array_remove(array_agg(distinct issue_stops.stop_id), NULL) as "stops!: Vec<i32>",
+    array_remove(array_agg(distinct issue_pics.pic_id), NULL) as "pics!: Vec<i32>"
 FROM issues
 JOIN issue_operators on issue_operators.issue_id = issues.id
-JOIN issue_routes on issue_routes.issue_id = issues.id
-JOIN issue_stops on issue_stops.issue_id = issues.id
-JOIN issue_pics on issue_pics.issue_id = issues.id
+LEFT JOIN issue_routes on issue_routes.issue_id = issues.id
+LEFT JOIN issue_stops on issue_stops.issue_id = issues.id
+LEFT JOIN issue_pics on issue_pics.issue_id = issues.id
 WHERE issue_operators.operator_id = $1
 GROUP BY issues.id
 "#,
@@ -616,15 +616,15 @@ pub(crate) async fn fetch_issue(
         issues.creation, issues.lat, issues.lon,
         issues.content as "content!: sqlx::types::Json<RichContent>",
         issues.state, issues.state_justification,
-    array_agg(issue_operators.operator_id) as "operators!: Vec<i32>",
-    array_agg(issue_routes.route_id) as "routes!: Vec<i32>",
-    array_agg(issue_stops.stop_id) as "stops!: Vec<i32>",
-    array_agg(issue_pics.pic_id) as "pics!: Vec<i32>"
+    array_remove(array_agg(distinct issue_operators.operator_id), NULL) as "operators!: Vec<i32>",
+    array_remove(array_agg(distinct issue_routes.route_id), NULL) as "routes!: Vec<i32>",
+    array_remove(array_agg(distinct issue_stops.stop_id), NULL) as "stops!: Vec<i32>",
+    array_remove(array_agg(distinct issue_pics.pic_id), NULL) as "pics!: Vec<i32>"
 FROM issues
-JOIN issue_operators on issue_operators.issue_id = issues.id
-JOIN issue_routes on issue_routes.issue_id = issues.id
-JOIN issue_stops on issue_stops.issue_id = issues.id
-JOIN issue_pics on issue_pics.issue_id = issues.id
+LEFT JOIN issue_operators on issue_operators.issue_id = issues.id
+LEFT JOIN issue_routes on issue_routes.issue_id = issues.id
+LEFT JOIN issue_stops on issue_stops.issue_id = issues.id
+LEFT JOIN issue_pics on issue_pics.issue_id = issues.id
 WHERE issues.id = $1
 GROUP BY issues.id"#,
         issue_id
