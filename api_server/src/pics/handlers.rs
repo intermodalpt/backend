@@ -535,8 +535,8 @@ pub(crate) async fn post_rich_image(
     claims: auth::Claims,
     mut multipart: Multipart,
 ) -> Result<Json<responses::FullRichImg>, Error> {
-    if auth::perms::CreateNews::is_valid(&claims.permissions)
-        || auth::perms::ModifyNews::is_valid(&claims.permissions)
+    if !(auth::perms::CreateNews::is_valid(&claims.permissions)
+        || auth::perms::ModifyNews::is_valid(&claims.permissions))
     {
         return Err(Error::Forbidden);
     }
@@ -567,9 +567,9 @@ pub(crate) async fn patch_rich_img_meta(
     Path(img_id): Path<Uuid>,
     Json(mut img_meta): Json<requests::ChangeRichImgMeta>,
 ) -> Result<(), Error> {
-    if auth::perms::CreateNews::is_valid(&claims.permissions)
+    if !(auth::perms::CreateNews::is_valid(&claims.permissions)
         || auth::perms::ModifyNews::is_valid(&claims.permissions)
-        || auth::perms::ModifyIssues::is_valid(&claims.permissions)
+        || auth::perms::ModifyIssues::is_valid(&claims.permissions))
     {
         return Err(Error::Forbidden);
     }
@@ -581,6 +581,8 @@ pub(crate) async fn patch_rich_img_meta(
         tracing::error!("Failed to open transaction: {err}");
         Error::DatabaseExecution
     })?;
+
+    // TODO log
 
     sql::update_rich_img_meta(&mut transaction, img_id, &img_meta).await?;
 
@@ -597,8 +599,8 @@ pub(crate) async fn post_import_external_news_image(
     claims: auth::Claims,
     Path(external_image_id): Path<i32>,
 ) -> Result<Json<responses::FullRichImg>, Error> {
-    if auth::perms::CreateNews::is_valid(&claims.permissions)
-        || auth::perms::ModifyNews::is_valid(&claims.permissions)
+    if !(auth::perms::CreateNews::is_valid(&claims.permissions)
+        || auth::perms::ModifyNews::is_valid(&claims.permissions))
     {
         // FIXME There's a security issue here.
         // We should check if the external image can be seen by this user
