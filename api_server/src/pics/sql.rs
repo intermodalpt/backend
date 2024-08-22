@@ -519,7 +519,7 @@ pub(crate) async fn fetch_latest_stop_pictures_cnt(
     let tagged_filter_active = tagged.is_some();
     let tagged = tagged.unwrap_or(false);
 
-    Ok(sqlx::query!(
+    sqlx::query!(
         r#"
 SELECT count(*) as "cnt!: i64"
 FROM stop_pics
@@ -548,7 +548,7 @@ WHERE (stop_pics.uploader = $1
             can_view_sensitive
         );
         Error::DatabaseExecution
-    })?)
+    })
 }
 
 pub(crate) async fn fetch_stop_picture_stop_rels(

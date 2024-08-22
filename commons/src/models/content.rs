@@ -19,6 +19,7 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+#[allow(clippy::module_name_repetitions)]
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct MapContent {
     pub layers: Vec<MapLayer>,
@@ -479,8 +480,9 @@ pub struct PulseSettings {
     pub speed: f64,
 }
 
+#[allow(clippy::module_name_repetitions)]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct ImgRef {
+pub struct ImgContent {
     pub id: Uuid,
     pub url: String,
     #[serde(default)]
@@ -502,6 +504,7 @@ pub struct ImgRef {
     pub lat: Option<f64>,
 }
 
+#[allow(clippy::module_name_repetitions)]
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct ContentRef {
     #[serde(default)]
@@ -512,24 +515,24 @@ pub struct ContentRef {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub enum ContentBlock {
+pub enum Block {
     Md(String),
-    Img(ImgRef),
+    Img(ImgContent),
     Map(MapContent),
     Ref(ContentRef),
 }
 
-impl ContentBlock {
+impl Block {
     pub fn validate(&self) -> Result<(), &'static str> {
         // There's a lot of room for improvement here.
         match self {
-            ContentBlock::Md(_) => Ok(()),
-            ContentBlock::Img(_) => {
+            Block::Md(_) => Ok(()),
+            Block::Img(_) => {
                 // TODO: Validate URL
                 Ok(())
             }
-            ContentBlock::Map(map) => map.validate(),
-            ContentBlock::Ref(content) => {
+            Block::Map(map) => map.validate(),
+            Block::Ref(content) => {
                 if content.name.is_some() || content.url.is_some() {
                     Ok(())
                 } else {
@@ -540,8 +543,9 @@ impl ContentBlock {
     }
 }
 
+#[allow(clippy::module_name_repetitions)]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct RichContent(pub Vec<ContentBlock>);
+pub struct RichContent(pub Vec<Block>);
 
 impl RichContent {
     pub fn validate(&self) -> Result<(), &'static str> {
@@ -552,11 +556,12 @@ impl RichContent {
         Ok(())
     }
 
+    #[must_use]
     pub fn get_linked_images(&self) -> Vec<Uuid> {
         self.0
             .iter()
             .filter_map(|block| match block {
-                ContentBlock::Img(img) => Some(img.id),
+                Block::Img(img) => Some(img.id),
                 _ => None,
             })
             .collect()

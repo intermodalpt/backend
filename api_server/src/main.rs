@@ -89,7 +89,7 @@ async fn main() {
     let db_url = settings.db.url.as_str();
     let (_, db_selection) =
         db_url.rsplit_once('@').expect("Invalid database URL");
-    let pool = PgPool::connect(&db_url)
+    let pool = PgPool::connect(db_url)
         .await
         .expect("Unable to connect to the database");
     tracing::info!("Connected to the {db_selection} database");

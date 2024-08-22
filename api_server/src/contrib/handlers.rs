@@ -252,9 +252,9 @@ pub(crate) async fn post_contrib_stop_data(
         comment: contribution.comment,
     };
 
-    return Ok(Json(IdReturn {
+    Ok(Json(IdReturn {
         id: sql::insert_new_contribution(&state.pool, contribution).await?,
-    }));
+    }))
 }
 
 pub(crate) async fn post_contrib_stop_picture(
@@ -300,9 +300,9 @@ pub(crate) async fn post_contrib_stop_picture(
         comment: None,
     };
 
-    return Ok(Json(IdReturn {
+    Ok(Json(IdReturn {
         id: sql::insert_new_contribution(&state.pool, contribution).await?,
-    }));
+    }))
 }
 
 pub(crate) async fn patch_contrib_stop_picture_meta(
@@ -354,7 +354,7 @@ pub(crate) async fn patch_contrib_stop_picture_meta(
         &state.pool,
         contribution_id,
         &contribution.change,
-        &contribution.comment,
+        contribution.comment.as_deref(),
     )
     .await
 }
@@ -379,7 +379,7 @@ pub(crate) async fn post_accept_contrib_data(
         contribution_id,
         claims.uid,
         verify,
-        &params.ignored,
+        params.ignored.as_deref(),
     )
     .await
 }

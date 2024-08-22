@@ -101,7 +101,7 @@ pub fn extract(
             .map_err(|e| Error::Extraction(e.to_string()))?;
 
         let file_path = match file.enclosed_name() {
-            Some(path) => path.to_owned(),
+            Some(path) => path.clone(),
             None => continue,
         };
 
@@ -111,7 +111,10 @@ pub fn extract(
             continue;
         }
 
-        let modification_date = zip_datetime_to_chrono(file.last_modified())?;
+        let modification_date =
+            zip_datetime_to_chrono(file.last_modified().ok_or(
+                Error::Extraction("No last modification timestamp".to_string()),
+            )?)?;
         if modification_date > last_modification_date {
             last_modification_date = modification_date;
         }

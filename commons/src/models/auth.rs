@@ -64,6 +64,7 @@ pub enum AuditLogAction {
 }
 
 impl AuditLogAction {
+    #[must_use]
     pub fn action_type_name(&self) -> &'static str {
         // TODO have a lib generate these
         match self {
@@ -213,6 +214,7 @@ mod perms {
             }
         }
 
+        #[must_use]
         pub fn everything() -> Self {
             Self {
                 regions: Some(subperm::Regions::everything()),
@@ -228,6 +230,7 @@ mod perms {
             }
         }
 
+        #[must_use]
         pub fn new_user_default() -> Self {
             Self {
                 stops: Some(subperm::Stops {
@@ -288,6 +291,7 @@ mod perms {
 
         #[derive(Debug, PartialEq, Clone, Default, Serialize, Deserialize)]
         #[serde(rename_all = "camelCase")]
+        #[allow(clippy::struct_excessive_bools)]
         pub struct Operators {
             #[serde(default, skip_serializing_if = "is_false")]
             pub create: bool,
@@ -324,6 +328,7 @@ mod perms {
 
         #[derive(Debug, PartialEq, Clone, Default, Serialize, Deserialize)]
         #[serde(rename_all = "camelCase")]
+        #[allow(clippy::struct_excessive_bools)]
         pub struct Routes {
             #[serde(default, skip_serializing_if = "is_false")]
             pub create: bool,
@@ -373,6 +378,7 @@ mod perms {
 
         #[derive(Debug, PartialEq, Clone, Default, Serialize, Deserialize)]
         #[serde(rename_all = "camelCase")]
+        #[allow(clippy::struct_excessive_bools)]
         pub struct Stops {
             #[serde(default, skip_serializing_if = "is_false")]
             pub create: bool,
@@ -440,6 +446,7 @@ mod perms {
 
         #[derive(Debug, PartialEq, Clone, Default, Serialize, Deserialize)]
         #[serde(rename_all = "camelCase")]
+        #[allow(clippy::struct_excessive_bools)]
         pub struct StopPics {
             #[serde(default, skip_serializing_if = "is_false")]
             pub upload: bool,
@@ -544,6 +551,7 @@ mod perms {
 
         #[derive(Debug, PartialEq, Clone, Default, Serialize, Deserialize)]
         #[serde(rename_all = "camelCase")]
+        #[allow(clippy::struct_excessive_bools)]
         pub struct Admin {
             #[serde(default, skip_serializing_if = "is_false")]
             pub read_audit_log: bool,
@@ -581,6 +589,7 @@ mod perms {
             }
         }
 
+        #[allow(clippy::struct_excessive_bools)]
         #[derive(Debug, PartialEq, Clone, Default, Serialize, Deserialize)]
         #[serde(rename_all = "camelCase")]
         pub struct Misc {
@@ -615,6 +624,7 @@ mod perms {
         }
     }
 
+    #[allow(clippy::trivially_copy_pass_by_ref)]
     pub(crate) fn is_false(val: &bool) -> bool {
         !val
     }

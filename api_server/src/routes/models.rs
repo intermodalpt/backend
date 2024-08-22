@@ -18,7 +18,6 @@
 
 pub(crate) mod requests {
     use serde::Deserialize;
-    use std::collections::HashMap;
 
     use commons::models::{history, routes};
 
@@ -168,12 +167,6 @@ pub(crate) mod requests {
             }
             patch
         }
-    }
-
-    #[derive(Deserialize)]
-    pub struct ValidationData {
-        pub root: commons::models::gtfs::RouteValidation,
-        pub subroutes: HashMap<i32, commons::models::gtfs::SubrouteValidation>,
     }
 }
 

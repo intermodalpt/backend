@@ -120,7 +120,7 @@ pub(crate) async fn post_stop(
         Error::DatabaseExecution
     })?;
 
-    return Ok(Json(IdReturn { id }));
+    Ok(Json(IdReturn { id }))
 }
 
 pub(crate) async fn patch_stop(

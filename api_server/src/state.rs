@@ -103,6 +103,7 @@ pub struct Captcha {
 }
 
 impl CaptchaStorage {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         CaptchaStorage {
             captchas: RwLock::new(HashMap::new()),

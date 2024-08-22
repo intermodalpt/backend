@@ -549,7 +549,7 @@ pub(crate) async fn upload_rich_img(
     )
     .await?;
 
-    let (lon, lat) = exif.map(|e| (e.lon, e.lat)).unwrap_or((None, None));
+    let (lon, lat) = exif.map_or((None, None), |e| (e.lon, e.lat));
 
     let db_res = sql::insert_rich_img(
         &mut transaction,

@@ -40,7 +40,6 @@ pub(crate) mod requests {
         pub service_check_date: Option<NaiveDate>,
         #[serde(default)]
         pub infrastructure_check_date: Option<NaiveDate>,
-        pub comment: Option<String>,
     }
 
     impl StopMetaContribution {

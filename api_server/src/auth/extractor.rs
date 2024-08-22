@@ -1,4 +1,4 @@
-use axum::extract::{FromRef, State};
+use axum::extract::FromRef;
 use axum::http::header::USER_AGENT;
 use axum::{
     async_trait, extract::FromRequestParts, http::request::Parts,
@@ -76,11 +76,10 @@ where
             if token.starts_with("manag.") {
                 let claims = jwt::decode_management_claims(token)?;
 
-
                 let state = parts
                     .extract_with_state::<AppState, _>(state)
                     .await
-                    .map_err(|e| Error::IllegalState)?;
+                    .map_err(|_| Error::IllegalState)?;
 
                 let permissions = sql::fetch_management_token_permissions(
                     &state.pool,
@@ -106,11 +105,11 @@ where
             return jwt::decode_access_claims(bearer.token());
         }
 
-        if let Ok(jar) = parts.extract::<CookieJar>().await {
-            if let Some(cookie) = jar.get("access_token") {
-                let value = cookie.value();
-                return jwt::decode_access_claims(value);
-            }
+        let Ok(jar) = parts.extract::<CookieJar>().await;
+
+        if let Some(cookie) = jar.get("access_token") {
+            let value = cookie.value();
+            return jwt::decode_access_claims(value);
         }
 
         Err(Error::Unauthorized)
@@ -134,11 +133,11 @@ where
             return jwt::decode_refresh_claims(bearer.token());
         }
 
-        if let Ok(jar) = parts.extract::<CookieJar>().await {
-            if let Some(cookie) = jar.get("refresh_token") {
-                let value = cookie.value();
-                return jwt::decode_refresh_claims(value);
-            }
+        let Ok(jar) = parts.extract::<CookieJar>().await;
+
+        if let Some(cookie) = jar.get("refresh_token") {
+            let value = cookie.value();
+            return jwt::decode_refresh_claims(value);
         }
 
         Err(Error::Unauthorized)

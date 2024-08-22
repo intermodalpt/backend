@@ -219,7 +219,7 @@ WHERE id=$1"#,
     )
     .fetch_optional(&mut **transaction)
     .await
-    .map(|res| res.map(|res| res.into()))
+    .map(|res| res.map(Into::into))
     .map_err(|err| {
         tracing::error!(error = err.to_string(), assignment_id);
         Error::DatabaseExecution
@@ -244,7 +244,7 @@ WHERE user_id=$1"#,
     )
     .fetch_all(executor)
     .await
-    .map(|res| res.into_iter().map(|res| res.into()).collect())
+    .map(|res| res.into_iter().map(Into::into).collect())
     .map_err(|err| {
         tracing::error!(error = err.to_string(), user_id);
         Error::DatabaseExecution

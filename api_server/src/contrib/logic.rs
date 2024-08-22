@@ -60,7 +60,7 @@ pub(crate) async fn accept_contribution(
     contribution_id: i64,
     user_id: i32,
     verify: bool,
-    ignored: &Option<String>,
+    ignored: Option<&str>,
 ) -> Result<(), Error> {
     let mut contribution = sql::fetch_contribution(pool, contribution_id)
         .await?
@@ -133,7 +133,7 @@ pub(crate) fn accept_stop_contribution(
     mut current: stops::Stop,
     patch: &mut history::stops::StopPatch,
     verify: bool,
-    ignored: &Option<String>,
+    ignored: Option<&str>,
 ) -> Result<stops::Stop, Error> {
     let ignored_fields = if let Some(ignored) = ignored {
         ignored

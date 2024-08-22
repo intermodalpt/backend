@@ -150,6 +150,7 @@ pub(crate) mod requests {
         pub password: String,
     }
 
+    #[allow(clippy::missing_fields_in_debug)]
     impl Debug for Login {
         fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
             f.debug_struct("Login")
@@ -174,6 +175,7 @@ pub(crate) mod requests {
         pub consent: super::ConsentAnswer,
     }
 
+    #[allow(clippy::missing_fields_in_debug)]
     impl Debug for Register {
         fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
             f.debug_struct("Register")
@@ -203,6 +205,7 @@ pub(crate) mod requests {
         pub new_password: String,
     }
 
+    #[allow(clippy::missing_fields_in_debug)]
     impl Debug for ChangeUnknownPassword {
         fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
             f.debug_struct("ChangeKnownPassword")
@@ -331,6 +334,7 @@ pub(crate) mod responses {
         pub(crate) survey_version: i32,
     }
 
+    #[allow(clippy::struct_field_names)]
     #[derive(Debug, Serialize)]
     pub(crate) struct UserStats {
         pub(crate) changelog_cnt: i64,

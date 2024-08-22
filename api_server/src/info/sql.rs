@@ -375,13 +375,7 @@ pub(crate) async fn insert_news(
     let publish_datetime = change.publish_datetime.unwrap_or(Local::now());
 
     let thumb_url: Option<String> = if let Some(thumb_id) = change.thumb_id {
-        let thumb_sha1 = fetch_rich_img_sha1(transaction, thumb_id)
-            .await?
-            .ok_or(Error::ValidationFailure(
-                "The referenced thumb_id does not exist".to_string(),
-            ))?;
-
-        Some(get_rich_img_thumb_path(&thumb_sha1))
+        Some(get_item_thumb_url(transaction, thumb_id).await?)
     } else {
         None
     };
@@ -444,13 +438,7 @@ pub(crate) async fn update_news_item(
         .ok_or(Error::NotFoundUpstream)?;
 
     let thumb_url: Option<String> = if let Some(thumb_id) = change.thumb_id {
-        let thumb_sha1 = fetch_rich_img_sha1(transaction, thumb_id)
-            .await?
-            .ok_or(Error::ValidationFailure(
-                "The referenced thumb_id does not exist".to_string(),
-            ))?;
-
-        Some(get_rich_img_thumb_path(&thumb_sha1))
+        Some(get_item_thumb_url(transaction, thumb_id).await?)
     } else {
         None
     };
@@ -481,6 +469,20 @@ WHERE id=$11"#,
         Error::DatabaseExecution
     })?;
 
+    update_news_item_operators(transaction, item_id, &current, change).await?;
+    update_news_item_regions(transaction, item_id, &current, change).await?;
+    update_news_item_external(transaction, item_id, &current, change).await?;
+    update_news_item_imgs(transaction, item_id, &current, change).await?;
+
+    Ok(())
+}
+
+pub(crate) async fn update_news_item_operators(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    item_id: i32,
+    current: &responses::FullNewsItem,
+    change: &requests::ChangeNewsItem,
+) -> Result<()> {
     let deleted_operator_ids = current
         .operator_ids
         .iter()
@@ -513,6 +515,15 @@ WHERE item_id=$1 AND operator_id = ANY($2)"#,
         }
     }
 
+    Ok(())
+}
+
+pub(crate) async fn update_news_item_regions(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    item_id: i32,
+    current: &responses::FullNewsItem,
+    change: &requests::ChangeNewsItem,
+) -> Result<()> {
     let deleted_region_ids = current
         .region_ids
         .iter()
@@ -544,6 +555,15 @@ WHERE item_id=$1 AND region_id = ANY($2)"#,
         }
     }
 
+    Ok(())
+}
+
+pub(crate) async fn update_news_item_external(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    item_id: i32,
+    current: &responses::FullNewsItem,
+    change: &requests::ChangeNewsItem,
+) -> Result<()> {
     let (common_external_ids, deleted_external_ids): (Vec<i32>, Vec<i32>) =
         current
             .external_rels
@@ -580,6 +600,15 @@ WHERE item_id=$1 AND external_item_id = ANY($2)"#,
         }
     }
 
+    Ok(())
+}
+
+pub(crate) async fn update_news_item_imgs(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    item_id: i32,
+    current: &responses::FullNewsItem,
+    change: &requests::ChangeNewsItem,
+) -> Result<()> {
     let change_imgs = change.get_linked_images();
     let curr_imgs = current
         .images
@@ -613,6 +642,18 @@ WHERE item_id=$1 AND img_id = ANY($2)"#,
     }
 
     Ok(())
+}
+
+async fn get_item_thumb_url(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    thumb_id: Uuid,
+) -> Result<String> {
+    fetch_rich_img_sha1(transaction, thumb_id)
+        .await?
+        .ok_or(Error::ValidationFailure(
+            "The referenced thumb_id does not exist".to_string(),
+        ))
+        .map(|sha1| get_rich_img_thumb_path(&sha1))
 }
 
 async fn fetch_rich_img_sha1(

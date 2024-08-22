@@ -23,7 +23,6 @@ use axum_extra::extract::cookie::{Cookie, SameSite};
 use serde::Serialize;
 
 use crate::settings::SETTINGS;
-use crate::Error;
 
 #[derive(Serialize)]
 pub struct IdReturn<T> {
@@ -46,7 +45,7 @@ pub(crate) fn json_response_with_cookie_set<T>(
     cookie_value: String,
     max_age: time::Duration,
     payload: T,
-) -> Result<impl IntoResponse, Error>
+) -> impl IntoResponse
 where
     T: Serialize,
 {
@@ -68,5 +67,5 @@ where
         .headers_mut()
         .insert(header::SET_COOKIE, cookie.to_string().parse().unwrap());
 
-    Ok(response)
+    response
 }

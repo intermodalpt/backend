@@ -60,25 +60,23 @@ pub(crate) async fn post_register(
 ) -> Result<(), Error> {
     if args.dry {
         logic::is_valid_registration(&registration, &state.pool).await
-    } else {
-        if let Some(captcha) = &registration.captcha {
-            let is_valid = state
-                .captchas
-                .attempt_captcha(captcha.uuid, &captcha.answer)?;
+    } else if let Some(captcha) = &registration.captcha {
+        let is_valid = state
+            .captchas
+            .attempt_captcha(captcha.uuid, &captcha.answer)?;
 
-            if !is_valid {
-                return Err(Error::ValidationFailure(
-                    "Captcha validation failed".to_string(),
-                ));
-            }
-
-            logic::register(&state.pool, registration, client_ip.0).await
-        } else {
-            // Are we going to ever have a registration without a captcha?
-            // Maybe if nobody has registered in the past hour
-            // logic::register(registration, client_ip.0, &state.pool).await
-            Err(Error::Forbidden)
+        if !is_valid {
+            return Err(Error::ValidationFailure(
+                "Captcha validation failed".to_string(),
+            ));
         }
+
+        logic::register(&state.pool, registration, client_ip.0).await
+    } else {
+        // Are we going to ever have a registration without a captcha?
+        // Maybe if nobody has registered in the past hour
+        // logic::register(registration, client_ip.0, &state.pool).await
+        Err(Error::Forbidden)
     }
 }
 
@@ -113,12 +111,12 @@ pub(crate) async fn post_login(
         logic::login(request, &state.pool, client_ip.0, &user_agent).await?;
 
     // Unset the token
-    json_response_with_cookie_set(
+    Ok(json_response_with_cookie_set(
         "refresh_token",
         refresh_token.0,
         time::Duration::days(SETTINGS.get().unwrap().jwt.refresh_days),
         refresh_claims,
-    )
+    ))
 }
 
 pub(crate) async fn post_logout(
@@ -150,12 +148,12 @@ pub(crate) async fn post_logout(
         Error::DatabaseExecution
     })?;
 
-    json_response_with_cookie_set(
+    Ok(json_response_with_cookie_set(
         "refresh_token",
-        "".to_string(),
+        String::new(),
         time::Duration::ZERO,
         (),
-    )
+    ))
 }
 
 pub(crate) async fn get_renew_access_token(
@@ -168,12 +166,12 @@ pub(crate) async fn get_renew_access_token(
         logic::renew_token(claims, &state.pool, client_ip.0, &user_agent)
             .await?;
 
-    json_response_with_cookie_set(
+    Ok(json_response_with_cookie_set(
         "access_token",
         access_token.0,
         time::Duration::minutes(SETTINGS.get().unwrap().jwt.access_minutes),
         access_claims,
-    )
+    ))
 }
 
 pub(crate) async fn get_management_tokens(
@@ -293,7 +291,7 @@ pub(crate) async fn post_assign_user_permissions(
             request,
             user_id,
             &claims,
-            client_ip.0.into(),
+            client_ip.0,
         )
         .await?,
     ))

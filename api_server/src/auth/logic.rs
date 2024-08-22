@@ -119,7 +119,7 @@ pub(crate) async fn renew_token(
                 msg = "Valid JWT for unknown user".to_string(),
                 jti = ?refresh_claims.jti,
                 uid = refresh_claims.uid
-            )
+            );
         })?;
 
     let mut transaction = db_pool.begin().await.map_err(|err| {
@@ -629,7 +629,7 @@ fn compile_permission_assignments(
         .rev()
         .for_each(|assignment| permissions.merge(assignment.permissions));
 
-    return permissions;
+    permissions
 }
 
 #[cfg(test)]

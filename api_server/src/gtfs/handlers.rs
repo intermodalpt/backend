@@ -308,7 +308,7 @@ pub(crate) async fn post_assign_subroute_validation(
         sql::update_subroute_validation_data(
             &mut transaction,
             request.subroute_id,
-            &correspondence_stops,
+            correspondence_stops,
             gtfs_cluster,
         )
         .await?;

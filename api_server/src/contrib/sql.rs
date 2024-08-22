@@ -367,14 +367,11 @@ pub(crate) async fn update_contribution<'c, E>(
     executor: E,
     id: i64,
     change: &history::Change,
-    comment: &Option<String>,
+    comment: Option<&str>,
 ) -> Result<()>
 where
     E: sqlx::Executor<'c, Database = sqlx::Postgres>,
 {
-    // FIXME the hell?
-    let comment = comment.as_ref().map(String::as_str);
-
     sqlx::query!(
         r#"
 UPDATE Contributions
