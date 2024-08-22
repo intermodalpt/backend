@@ -45,8 +45,8 @@ impl MapContent {
         }
 
         if let Some(bounding) = &self.bounding {
-            if bounding.len() != 2 {
-                return Err("Bounding box must have two points");
+            if bounding.len() < 3 {
+                return Err("Bounding box must have at least three points");
             }
 
             if bounding.iter().any(|[lon, lat]| {
@@ -328,7 +328,7 @@ pub struct BlinkSettings {
 pub struct PointRendering {
     pub size: f32,
     pub color: String,
-    pub opacity: i32,
+    pub opacity: f32,
     #[serde(default)]
     pub outline: Option<OutlineRendering>,
     pub pulse: Option<PulseSettings>,
@@ -352,7 +352,7 @@ impl PointRendering {
             return Err("Invalid point color");
         }
 
-        if !(0..=1).contains(&self.opacity) {
+        if !(0.0..=1.0).contains(&self.opacity) {
             return Err("Invalid point opacity");
         }
 
