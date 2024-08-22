@@ -1,0 +1,46 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT id, name, short_name, lat, lon\nFROM stops\nJOIN issue_stops ON stops.id = issue_stops.stop_id\nJOIN issue_regions ON stops.id = issue_regions.region_id\nWHERE region_id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "short_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "lat",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 4,
+        "name": "lon",
+        "type_info": "Float8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "ea6eaa4dacaebccaab685caa02642da08a3be1f70dbfa66ba7befcca446b95af"
+}

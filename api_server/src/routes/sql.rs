@@ -1098,3 +1098,29 @@ WHERE issue_operators.operator_id = $1
             Error::DatabaseExecution
         })
 }
+
+pub(crate) async fn fetch_region_issue_routes(
+    pool: &PgPool,
+    region_id: i32,
+) -> Result<Vec<responses::SimpleRoute>> {
+    sqlx::query_as!(
+        responses::SimpleRoute,
+        r#"
+SELECT routes.id, routes.code, routes.name, routes.operator as operator_id, routes.circular,
+    COALESCE(routes.badge_text_color, route_types.badge_text_color) as "badge_text!: String",
+    COALESCE(routes.badge_bg_color, route_types.badge_bg_color) as "badge_bg!: String"
+FROM routes
+JOIN issue_routes on routes.id = issue_routes.route_id
+JOIN issue_regions on issue_routes.issue_id = issue_regions.issue_id
+JOIN route_types on routes.type = route_types.id
+WHERE issue_regions.region_id = $1
+"#,
+        region_id
+    )
+        .fetch_all(pool)
+        .await
+        .map_err(|err| {
+            tracing::error!(error=err.to_string(), region_id);
+            Error::DatabaseExecution
+        })
+}

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT issues.id, issues.title, issues.category, issues.impact,\n        issues.creation, issues.lat, issues.lon,\n        issues.content as \"content!: sqlx::types::Json<RichContent>\",\n        issues.state, issues.state_justification,\n    array_remove(array_agg(distinct issue_operators.operator_id), NULL) as \"operators!: Vec<i32>\",\n    array_remove(array_agg(distinct issue_routes.route_id), NULL) as \"routes!: Vec<i32>\",\n    array_remove(array_agg(distinct issue_stops.stop_id), NULL) as \"stops!: Vec<i32>\"\nFROM issues\nLEFT JOIN issue_operators on issue_operators.issue_id = issues.id\nLEFT JOIN issue_routes on issue_routes.issue_id = issues.id\nLEFT JOIN issue_stops on issue_stops.issue_id = issues.id\nWHERE issues.id = $1\nGROUP BY issues.id",
+  "query": "SELECT issues.id, issues.title, issues.category, issues.impact,\n        issues.creation, issues.lat, issues.lon,\n        issues.content as \"content!: sqlx::types::Json<RichContent>\",\n        issues.state, issues.state_justification,\n    array_remove(array_agg(distinct issue_regions.region_id), NULL) as \"regions!: Vec<i32>\",\n    array_remove(array_agg(distinct issue_operators.operator_id), NULL) as \"operators!: Vec<i32>\",\n    array_remove(array_agg(distinct issue_routes.route_id), NULL) as \"routes!: Vec<i32>\",\n    array_remove(array_agg(distinct issue_stops.stop_id), NULL) as \"stops!: Vec<i32>\"\nFROM issues\nLEFT JOIN issue_regions on issue_regions.issue_id = issues.id\nLEFT JOIN issue_operators on issue_operators.issue_id = issues.id\nLEFT JOIN issue_routes on issue_routes.issue_id = issues.id\nLEFT JOIN issue_stops on issue_stops.issue_id = issues.id\nWHERE issues.id = $1\nGROUP BY issues.id",
   "describe": {
     "columns": [
       {
@@ -55,16 +55,21 @@
       },
       {
         "ordinal": 10,
-        "name": "operators!: Vec<i32>",
+        "name": "regions!: Vec<i32>",
         "type_info": "Int4Array"
       },
       {
         "ordinal": 11,
-        "name": "routes!: Vec<i32>",
+        "name": "operators!: Vec<i32>",
         "type_info": "Int4Array"
       },
       {
         "ordinal": 12,
+        "name": "routes!: Vec<i32>",
+        "type_info": "Int4Array"
+      },
+      {
+        "ordinal": 13,
         "name": "stops!: Vec<i32>",
         "type_info": "Int4Array"
       }
@@ -87,8 +92,9 @@
       true,
       null,
       null,
+      null,
       null
     ]
   },
-  "hash": "2ca528d559120a3174bbbe8b7433560dd6aadfe76060998d62374d5e71a2f69b"
+  "hash": "5f761c7ba1fb3fc3ee883e4e1ce19f0a2245a967423adc14031f1cb224d4b3ad"
 }

@@ -20,6 +20,7 @@ use sqlx::PgPool;
 
 use commons::models::geo;
 
+use super::models::responses;
 use crate::Error;
 
 type Result<T> = std::result::Result<T, Error>;
@@ -38,6 +39,18 @@ FROM regions
         tracing::error!(error = err.to_string());
         Error::DatabaseExecution
     })
+}
+
+pub(crate) async fn fetch_simple_regions(
+    pool: &PgPool,
+) -> Result<Vec<responses::SimpleRegion>> {
+    sqlx::query_as!(responses::SimpleRegion, "SELECT id, name FROM regions")
+        .fetch_all(pool)
+        .await
+        .map_err(|err| {
+            tracing::error!(error = err.to_string());
+            Error::DatabaseExecution
+        })
 }
 
 pub(crate) async fn fetch_region(
@@ -307,4 +320,52 @@ pub(crate) async fn update_stop_parish(
     })?;
 
     Ok(())
+}
+
+pub(crate) async fn fetch_issue_regions(
+    pool: &PgPool,
+    issue_id: i32,
+) -> Result<Vec<responses::SimpleRegion>> {
+    sqlx::query_as!(
+        responses::SimpleRegion,
+        r#"
+SELECT id, name
+FROM regions
+WHERE id IN (
+    SELECT region_id FROM issue_regions WHERE issue_id=$1
+)
+"#,
+        issue_id
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), issue_id);
+        Error::DatabaseExecution
+    })
+}
+
+pub(crate) async fn fetch_region_issue_regions(
+    pool: &PgPool,
+    region_id: i32,
+) -> Result<Vec<responses::SimpleRegion>> {
+    sqlx::query_as!(
+        responses::SimpleRegion,
+        r#"
+SELECT id, name
+FROM regions
+JOIN issue_regions ON issue_regions.region_id=regions.id
+WHERE issue_regions.issue_id IN (
+    SELECT region_id
+    FROM issue_regions
+    WHERE issue_id = $1
+)"#,
+        region_id
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), region_id);
+        Error::DatabaseExecution
+    })
 }

@@ -33,6 +33,12 @@ pub(crate) async fn get_regions(
     Ok(Json(sql::fetch_regions(&state.pool).await?))
 }
 
+pub(crate) async fn get_simple_regions(
+    State(state): State<AppState>,
+) -> Result<Json<Vec<responses::SimpleRegion>>, Error> {
+    Ok(Json(sql::fetch_simple_regions(&state.pool).await?))
+}
+
 pub(crate) async fn get_region(
     State(state): State<AppState>,
     Path(region_id): Path<i32>,

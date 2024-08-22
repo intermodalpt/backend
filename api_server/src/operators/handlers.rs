@@ -27,7 +27,7 @@ use super::models::{requests, responses};
 use super::sql;
 use crate::pics::sql as pics_sql;
 use crate::responses::IdReturn;
-use crate::{auth, contrib, routes, stops, AppState, Error};
+use crate::{auth, contrib, geo, routes, stops, AppState, Error};
 
 pub(crate) async fn get_operators(
     State(state): State<AppState>,
@@ -149,15 +149,16 @@ pub(crate) async fn get_issue(
     State(state): State<AppState>,
     Path(issue_id): Path<i32>,
 ) -> Result<Json<responses::FullIssue>, Error> {
-    let (issue, operators, stops, routes) = future::join4(
+    let (issue, regions, operators, stops, routes) = future::join5(
         sql::fetch_issue(&state.pool, issue_id),
+        geo::sql::fetch_issue_regions(&state.pool, issue_id),
         sql::fetch_issue_operators(&state.pool, issue_id),
         stops::sql::fetch_issue_stops(&state.pool, issue_id),
         routes::sql::fetch_issue_routes(&state.pool, issue_id),
     )
     .await;
 
-    let issue = issue?;
+    let issue = issue?.ok_or(Error::NotFoundUpstream)?;
 
     Ok(Json(responses::FullIssue {
         id: issue.id,
@@ -170,6 +171,7 @@ pub(crate) async fn get_issue(
         content: issue.content,
         state: issue.state,
         state_justification: issue.state_justification,
+        regions: regions?,
         operators: operators?,
         routes: routes?,
         stops: stops?,
@@ -266,32 +268,74 @@ pub(crate) async fn get_operator_issues(
     State(state): State<AppState>,
     Path(operator_id): Path<i32>,
 ) -> Result<Json<Vec<responses::FullIssue>>, Error> {
-    let (issues, issue_operators, issue_routes, issue_stops) = future::join4(
+    let (issues, regions, operators, routes, stops) = future::join5(
         sql::fetch_operator_issues(&state.pool, operator_id),
+        geo::sql::fetch_simple_regions(&state.pool),
         sql::fetch_operator_issue_operators(&state.pool, operator_id),
         routes::sql::fetch_operator_issue_routes(&state.pool, operator_id),
         stops::sql::fetch_operator_issue_stops(&state.pool, operator_id),
     )
     .await;
 
-    let operator_index = issue_operators?
+    let issues = fuse_issues(issues?, regions?, operators?, routes?, stops?);
+
+    Ok(Json(issues))
+}
+
+pub(crate) async fn get_region_issues(
+    State(state): State<AppState>,
+    Path(region_id): Path<i32>,
+) -> Result<Json<Vec<responses::FullIssue>>, Error> {
+    let (issues, regions, operators, routes, stops) = future::join5(
+        sql::fetch_region_issues(&state.pool, region_id),
+        geo::sql::fetch_region_issue_regions(&state.pool, region_id),
+        sql::fetch_region_issue_operators(&state.pool, region_id),
+        routes::sql::fetch_region_issue_routes(&state.pool, region_id),
+        stops::sql::fetch_region_issue_stops(&state.pool, region_id),
+    )
+    .await;
+
+    let issues = fuse_issues(issues?, regions?, operators?, routes?, stops?);
+
+    Ok(Json(issues))
+}
+
+fn fuse_issues(
+    issues: Vec<operators::Issue>,
+    regions: Vec<geo::models::responses::SimpleRegion>,
+    issue_operators: Vec<responses::SimpleOperator>,
+    issue_routes: Vec<routes::models::responses::SimpleRoute>,
+    issue_stops: Vec<stops::models::responses::SimpleStop>,
+) -> Vec<responses::FullIssue> {
+    let region_index = regions
+        .into_iter()
+        .map(|region| (region.id, region))
+        .collect::<HashMap<_, _>>();
+
+    let operator_index = issue_operators
         .into_iter()
         .map(|operator| (operator.id, operator))
         .collect::<HashMap<_, _>>();
 
-    let route_index = issue_routes?
+    let route_index = issue_routes
         .into_iter()
         .map(|route| (route.id, route))
         .collect::<HashMap<_, _>>();
 
-    let stop_index = issue_stops?
+    let stop_index = issue_stops
         .into_iter()
         .map(|stop| (stop.id, stop))
         .collect::<HashMap<_, _>>();
 
-    let issues = issues?
+    issues
         .into_iter()
         .map(|issue| {
+            let issue_regions = issue
+                .region_ids
+                .iter()
+                .filter_map(|id| region_index.get(id))
+                .cloned()
+                .collect();
             let issue_operators = issue
                 .operator_ids
                 .iter()
@@ -322,14 +366,13 @@ pub(crate) async fn get_operator_issues(
                 lon: issue.lon,
                 state: issue.state,
                 state_justification: issue.state_justification,
+                regions: issue_regions,
                 operators: issue_operators,
                 routes: issue_routes,
                 stops: issue_stops,
             }
         })
-        .collect::<Vec<_>>();
-
-    Ok(Json(issues))
+        .collect::<Vec<_>>()
 }
 
 pub(crate) async fn post_issue(
@@ -364,7 +407,7 @@ pub(crate) async fn post_issue(
         Error::DatabaseExecution
     })?;
 
-    return Ok(Json(IdReturn { id }));
+    Ok(Json(IdReturn { id }))
 }
 
 pub(crate) async fn patch_issue(
@@ -375,7 +418,9 @@ pub(crate) async fn patch_issue(
 ) -> Result<(), Error> {
     change.validate()?;
 
-    let issue = sql::fetch_issue(&state.pool, issue_id).await?;
+    let issue = sql::fetch_issue(&state.pool, issue_id)
+        .await?
+        .ok_or(Error::NotFoundUpstream)?;
 
     let patch = change.derive_patch(&issue);
     if patch.is_empty() {

@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT id, name\nFROM regions\nWHERE id IN (\n    SELECT region_id FROM issue_regions WHERE issue_id=$1\n)\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "26565264f92cb03fb16637ae4e0d0a5a816674de3f98c3c634b5b1416540c055"
+}

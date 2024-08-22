@@ -24,7 +24,7 @@ use axum::Router;
 use axum_client_ip::SecureClientIpSource;
 use axum_extra::headers::{authorization::Bearer, Authorization};
 use headers::Header;
-use tower_http::cors::{Any, CorsLayer};
+use tower_http::cors::{AllowOrigin, CorsLayer};
 use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::trace::{self, TraceLayer};
 
@@ -49,6 +49,7 @@ pub fn build_paths(state: AppState) -> Router {
 
     Router::new()
         .route("/v1/regions", get(geo::handlers::get_regions))
+        .route("/v1/regions/simple", get(geo::handlers::get_simple_regions))
         .route("/v1/regions/:region_id", get(geo::handlers::get_region))
         .route(
             "/v1/regions/:region_id/parishes",
@@ -100,6 +101,10 @@ pub fn build_paths(state: AppState) -> Router {
         .route(
             "/v1/regions/:region_id/news",
             get(info::handlers::get_region_news),
+        )
+        .route(
+            "/v1/regions/:region_id/issues",
+            get(operators::handlers::get_region_issues),
         )
         .route(
             "/v1/stops",

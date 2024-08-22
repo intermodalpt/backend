@@ -35,6 +35,7 @@ pub(crate) mod responses {
     use commons::models::content::RichContent;
     use commons::models::operators;
 
+    use crate::geo::models::responses::SimpleRegion;
     use crate::routes::models::responses::SimpleRoute;
     use crate::stops::models::responses::SimpleStop;
 
@@ -146,6 +147,7 @@ pub(crate) mod responses {
         pub operators: Vec<SimpleOperator>,
         pub routes: Vec<SimpleRoute>,
         pub stops: Vec<SimpleStop>,
+        pub regions: Vec<SimpleRegion>,
     }
 
     #[derive(Debug, Serialize)]
@@ -160,6 +162,7 @@ pub(crate) mod responses {
         pub operator_ids: Vec<i32>,
         pub route_ids: Vec<i32>,
         pub stop_ids: Vec<i32>,
+        pub region_ids: Vec<i32>,
     }
 }
 
@@ -235,6 +238,7 @@ pub(crate) mod requests {
         pub lat: Option<f64>,
         pub lon: Option<f64>,
         pub content: RichContent,
+        pub region_ids: Vec<i32>,
         pub operator_ids: Vec<i32>,
         pub route_ids: Vec<i32>,
         pub stop_ids: Vec<i32>,
@@ -293,6 +297,7 @@ pub(crate) mod requests {
                 lat: value.lat,
                 lon: value.lon,
                 content: value.content,
+                region_ids: value.region_ids,
                 operator_ids: value.operator_ids,
                 route_ids: value.route_ids,
                 stop_ids: value.stop_ids,

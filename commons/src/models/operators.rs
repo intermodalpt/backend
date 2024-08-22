@@ -107,6 +107,7 @@ pub struct Issue {
     pub content: RichContent,
     pub state: IssueState,
     pub state_justification: Option<String>,
+    pub region_ids: Vec<i32>,
     pub operator_ids: Vec<i32>,
     pub route_ids: Vec<i32>,
     pub stop_ids: Vec<i32>,

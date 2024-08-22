@@ -20,6 +20,12 @@ pub(crate) mod responses {
     use commons::models::operators;
     use serde::Serialize;
 
+    #[derive(Serialize, Debug, Clone)]
+    pub struct SimpleRegion {
+        pub id: i32,
+        pub name: String,
+    }
+
     #[derive(Serialize, Debug)]
     pub struct RegionWithOperators {
         pub id: i32,
