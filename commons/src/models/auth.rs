@@ -516,6 +516,7 @@ mod perms {
         }
 
         #[derive(Debug, PartialEq, Clone, Default, Serialize, Deserialize)]
+        #[serde(rename_all = "camelCase")]
         pub struct ExternalNews {
             #[serde(default, skip_serializing_if = "is_false")]
             pub read_private: bool,

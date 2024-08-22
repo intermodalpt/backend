@@ -45,7 +45,8 @@ pub fn build_paths(state: AppState) -> Router {
             Method::DELETE,
         ])
         .allow_headers([header::CONTENT_TYPE, header::AUTHORIZATION])
-        .allow_origin(Any);
+        .allow_origin(AllowOrigin::mirror_request())
+        .allow_credentials(true);
 
     Router::new()
         .route("/v1/regions", get(geo::handlers::get_regions))
@@ -620,11 +621,9 @@ pub fn build_paths(state: AppState) -> Router {
                         .ok()
                         .and_then(|Authorization(bearer)| {
                             if let Ok(claims) =
-                                auth::jwt::decode_access_claims(bearer.token())
-                            {
-                                Some((claims.uid, claims.jti))
-                            } else if let Ok(claims) =
-                                auth::jwt::decode_refresh_claims(bearer.token())
+                                auth::jwt::decode_management_claims(
+                                    bearer.token(),
+                                )
                             {
                                 Some((claims.uid, claims.jti))
                             } else {

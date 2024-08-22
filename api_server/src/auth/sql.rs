@@ -145,16 +145,18 @@ pub(crate) async fn insert_management_token(
     token_id: Uuid,
     token_name: &str,
     models::JwtManagement(token): &models::JwtManagement,
+    permissions: &auth::Permissions,
 ) -> Result<()> {
     sqlx::query_as!(
         responses::ManagementToken,
         r#"
-INSERT INTO management_tokens(session_id, name, token)
-VALUES ($1, $2, $3)
+INSERT INTO management_tokens(session_id, name, token, permissions)
+VALUES ($1, $2, $3, $4)
     "#,
         token_id,
         token_name,
-        token
+        token,
+        json!(permissions)
     )
     .execute(&mut **transaction)
     .await

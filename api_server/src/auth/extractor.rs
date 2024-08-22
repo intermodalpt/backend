@@ -60,13 +60,14 @@ where
 #[async_trait]
 impl<S> FromRequestParts<S> for models::Claims
 where
+    AppState: FromRef<S>,
     S: Send + Sync,
 {
     type Rejection = Error;
 
     async fn from_request_parts(
         parts: &mut Parts,
-        _state: &S,
+        state: &S,
     ) -> Result<Self, Self::Rejection> {
         if let Ok(TypedHeader(Authorization(bearer))) =
             parts.extract::<TypedHeader<Authorization<Bearer>>>().await
@@ -75,11 +76,11 @@ where
             if token.starts_with("manag.") {
                 let claims = jwt::decode_management_claims(token)?;
 
+
                 let state = parts
-                    .extensions
-                    .get::<State<AppState>>()
-                    .ok_or(Error::IllegalState)?
-                    .clone();
+                    .extract_with_state::<AppState, _>(state)
+                    .await
+                    .map_err(|e| Error::IllegalState)?;
 
                 let permissions = sql::fetch_management_token_permissions(
                     &state.pool,
@@ -147,6 +148,7 @@ where
 #[async_trait]
 impl<S, P: super::ClaimPermission> FromRequestParts<S> for super::ScopedClaim<P>
 where
+    AppState: FromRef<S>,
     S: Send + Sync,
 {
     type Rejection = Error;

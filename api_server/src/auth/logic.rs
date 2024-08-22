@@ -208,9 +208,13 @@ pub(crate) async fn create_management_token(
         .await?
         .ok_or(Error::Forbidden)?;
 
-    let permissions = sql::fetch_user_permissions(&mut transaction, claims.uid)
-        .await?
-        .ok_or(Error::IllegalState)?;
+    let permissions = if user.is_superuser {
+        auth::Permissions::everything()
+    } else {
+        sql::fetch_user_permissions(&mut transaction, claims.uid)
+            .await?
+            .ok_or(Error::IllegalState)?
+    };
 
     let session_id = Uuid::new_v4();
     let issue_time = Utc::now();
@@ -244,6 +248,7 @@ pub(crate) async fn create_management_token(
         session_id,
         &request.name,
         &encoded_claims,
+        &permissions,
     )
     .await?;
 
