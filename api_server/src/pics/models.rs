@@ -22,7 +22,6 @@ use uuid::Uuid;
 #[derive(Deserialize, Debug)]
 pub struct SimpleRichImg {
     pub id: Uuid,
-    pub sha1: String,
     pub transcript: Option<String>,
 }
 
@@ -133,9 +132,9 @@ pub(crate) mod responses {
             Self {
                 id: value.id,
                 transcript: value.transcript,
-                url_full: get_rich_img_full_path(&value.sha1),
-                url_medium: get_rich_img_medium_path(&value.sha1),
-                url_thumb: get_rich_img_thumb_path(&value.sha1),
+                url_full: get_rich_img_full_path(value.id),
+                url_medium: get_rich_img_medium_path(value.id),
+                url_thumb: get_rich_img_thumb_path(value.id),
             }
         }
     }
@@ -162,9 +161,9 @@ pub(crate) mod responses {
                 license: value.license,
                 lat: value.lat,
                 lon: value.lon,
-                url_full: get_rich_img_full_path(&value.sha1),
-                url_medium: get_rich_img_medium_path(&value.sha1),
-                url_thumb: get_rich_img_thumb_path(&value.sha1),
+                url_full: get_rich_img_full_path(value.id),
+                url_medium: get_rich_img_medium_path(value.id),
+                url_thumb: get_rich_img_thumb_path(value.id),
             }
         }
     }
@@ -193,9 +192,9 @@ pub(crate) mod responses {
                 lat: img.lat,
                 lon: img.lon,
                 filename: img.filename,
-                url_full: get_rich_img_full_path(&img.sha1),
-                url_medium: get_rich_img_medium_path(&img.sha1),
-                url_thumb: get_rich_img_thumb_path(&img.sha1),
+                url_full: get_rich_img_full_path(img.id),
+                url_medium: get_rich_img_medium_path(img.id),
+                url_thumb: get_rich_img_thumb_path(img.id),
             }
         }
     }
@@ -437,11 +436,9 @@ impl<'r> sqlx::decode::Decode<'r, sqlx::Postgres> for SimpleRichImg {
     {
         let mut decoder = sqlx::postgres::types::PgRecordDecoder::new(value)?;
         let id = decoder.try_decode::<Uuid>()?;
-        let sha1 = decoder.try_decode::<String>()?;
         let transcript = decoder.try_decode::<Option<String>>()?;
         Ok(SimpleRichImg {
             id,
-            sha1,
             transcript,
         })
     }

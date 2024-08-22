@@ -1,12 +1,12 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT sha1 FROM rich_imgs WHERE id=$1",
+  "query": "SELECT id FROM rich_imgs WHERE id=$1",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
-        "name": "sha1",
-        "type_info": "Bpchar"
+        "name": "id",
+        "type_info": "Uuid"
       }
     ],
     "parameters": {
@@ -18,5 +18,5 @@
       false
     ]
   },
-  "hash": "8e0ab53404c44b3bcbdeb2a7c828b7a5ff74a59fbba9364783c0bb360e9aeaba"
+  "hash": "524b2bb5a0898aa3856c811edb6ed8010aaf234b50d849257aefc1b2d02ab9ad"
 }

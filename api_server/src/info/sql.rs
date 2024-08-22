@@ -28,7 +28,7 @@ use commons::models::content::RichContent;
 use super::models::{self, requests, responses};
 use crate::pics::{
     get_external_news_pic_path, get_external_news_ss_path,
-    get_rich_img_thumb_path, models as pic_models,
+    get_rich_img_thumb_path, models as pic_models, sql::rich_img_exists,
 };
 use crate::Error;
 
@@ -316,7 +316,7 @@ SELECT news_items.id, news_items.title, news_items.summary,
     array_remove(array_agg(distinct region_id), NULL) as "region_ids!: Vec<i32>",
     CASE
         WHEN count(rich_imgs.id) > 0
-        THEN array_agg(ROW(rich_imgs.id, sha1, transcript))
+        THEN array_agg(ROW(rich_imgs.id, transcript))
         ELSE array[]::record[]
     END as "imgs!: Vec<pic_models::SimpleRichImg>",
     CASE
@@ -374,8 +374,8 @@ pub(crate) async fn insert_news(
 ) -> Result<i32> {
     let publish_datetime = change.publish_datetime.unwrap_or(Local::now());
 
-    let thumb_url: Option<String> = if let Some(thumb_id) = change.thumb_id {
-        Some(get_item_thumb_url(transaction, thumb_id).await?)
+    let thumb_url: Option<String> = if let Some(img_id) = change.thumb_id {
+        Some(get_item_thumb_url(transaction, img_id).await?)
     } else {
         None
     };
@@ -646,29 +646,15 @@ WHERE item_id=$1 AND img_id = ANY($2)"#,
 
 async fn get_item_thumb_url(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-    thumb_id: Uuid,
+    id: Uuid,
 ) -> Result<String> {
-    fetch_rich_img_sha1(transaction, thumb_id)
-        .await?
-        .ok_or(Error::ValidationFailure(
+    if rich_img_exists(transaction, id).await? {
+        Ok(get_rich_img_thumb_path(id))
+    } else {
+        Err(Error::ValidationFailure(
             "The referenced thumb_id does not exist".to_string(),
         ))
-        .map(|sha1| get_rich_img_thumb_path(&sha1))
-}
-
-async fn fetch_rich_img_sha1(
-    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-    img_id: Uuid,
-) -> Result<Option<String>> {
-    // TODO move to pics/sql.rs
-    sqlx::query!(r#"SELECT sha1 FROM rich_imgs WHERE id=$1"#, img_id)
-        .fetch_optional(&mut **transaction)
-        .await
-        .map_err(|err| {
-            tracing::error!(error = err.to_string(), img_id = ?img_id);
-            Error::DatabaseExecution
-        })
-        .map(|row| row.map(|row| row.sha1))
+    }
 }
 
 async fn insert_news_item_operator(

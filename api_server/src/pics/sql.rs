@@ -1137,12 +1137,12 @@ WHERE operators.id=$2
 
 pub(crate) async fn insert_rich_img(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    id: Uuid,
     sha1: &str,
     filename: Option<&str>,
     lon: Option<f64>,
     lat: Option<f64>,
 ) -> Result<Uuid> {
-    let id = Uuid::new_v4();
     let _ = sqlx::query!(
         r#"
 INSERT INTO rich_imgs(id, sha1, filename, lon, lat)
@@ -1311,6 +1311,20 @@ WHERE id=$6"#,
     })?;
 
     Ok(())
+}
+
+pub(crate) async fn rich_img_exists(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    img_id: Uuid,
+) -> Result<bool> {
+    sqlx::query!("SELECT id FROM rich_imgs WHERE id=$1", img_id)
+        .fetch_optional(&mut **transaction)
+        .await
+        .map_err(|err| {
+            tracing::error!(error = err.to_string(), img_id = ?img_id);
+            Error::DatabaseExecution
+        })
+        .map(|a| a.is_some())
 }
 
 pub(crate) async fn fetch_external_news_item_imgs(

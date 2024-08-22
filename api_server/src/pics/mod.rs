@@ -21,6 +21,8 @@ pub(crate) mod logic;
 pub(crate) mod models;
 pub(crate) mod sql;
 
+use uuid::Uuid;
+
 use crate::settings::SETTINGS;
 
 pub(crate) fn get_stop_pic_ori_named_path(sha: &str, filename: &str) -> String {
@@ -57,23 +59,23 @@ pub(crate) fn get_logo_path(operator_id: i32, sha: &str) -> String {
 
 // ----- Images in rich content blocks -----
 
-pub(crate) fn get_rich_img_full_path(sha: &str) -> String {
+pub(crate) fn get_rich_img_full_path(id: Uuid) -> String {
     format!(
-        "{}/content/ori/{sha}/original",
+        "{}/content/{id}/ori/original",
         SETTINGS.get().unwrap().images.root
     )
 }
 
-pub(crate) fn get_rich_img_medium_path(sha: &str) -> String {
+pub(crate) fn get_rich_img_medium_path(id: Uuid) -> String {
     format!(
-        "{}/content/medium/{sha}/preview",
+        "{}/content/{id}/medium/preview",
         SETTINGS.get().unwrap().images.root
     )
 }
 
-pub(crate) fn get_rich_img_thumb_path(sha: &str) -> String {
+pub(crate) fn get_rich_img_thumb_path(id: Uuid) -> String {
     format!(
-        "{}/content/thumb/{sha}/preview",
+        "{}/content/{id}/thumb/preview",
         SETTINGS.get().unwrap().images.root
     )
 }
