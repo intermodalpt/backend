@@ -23,7 +23,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use commons::models::operators;
-use commons::utils::{git, gtfs as gtfs_utils, http};
+use commons::utils::{gtfs as gtfs_utils, http};
 
 use super::models;
 use crate::errors::Error;
@@ -143,33 +143,25 @@ pub(crate) async fn update_operator_gtfs(
     let mut meta = get_operator_storage_meta(operator_id)?;
     match operator_tag {
         "cmet" => {
-            let path = format!("./data/operators/{operator_id}/gtfsrepo");
-            let url = "https://github.com/carrismetropolitana/gtfs";
-            let remote_name = "origin";
-            let remote_branch = "live";
+            let path = format!("./data/operators/{operator_id}/gtfs.zip");
+            let url = "https://api.carrismetropolitana.pt/gtfs*";
 
-            let version_date =
-                git::update_repo(url, &path, remote_name, remote_branch)
-                    .map_err(|err| {
-                        tracing::error!(err=?err);
-                        Error::Processing
-                    })?;
-
-            if meta.last_gtfs != Some(version_date) {
-                meta.last_gtfs = Some(version_date);
-                gtfs_utils::extract(
-                    &format!(
-                        "./data/operators/{operator_id}/gtfsrepo/CarrisMetropolitana.zip"
-                    ),
-                    &format!("./data/operators/{operator_id}/gtfs"),
-                ).inspect_err(|err| {
+            http::download_file(url, &path, None)
+                .await
+                .inspect_err(|err| {
                     tracing::error!(
-                        msg="Failure extracting GTFS",
-                        operator_id,
-                        err=?err
+                        msg="Failed to download file",
+                        err=?err,
+                        url,
+                        path
                     );
                 })?;
-            }
+
+            let newest_file = gtfs_utils::extract(
+                &format!("./data/operators/{operator_id}/gtfs.zip"),
+                &format!("./data/operators/{operator_id}/gtfs"),
+            )?;
+            meta.last_gtfs = Some(newest_file);
         }
         "carris" => {
             let path = format!("./data/operators/{operator_id}/gtfs.zip");
@@ -206,6 +198,37 @@ pub(crate) async fn update_operator_gtfs(
         }
         "fert" => {
             fetch_transporlis_feed(&mut meta, operator_id, 13).await?;
+        }
+        "mobic" => {
+            let path = format!("./data/operators/{operator_id}/gtfs.zip");
+            let url = "https://dadosabertos.cascais.pt/\
+                dataset/ddef8977-0ad0-4d23-99d3-ae269a21b589/\
+                resource/819dac57-8843-43a3-a630-9cc7987325c0/\
+                download/gtfs-mobicascais.zip";
+
+            http::download_file(url, &path, None)
+                .await
+                .inspect_err(|err| {
+                    tracing::error!(
+                        msg="Failed to download file",
+                        err=?err,
+                        url,
+                        path
+                    );
+                })?;
+
+            let newest_file = gtfs_utils::extract(
+                &format!("./data/operators/{operator_id}/gtfs.zip"),
+                &format!("./data/operators/{operator_id}/gtfs"),
+            )
+            .inspect_err(|err| {
+                tracing::error!(
+                    msg="Failure extracting GTFS",
+                    operator_id,
+                    err=?err
+                );
+            })?;
+            meta.last_gtfs = Some(newest_file);
         }
         _ => {
             tracing::warn!("Unknown operator tag: '{operator_tag}'");
