@@ -1,60 +1,75 @@
 CREATE TABLE users
 (
-    id                  serial PRIMARY KEY,
-    username            text                  NOT NULL UNIQUE,
-    password            text                  NOT NULL,
-    is_admin            boolean DEFAULT false NOT NULL,
-    is_trusted          boolean DEFAULT false NOT NULL, -- TODO drop
-    works_for           integer, -- TODO implement properly or drop; REFERENCES operators (id),
-    email               text                  NOT NULL,
-    verification_level  int default 0         NOT NULL,
-    consent             jsonb DEFAULT '{}'::jsonb NOT NULL,
-    consent_date        timestamp with time zone,
-    registration_date   timestamp with time zone DEFAULT clock_timestamp() NOT NULL,
-    survey              JSONB DEFAULT '{}'::jsonb NOT NULL
+    id                 serial PRIMARY KEY,
+    username           text                                               NOT NULL UNIQUE,
+    password           text                                               NOT NULL,
+    permissions        jsonb                    DEFAULT '[]'::jsonb       NOT NULL, -- Cached field
+    is_superuser       boolean                  DEFAULT false             NOT NULL,
+    is_suspended       boolean                  DEFAULT false             NOT NULL,
+    works_for          integer,                                                     -- TODO implement properly or drop; REFERENCES operators (id),
+    email              text                                               NOT NULL,
+    verification_level int                      default 0                 NOT NULL,
+    consent            jsonb                    DEFAULT '{}'::jsonb       NOT NULL,
+    consent_date       timestamp with time zone,
+    registration_date  timestamp with time zone DEFAULT clock_timestamp() NOT NULL,
+    survey             JSONB                    DEFAULT '{}'::jsonb       NOT NULL,
+    survey_version     integer                  DEFAULT 0                 NOT NULL
 );
 
 CREATE TABLE user_verifications
 (
-    id            serial PRIMARY KEY,
-    user_id       integer REFERENCES users (id) NOT NULL,
-    email         text NOT NULL,
-    secret        text NOT NULL,
-    completed     boolean DEFAULT false NOT NULL,
-    expiration    timestamp with time zone NOT NULL,
-    ip            inet NOT NULL,
-    user_agent    text NOT NULL
+    id         serial PRIMARY KEY,
+    user_id    integer REFERENCES users (id) NOT NULL,
+    email      text                          NOT NULL,
+    secret     text                          NOT NULL,
+    completed  boolean DEFAULT false         NOT NULL,
+    expiration timestamp with time zone      NOT NULL,
+    ip         inet                          NOT NULL,
+    user_agent text                          NOT NULL
 );
 
 CREATE TABLE user_permissions
 (
-    user_id       integer REFERENCES users (id) NOT NULL,
-    permissions   jsonb DEFAULT '[]'::jsonb NOT NULL,
-    issuer_id     integer REFERENCES users (id),
-    priority      integer DEFAULT 0 NOT NULL
+    id          serial PRIMARY KEY, -- Solely a unique identifier
+    user_id     integer REFERENCES users (id)                NOT NULL,
+    permissions jsonb                    DEFAULT '[]'::jsonb NOT NULL,
+    issuer_id   integer REFERENCES users (id),
+    issuance    timestamp with time zone default now()       NOT NULL,
+    priority    integer                  DEFAULT 0           NOT NULL
 );
 
 CREATE TABLE user_sessions
 (
-    id          uuid PRIMARY KEY, -- Also the renewal token UUID
-    user_id     integer REFERENCES users (id) NOT NULL,
-    ip          inet NOT NULL,
-    user_agent  text NOT NULL,
-    creation    timestamp with time zone DEFAULT clock_timestamp() NOT NULL,
-    expiration  timestamp with time zone NOT NULL,
-    revoked     boolean DEFAULT false NOT NULL
+    id         uuid PRIMARY KEY, -- Also the renewal token UUID
+    user_id    integer REFERENCES users (id)                      NOT NULL,
+    ip         inet                                               NOT NULL,
+    user_agent text                                               NOT NULL,
+    creation   timestamp with time zone DEFAULT clock_timestamp() NOT NULL,
+    expiration timestamp with time zone                           NOT NULL,
+    revoked    boolean                  DEFAULT false             NOT NULL
 );
 
 -- Access authorization through a user session
 CREATE TABLE user_session_access
 (
     id          uuid PRIMARY KEY, -- Also the access token UUID
-    session_id  uuid REFERENCES user_sessions (id) NOT NULL,
-    ip          inet NOT NULL,
-    user_agent  text NOT NULL,
+    session_id  uuid REFERENCES user_sessions (id)                 NOT NULL,
+    ip          inet                                               NOT NULL,
+    user_agent  text                                               NOT NULL,
     creation    timestamp with time zone DEFAULT clock_timestamp() NOT NULL,
     last_active timestamp with time zone DEFAULT clock_timestamp() NOT NULL,
-    expiration  timestamp with time zone NOT NULL
+    expiration  timestamp with time zone                           NOT NULL
+);
+
+CREATE TABLE management_tokens
+(
+    session_id  uuid REFERENCES user_sessions (id) NOT NULL,
+    -- An identifier for the token
+    name        text                               NOT NULL,
+    -- What this token allows for. One should intersect it with the user's permissions
+    permissions jsonb DEFAULT '[]'::jsonb          NOT NULL,
+    -- The token as issued
+    token       text                               NOT NULL
 );
 
 CREATE TABLE contributions
@@ -80,13 +95,13 @@ CREATE TABLE changelog
 
 CREATE TABLE audit_log
 (
-    id       bigserial PRIMARY KEY,
-    user_id  integer                                            NOT NULL REFERENCES users (id),
+    id          bigserial PRIMARY KEY,
+    user_id     integer                                            NOT NULL REFERENCES users (id),
     session_id  uuid,
-    datetime timestamp with time zone DEFAULT clock_timestamp() NOT NULL,
-    action_type   text                                          NOT NULL,
-    action   jsonb                                              NOT NULL,
-    addr     cidr                                               NOT NULL
+    datetime    timestamp with time zone DEFAULT clock_timestamp() NOT NULL,
+    action_type text                                               NOT NULL,
+    action      jsonb                                              NOT NULL,
+    addr        cidr                                               NOT NULL
 );
 
 CREATE TABLE regions
@@ -94,9 +109,13 @@ CREATE TABLE regions
     id         serial PRIMARY KEY,
     name       text    NOT NULL,
     geometry   jsonb,
+    active     boolean NOT NULL,
+    level      integer NOT NULL,
+    ref        text, -- DICOFRE
     center_lat float,
     center_lon float,
-    zoom       float
+    zoom       float,
+    bbox       double precision[]
 );
 
 CREATE TABLE municipalities
@@ -125,7 +144,7 @@ CREATE TABLE operators
     description  text,
     logo_sha1    character(40),
     -- TODO implement; Cached version logo_sha1-derived url
-    -- logo_url          text,
+    logo_url     text,
     validation   jsonb,
     -- If IML is complete and updated
     is_complete  boolean DEFAULT false            NOT NULL,
@@ -165,12 +184,22 @@ CREATE TABLE vehicle
     usb_outlets         integer NOT NULL
 );
 
+CREATE TABLE stop_clusters
+(
+    id            serial PRIMARY KEY,
+    local_name    text,
+    regional_name text,
+    national_name text,
+    is_terminal   boolean NOT NULL
+);
+
 CREATE TABLE stops
 (
     id                        serial PRIMARY KEY,
+    cluster                   integer REFERENCES stop_clusters (id),
     name                      text                                              NOT NULL,
     short_name                text,
-    -- If the name is ours or has been externally sourced (needed to make the name NON NULL)
+    -- Whether the name is ours or has been externally sourced (needed to make the name NON NULL)
     is_name_overridden        boolean                  DEFAULT false            NOT NULL,
     is_ghost                  boolean                  DEFAULT false            NOT NULL,
     locality                  text,
@@ -193,7 +222,7 @@ CREATE TABLE stops
     verified_position         boolean                  DEFAULT false            NOT NULL,
     survey_method             int,
 
-    osm_id                    bigint UNIQUE, -- TODO add foreign key
+    osm_id                    bigint UNIQUE,
     -- This is bound to the IML stop instead of the OSM stop to prevent volatility
     -- We're assuring that OSM is in a good shape for this stop
     osm_env_features          jsonb                    DEFAULT '{}'::jsonb      NOT NULL,
@@ -222,10 +251,13 @@ CREATE TABLE osm_stops
     deleted      boolean                  NOT NULL
 );
 
+ALTER TABLE stops
+    ADD CONSTRAINT osm_stops_fkey FOREIGN KEY (osm_id) REFERENCES osm_stops (id) ON DELETE RESTRICT;
+
 CREATE TABLE route_types
 (
     id               serial PRIMARY KEY,
-    operator         integer REFERENCES operators (id) ON DELETE RESTRICT,
+    operator         integer                                   NOT NULL REFERENCES operators (id) ON DELETE RESTRICT,
     name             text,
     zapping_cost     integer                                   NOT NULL,
     board_cost       integer                                   NOT NULL,
@@ -296,7 +328,7 @@ CREATE TABLE subroute_stops
     subroute     integer  NOT NULL REFERENCES subroutes (id),
     stop         integer  NOT NULL REFERENCES stops (id),
     idx          smallint NOT NULL,
-    time_to_next integer
+    time_to_next integer -- FIXME This ain't the way
 );
 
 CREATE UNIQUE INDEX unique_subroutestops ON subroute_stops USING btree (subroute, idx);
@@ -319,6 +351,8 @@ CREATE TABLE stop_operators
     source        text    NOT NULL,
     PRIMARY KEY (stop_id, operator_id)
 );
+
+CREATE UNIQUE INDEX stop_operators_stop_by_reference ON stop_operators (operator_id, stop_ref);
 
 CREATE TABLE region_operators
 (
@@ -388,14 +422,26 @@ CREATE TABLE panoramas
     sensitive         boolean DEFAULT false    NOT NULL
 );
 
+CREATE TABLE rich_imgs
+(
+    id          uuid PRIMARY KEY,
+    sha1        character(40) NOT NULL,
+    filename    text,
+    transcript  text,
+    attribution text,
+    license     text,
+    lat         double precision,
+    lon         double precision,
+    upload_date timestamp DEFAULT now()
+);
+
 CREATE TABLE issues
 (
     id                  serial PRIMARY KEY,
     title               text                     NOT NULL,
-    message             text                     NOT NULL,
     creation            timestamp with time zone NOT NULL,
     category            text                     NOT NULL,
-    geojson             jsonb,
+    content             jsonb,
     lat                 double precision,
     lon                 double precision,
     state               text                     NOT NULL,
@@ -424,27 +470,34 @@ CREATE TABLE issue_operators
     PRIMARY KEY (issue_id, operator_id)
 );
 
-CREATE TABLE issue_pics
+CREATE TABLE issue_regions
+(
+    issue_id  integer NOT NULL REFERENCES issues (id),
+    region_id integer NOT NULL REFERENCES regions (id),
+    PRIMARY KEY (issue_id, region_id)
+);
+
+CREATE TABLE issue_imgs
 (
     issue_id integer NOT NULL REFERENCES issues (id),
-    pic_id   integer NOT NULL REFERENCES stop_pics (id),
-    PRIMARY KEY (issue_id, pic_id)
+    img_id   uuid    NOT NULL REFERENCES rich_imgs (id),
+    PRIMARY KEY (issue_id, img_id)
 );
 
 CREATE TABLE abnormalities
 (
-    id            bigserial PRIMARY KEY,
-    summary       text                  NOT NULL,
-    message       text                  NOT NULL,
-    from_datetime time with time zone,
-    to_datetime   time with time zone,
-    geojson       jsonb,
-    mark_resolved boolean DEFAULT false NOT NULL
+    id            serial PRIMARY KEY,
+    summary       text                     NOT NULL,
+    creation      timestamp with time zone NOT NULL,
+    from_datetime timestamp with time zone,
+    to_datetime   timestamp with time zone,
+    content       jsonb,
+    mark_resolved boolean DEFAULT false    NOT NULL
 );
 
 CREATE TABLE abnormality_operators
 (
-    abnormality_id bigint  NOT NULL,
+    abnormality_id integer NOT NULL,
     operator_id    integer NOT NULL,
     PRIMARY KEY (abnormality_id, operator_id)
 );
@@ -454,6 +507,27 @@ CREATE TABLE abnormality_routes
     abnormality_id integer NOT NULL REFERENCES abnormalities (id),
     route_id       integer NOT NULL REFERENCES routes (id),
     PRIMARY KEY (abnormality_id, route_id)
+);
+
+CREATE TABLE abnormality_stops
+(
+    abnormality_id integer NOT NULL REFERENCES abnormalities (id),
+    stop_id        integer NOT NULL REFERENCES stops (id),
+    PRIMARY KEY (abnormality_id, stop_id)
+);
+
+CREATE TABLE abnormality_regions
+(
+    abnormality_id integer NOT NULL REFERENCES abnormalities (id),
+    region_id      integer NOT NULL REFERENCES regions (id),
+    PRIMARY KEY (abnormality_id, region_id)
+);
+
+CREATE TABLE abnormality_imgs
+(
+    abnormality_id integer NOT NULL REFERENCES abnormalities (id),
+    img_id         uuid    NOT NULL REFERENCES rich_imgs (id),
+    PRIMARY KEY (abnormality_id, img_id)
 );
 
 CREATE TABLE tickets
@@ -475,15 +549,6 @@ CREATE TABLE ticket_comments
     user_id   integer NOT NULL REFERENCES users (id)
 );
 
-CREATE TABLE news_imgs
-(
-    id          serial PRIMARY KEY,
-    sha1        character(40) NOT NULL,
-    filename    text,
-    transcript  text,
-    upload_date timestamp DEFAULT now()
-);
-
 CREATE TABLE news_items
 (
     id               serial PRIMARY KEY,
@@ -492,7 +557,7 @@ CREATE TABLE news_items
     author_id        integer REFERENCES users (ID),
     author_override  text,
     content          jsonb                    NOT NULL,
-    thumb_id         integer REFERENCES news_imgs (ID),
+    thumb_id         uuid REFERENCES rich_imgs (ID),
     thumb_url        text, -- Cache field for thumb_id
 
     publish_datetime timestamp with time zone NOT NULL,
@@ -504,7 +569,7 @@ CREATE TABLE news_items
 CREATE TABLE news_items_imgs
 (
     item_id integer NOT NULL REFERENCES news_items (id),
-    img_id  integer NOT NULL REFERENCES news_imgs (id),
+    img_id  uuid    NOT NULL REFERENCES rich_imgs (id),
     PRIMARY KEY (item_id, img_id)
 );
 
@@ -607,15 +672,15 @@ CREATE TABLE news_items_external_news_items
 -- This is intended to be a temporary table with potentially half filled data
 -- The objective is being aware of registration failures and being able
 -- to contact the person who had trouble if needed
--- This table should go away once things are more stabler
+-- This table should go away once things are more stable
 CREATE TABLE attempted_surveys
 (
-    id            serial PRIMARY KEY,
-    user_id       integer REFERENCES users (id),
-    username      text,
-    email         text,
-    date          timestamp with time zone DEFAULT clock_timestamp() NOT NULL,
-    ip            inet NOT NULL,
-    user_agent    text NOT NULL,
-    survey        JSONB DEFAULT '{}'::jsonb   NOT NULL
+    id         serial PRIMARY KEY,
+    user_id    integer REFERENCES users (id),
+    username   text,
+    email      text,
+    date       timestamp with time zone DEFAULT clock_timestamp() NOT NULL,
+    ip         inet                                               NOT NULL,
+    user_agent text                                               NOT NULL,
+    survey     JSONB                    DEFAULT '{}'::jsonb       NOT NULL
 );
