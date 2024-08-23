@@ -1,6 +1,6 @@
 /*
     Intermodal, transportation information aggregator
-    Copyright (C) 2022 - 2023  Cláudio Pereira
+    Copyright (C) 2022 - 2024  Cláudio Pereira
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -43,6 +43,7 @@ mod stops;
 mod utils;
 
 use std::net::SocketAddr;
+use std::process::exit;
 use std::sync::Arc;
 
 use sqlx::postgres::PgPool;
@@ -71,16 +72,23 @@ async fn main() {
     )
     .unwrap();
 
-    let bucket_name = settings.s3.bucket_name.as_str();
-    let bucket = s3::Bucket::new(
-        bucket_name,
+    let region = if let Some(endpoint) = &settings.s3.endpoint {
+        s3::Region::Custom {
+            region: "minio".to_owned(),
+            endpoint: endpoint.clone(),
+        }
+    } else if let Some(account_id) = &settings.s3.account_id {
         s3::Region::R2 {
-            account_id: settings.s3.account_id.clone(),
-        },
-        credentials,
-    )
-    .unwrap()
-    .with_path_style();
+            account_id: account_id.clone(),
+        }
+    } else {
+        eprint!("No S3 endpoint or account ID provided");
+        exit(-1);
+    };
+    let bucket_name = settings.s3.bucket_name.as_str();
+    let bucket = s3::Bucket::new(bucket_name, region, credentials)
+        .unwrap()
+        .with_path_style();
     tracing::info!("Configured to use the {bucket_name} bucket");
     if !(bucket_name.ends_with("dev") || bucket_name.ends_with("test")) {
         tracing::warn!("Using a production bucket");

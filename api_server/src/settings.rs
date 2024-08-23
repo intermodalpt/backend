@@ -1,3 +1,21 @@
+/*
+    Intermodal, transportation information aggregator
+    Copyright (C) 2024  Cláudio Pereira
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as
+    published by the Free Software Foundation, either version 3 of the
+    License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
 
@@ -25,10 +43,13 @@ pub(crate) struct Http {
 
 #[derive(Deserialize, Debug)]
 pub(crate) struct S3Api {
+    #[serde(default)]
+    pub(crate) endpoint: Option<String>,
+    #[serde(default)]
+    pub(crate) account_id: Option<String>,
     pub(crate) access_key: String,
     pub(crate) secret_key: String,
     pub(crate) bucket_name: String,
-    pub(crate) account_id: String,
 }
 #[derive(Deserialize, Debug)]
 pub(crate) struct Jwt {
@@ -52,8 +73,32 @@ pub(crate) struct Images {
 }
 
 pub(crate) fn load() {
-    let file = std::fs::read_to_string("./settings.toml")
-        .expect("Could not read settings file");
-    let settings: Settings = toml::from_str(&file).unwrap();
-    SETTINGS.set(settings).expect("Unable to set settings");
+    let file = if std::path::Path::new("./settings.toml").exists() {
+        match std::fs::read_to_string("./settings.toml") {
+            Ok(file) => file,
+            Err(e) => {
+                eprint!("Could not read local settings file: {}", e);
+                std::process::exit(-1);
+            }
+        }
+    } else if std::path::Path::new("/conf/settings.toml").exists() {
+        match std::fs::read_to_string("/conf/settings.toml") {
+            Ok(file) => file,
+            Err(e) => {
+                eprint!("Could not read container settings file: {}", e);
+                std::process::exit(-1);
+            }
+        }
+    } else {
+        eprint!("No settings file found");
+        std::process::exit(-1);
+    };
+
+    match toml::from_str(&file) {
+        Ok(settings) => SETTINGS.set(settings).expect("Unable to set settings"),
+        Err(e) => {
+            eprint!("Invalid settings file: {}", e);
+            std::process::exit(-1);
+        }
+    }
 }
