@@ -1,6 +1,6 @@
 /*
     Intermodal, transportation information aggregator
-    Copyright (C) 2023  Cláudio Pereira
+    Copyright (C) 2023 - 2024  Cláudio Pereira
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -68,3 +68,96 @@ pub struct Departure {
     pub time: i16,
     pub calendar_id: i32,
 }
+
+// Proposal to redo the subroutes with sequence deduplication
+
+/*
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Route {
+    pub id: i32,
+    pub type_id: i32,
+    pub operator_id: i32,
+
+    pub code: Option<String>,
+    pub name: String,
+    pub circular: bool,
+    pub active: bool,
+    pub badge_text_color: Option<String>,
+    pub badge_bg_color: Option<String>,
+
+    pub directions: Vec<RouteDirection>,
+}
+
+/// Points that should be near the routed path.
+/// These are used to override bad routing
+pub struct NavigationPoint {
+    // Stop ID
+    pub from: Option<i32>,
+    // Stop ID
+    pub to: Option<i32>,
+    // Coord
+    pub lon: f64,
+    pub lat: f64,
+}
+
+/// A `RouteDirection` is the main path in one direction
+/// Actual instances (`Subroute`s) inherit from here and
+/// apply 0..n of the available patches
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RouteDirection {
+    pub from: String,
+    pub to: String,
+    pub stop_sequence: Vec<i32>,
+    // The defined, available patches (unapplied)
+    pub patches: Vec<SegmentPatch>,
+    pub subroutes: Vec<Subroute>,
+    pub main_stops: Vec<i32>,
+    pub through: Vec<NavigationPoint>,
+}
+
+/// A `SegmentPatch` alters a stop sequence
+/// To inject stops between stops X and Y:
+/// - `from` should point to X
+/// - `to` should point to Y
+/// - `seq` points at ids (`[a, b, c]`)
+/// - such that the sequence becomes `[..., X, a, b, c, Y, ...]`
+/// To delete stops (`[a, b, c]`) in a sequence (`[..., X, a, b, c, Y, ...]`)
+/// - `from` should point to X
+/// - `to` should point to Y
+/// - `seq` points to an empty sequence (`[]`)
+/// - such that the sequence becomes `[..., X, Y, ...]`
+/// Appending to the end requires ``
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SegmentPatch {
+    pub from: Option<i32>,
+    pub to: Option<i32>,
+    pub seq: Vec<i32>,
+    pub via: Option<SubrouteVia>,
+    pub through: Vec<NavigationPoint>,
+    // The stops which are to be appended to the main stops
+    pub add_main_stops: Vec<i32>,
+    // The stops which are to be removed from the main stops
+    pub rm_main_stops: Vec<i32>,
+}
+
+/// A `Subroute` is a bus path that is real and has services
+/// It adds up to enough information to tell the stop sequence, precise way,
+/// code, headsign and such attributes.
+/// It is instantiated by adding `Departure`s to it
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Subroute {
+    pub id: i32,
+    // The applied patches (over the RouteDirection)
+    pub patches: Vec<i32>,
+
+    pub code_override: Option<String>,
+    pub headsign_override: Option<String>,
+    /// A pair identifier should be common between subroutes
+    /// which are equivalent among different directions
+    pub pair: i32,
+    pub circular: bool,
+
+    pub polyline: Option<String>,
+    pub validation: Option<gtfs::SubrouteValidation>,
+}
+ */
