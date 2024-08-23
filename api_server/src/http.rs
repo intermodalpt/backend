@@ -108,6 +108,10 @@ pub fn build_paths(state: AppState) -> Router {
             get(operators::handlers::get_region_issues),
         )
         .route(
+            "/v1/regions/:region_id/abnormalities",
+            get(operators::handlers::get_region_abnormalities),
+        )
+        .route(
             "/v1/stops",
             get(stops::handlers::get_all_stops)
                 .post(stops::handlers::post_stop),
@@ -294,6 +298,12 @@ pub fn build_paths(state: AppState) -> Router {
             get(operators::handlers::get_issue)
                 .patch(operators::handlers::patch_issue),
         )
+        .route("/v1/abnormalities", post(operators::handlers::post_abnormality))
+        .route(
+            "/v1/abnormalities/:abnormality_id",
+            get(operators::handlers::get_abnormality)
+                .patch(operators::handlers::patch_abnormality),
+        )
         .route(
             "/v1/contrib/upload/stops",
             post(pics::handlers::upload_dangling_stop_picture),
@@ -420,6 +430,10 @@ pub fn build_paths(state: AppState) -> Router {
         .route(
             "/v1/operators/:operator_id/issues",
             get(operators::handlers::get_operator_issues),
+        )
+        .route(
+            "/v1/operators/:operator_id/abnormalities",
+            get(operators::handlers::get_operator_abnormalities),
         )
         .route(
             "/v1/operators/:operator_id/gtfs/stops",

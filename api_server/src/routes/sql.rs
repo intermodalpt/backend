@@ -1055,7 +1055,7 @@ pub(crate) async fn fetch_issue_routes(
     sqlx::query_as!(
         responses::SimpleRoute,
         r#"
-SELECT routes.id, routes.code, routes.name, routes.operator as operator_id, routes.circular, 
+SELECT routes.id, routes.code, routes.name, routes.operator as operator_id, routes.circular,
     COALESCE(routes.badge_text_color, route_types.badge_text_color) as "badge_text!: String",
     COALESCE(routes.badge_bg_color, route_types.badge_bg_color) as "badge_bg!: String"
 FROM routes
@@ -1080,7 +1080,7 @@ pub(crate) async fn fetch_operator_issue_routes(
     sqlx::query_as!(
         responses::SimpleRoute,
         r#"
-SELECT routes.id, routes.code, routes.name, routes.operator as operator_id, routes.circular, 
+SELECT routes.id, routes.code, routes.name, routes.operator as operator_id, routes.circular,
     COALESCE(routes.badge_text_color, route_types.badge_text_color) as "badge_text!: String",
     COALESCE(routes.badge_bg_color, route_types.badge_bg_color) as "badge_bg!: String"
 FROM routes
@@ -1114,6 +1114,83 @@ JOIN issue_routes on routes.id = issue_routes.route_id
 JOIN issue_regions on issue_routes.issue_id = issue_regions.issue_id
 JOIN route_types on routes.type = route_types.id
 WHERE issue_regions.region_id = $1
+"#,
+        region_id
+    )
+        .fetch_all(pool)
+        .await
+        .map_err(|err| {
+            tracing::error!(error=err.to_string(), region_id);
+            Error::DatabaseExecution
+        })
+}
+
+pub(crate) async fn fetch_abnormality_routes(
+    pool: &PgPool,
+    issue_id: i32,
+) -> Result<Vec<responses::SimpleRoute>> {
+    sqlx::query_as!(
+        responses::SimpleRoute,
+        r#"
+SELECT routes.id, routes.code, routes.name, routes.operator as operator_id, routes.circular,
+    COALESCE(routes.badge_text_color, route_types.badge_text_color) as "badge_text!: String",
+    COALESCE(routes.badge_bg_color, route_types.badge_bg_color) as "badge_bg!: String"
+FROM routes
+JOIN abnormality_routes on routes.id = abnormality_routes.route_id
+JOIN route_types on routes.type = route_types.id
+WHERE abnormality_routes.abnormality_id = $1
+"#,
+        issue_id
+    )
+        .fetch_all(pool)
+        .await
+        .map_err(|err| {
+            tracing::error!(error=err.to_string(), issue_id);
+            Error::DatabaseExecution
+        })
+}
+
+pub(crate) async fn fetch_operator_abnormalities_routes(
+    pool: &PgPool,
+    operator_id: i32,
+) -> Result<Vec<responses::SimpleRoute>> {
+    sqlx::query_as!(
+        responses::SimpleRoute,
+        r#"
+SELECT routes.id, routes.code, routes.name, routes.operator as operator_id, routes.circular,
+    COALESCE(routes.badge_text_color, route_types.badge_text_color) as "badge_text!: String",
+    COALESCE(routes.badge_bg_color, route_types.badge_bg_color) as "badge_bg!: String"
+FROM routes
+JOIN abnormality_routes on routes.id = abnormality_routes.route_id
+JOIN abnormality_operators on abnormality_routes.abnormality_id = abnormality_operators.abnormality_id
+JOIN route_types on routes.type = route_types.id
+WHERE abnormality_operators.operator_id = $1
+"#,
+        operator_id
+    )
+        .fetch_all(pool)
+        .await
+        .map_err(|err| {
+            tracing::error!(error=err.to_string(), operator_id);
+            Error::DatabaseExecution
+        })
+}
+
+pub(crate) async fn fetch_region_abnormalities_routes(
+    pool: &PgPool,
+    region_id: i32,
+) -> Result<Vec<responses::SimpleRoute>> {
+    sqlx::query_as!(
+        responses::SimpleRoute,
+        r#"
+SELECT routes.id, routes.code, routes.name, routes.operator as operator_id, routes.circular,
+    COALESCE(routes.badge_text_color, route_types.badge_text_color) as "badge_text!: String",
+    COALESCE(routes.badge_bg_color, route_types.badge_bg_color) as "badge_bg!: String"
+FROM routes
+JOIN abnormality_routes on routes.id = abnormality_routes.route_id
+JOIN abnormality_regions on abnormality_routes.abnormality_id = abnormality_regions.abnormality_id
+JOIN route_types on routes.type = route_types.id
+WHERE abnormality_regions.region_id = $1
 "#,
         region_id
     )

@@ -145,39 +145,6 @@ pub(crate) async fn delete_operator_stop(
     Ok(())
 }
 
-pub(crate) async fn get_issue(
-    State(state): State<AppState>,
-    Path(issue_id): Path<i32>,
-) -> Result<Json<responses::FullIssue>, Error> {
-    let (issue, regions, operators, stops, routes) = future::join5(
-        sql::fetch_issue(&state.pool, issue_id),
-        geo::sql::fetch_issue_regions(&state.pool, issue_id),
-        sql::fetch_issue_operators(&state.pool, issue_id),
-        stops::sql::fetch_issue_stops(&state.pool, issue_id),
-        routes::sql::fetch_issue_routes(&state.pool, issue_id),
-    )
-    .await;
-
-    let issue = issue?.ok_or(Error::NotFoundUpstream)?;
-
-    Ok(Json(responses::FullIssue {
-        id: issue.id,
-        title: issue.title,
-        category: issue.category,
-        impact: issue.impact,
-        creation: issue.creation,
-        lat: issue.lat,
-        lon: issue.lon,
-        content: issue.content,
-        state: issue.state,
-        state_justification: issue.state_justification,
-        regions: regions?,
-        operators: operators?,
-        routes: routes?,
-        stops: stops?,
-    }))
-}
-
 pub(crate) async fn get_operator_route_types(
     State(state): State<AppState>,
     Path(operator_id): Path<i32>,
@@ -262,6 +229,39 @@ pub(crate) async fn delete_operator_route_type(
     })?;
 
     Ok(())
+}
+
+pub(crate) async fn get_issue(
+    State(state): State<AppState>,
+    Path(issue_id): Path<i32>,
+) -> Result<Json<responses::FullIssue>, Error> {
+    let (issue, regions, operators, stops, routes) = future::join5(
+        sql::fetch_issue(&state.pool, issue_id),
+        geo::sql::fetch_issue_regions(&state.pool, issue_id),
+        sql::fetch_issue_operators(&state.pool, issue_id),
+        stops::sql::fetch_issue_stops(&state.pool, issue_id),
+        routes::sql::fetch_issue_routes(&state.pool, issue_id),
+    )
+    .await;
+
+    let issue = issue?.ok_or(Error::NotFoundUpstream)?;
+
+    Ok(Json(responses::FullIssue {
+        id: issue.id,
+        title: issue.title,
+        category: issue.category,
+        impact: issue.impact,
+        creation: issue.creation,
+        lat: issue.lat,
+        lon: issue.lon,
+        content: issue.content,
+        state: issue.state,
+        state_justification: issue.state_justification,
+        regions: regions?,
+        operators: operators?,
+        routes: routes?,
+        stops: stops?,
+    }))
 }
 
 pub(crate) async fn get_operator_issues(
@@ -452,6 +452,259 @@ pub(crate) async fn patch_issue(
         claims.uid,
         &[history::Change::IssueUpdate {
             original: issue.into(),
+            patch,
+        }],
+        None,
+    )
+    .await?;
+
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
+
+    Ok(())
+}
+
+pub(crate) async fn get_abnormality(
+    State(state): State<AppState>,
+    Path(abnormality_id): Path<i32>,
+) -> Result<Json<responses::FullAbnormality>, Error> {
+    let (abnormality, regions, operators, stops, routes) = future::join5(
+        sql::fetch_abnormality(&state.pool, abnormality_id),
+        geo::sql::fetch_abnormality_regions(&state.pool, abnormality_id),
+        sql::fetch_abnormality_operators(&state.pool, abnormality_id),
+        stops::sql::fetch_abnormality_stops(&state.pool, abnormality_id),
+        routes::sql::fetch_abnormality_routes(&state.pool, abnormality_id),
+    )
+    .await;
+
+    let abnormality = abnormality?.ok_or(Error::NotFoundUpstream)?;
+
+    Ok(Json(responses::FullAbnormality {
+        id: abnormality.id,
+        summary: abnormality.summary,
+        creation: abnormality.creation,
+        content: abnormality.content,
+        from_datetime: abnormality.from_datetime,
+        to_datetime: abnormality.to_datetime,
+        mark_resolved: abnormality.mark_resolved,
+        regions: regions?,
+        operators: operators?,
+        routes: routes?,
+        stops: stops?,
+    }))
+}
+
+pub(crate) async fn get_operator_abnormalities(
+    State(state): State<AppState>,
+    Path(operator_id): Path<i32>,
+) -> Result<Json<Vec<responses::FullAbnormality>>, Error> {
+    let (abnormalities, regions, operators, routes, stops) = future::join5(
+        sql::fetch_operator_abnormalities(&state.pool, operator_id),
+        geo::sql::fetch_simple_regions(&state.pool),
+        sql::fetch_operator_abnormalities_operators(&state.pool, operator_id),
+        routes::sql::fetch_operator_abnormalities_routes(
+            &state.pool,
+            operator_id,
+        ),
+        stops::sql::fetch_operator_abnormalities_stops(
+            &state.pool,
+            operator_id,
+        ),
+    )
+    .await;
+
+    let abnormalities = fuse_abnormalities(
+        abnormalities?,
+        regions?,
+        operators?,
+        routes?,
+        stops?,
+    );
+
+    Ok(Json(abnormalities))
+}
+
+pub(crate) async fn get_region_abnormalities(
+    State(state): State<AppState>,
+    Path(region_id): Path<i32>,
+) -> Result<Json<Vec<responses::FullAbnormality>>, Error> {
+    let (abnormalities, regions, operators, routes, stops) = future::join5(
+        sql::fetch_region_abnormalities(&state.pool, region_id),
+        geo::sql::fetch_region_abnormalities_regions(&state.pool, region_id),
+        sql::fetch_region_abnormalities_operators(&state.pool, region_id),
+        routes::sql::fetch_region_abnormalities_routes(&state.pool, region_id),
+        stops::sql::fetch_region_abnormalities_stops(&state.pool, region_id),
+    )
+    .await;
+
+    let abnormalities = fuse_abnormalities(
+        abnormalities?,
+        regions?,
+        operators?,
+        routes?,
+        stops?,
+    );
+
+    Ok(Json(abnormalities))
+}
+
+fn fuse_abnormalities(
+    abnormalities: Vec<operators::Abnormality>,
+    regions: Vec<geo::models::responses::SimpleRegion>,
+    operators: Vec<responses::SimpleOperator>,
+    routes: Vec<routes::models::responses::SimpleRoute>,
+    stops: Vec<stops::models::responses::SimpleStop>,
+) -> Vec<responses::FullAbnormality> {
+    let region_index = regions
+        .into_iter()
+        .map(|region| (region.id, region))
+        .collect::<HashMap<_, _>>();
+
+    let operator_index = operators
+        .into_iter()
+        .map(|operator| (operator.id, operator))
+        .collect::<HashMap<_, _>>();
+
+    let route_index = routes
+        .into_iter()
+        .map(|route| (route.id, route))
+        .collect::<HashMap<_, _>>();
+
+    let stop_index = stops
+        .into_iter()
+        .map(|stop| (stop.id, stop))
+        .collect::<HashMap<_, _>>();
+
+    abnormalities
+        .into_iter()
+        .map(|abnormality| {
+            let abn_regions = abnormality
+                .region_ids
+                .iter()
+                .filter_map(|id| region_index.get(id))
+                .cloned()
+                .collect();
+            let abn_operators = abnormality
+                .operator_ids
+                .iter()
+                .filter_map(|id| operator_index.get(id))
+                .cloned()
+                .collect();
+            let abn_routes = abnormality
+                .route_ids
+                .iter()
+                .filter_map(|id| route_index.get(id))
+                .cloned()
+                .collect();
+            let abn_stops = abnormality
+                .stop_ids
+                .iter()
+                .filter_map(|id| stop_index.get(id))
+                .cloned()
+                .collect();
+
+            responses::FullAbnormality {
+                id: abnormality.id,
+                summary: abnormality.summary,
+                creation: abnormality.creation,
+                content: abnormality.content,
+                from_datetime: abnormality.from_datetime,
+                to_datetime: abnormality.to_datetime,
+                regions: abn_regions,
+                operators: abn_operators,
+                routes: abn_routes,
+                stops: abn_stops,
+                mark_resolved: abnormality.mark_resolved,
+            }
+        })
+        .collect::<Vec<_>>()
+}
+
+pub(crate) async fn post_abnormality(
+    State(state): State<AppState>,
+    auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::ModifyIssues>,
+    Json(abnormality): Json<requests::NewAbnormality>,
+) -> Result<Json<IdReturn<i32>>, Error> {
+    abnormality.validate()?;
+
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
+
+    let id = sql::insert_abnormality(&mut transaction, &abnormality).await?;
+
+    let abnormality = operators::Abnormality {
+        id,
+        ..operators::Abnormality::from(abnormality)
+    };
+
+    contrib::sql::insert_changeset_log(
+        &mut transaction,
+        claims.uid,
+        &[history::Change::AbnormalityCreation {
+            data: abnormality.into(),
+        }],
+        None,
+    )
+    .await?;
+
+    transaction.commit().await.map_err(|err| {
+        tracing::error!("Transaction failed to commit: {err}");
+        Error::DatabaseExecution
+    })?;
+
+    Ok(Json(IdReturn { id }))
+}
+
+pub(crate) async fn patch_abnormality(
+    State(state): State<AppState>,
+    auth::ScopedClaim(claims, _): auth::ScopedClaim<auth::perms::ModifyIssues>,
+    Path(abnormality_id): Path<i32>,
+    Json(change): Json<requests::ChangeAbnormality>,
+) -> Result<(), Error> {
+    change.validate()?;
+
+    let abnormality = sql::fetch_abnormality(&state.pool, abnormality_id)
+        .await?
+        .ok_or(Error::NotFoundUpstream)?;
+
+    let patch = change.derive_patch(&abnormality);
+    if patch.is_empty() {
+        return Ok(());
+    }
+
+    let mut transaction = state.pool.begin().await.map_err(|err| {
+        tracing::error!("Failed to open transaction: {err}");
+        Error::DatabaseExecution
+    })?;
+
+    sql::update_abnormality(&mut transaction, abnormality_id, &change).await?;
+    // This code is very suboptimal but it'll do for now
+    // TODO: optimize
+    pics_sql::unlink_rich_images_from_abnormality(
+        &mut transaction,
+        abnormality_id,
+    )
+    .await?;
+    if patch.content.is_some() {
+        for img_id in change.content.get_linked_images() {
+            pics_sql::link_rich_image_to_issue(
+                &mut transaction,
+                img_id,
+                abnormality_id,
+            )
+            .await?;
+        }
+    }
+
+    contrib::sql::insert_changeset_log(
+        &mut transaction,
+        claims.uid,
+        &[history::Change::AbnormalityUpdate {
+            original: abnormality.into(),
             patch,
         }],
         None,

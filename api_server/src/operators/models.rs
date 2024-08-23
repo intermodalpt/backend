@@ -151,25 +151,39 @@ pub(crate) mod responses {
     }
 
     #[derive(Debug, Serialize)]
-    pub struct Abnormally {
+    pub struct Abnormality {
         pub id: i32,
         pub summary: String,
-        pub message: String,
+        pub creation: DateTime<Local>,
+        pub content: RichContent,
         pub from_datetime: Option<DateTime<Local>>,
         pub to_datetime: Option<DateTime<Local>>,
-        pub geojson: Option<JsonValue>,
         pub mark_resolved: bool,
         pub operator_ids: Vec<i32>,
         pub route_ids: Vec<i32>,
         pub stop_ids: Vec<i32>,
         pub region_ids: Vec<i32>,
     }
+
+    #[derive(Debug, Serialize)]
+    pub struct FullAbnormality {
+        pub id: i32,
+        pub summary: String,
+        pub creation: DateTime<Local>,
+        pub content: RichContent,
+        pub from_datetime: Option<DateTime<Local>>,
+        pub to_datetime: Option<DateTime<Local>>,
+        pub mark_resolved: bool,
+        pub operators: Vec<SimpleOperator>,
+        pub routes: Vec<SimpleRoute>,
+        pub stops: Vec<SimpleStop>,
+        pub regions: Vec<SimpleRegion>,
+    }
 }
 
 pub(crate) mod requests {
     use chrono::{DateTime, Local};
     use serde::Deserialize;
-    use sqlx::types::JsonValue;
 
     use commons::models::calendar::Calendar;
     use commons::models::content::RichContent;
@@ -315,6 +329,7 @@ pub(crate) mod requests {
         pub lat: Option<f64>,
         pub lon: Option<f64>,
         pub content: RichContent,
+        pub region_ids: Vec<i32>,
         pub operator_ids: Vec<i32>,
         pub route_ids: Vec<i32>,
         pub stop_ids: Vec<i32>,
@@ -358,6 +373,7 @@ pub(crate) mod requests {
 
             Ok(())
         }
+
         pub fn derive_patch(
             &self,
             issue: &operators::Issue,
@@ -404,27 +420,107 @@ pub(crate) mod requests {
     }
 
     #[derive(Debug, Deserialize)]
-    pub struct NewAbnormally {
+    pub struct NewAbnormality {
         pub summary: String,
-        pub message: String,
         pub from_datetime: Option<DateTime<Local>>,
         pub to_datetime: Option<DateTime<Local>>,
-        pub geojson: Option<JsonValue>,
+        pub content: RichContent,
+        pub mark_resolved: bool,
+        pub region_ids: Vec<i32>,
         pub operator_ids: Vec<i32>,
         pub route_ids: Vec<i32>,
         pub stop_ids: Vec<i32>,
     }
 
+    impl NewAbnormality {
+        pub(crate) fn validate(&self) -> Result<(), Error> {
+            if self.summary.trim().is_empty() {
+                return Err(Error::ValidationFailure(
+                    "Empty summary".to_string(),
+                ));
+            }
+
+            Ok(())
+        }
+    }
+
+    impl From<NewAbnormality> for operators::Abnormality {
+        fn from(abnormality: NewAbnormality) -> Self {
+            Self {
+                id: -1,
+                summary: abnormality.summary,
+                creation: Local::now(),
+                from_datetime: abnormality.from_datetime,
+                to_datetime: abnormality.to_datetime,
+                content: abnormality.content,
+                mark_resolved: abnormality.mark_resolved,
+                region_ids: abnormality.region_ids,
+                operator_ids: abnormality.operator_ids,
+                route_ids: abnormality.route_ids,
+                stop_ids: abnormality.stop_ids,
+            }
+        }
+    }
+
     #[derive(Debug, Deserialize)]
-    pub struct ChangeAbnormally {
+    pub struct ChangeAbnormality {
         pub summary: String,
-        pub message: String,
         pub from_datetime: Option<DateTime<Local>>,
         pub to_datetime: Option<DateTime<Local>>,
-        pub geojson: Option<JsonValue>,
+        pub content: RichContent,
         pub mark_resolved: bool,
+        pub region_ids: Vec<i32>,
         pub operator_ids: Vec<i32>,
         pub route_ids: Vec<i32>,
         pub stop_ids: Vec<i32>,
+    }
+
+    impl ChangeAbnormality {
+        pub(crate) fn validate(&self) -> Result<(), Error> {
+            let trimmed_summary = self.summary.trim();
+            if trimmed_summary.is_empty() {
+                return Err(Error::ValidationFailure(
+                    "Empty summary".to_string(),
+                ));
+            }
+
+            if trimmed_summary.len() < 10 {
+                return Err(Error::ValidationFailure(
+                    "Summary too small".to_string(),
+                ));
+            }
+
+            Ok(())
+        }
+        pub fn derive_patch(
+            &self,
+            abnormality: &operators::Abnormality,
+        ) -> history::operators::AbnormalityPatch {
+            let mut patch = history::operators::AbnormalityPatch::default();
+
+            if self.summary != abnormality.summary {
+                patch.summary = Some(self.summary.clone());
+            }
+            if self.from_datetime != abnormality.from_datetime {
+                patch.from_datetime = self.from_datetime;
+            }
+            if self.to_datetime != abnormality.to_datetime {
+                patch.to_datetime = self.to_datetime;
+            }
+            if self.content != abnormality.content {
+                patch.content = Some(self.content.clone());
+            }
+            if self.operator_ids != abnormality.operator_ids {
+                patch.operator_ids = Some(self.operator_ids.clone());
+            }
+            if self.route_ids != abnormality.route_ids {
+                patch.route_ids = Some(self.route_ids.clone());
+            }
+            if self.stop_ids != abnormality.stop_ids {
+                patch.stop_ids = Some(self.stop_ids.clone());
+            }
+
+            patch
+        }
     }
 }

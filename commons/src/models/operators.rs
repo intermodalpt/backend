@@ -1,6 +1,6 @@
 /*
     Intermodal, transportation information aggregator
-    Copyright (C) 2023  Cláudio Pereira
+    Copyright (C) 2023 - 2024 Cláudio Pereira
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -65,30 +65,18 @@ pub struct OperatorVehicle {
 
 // Abnormalities are temporary changes to the network
 // such as temporary detours
-pub struct Abnormally {
+pub struct Abnormality {
     pub id: i32,
     pub summary: String,
-    pub message: String,
     pub creation: DateTime<Local>,
     pub from_datetime: Option<DateTime<Local>>,
     pub to_datetime: Option<DateTime<Local>>,
     pub content: RichContent,
     pub mark_resolved: bool,
-}
-
-pub struct AbnormallyOperator {
-    pub abnormally_id: i32,
-    pub operator_id: i32,
-}
-
-pub struct AbnormallyRoute {
-    pub abnormally_id: i32,
-    pub route_id: i32,
-}
-
-pub struct AbnormallyStop {
-    pub abnormally_id: i32,
-    pub stop_id: i32,
+    pub region_ids: Vec<i32>,
+    pub operator_ids: Vec<i32>,
+    pub route_ids: Vec<i32>,
+    pub stop_ids: Vec<i32>,
 }
 
 // Issues are problems raised by the community in a

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT routes.id, routes.code, routes.name, routes.operator as operator_id, routes.circular, \n    COALESCE(routes.badge_text_color, route_types.badge_text_color) as \"badge_text!: String\",\n    COALESCE(routes.badge_bg_color, route_types.badge_bg_color) as \"badge_bg!: String\"\nFROM routes\nJOIN issue_routes on routes.id = issue_routes.route_id\nJOIN route_types on routes.type = route_types.id\nWHERE issue_routes.issue_id = $1\n",
+  "query": "\nSELECT routes.id, routes.code, routes.name, routes.operator as operator_id, routes.circular,\n    COALESCE(routes.badge_text_color, route_types.badge_text_color) as \"badge_text!: String\",\n    COALESCE(routes.badge_bg_color, route_types.badge_bg_color) as \"badge_bg!: String\"\nFROM routes\nJOIN abnormality_routes on routes.id = abnormality_routes.route_id\nJOIN abnormality_regions on abnormality_routes.abnormality_id = abnormality_regions.abnormality_id\nJOIN route_types on routes.type = route_types.id\nWHERE abnormality_regions.region_id = $1\n",
   "describe": {
     "columns": [
       {
@@ -54,5 +54,5 @@
       null
     ]
   },
-  "hash": "b8962b9cb472903fc00c5e22d93cf48a0f6887ee1bd1d18869145b1138638c8f"
+  "hash": "c34d6d05ee310924f59c2065513d3ffe2242a20325eb3ca6786e224f7e0f610c"
 }

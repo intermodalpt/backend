@@ -1,6 +1,6 @@
 /*
     Intermodal, transportation information aggregator
-    Copyright (C) 2023  Cláudio Pereira
+    Copyright (C) 2023 - 2024  Cláudio Pereira
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -72,64 +72,61 @@ pub struct Reseller {
 
 // Abnormalities are temporary changes to the network
 // such as temporary detours
-pub struct Abnormally {
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Abnormality {
     pub id: i32,
     pub summary: String,
-    pub message: String,
     pub creation: DateTime<Local>,
     pub from_datetime: Option<DateTime<Local>>,
     pub to_datetime: Option<DateTime<Local>>,
     pub content: RichContent,
     pub mark_resolved: bool,
+    pub region_ids: Vec<i32>,
+    pub operator_ids: Vec<i32>,
+    pub route_ids: Vec<i32>,
+    pub stop_ids: Vec<i32>,
 }
 
-impl From<current::Abnormally> for Abnormally {
-    fn from(abnormally: current::Abnormally) -> Self {
+impl From<current::Abnormality> for Abnormality {
+    fn from(abnormality: current::Abnormality) -> Self {
         Self {
-            id: abnormally.id,
-            summary: abnormally.summary,
-            message: abnormally.message,
-            creation: abnormally.creation,
-            from_datetime: abnormally.from_datetime,
-            to_datetime: abnormally.to_datetime,
-            content: abnormally.content,
-            mark_resolved: abnormally.mark_resolved,
+            id: abnormality.id,
+            summary: abnormality.summary,
+            creation: abnormality.creation,
+            from_datetime: abnormality.from_datetime,
+            to_datetime: abnormality.to_datetime,
+            content: abnormality.content,
+            mark_resolved: abnormality.mark_resolved,
+            region_ids: abnormality.region_ids,
+            operator_ids: abnormality.operator_ids,
+            route_ids: abnormality.route_ids,
+            stop_ids: abnormality.stop_ids,
         }
     }
 }
 
-impl TryFrom<Abnormally> for current::Abnormally {
+impl TryFrom<Abnormality> for current::Abnormality {
     type Error = Error;
 
-    fn try_from(abnormally: Abnormally) -> Result<Self, Self::Error> {
+    fn try_from(abnormality: Abnormality) -> Result<Self, Self::Error> {
         Ok(Self {
-            id: abnormally.id,
-            summary: abnormally.summary,
-            message: abnormally.message,
-            creation: abnormally.creation,
-            from_datetime: abnormally.from_datetime,
-            to_datetime: abnormally.to_datetime,
-            content: abnormally.content,
-            mark_resolved: abnormally.mark_resolved,
+            id: abnormality.id,
+            summary: abnormality.summary,
+            creation: abnormality.creation,
+            from_datetime: abnormality.from_datetime,
+            to_datetime: abnormality.to_datetime,
+            content: abnormality.content,
+            mark_resolved: abnormality.mark_resolved,
+            region_ids: abnormality.region_ids,
+            operator_ids: abnormality.operator_ids,
+            route_ids: abnormality.route_ids,
+            stop_ids: abnormality.stop_ids,
         })
     }
 }
 
-pub struct AbnormallyOperator {
-    pub abnormally_id: i32,
-    pub operator_id: i32,
-}
-
-pub struct AbnormallyRoute {
-    pub abnormally_id: i32,
-    pub route_id: i32,
-}
-
-pub struct AbnormallyStop {
-    pub abnormally_id: i32,
-    pub stop_id: i32,
-}
-
+// Issues are problems raised by the community in a
+// moderated fashion, that ensures issue quality and deduplication.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Issue {
     pub id: i32,
@@ -487,6 +484,7 @@ impl IssuePatch {
             && self.pic_ids.is_none()
     }
 
+    // TODO link this
     #[allow(unused)]
     pub fn apply(self, issue: &mut current::Issue) -> Result<(), Error> {
         if let Some(title) = self.title {
@@ -524,6 +522,75 @@ impl IssuePatch {
         }
         if let Some(stop_ids) = self.stop_ids {
             issue.stop_ids = stop_ids;
+        }
+        Ok(())
+    }
+}
+
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
+pub struct AbnormalityPatch {
+    pub summary: Option<String>,
+    pub creation: Option<DateTime<Local>>,
+    pub from_datetime: Option<DateTime<Local>>,
+    pub to_datetime: Option<DateTime<Local>>,
+    pub content: Option<RichContent>,
+    pub mark_resolved: Option<bool>,
+    pub region_ids: Option<Vec<i32>>,
+    pub operator_ids: Option<Vec<i32>>,
+    pub route_ids: Option<Vec<i32>>,
+    pub stop_ids: Option<Vec<i32>>,
+}
+
+impl AbnormalityPatch {
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.summary.is_none()
+            && self.creation.is_none()
+            && self.from_datetime.is_none()
+            && self.to_datetime.is_none()
+            && self.content.is_none()
+            && self.mark_resolved.is_none()
+            && self.region_ids.is_none()
+            && self.operator_ids.is_none()
+            && self.route_ids.is_none()
+            && self.stop_ids.is_none()
+    }
+
+    // TODO link this
+    #[allow(unused)]
+    pub fn apply(
+        self,
+        abnormality: &mut current::Abnormality,
+    ) -> Result<(), Error> {
+        if let Some(summary) = self.summary {
+            abnormality.summary = summary;
+        }
+        if let Some(creation) = self.creation {
+            abnormality.creation = creation;
+        }
+        if let Some(from_datetime) = self.from_datetime {
+            abnormality.from_datetime = Some(from_datetime);
+        }
+        if let Some(to_datetime) = self.to_datetime {
+            abnormality.to_datetime = Some(to_datetime);
+        }
+        if let Some(content) = self.content {
+            abnormality.content = content;
+        }
+        if let Some(mark_resolved) = self.mark_resolved {
+            abnormality.mark_resolved = mark_resolved;
+        }
+        if let Some(region_ids) = self.region_ids {
+            abnormality.region_ids = region_ids;
+        }
+        if let Some(operator_ids) = self.operator_ids {
+            abnormality.operator_ids = operator_ids;
+        }
+        if let Some(route_ids) = self.route_ids {
+            abnormality.route_ids = route_ids;
+        }
+        if let Some(stop_ids) = self.stop_ids {
+            abnormality.stop_ids = stop_ids;
         }
         Ok(())
     }

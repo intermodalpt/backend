@@ -1,0 +1,58 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT routes.id, routes.code, routes.name, routes.operator as operator_id, routes.circular,\n    COALESCE(routes.badge_text_color, route_types.badge_text_color) as \"badge_text!: String\",\n    COALESCE(routes.badge_bg_color, route_types.badge_bg_color) as \"badge_bg!: String\"\nFROM routes\nJOIN abnormality_routes on routes.id = abnormality_routes.route_id\nJOIN abnormality_operators on abnormality_routes.abnormality_id = abnormality_operators.abnormality_id\nJOIN route_types on routes.type = route_types.id\nWHERE abnormality_operators.operator_id = $1\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "code",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "operator_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "circular",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 5,
+        "name": "badge_text!: String",
+        "type_info": "Bpchar"
+      },
+      {
+        "ordinal": 6,
+        "name": "badge_bg!: String",
+        "type_info": "Bpchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      false,
+      false,
+      null,
+      null
+    ]
+  },
+  "hash": "ebcfd56c4d729bc0a9ff7fe0d1e7154e5b395342899b5e7335c18f629bc75a3b"
+}

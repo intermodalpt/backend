@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM abnormality_operators WHERE abnormality_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "4bb4e3e9d5b252a5ee7de2399ea486886ea777beae4d0661c9323330faf17c18"
+}

@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO abnormality_routes (route_id, abnormality_id) VALUES ($1, $2)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3f741586ad330c9a3c5c4f5d0a351e160f59d25bc3eee72c0bd0ecee4ac1169e"
+}

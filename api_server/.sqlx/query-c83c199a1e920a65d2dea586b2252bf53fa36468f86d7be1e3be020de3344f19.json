@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT id, name\nFROM regions\nJOIN issue_regions ON issue_regions.region_id=regions.id\nWHERE issue_regions.issue_id IN (\n    SELECT region_id\n    FROM issue_regions\n    WHERE issue_id = $1\n)",
+  "query": "\nSELECT DISTINCT id, name\nFROM regions\nJOIN abnormality_regions ON abnormality_regions.region_id=regions.id\nWHERE abnormality_regions.abnormality_id IN (\n    SELECT abnormality_id\n    FROM abnormality_regions\n    WHERE region_id = $1\n)",
   "describe": {
     "columns": [
       {
@@ -24,5 +24,5 @@
       false
     ]
   },
-  "hash": "817cb0d6c8da6d4d539d7c086fc43b738e5ddd30548be83b70f33164b39dd446"
+  "hash": "c83c199a1e920a65d2dea586b2252bf53fa36468f86d7be1e3be020de3344f19"
 }

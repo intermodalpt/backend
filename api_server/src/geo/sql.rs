@@ -352,13 +352,61 @@ pub(crate) async fn fetch_region_issue_regions(
     sqlx::query_as!(
         responses::SimpleRegion,
         r#"
-SELECT id, name
+SELECT DISTINCT id, name
 FROM regions
 JOIN issue_regions ON issue_regions.region_id=regions.id
 WHERE issue_regions.issue_id IN (
-    SELECT region_id
+    SELECT issue_id
     FROM issue_regions
-    WHERE issue_id = $1
+    WHERE region_id = $1
+)"#,
+        region_id
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), region_id);
+        Error::DatabaseExecution
+    })
+}
+
+pub(crate) async fn fetch_abnormality_regions(
+    pool: &PgPool,
+    abnormality_id: i32,
+) -> Result<Vec<responses::SimpleRegion>> {
+    sqlx::query_as!(
+        responses::SimpleRegion,
+        r#"
+SELECT id, name
+FROM regions
+WHERE id IN (
+    SELECT region_id FROM issue_regions WHERE issue_id=$1
+)
+"#,
+        abnormality_id
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), abnormality_id);
+        Error::DatabaseExecution
+    })
+}
+
+pub(crate) async fn fetch_region_abnormalities_regions(
+    pool: &PgPool,
+    region_id: i32,
+) -> Result<Vec<responses::SimpleRegion>> {
+    sqlx::query_as!(
+        responses::SimpleRegion,
+        r#"
+SELECT DISTINCT id, name
+FROM regions
+JOIN abnormality_regions ON abnormality_regions.region_id=regions.id
+WHERE abnormality_regions.abnormality_id IN (
+    SELECT abnormality_id
+    FROM abnormality_regions
+    WHERE region_id = $1
 )"#,
         region_id
     )

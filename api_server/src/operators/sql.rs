@@ -502,196 +502,6 @@ WHERE operator = $1 AND id = $2
     Ok(())
 }
 
-pub(crate) async fn fetch_operator_issues(
-    pool: &PgPool,
-    operator_id: i32,
-) -> Result<Vec<operators::Issue>> {
-    sqlx::query!(
-        r#"
-SELECT issues.id, issues.title,
-    issues.content as "content!: sqlx::types::Json<RichContent>",
-    issues.category, issues.lat, issues.creation, issues.lon, issues.impact,
-    issues.state, issues.state_justification,
-    array_remove(array_agg(distinct issue_regions.region_id), NULL) as "regions!: Vec<i32>",
-    array_remove(array_agg(distinct issue_operators.operator_id), NULL) as "operators!: Vec<i32>",
-    array_remove(array_agg(distinct issue_routes.route_id), NULL) as "routes!: Vec<i32>",
-    array_remove(array_agg(distinct issue_stops.stop_id), NULL) as "stops!: Vec<i32>"
-FROM issues
-JOIN issue_operators on issue_operators.issue_id = issues.id
-LEFT JOIN issue_regions on issue_regions.issue_id = issues.id
-LEFT JOIN issue_routes on issue_routes.issue_id = issues.id
-LEFT JOIN issue_stops on issue_stops.issue_id = issues.id
-WHERE issue_operators.operator_id = $1
-GROUP BY issues.id
-"#,
-        operator_id
-    )
-    .fetch_all(pool)
-    .await
-    .map_err(|err| {
-        tracing::error!(error = err.to_string());
-        Error::DatabaseExecution
-    })?
-    .into_iter()
-    .map(|row| {
-        Ok(operators::Issue {
-            id: row.id,
-            title: row.title,
-            content: row.content.0,
-            category: serde_json::from_str(&row.category).map_err(|e| {
-                tracing::error!("Error deserializing {e}");
-                Error::DatabaseDeserialization
-            })?,
-            creation: row.creation.into(),
-            state: serde_json::from_str(&row.state).map_err(|e| {
-                tracing::error!("Error deserializing {e}");
-                Error::DatabaseDeserialization
-            })?,
-            state_justification: row.state_justification,
-            lat: row.lat,
-            lon: row.lon,
-            impact: row.impact,
-            region_ids: row.regions,
-            operator_ids: row.operators,
-            route_ids: row.routes,
-            stop_ids: row.stops,
-        })
-    })
-    .collect()
-}
-
-pub(crate) async fn fetch_region_issues(
-    pool: &PgPool,
-    operator_id: i32,
-) -> Result<Vec<operators::Issue>> {
-    sqlx::query!(
-        r#"
-SELECT issues.id, issues.title,
-    issues.content as "content!: sqlx::types::Json<RichContent>",
-    issues.category, issues.lat, issues.creation, issues.lon, issues.impact,
-    issues.state, issues.state_justification,
-    array_remove(array_agg(distinct issue_regions.region_id), NULL) as "regions!: Vec<i32>",
-    array_remove(array_agg(distinct issue_operators.operator_id), NULL) as "operators!: Vec<i32>",
-    array_remove(array_agg(distinct issue_routes.route_id), NULL) as "routes!: Vec<i32>",
-    array_remove(array_agg(distinct issue_stops.stop_id), NULL) as "stops!: Vec<i32>"
-FROM issues
-JOIN issue_regions on issue_regions.issue_id = issues.id
-LEFT JOIN issue_operators on issue_operators.issue_id = issues.id
-LEFT JOIN issue_routes on issue_routes.issue_id = issues.id
-LEFT JOIN issue_stops on issue_stops.issue_id = issues.id
-WHERE issue_operators.operator_id = $1
-GROUP BY issues.id
-"#,
-        operator_id
-    )
-    .fetch_all(pool)
-    .await
-    .map_err(|err| {
-        tracing::error!(error = err.to_string());
-        Error::DatabaseExecution
-    })?
-    .into_iter()
-    .map(|row| {
-        Ok(operators::Issue {
-            id: row.id,
-            title: row.title,
-            content: row.content.0,
-            category: serde_json::from_str(&row.category).map_err(|e| {
-                tracing::error!("Error deserializing {e}");
-                Error::DatabaseDeserialization
-            })?,
-            creation: row.creation.into(),
-            state: serde_json::from_str(&row.state).map_err(|e| {
-                tracing::error!("Error deserializing {e}");
-                Error::DatabaseDeserialization
-            })?,
-            state_justification: row.state_justification,
-            lat: row.lat,
-            lon: row.lon,
-            impact: row.impact,
-            region_ids: row.regions,
-            operator_ids: row.operators,
-            route_ids: row.routes,
-            stop_ids: row.stops,
-        })
-    })
-    .collect()
-}
-
-pub(crate) async fn fetch_operator_issue_operators(
-    pool: &PgPool,
-    operator_id: i32,
-) -> Result<Vec<responses::SimpleOperator>> {
-    sqlx::query_as!(
-        responses::SimpleOperator,
-        r#"
-SELECT operators.id, operators.name, operators.tag
-FROM operators
-JOIN issue_operators on issue_operators.operator_id = operators.id
-WHERE issue_operators.issue_id IN (
-    SELECT issue_id
-    FROM issue_operators
-    WHERE operator_id = $1
-)
-"#,
-        operator_id
-    )
-    .fetch_all(pool)
-    .await
-    .map_err(|err| {
-        tracing::error!(error = err.to_string(), operator_id);
-        Error::DatabaseExecution
-    })
-}
-
-pub(crate) async fn fetch_region_issue_operators(
-    pool: &PgPool,
-    region_id: i32,
-) -> Result<Vec<responses::SimpleOperator>> {
-    sqlx::query_as!(
-        responses::SimpleOperator,
-        r#"
-SELECT operators.id, operators.name, operators.tag
-FROM operators
-JOIN issue_operators on issue_operators.operator_id = operators.id
-WHERE issue_operators.issue_id IN (
-    SELECT issue_id
-    FROM issue_regions
-    WHERE region_id = $1
-)
-"#,
-        region_id
-    )
-    .fetch_all(pool)
-    .await
-    .map_err(|err| {
-        tracing::error!(error = err.to_string(), region_id);
-        Error::DatabaseExecution
-    })
-}
-
-pub(crate) async fn fetch_issue_operators(
-    pool: &PgPool,
-    issue_id: i32,
-) -> Result<Vec<responses::SimpleOperator>> {
-    sqlx::query_as!(
-        responses::SimpleOperator,
-        r#"
-SELECT operators.id, operators.name, operators.tag
-FROM issue_operators
-JOIN operators on issue_operators.operator_id = operators.id
-WHERE issue_operators.issue_id = $1
-"#,
-        issue_id
-    )
-    .fetch_all(pool)
-    .await
-    .map_err(|err| {
-        tracing::error!(error = err.to_string(), issue_id);
-        Error::DatabaseExecution
-    })
-}
-
 pub(crate) async fn fetch_issue(
     pool: &PgPool,
     issue_id: i32,
@@ -780,91 +590,16 @@ RETURNING id
 
     let id = row.id;
 
-    for region_id in &issue.region_ids {
-        sqlx::query!(
-            "INSERT INTO issue_regions (region_id, issue_id) VALUES ($1, $2)",
-            region_id,
-            id
-        )
-        .execute(&mut **transaction)
-        .await
-        .map_err(|err| {
-            tracing::error!(error = err.to_string(), region_id, id);
-            Error::DatabaseExecution
-        })?;
-    }
-
-    for operator_id in &issue.operator_ids {
-        sqlx::query!(
-            r#"
-            INSERT INTO issue_operators (operator_id, issue_id)
-            VALUES ($1, $2)
-            "#,
-            operator_id,
-            id
-        )
-        .execute(&mut **transaction)
-        .await
-        .map_err(|err| {
-            tracing::error!(error = err.to_string(), operator_id, id);
-            Error::DatabaseExecution
-        })?;
-    }
-
-    for route_id in &issue.route_ids {
-        sqlx::query!(
-            r#"
-            INSERT INTO issue_routes (route_id, issue_id)
-            VALUES ($1, $2)
-            "#,
-            route_id,
-            id
-        )
-        .execute(&mut **transaction)
-        .await
-        .map_err(|err| {
-            tracing::error!(
-                error = err.to_string(),
-                route_id = route_id,
-                id = id
-            );
-            Error::DatabaseExecution
-        })?;
-    }
-
-    for stop_id in &issue.stop_ids {
-        sqlx::query!(
-            r#"
-            INSERT INTO issue_stops (stop_id, issue_id)
-            VALUES ($1, $2)
-            "#,
-            stop_id,
-            id
-        )
-        .execute(&mut **transaction)
-        .await
-        .map_err(|err| {
-            tracing::error!(error = err.to_string(), stop_id = stop_id);
-            Error::DatabaseExecution
-        })?;
-    }
-
-    for img_id in issue.content.get_linked_images() {
-        sqlx::query!(
-            r#"
-            INSERT INTO issue_imgs (img_id, issue_id)
-            VALUES ($1, $2)
-            "#,
-            img_id,
-            id
-        )
-        .execute(&mut **transaction)
-        .await
-        .map_err(|err| {
-            tracing::error!(error = err.to_string(), id, img_id = ?img_id);
-            Error::DatabaseExecution
-        })?;
-    }
+    insert_issue_related(
+        transaction,
+        id,
+        &issue.region_ids,
+        &issue.operator_ids,
+        &issue.route_ids,
+        &issue.stop_ids,
+        &issue.content,
+    )
+    .await?;
 
     Ok(id)
 }
@@ -903,7 +638,16 @@ pub(crate) async fn update_issue(
     })?;
 
     delete_issue_related(transaction, issue_id).await?;
-    insert_issue_related(transaction, issue_id, issue).await?;
+    insert_issue_related(
+        transaction,
+        issue_id,
+        &issue.region_ids,
+        &issue.operator_ids,
+        &issue.route_ids,
+        &issue.stop_ids,
+        &issue.content,
+    )
+    .await?;
 
     Ok(())
 }
@@ -911,9 +655,27 @@ pub(crate) async fn update_issue(
 async fn insert_issue_related(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     issue_id: i32,
-    issue: &requests::ChangeIssue,
+    region_ids: &[i32],
+    operator_ids: &[i32],
+    route_ids: &[i32],
+    stop_ids: &[i32],
+    content: &RichContent,
 ) -> Result<()> {
-    for operator_id in &issue.operator_ids {
+    for region_id in region_ids {
+        sqlx::query!(
+            "INSERT INTO issue_regions (region_id, issue_id) VALUES ($1, $2)",
+            region_id,
+            issue_id
+        )
+        .execute(&mut **transaction)
+        .await
+        .map_err(|err| {
+            tracing::error!(error = err.to_string(), region_id, issue_id);
+            Error::DatabaseExecution
+        })?;
+    }
+
+    for operator_id in operator_ids {
         sqlx::query!(
             r#"
             INSERT INTO issue_operators (operator_id, issue_id)
@@ -930,7 +692,7 @@ async fn insert_issue_related(
         })?;
     }
 
-    for route_id in &issue.route_ids {
+    for route_id in route_ids {
         sqlx::query!(
             "INSERT INTO issue_routes (route_id, issue_id) VALUES ($1, $2)",
             route_id,
@@ -948,7 +710,7 @@ async fn insert_issue_related(
         })?;
     }
 
-    for stop_id in &issue.stop_ids {
+    for stop_id in stop_ids {
         sqlx::query!(
             "INSERT INTO issue_stops (stop_id, issue_id) VALUES ($1, $2)",
             stop_id,
@@ -966,7 +728,7 @@ async fn insert_issue_related(
         })?;
     }
 
-    for img_id in issue.content.get_linked_images() {
+    for img_id in content.get_linked_images() {
         sqlx::query!(
             "INSERT INTO issue_imgs (img_id, issue_id) VALUES ($1, $2)",
             img_id,
@@ -978,7 +740,7 @@ async fn insert_issue_related(
             tracing::error!(
                 error = err.to_string(),
                 img_id = ?img_id,
-                issue_id = issue_id
+                issue_id
             );
             Error::DatabaseExecution
         })?;
@@ -1024,6 +786,686 @@ async fn delete_issue_related(
         })?;
 
     Ok(())
+}
+
+pub(crate) async fn fetch_operator_issues(
+    pool: &PgPool,
+    operator_id: i32,
+) -> Result<Vec<operators::Issue>> {
+    sqlx::query!(
+        r#"
+SELECT issues.id, issues.title,
+    issues.content as "content!: sqlx::types::Json<RichContent>",
+    issues.category, issues.lat, issues.creation, issues.lon, issues.impact,
+    issues.state, issues.state_justification,
+    array_remove(array_agg(distinct issue_regions.region_id), NULL) as "regions!: Vec<i32>",
+    array_remove(array_agg(distinct issue_operators.operator_id), NULL) as "operators!: Vec<i32>",
+    array_remove(array_agg(distinct issue_routes.route_id), NULL) as "routes!: Vec<i32>",
+    array_remove(array_agg(distinct issue_stops.stop_id), NULL) as "stops!: Vec<i32>"
+FROM issues
+JOIN issue_operators on issue_operators.issue_id = issues.id
+LEFT JOIN issue_regions on issue_regions.issue_id = issues.id
+LEFT JOIN issue_routes on issue_routes.issue_id = issues.id
+LEFT JOIN issue_stops on issue_stops.issue_id = issues.id
+WHERE issue_operators.operator_id = $1
+GROUP BY issues.id
+"#,
+        operator_id
+    )
+        .fetch_all(pool)
+        .await
+        .map_err(|err| {
+            tracing::error!(error = err.to_string());
+            Error::DatabaseExecution
+        })?
+        .into_iter()
+        .map(|row| {
+            Ok(operators::Issue {
+                id: row.id,
+                title: row.title,
+                content: row.content.0,
+                category: serde_json::from_str(&row.category).map_err(|e| {
+                    tracing::error!("Error deserializing {e}");
+                    Error::DatabaseDeserialization
+                })?,
+                creation: row.creation.into(),
+                state: serde_json::from_str(&row.state).map_err(|e| {
+                    tracing::error!("Error deserializing {e}");
+                    Error::DatabaseDeserialization
+                })?,
+                state_justification: row.state_justification,
+                lat: row.lat,
+                lon: row.lon,
+                impact: row.impact,
+                region_ids: row.regions,
+                operator_ids: row.operators,
+                route_ids: row.routes,
+                stop_ids: row.stops,
+            })
+        })
+        .collect()
+}
+
+pub(crate) async fn fetch_region_issues(
+    pool: &PgPool,
+    operator_id: i32,
+) -> Result<Vec<operators::Issue>> {
+    sqlx::query!(
+        r#"
+SELECT issues.id, issues.title,
+    issues.content as "content!: sqlx::types::Json<RichContent>",
+    issues.category, issues.lat, issues.creation, issues.lon, issues.impact,
+    issues.state, issues.state_justification,
+    array_remove(array_agg(distinct issue_regions.region_id), NULL) as "regions!: Vec<i32>",
+    array_remove(array_agg(distinct issue_operators.operator_id), NULL) as "operators!: Vec<i32>",
+    array_remove(array_agg(distinct issue_routes.route_id), NULL) as "routes!: Vec<i32>",
+    array_remove(array_agg(distinct issue_stops.stop_id), NULL) as "stops!: Vec<i32>"
+FROM issues
+JOIN issue_regions on issue_regions.issue_id = issues.id
+LEFT JOIN issue_operators on issue_operators.issue_id = issues.id
+LEFT JOIN issue_routes on issue_routes.issue_id = issues.id
+LEFT JOIN issue_stops on issue_stops.issue_id = issues.id
+WHERE issue_operators.operator_id = $1
+GROUP BY issues.id
+"#,
+        operator_id
+    )
+        .fetch_all(pool)
+        .await
+        .map_err(|err| {
+            tracing::error!(error = err.to_string());
+            Error::DatabaseExecution
+        })?
+        .into_iter()
+        .map(|row| {
+            Ok(operators::Issue {
+                id: row.id,
+                title: row.title,
+                content: row.content.0,
+                category: serde_json::from_str(&row.category).map_err(|e| {
+                    tracing::error!("Error deserializing {e}");
+                    Error::DatabaseDeserialization
+                })?,
+                creation: row.creation.into(),
+                state: serde_json::from_str(&row.state).map_err(|e| {
+                    tracing::error!("Error deserializing {e}");
+                    Error::DatabaseDeserialization
+                })?,
+                state_justification: row.state_justification,
+                lat: row.lat,
+                lon: row.lon,
+                impact: row.impact,
+                region_ids: row.regions,
+                operator_ids: row.operators,
+                route_ids: row.routes,
+                stop_ids: row.stops,
+            })
+        })
+        .collect()
+}
+
+pub(crate) async fn fetch_operator_issue_operators(
+    pool: &PgPool,
+    operator_id: i32,
+) -> Result<Vec<responses::SimpleOperator>> {
+    sqlx::query_as!(
+        responses::SimpleOperator,
+        r#"
+SELECT operators.id, operators.name, operators.tag
+FROM operators
+JOIN issue_operators on issue_operators.operator_id = operators.id
+WHERE issue_operators.issue_id IN (
+    SELECT issue_id
+    FROM issue_operators
+    WHERE operator_id = $1
+)
+"#,
+        operator_id
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), operator_id);
+        Error::DatabaseExecution
+    })
+}
+
+pub(crate) async fn fetch_region_issue_operators(
+    pool: &PgPool,
+    region_id: i32,
+) -> Result<Vec<responses::SimpleOperator>> {
+    sqlx::query_as!(
+        responses::SimpleOperator,
+        r#"
+SELECT operators.id, operators.name, operators.tag
+FROM operators
+JOIN issue_operators on issue_operators.operator_id = operators.id
+WHERE issue_operators.issue_id IN (
+    SELECT issue_id
+    FROM issue_regions
+    WHERE region_id = $1
+)
+"#,
+        region_id
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), region_id);
+        Error::DatabaseExecution
+    })
+}
+
+pub(crate) async fn fetch_issue_operators(
+    pool: &PgPool,
+    issue_id: i32,
+) -> Result<Vec<responses::SimpleOperator>> {
+    sqlx::query_as!(
+        responses::SimpleOperator,
+        r#"
+SELECT operators.id, operators.name, operators.tag
+FROM issue_operators
+JOIN operators on issue_operators.operator_id = operators.id
+WHERE issue_operators.issue_id = $1
+"#,
+        issue_id
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), issue_id);
+        Error::DatabaseExecution
+    })
+}
+
+pub(crate) async fn fetch_abnormality(
+    pool: &PgPool,
+    abnormality_id: i32,
+) -> Result<Option<operators::Abnormality>> {
+    sqlx::query!(
+        r#"
+SELECT abnormalities.id, abnormalities.summary, abnormalities.creation,
+    abnormalities.from_datetime, abnormalities.to_datetime,
+    abnormalities.content as "content!: sqlx::types::Json<RichContent>",
+    abnormalities.mark_resolved,
+    array_remove(array_agg(distinct abnormality_regions.region_id), NULL) as "regions!: Vec<i32>",
+    array_remove(array_agg(distinct abnormality_operators.operator_id), NULL) as "operators!: Vec<i32>",
+    array_remove(array_agg(distinct abnormality_routes.route_id), NULL) as "routes!: Vec<i32>",
+    array_remove(array_agg(distinct abnormality_stops.stop_id), NULL) as "stops!: Vec<i32>"
+FROM abnormalities
+LEFT JOIN abnormality_regions on abnormality_regions.abnormality_id = abnormalities.id
+LEFT JOIN abnormality_operators on abnormality_operators.abnormality_id = abnormalities.id
+LEFT JOIN abnormality_routes on abnormality_routes.abnormality_id = abnormalities.id
+LEFT JOIN abnormality_stops on abnormality_stops.abnormality_id = abnormalities.id
+WHERE abnormalities.id = $1
+GROUP BY abnormalities.id"#,
+        abnormality_id
+    )
+        .fetch_optional(pool)
+        .await
+        .map_err(|err| {
+            tracing::error!(error = err.to_string(), abnormality_id = abnormality_id);
+            Error::DatabaseExecution
+        }).and_then(|res|
+        res.map(|row| Ok(operators::Abnormality {
+            id: row.id,
+            summary: row.summary,
+            content: row.content.0,
+            creation: row.creation.into(),
+            from_datetime: row.from_datetime.map(Into::into),
+            to_datetime: row.to_datetime.map(Into::into),
+            mark_resolved: row.mark_resolved,
+            region_ids: row.regions,
+            operator_ids: row.operators,
+            route_ids: row.routes,
+            stop_ids: row.stops,
+        }))
+            .transpose()
+    )
+}
+
+pub(crate) async fn insert_abnormality(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    abnormality: &requests::NewAbnormality,
+) -> Result<i32> {
+    let creation = Local::now();
+
+    let row = sqlx::query!(
+        r#"
+INSERT INTO abnormalities (summary, creation, from_datetime, to_datetime, content, mark_resolved)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING id
+"#,
+        abnormality.summary,
+        creation,
+        abnormality.from_datetime,
+        abnormality.to_datetime,
+        Json(&abnormality.content) as _,
+        abnormality.mark_resolved
+    )
+        .fetch_one(&mut **transaction)
+        .await
+        .map_err(|err| {
+            tracing::error!(
+            error=err.to_string(),
+            issue=?abnormality,
+            creation=?creation
+        );
+            Error::DatabaseExecution
+        })?;
+
+    let id = row.id;
+
+    insert_abnormality_related(
+        transaction,
+        id,
+        &abnormality.region_ids,
+        &abnormality.operator_ids,
+        &abnormality.route_ids,
+        &abnormality.stop_ids,
+        &abnormality.content,
+    )
+    .await?;
+
+    Ok(id)
+}
+
+pub(crate) async fn update_abnormality(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    abnormality_id: i32,
+    abnormality: &requests::ChangeAbnormality,
+) -> Result<()> {
+    sqlx::query!(
+        r#"
+        UPDATE abnormalities
+        SET summary = $1,
+            from_datetime = $2,
+            to_datetime = $3,
+            content = $4,
+            mark_resolved = $5
+        WHERE id = $6
+        "#,
+        abnormality.summary,
+        abnormality.from_datetime,
+        abnormality.to_datetime,
+        Json(&abnormality.content) as _,
+        abnormality.mark_resolved,
+        abnormality_id
+    )
+        .execute(&mut **transaction)
+        .await
+        .map_err(|err| {
+            tracing::error!(error = err.to_string(), abnormality_id=abnormality_id, abnormality = ?abnormality);
+            Error::DatabaseExecution
+        })?;
+
+    delete_abnormality_related(transaction, abnormality_id).await?;
+    insert_abnormality_related(
+        transaction,
+        abnormality_id,
+        &abnormality.region_ids,
+        &abnormality.operator_ids,
+        &abnormality.route_ids,
+        &abnormality.stop_ids,
+        &abnormality.content,
+    )
+    .await?;
+
+    Ok(())
+}
+
+async fn insert_abnormality_related(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    abnormality_id: i32,
+    region_ids: &[i32],
+    operator_ids: &[i32],
+    route_ids: &[i32],
+    stop_ids: &[i32],
+    content: &RichContent,
+) -> Result<()> {
+    for operator_id in operator_ids {
+        sqlx::query!(
+            r#"
+            INSERT INTO abnormality_operators (operator_id, abnormality_id)
+            VALUES ($1, $2)
+            "#,
+            operator_id,
+            abnormality_id
+        )
+        .execute(&mut **transaction)
+        .await
+        .map_err(|err| {
+            tracing::error!(
+                error = err.to_string(),
+                operator_id,
+                abnormality_id
+            );
+            Error::DatabaseExecution
+        })?;
+    }
+
+    for route_id in route_ids {
+        sqlx::query!(
+            "INSERT INTO abnormality_routes (route_id, abnormality_id) VALUES ($1, $2)",
+            route_id,
+            abnormality_id
+        )
+            .execute(&mut **transaction)
+            .await
+            .map_err(|err| {
+                tracing::error!(
+                error = err.to_string(),
+                route_id = route_id,
+                abnormality_id = abnormality_id
+            );
+                Error::DatabaseExecution
+            })?;
+    }
+
+    for stop_id in stop_ids {
+        sqlx::query!(
+            "INSERT INTO abnormality_stops (stop_id, abnormality_id) VALUES ($1, $2)",
+            stop_id,
+            abnormality_id
+        )
+            .execute(&mut **transaction)
+            .await
+            .map_err(|err| {
+                tracing::error!(
+                error = err.to_string(),
+                stop_id = stop_id,
+                abnormality_id = abnormality_id
+            );
+                Error::DatabaseExecution
+            })?;
+    }
+
+    for region_id in region_ids {
+        sqlx::query!(
+            "INSERT INTO abnormality_regions (region_id, abnormality_id) VALUES ($1, $2)",
+            region_id,
+            abnormality_id
+        )
+            .execute(&mut **transaction)
+            .await
+            .map_err(|err| {
+                tracing::error!(
+                    error = err.to_string(),
+                    region_id = region_id,
+                    abnormality_id = abnormality_id
+                );
+                Error::DatabaseExecution
+            })?;
+    }
+
+    for img_id in content.get_linked_images() {
+        sqlx::query!(
+            "INSERT INTO abnormality_imgs (img_id, abnormality_id) VALUES ($1, $2)",
+            img_id,
+            abnormality_id
+        )
+            .execute(&mut **transaction)
+            .await
+            .map_err(|err| {
+                tracing::error!(
+                error = err.to_string(),
+                img_id = ?img_id,
+                abnormality_id = abnormality_id
+            );
+                Error::DatabaseExecution
+            })?;
+    }
+
+    Ok(())
+}
+
+async fn delete_abnormality_related(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    abnormality_id: i32,
+) -> Result<()> {
+    sqlx::query!(
+        "DELETE FROM abnormality_operators WHERE abnormality_id = $1",
+        abnormality_id
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| {
+        tracing::error!(
+            error = err.to_string(),
+            abnormality_id = abnormality_id
+        );
+        Error::DatabaseExecution
+    })?;
+
+    sqlx::query!(
+        "DELETE FROM abnormality_routes WHERE abnormality_id = $1",
+        abnormality_id
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| {
+        tracing::error!(
+            error = err.to_string(),
+            abnormality_id = abnormality_id
+        );
+        Error::DatabaseExecution
+    })?;
+
+    sqlx::query!(
+        "DELETE FROM abnormality_stops WHERE abnormality_id = $1",
+        abnormality_id
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| {
+        tracing::error!(
+            error = err.to_string(),
+            abnormality_id = abnormality_id
+        );
+        Error::DatabaseExecution
+    })?;
+
+    sqlx::query!(
+        "DELETE FROM abnormality_regions WHERE abnormality_id = $1",
+        abnormality_id
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| {
+        tracing::error!(
+            error = err.to_string(),
+            abnormality_id = abnormality_id
+        );
+        Error::DatabaseExecution
+    })?;
+
+    sqlx::query!(
+        "DELETE FROM abnormality_imgs WHERE abnormality_id = $1",
+        abnormality_id
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| {
+        tracing::error!(
+            error = err.to_string(),
+            abnormality_id = abnormality_id
+        );
+        Error::DatabaseExecution
+    })?;
+
+    Ok(())
+}
+
+pub(crate) async fn fetch_operator_abnormalities(
+    pool: &PgPool,
+    operator_id: i32,
+) -> Result<Vec<operators::Abnormality>> {
+    sqlx::query!(
+        r#"
+SELECT abnormalities.id, abnormalities.summary, abnormalities.creation,
+    abnormalities.from_datetime, abnormalities.to_datetime,
+    abnormalities.content as "content!: sqlx::types::Json<RichContent>",
+    abnormalities.mark_resolved,
+    array_remove(array_agg(distinct abnormality_regions.region_id), NULL) as "regions!: Vec<i32>",
+    array_remove(array_agg(distinct abnormality_operators.operator_id), NULL) as "operators!: Vec<i32>",
+    array_remove(array_agg(distinct abnormality_routes.route_id), NULL) as "routes!: Vec<i32>",
+    array_remove(array_agg(distinct abnormality_stops.stop_id), NULL) as "stops!: Vec<i32>"
+FROM abnormalities
+JOIN abnormality_operators on abnormality_operators.abnormality_id = abnormalities.id
+LEFT JOIN abnormality_regions on abnormality_regions.abnormality_id = abnormalities.id
+LEFT JOIN abnormality_routes on abnormality_routes.abnormality_id = abnormalities.id
+LEFT JOIN abnormality_stops on abnormality_stops.abnormality_id = abnormalities.id
+WHERE abnormality_operators.operator_id = $1
+GROUP BY abnormalities.id
+"#,
+        operator_id
+    )
+        .fetch_all(pool)
+        .await
+        .map_err(|err| {
+            tracing::error!(error = err.to_string());
+            Error::DatabaseExecution
+        })?
+        .into_iter()
+        .map(|row| {
+            Ok(operators::Abnormality {
+                id: row.id,
+                summary: row.summary,
+                content: row.content.0,
+                creation: row.creation.into(),
+                from_datetime: row.from_datetime.map(Into::into),
+                to_datetime: row.to_datetime.map(Into::into),
+                mark_resolved: row.mark_resolved,
+                region_ids: row.regions,
+                operator_ids: row.operators,
+                route_ids: row.routes,
+                stop_ids: row.stops,
+            })
+        })
+        .collect()
+}
+
+pub(crate) async fn fetch_region_abnormalities(
+    pool: &PgPool,
+    operator_id: i32,
+) -> Result<Vec<operators::Abnormality>> {
+    sqlx::query!(
+        r#"
+SELECT abnormalities.id, abnormalities.summary, abnormalities.creation,
+    abnormalities.from_datetime, abnormalities.to_datetime,
+    abnormalities.content as "content!: sqlx::types::Json<RichContent>",
+    abnormalities.mark_resolved,
+    array_remove(array_agg(distinct abnormality_regions.region_id), NULL) as "regions!: Vec<i32>",
+    array_remove(array_agg(distinct abnormality_operators.operator_id), NULL) as "operators!: Vec<i32>",
+    array_remove(array_agg(distinct abnormality_routes.route_id), NULL) as "routes!: Vec<i32>",
+    array_remove(array_agg(distinct abnormality_stops.stop_id), NULL) as "stops!: Vec<i32>"
+FROM abnormalities
+JOIN abnormality_regions on abnormality_regions.abnormality_id = abnormalities.id
+LEFT JOIN abnormality_operators on abnormality_operators.abnormality_id = abnormalities.id
+LEFT JOIN abnormality_routes on abnormality_routes.abnormality_id = abnormalities.id
+LEFT JOIN abnormality_stops on abnormality_stops.abnormality_id = abnormalities.id
+WHERE abnormality_operators.operator_id = $1
+GROUP BY abnormalities.id
+"#,
+        operator_id
+    )
+        .fetch_all(pool)
+        .await
+        .map_err(|err| {
+            tracing::error!(error = err.to_string());
+            Error::DatabaseExecution
+        })?
+        .into_iter()
+        .map(|row| {
+            Ok(operators::Abnormality {
+                id: row.id,
+                summary: row.summary,
+                content: row.content.0,
+                creation: row.creation.into(),
+                from_datetime: row.from_datetime.map(Into::into),
+                to_datetime: row.to_datetime.map(Into::into),
+                mark_resolved: row.mark_resolved,
+                region_ids: row.regions,
+                operator_ids: row.operators,
+                route_ids: row.routes,
+                stop_ids: row.stops,
+            })
+        })
+        .collect()
+}
+
+pub(crate) async fn fetch_operator_abnormalities_operators(
+    pool: &PgPool,
+    operator_id: i32,
+) -> Result<Vec<responses::SimpleOperator>> {
+    sqlx::query_as!(
+        responses::SimpleOperator,
+        r#"
+SELECT operators.id, operators.name, operators.tag
+FROM operators
+JOIN abnormality_operators on abnormality_operators.operator_id = operators.id
+WHERE abnormality_operators.abnormality_id IN (
+    SELECT abnormality_id
+    FROM abnormality_operators
+    WHERE operator_id = $1
+)
+"#,
+        operator_id
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), operator_id);
+        Error::DatabaseExecution
+    })
+}
+
+pub(crate) async fn fetch_region_abnormalities_operators(
+    pool: &PgPool,
+    region_id: i32,
+) -> Result<Vec<responses::SimpleOperator>> {
+    sqlx::query_as!(
+        responses::SimpleOperator,
+        r#"
+SELECT operators.id, operators.name, operators.tag
+FROM operators
+JOIN abnormality_operators on abnormality_operators.operator_id = operators.id
+WHERE abnormality_operators.abnormality_id IN (
+    SELECT abnormality_id
+    FROM abnormality_regions
+    WHERE region_id = $1
+)
+"#,
+        region_id
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), region_id);
+        Error::DatabaseExecution
+    })
+}
+
+pub(crate) async fn fetch_abnormality_operators(
+    pool: &PgPool,
+    abnormality_id: i32,
+) -> Result<Vec<responses::SimpleOperator>> {
+    sqlx::query_as!(
+        responses::SimpleOperator,
+        r#"
+SELECT operators.id, operators.name, operators.tag
+FROM abnormality_operators
+JOIN operators on abnormality_operators.operator_id = operators.id
+WHERE abnormality_operators.abnormality_id = $1
+"#,
+        abnormality_id
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), abnormality_id);
+        Error::DatabaseExecution
+    })
 }
 
 pub(crate) async fn fetch_calendars(

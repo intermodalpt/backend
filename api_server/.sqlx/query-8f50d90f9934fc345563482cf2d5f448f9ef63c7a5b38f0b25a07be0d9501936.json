@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM abnormality_routes WHERE abnormality_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8f50d90f9934fc345563482cf2d5f448f9ef63c7a5b38f0b25a07be0d9501936"
+}

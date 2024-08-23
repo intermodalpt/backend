@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT operators.id, operators.name, operators.tag\nFROM operators\nJOIN abnormality_operators on abnormality_operators.operator_id = operators.id\nWHERE abnormality_operators.abnormality_id IN (\n    SELECT abnormality_id\n    FROM abnormality_operators\n    WHERE operator_id = $1\n)\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "tag",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "33639604a8b2c03f84e6cac0e7376ad46a0631346d28f5146566744e7057aa55"
+}

@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE abnormalities\n        SET summary = $1,\n            from_datetime = $2,\n            to_datetime = $3,\n            content = $4,\n            mark_resolved = $5\n        WHERE id = $6\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Timestamptz",
+        "Timestamptz",
+        "Jsonb",
+        "Bool",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a5ec8452fc54e27128d35e271a1b4557e1919fbf4b357565ae91ca54b8c76190"
+}

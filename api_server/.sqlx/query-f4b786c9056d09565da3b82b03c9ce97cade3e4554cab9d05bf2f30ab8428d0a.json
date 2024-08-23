@@ -1,0 +1,82 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT abnormalities.id, abnormalities.summary, abnormalities.creation,\n    abnormalities.from_datetime, abnormalities.to_datetime,\n    abnormalities.content as \"content!: sqlx::types::Json<RichContent>\",\n    abnormalities.mark_resolved,\n    array_remove(array_agg(distinct abnormality_regions.region_id), NULL) as \"regions!: Vec<i32>\",\n    array_remove(array_agg(distinct abnormality_operators.operator_id), NULL) as \"operators!: Vec<i32>\",\n    array_remove(array_agg(distinct abnormality_routes.route_id), NULL) as \"routes!: Vec<i32>\",\n    array_remove(array_agg(distinct abnormality_stops.stop_id), NULL) as \"stops!: Vec<i32>\"\nFROM abnormalities\nJOIN abnormality_regions on abnormality_regions.abnormality_id = abnormalities.id\nLEFT JOIN abnormality_operators on abnormality_operators.abnormality_id = abnormalities.id\nLEFT JOIN abnormality_routes on abnormality_routes.abnormality_id = abnormalities.id\nLEFT JOIN abnormality_stops on abnormality_stops.abnormality_id = abnormalities.id\nWHERE abnormality_operators.operator_id = $1\nGROUP BY abnormalities.id\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "summary",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "creation",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 3,
+        "name": "from_datetime",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "to_datetime",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
+        "name": "content!: sqlx::types::Json<RichContent>",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 6,
+        "name": "mark_resolved",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 7,
+        "name": "regions!: Vec<i32>",
+        "type_info": "Int4Array"
+      },
+      {
+        "ordinal": 8,
+        "name": "operators!: Vec<i32>",
+        "type_info": "Int4Array"
+      },
+      {
+        "ordinal": 9,
+        "name": "routes!: Vec<i32>",
+        "type_info": "Int4Array"
+      },
+      {
+        "ordinal": 10,
+        "name": "stops!: Vec<i32>",
+        "type_info": "Int4Array"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "f4b786c9056d09565da3b82b03c9ce97cade3e4554cab9d05bf2f30ab8428d0a"
+}

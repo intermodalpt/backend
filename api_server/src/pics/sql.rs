@@ -1268,7 +1268,28 @@ WHERE issue_id=$1
     .execute(&mut **transaction)
     .await
     .map_err(|err| {
-        tracing::error!(error = err.to_string(), issue_id = ?issue_id);
+        tracing::error!(error = err.to_string(), issue_id);
+        Error::DatabaseExecution
+    })?;
+
+    Ok(())
+}
+
+pub(crate) async fn unlink_rich_images_from_abnormality(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    abnormality_id: i32,
+) -> Result<()> {
+    let _res = sqlx::query!(
+        r#"
+DELETE FROM abnormality_imgs
+WHERE abnormality_id=$1
+        "#,
+        abnormality_id
+    )
+    .execute(&mut **transaction)
+    .await
+    .map_err(|err| {
+        tracing::error!(error = err.to_string(), abnormality_id);
         Error::DatabaseExecution
     })?;
 

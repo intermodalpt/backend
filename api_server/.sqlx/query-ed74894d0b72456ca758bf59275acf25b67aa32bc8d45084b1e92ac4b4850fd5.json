@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM abnormality_regions WHERE abnormality_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ed74894d0b72456ca758bf59275acf25b67aa32bc8d45084b1e92ac4b4850fd5"
+}
