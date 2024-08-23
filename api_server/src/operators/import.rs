@@ -27,14 +27,40 @@ use commons::utils::{gtfs as gtfs_utils, http};
 
 use super::models;
 use crate::errors::Error;
+use crate::settings::SETTINGS;
+
+fn get_data_root() -> PathBuf {
+    let root = SETTINGS.get().unwrap().storage.root.as_str();
+    PathBuf::from(root)
+}
+
+fn get_operators_data_root() -> PathBuf {
+    let mut path = get_data_root();
+    path.push("operators");
+    path
+}
+
+fn get_operator_data_root(operator_id: i32) -> PathBuf {
+    let mut path = get_operators_data_root();
+    path.push(operator_id.to_string());
+    path
+}
+
+fn get_operator_storage_meta_path(operator_id: i32) -> PathBuf {
+    let mut meta_path = get_operator_data_root(operator_id);
+    meta_path.push("meta.json");
+    meta_path
+}
 
 pub(crate) trait OperatorData {
     fn get_id(&self) -> i32;
     fn get_data_root(&self) -> PathBuf {
-        PathBuf::from(format!("./data/operators/{}/", self.get_id()))
+        get_operator_data_root(self.get_id())
     }
     fn get_gtfs_root(&self) -> PathBuf {
-        PathBuf::from(format!("./data/operators/{}/gtfs/", self.get_id()))
+        let mut path = self.get_data_root();
+        path.push("gtfs");
+        path
     }
     fn get_storage_meta(&self) -> Result<OperatorStorageMeta, Error> {
         get_operator_storage_meta(self.get_id())
@@ -61,8 +87,7 @@ pub struct OperatorStorageMeta {
 pub(crate) fn get_operator_storage_meta(
     operator_id: i32,
 ) -> Result<OperatorStorageMeta, Error> {
-    let meta_path =
-        PathBuf::from(format!("./data/operators/{operator_id}/meta.json"));
+    let meta_path = get_operator_storage_meta_path(operator_id);
 
     let meta = if meta_path.exists() {
         let meta: OperatorStorageMeta = serde_json::from_reader(
@@ -82,7 +107,10 @@ pub(crate) fn get_operator_storage_meta(
 
         if let Some(p) = meta_path.parent() {
             if !p.exists() {
-                fs::create_dir_all(p).unwrap();
+                fs::create_dir_all(p).map_err(|err| {
+                    tracing::error!(msg = "Filesystem error", err=?err);
+                    Error::Filesystem
+                })?;
             }
         }
         serde_json::to_writer(
@@ -105,8 +133,7 @@ pub(crate) fn set_operator_storage_meta(
     operator_id: i32,
     meta: &OperatorStorageMeta,
 ) -> Result<(), Error> {
-    let meta_path =
-        PathBuf::from(format!("./data/operators/{operator_id}/meta.json"));
+    let meta_path = get_operator_storage_meta_path(operator_id);
 
     if let Some(p) = meta_path.parent() {
         if !p.exists() {
@@ -143,45 +170,46 @@ pub(crate) async fn update_operator_gtfs(
     let mut meta = get_operator_storage_meta(operator_id)?;
     match operator_tag {
         "cmet" => {
-            let path = format!("./data/operators/{operator_id}/gtfs.zip");
+            let mut zip_path = get_operator_data_root(operator_id);
+            zip_path.push("gtfs.zip");
+            let mut gtfs_path = get_operator_data_root(operator_id);
+            gtfs_path.push("gtfs");
+
             let url = "https://api.carrismetropolitana.pt/gtfs*";
 
-            http::download_file(url, &path, None)
+            http::download_file(url, &zip_path, None)
                 .await
                 .inspect_err(|err| {
                     tracing::error!(
                         msg="Failed to download file",
                         err=?err,
                         url,
-                        path
+                        zip_path = ?zip_path
                     );
                 })?;
 
-            let newest_file = gtfs_utils::extract(
-                &format!("./data/operators/{operator_id}/gtfs.zip"),
-                &format!("./data/operators/{operator_id}/gtfs"),
-            )?;
+            let newest_file = gtfs_utils::extract(&zip_path, &gtfs_path)?;
             meta.last_gtfs = Some(newest_file);
         }
         "carris" => {
-            let path = format!("./data/operators/{operator_id}/gtfs.zip");
+            let mut zip_path = get_operator_data_root(operator_id);
+            zip_path.push("gtfs.zip");
+            let mut gtfs_path = get_operator_data_root(operator_id);
+            gtfs_path.push("gtfs");
             let url = "https://gateway.carris.pt/gateway/gtfs/api/v2.11/GTFS";
 
-            http::download_file(url, &path, None)
+            http::download_file(url, &zip_path, None)
                 .await
                 .inspect_err(|err| {
                     tracing::error!(
                         msg="Failed to download file",
                         err=?err,
                         url,
-                        path
+                        zip_path=?zip_path
                     );
                 })?;
 
-            let newest_file = gtfs_utils::extract(
-                &format!("./data/operators/{operator_id}/gtfs.zip"),
-                &format!("./data/operators/{operator_id}/gtfs"),
-            )?;
+            let newest_file = gtfs_utils::extract(&zip_path, &gtfs_path)?;
             meta.last_gtfs = Some(newest_file);
         }
         "tcb" => {
@@ -200,34 +228,34 @@ pub(crate) async fn update_operator_gtfs(
             fetch_transporlis_feed(&mut meta, operator_id, 13).await?;
         }
         "mobic" => {
-            let path = format!("./data/operators/{operator_id}/gtfs.zip");
+            let mut zip_path = get_operator_data_root(operator_id);
+            zip_path.push("gtfs.zip");
+            let mut gtfs_path = get_operator_data_root(operator_id);
+            gtfs_path.push("gtfs");
             let url = "https://dadosabertos.cascais.pt/\
                 dataset/ddef8977-0ad0-4d23-99d3-ae269a21b589/\
                 resource/819dac57-8843-43a3-a630-9cc7987325c0/\
                 download/gtfs-mobicascais.zip";
 
-            http::download_file(url, &path, None)
+            http::download_file(url, &zip_path, None)
                 .await
                 .inspect_err(|err| {
                     tracing::error!(
                         msg="Failed to download file",
                         err=?err,
                         url,
-                        path
+                        zip_path=?zip_path
                     );
                 })?;
 
-            let newest_file = gtfs_utils::extract(
-                &format!("./data/operators/{operator_id}/gtfs.zip"),
-                &format!("./data/operators/{operator_id}/gtfs"),
-            )
-            .inspect_err(|err| {
-                tracing::error!(
-                    msg="Failure extracting GTFS",
-                    operator_id,
-                    err=?err
-                );
-            })?;
+            let newest_file = gtfs_utils::extract(&zip_path, &gtfs_path)
+                .inspect_err(|err| {
+                    tracing::error!(
+                        msg="Failure extracting GTFS",
+                        operator_id,
+                        err=?err
+                    );
+                })?;
             meta.last_gtfs = Some(newest_file);
         }
         _ => {
@@ -244,26 +272,29 @@ async fn fetch_transporlis_feed(
     operator_id: i32,
     transporlis_id: i32,
 ) -> Result<(), Error> {
-    let path = format!("./data/operators/{operator_id}/gtfs.zip");
+    let mut zip_path = get_operator_data_root(operator_id);
+    zip_path.push("gtfs.zip");
+    let mut gtfs_path = get_operator_data_root(operator_id);
+    gtfs_path.push("gtfs");
     let url = format!(
         "https://www.transporlis.pt/desktopmodules/\
             trp_opendata/ajax/downloadFile.ashx?op={transporlis_id}&u=web"
     );
 
-    http::download_file(&url, &path, None)
+    http::download_file(&url, &zip_path, None)
         .await
         .inspect_err(|err| {
             tracing::error!(
                 msg="Failed to download file",
                 err=?err,
                 url,
-                path
+                zip_path=?zip_path
             );
         })?;
 
     let newest_file = gtfs_utils::extract(
-        &format!("./data/operators/{operator_id}/gtfs.zip"),
-        &format!("./data/operators/{operator_id}/gtfs"),
+        &zip_path,
+        &gtfs_path,
     )
     .inspect_err(|err| {
         tracing::error!(msg="Failure extracting GTFS", operator_id, err=?err);

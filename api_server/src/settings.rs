@@ -24,11 +24,23 @@ pub(crate) static SETTINGS: OnceCell<Settings> = OnceCell::new();
 #[derive(Deserialize, Debug)]
 pub(crate) struct Settings {
     pub(crate) http: Http,
+    #[serde(default)]
+    pub(crate) storage: Storage,
     pub(crate) db: Database,
     pub(crate) s3: S3Api,
     pub(crate) jwt: Jwt,
     pub(crate) cookies: Cookies,
     pub(crate) images: Images,
+}
+
+fn default_data_root() -> String {
+    "./data".to_string()
+}
+
+#[derive(Deserialize, Debug, Default)]
+pub(crate) struct Storage {
+    #[serde(default = "default_data_root")]
+    pub(crate) root: String,
 }
 
 #[derive(Deserialize, Debug)]

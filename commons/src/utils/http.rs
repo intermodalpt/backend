@@ -17,12 +17,13 @@
 */
 
 use std::io::Cursor;
+use std::path::PathBuf;
 
 use crate::errors::Error;
 
 pub async fn download_file(
     url: &str,
-    output: &str,
+    output: &PathBuf,
     max_content_len: Option<usize>,
 ) -> Result<(), Error> {
     let resp = reqwest::get(url)

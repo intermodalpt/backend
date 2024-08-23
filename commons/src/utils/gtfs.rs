@@ -84,8 +84,8 @@ pub fn calculate_stop_sliding_windows(
 }
 
 pub fn extract(
-    zip_file: &str,
-    output_dir: &str,
+    zip_file: &PathBuf,
+    output_dir: &PathBuf,
 ) -> Result<chrono::DateTime<chrono::Utc>, Error> {
     let file = fs::File::open(zip_file)
         .map_err(|e| Error::Filesystem(e.to_string()))?;
