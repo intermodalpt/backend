@@ -121,8 +121,9 @@ CREATE TABLE regions
 CREATE TABLE municipalities
 (
     id   serial PRIMARY KEY,
-    name text    NOT NULL,
-    zone integer NOT NULL
+    name text                                NOT NULL,
+    dico character(4) DEFAULT '0000'::bpchar NOT NULL UNIQUE
+--     simplified_geometry jsonb, TODO
 );
 
 CREATE TABLE parishes
@@ -131,9 +132,23 @@ CREATE TABLE parishes
     name         text                                  NOT NULL,
     short_name   text                                  NOT NULL,
     municipality integer                               NOT NULL REFERENCES municipalities (id),
-    polygon      text,
-    geojson      jsonb                                 NOT NULL,
-    dicofre      character(6) DEFAULT '000000'::bpchar NOT NULL
+    geometry     jsonb                                 NOT NULL,
+    dicofre      character(6) DEFAULT '000000'::bpchar NOT NULL UNIQUE
+    -- simplified_geometry jsonb                                 NOT NULL, TODO
+);
+
+CREATE TABLE region_parishes
+(
+    region_id integer NOT NULL REFERENCES regions (id),
+    parish_id integer NOT NULL REFERENCES parishes (id),
+    PRIMARY KEY (region_id, parish_id)
+);
+
+CREATE TABLE region_municipalities
+(
+    region_id       integer NOT NULL REFERENCES regions (id),
+    municipality_id integer NOT NULL REFERENCES municipalities (id),
+    PRIMARY KEY (region_id, municipality_id)
 );
 
 CREATE TABLE operators

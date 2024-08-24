@@ -284,20 +284,29 @@ WHERE region_id=$1 AND stop_id=$2;
     Ok(())
 }
 
-pub(crate) async fn fetch_parishes(pool: &PgPool) -> Result<Vec<geo::Parish>> {
+pub(crate) async fn fetch_parishes(
+    pool: &PgPool,
+    region_id: i32,
+) -> Result<Vec<geo::Parish>> {
     sqlx::query_as!(
         geo::Parish,
         r#"
-SELECT parishes.id, parishes.name, parishes.short_name, municipalities.name as municipality,
-    municipalities.zone, parishes.polygon, parishes.geojson
+SELECT parishes.id, parishes.name, parishes.short_name, parishes.geometry,
+    municipalities.name as municipality
 FROM parishes
 JOIN municipalities ON parishes.municipality = municipalities.id
-    "#
+WHERE parishes.id IN (
+    SELECT parish_id
+    FROM region_parishes
+    WHERE region_id = $1
+)
+    "#,
+        region_id
     )
     .fetch_all(pool)
     .await
     .map_err(|err| {
-        tracing::error!(error=err.to_string());
+        tracing::error!(error = err.to_string());
         Error::DatabaseExecution
     })
 }

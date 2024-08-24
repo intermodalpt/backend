@@ -205,8 +205,7 @@ pub(crate) async fn get_parishes(
     State(state): State<AppState>,
     Path(region_id): Path<i32>,
 ) -> Result<Json<Vec<geo::Parish>>, Error> {
-    // TODO filter by region
-    Ok(Json(sql::fetch_parishes(&state.pool).await?))
+    Ok(Json(sql::fetch_parishes(&state.pool, region_id).await?))
 }
 
 pub(crate) async fn put_stop_parish(

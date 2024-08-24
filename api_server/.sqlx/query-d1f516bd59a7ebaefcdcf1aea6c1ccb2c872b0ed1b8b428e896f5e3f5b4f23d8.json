@@ -1,0 +1,46 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT parishes.id, parishes.name, parishes.short_name, parishes.geometry,\n    municipalities.name as municipality\nFROM parishes\nJOIN municipalities ON parishes.municipality = municipalities.id\nWHERE parishes.id IN (\n    SELECT parish_id\n    FROM region_parishes\n    WHERE region_id = $1\n)\n    ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "short_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "geometry",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 4,
+        "name": "municipality",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "d1f516bd59a7ebaefcdcf1aea6c1ccb2c872b0ed1b8b428e896f5e3f5b4f23d8"
+}
