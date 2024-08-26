@@ -385,7 +385,7 @@ WHERE operator = $1
 pub(crate) async fn insert_operator_route_type(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     operator_id: i32,
-    change: requests::ChangeOperatorRouteType,
+    change: &requests::ChangeOperatorRouteType,
 ) -> Result<i32> {
     let res = sqlx::query!(
         r#"

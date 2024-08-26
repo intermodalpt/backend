@@ -158,16 +158,29 @@ pub(crate) async fn post_operator_route_type(
     State(state): State<AppState>,
     Path(operator_id): Path<i32>,
     auth::ScopedClaim(_, _): auth::ScopedClaim<auth::perms::ModifyOperatorMeta>,
-    Json(type_id): Json<requests::ChangeOperatorRouteType>,
-) -> Result<Json<i32>, Error> {
+    Json(route_type): Json<requests::ChangeOperatorRouteType>,
+) -> Result<Json<responses::OperatorRouteType>, Error> {
     let mut transaction = state.pool.begin().await.map_err(|err| {
         tracing::error!("Failed to open transaction: {err}");
         Error::DatabaseExecution
     })?;
 
-    let id =
-        sql::insert_operator_route_type(&mut transaction, operator_id, type_id)
-            .await?;
+    let id = sql::insert_operator_route_type(
+        &mut transaction,
+        operator_id,
+        &route_type,
+    )
+    .await?;
+
+    let route_type = responses::OperatorRouteType {
+        id,
+        name: route_type.name,
+        zapping_cost: route_type.zapping_cost,
+        board_cost: route_type.board_cost,
+        multi_trip: route_type.multi_trip,
+        badge_text_color: route_type.badge_text_color,
+        badge_bg_color: route_type.badge_bg_color,
+    };
 
     // TODO log
 
@@ -176,7 +189,7 @@ pub(crate) async fn post_operator_route_type(
         Error::DatabaseExecution
     })?;
 
-    Ok(Json(id))
+    Ok(Json(route_type))
 }
 
 pub(crate) async fn patch_operator_route_type(
